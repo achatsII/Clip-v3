@@ -1,0 +1,10 @@
+{
+  "name": "CLIP — Instructions de travail",
+  "short_name": "CLIP",
+  "start_url": "/accueil",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0078FF",
+  "lang": "fr-CA",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
