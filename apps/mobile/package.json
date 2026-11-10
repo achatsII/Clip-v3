@@ -1,0 +1,64 @@
+{
+  "name": "clip-v3-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Coquille native de CLIP V3 : affiche l'app web et ajoute la capture à poids contrôlé, le scan et l'envoi des fichiers.",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "icons": "node scripts/generate-icons.js"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~58.0.23",
+    "expo-application": "~58.1.2",
+    "expo-asset": "~58.0.20",
+    "expo-audio": "~58.0.11",
+    "expo-blur": "~58.0.5",
+    "expo-camera": "~58.0.14",
+    "expo-constants": "~58.0.15",
+    "expo-crypto": "~58.0.7",
+    "expo-document-picker": "~58.0.4",
+    "expo-file-system": "~58.0.13",
+    "expo-font": "~58.0.11",
+    "expo-haptics": "~58.0.7",
+    "expo-image-manipulator": "~58.0.16",
+    "expo-image-picker": "~58.0.10",
+    "expo-keep-awake": "~58.0.3",
+    "expo-linear-gradient": "~58.0.3",
+    "expo-linking": "~58.0.16",
+    "expo-print": "~58.0.8",
+    "expo-sharing": "~58.0.22",
+    "expo-splash-screen": "~58.0.13",
+    "expo-status-bar": "~58.0.4",
+    "expo-system-ui": "~58.0.7",
+    "expo-video-thumbnails": "~58.0.2",
+    "expo-web-browser": "~58.0.7",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-webview": "14.0.1",
+    "semver": "^7.8.6"
+  },
+  "devDependencies": {
+    "@react-native/jest-preset": "^0.88.1",
+    "@types/jest": "^30.0.0",
+    "@types/react": "~19.3.0",
+    "@types/semver": "^7.7.1",
+    "jest": "^30.0.0",
+    "jest-expo": "~58.0.14",
+    "typescript": "~6.0.3"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "testMatch": [
+      "<rootDir>/src/**/*.test.ts",
+      "<rootDir>/src/**/*.test.tsx"
+    ]
+  }
+}

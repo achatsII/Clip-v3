@@ -1,0 +1,81 @@
+{
+  "expo": {
+    "name": "CLIP",
+    "slug": "clip-v3",
+    "version": "1.0.0",
+    "scheme": "clip",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#0a0f18",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.intelligenceindustrielle.clip",
+      "infoPlist": {
+        "NSCameraUsageDescription": "CLIP utilise la caméra pour photographier et filmer les étapes de vos instructions de travail, et pour lire les codes QR des postes.",
+        "NSMicrophoneUsageDescription": "CLIP utilise le micro pour enregistrer vos notes vocales, le son de vos vidéos et parler à l'assistant vocal.",
+        "NSPhotoLibraryUsageDescription": "CLIP accède à vos photos et vidéos pour ajouter des médias déjà pris à une instruction de travail.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.intelligenceindustrielle.clip",
+      "adaptiveIcon": {
+        "backgroundColor": "#0078FF",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CLIP utilise la caméra pour photographier et filmer les étapes de vos instructions de travail, et pour lire les codes QR des postes.",
+          "microphonePermission": "CLIP utilise le micro pour enregistrer le son de vos vidéos.",
+          "recordAudioAndroid": true,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "CLIP utilise le micro pour enregistrer vos notes vocales et parler à l'assistant vocal.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CLIP accède à vos photos et vidéos pour ajouter des médias déjà pris à une instruction de travail.",
+          "cameraPermission": "CLIP utilise la caméra pour photographier et filmer les étapes de vos instructions de travail, et pour lire les codes QR des postes.",
+          "microphonePermission": "CLIP utilise le micro pour enregistrer vos notes vocales, le son de vos vidéos et parler à l'assistant vocal."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#F8FAFC",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#0A0F18"
+          }
+        }
+      ],
+      "expo-font",
+      "expo-asset"
+    ]
+  }
+}

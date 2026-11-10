@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    "types": ["jest"]
+  },
+  "include": ["index.ts", "App.tsx", "src/**/*.ts", "src/**/*.tsx", "../../packages/bridge/src/**/*.ts"]
+}
