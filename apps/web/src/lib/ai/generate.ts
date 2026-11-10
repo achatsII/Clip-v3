@@ -52,6 +52,14 @@ function fmtDuration(sec?: number) {
 
 export type Stage = 'prepare' | 'analyze' | 'finish'
 
+/** Gemini nomme la vidéo QuickTime `video/mov` (les iPhone filment en .mov). */
+function geminiMime(s: Source): string {
+  const m = (s.mimeType || (s.kind === 'video' ? 'video/mp4' : 'audio/mp4')).split(';')[0]
+  if (m === 'video/quicktime') return 'video/mov'
+  if (m === 'audio/x-m4a' || m === 'audio/m4a') return 'audio/mp4'
+  return m
+}
+
 /**
  * Prépare les fichiers pour l'IA : vidéos (et notes vocales sans transcription) téléversées chez
  * Gemini, URI réutilisée tant qu'elle vit. Rend les sources mises à jour, à enregistrer.
@@ -77,10 +85,10 @@ export async function prepareForAi(
           const processed = await files.processVideo(s.url)
           s = { ...s, url: processed.url, sizeBytes: processed.sizeBytes ?? s.sizeBytes, durationSec: s.durationSec ?? processed.durationSec ?? undefined }
         }
-        const g = await files.geminiUpload(s.url!, s.mimeType || (s.kind === 'video' ? 'video/mp4' : 'audio/mp4'), s.sizeBytes ?? 0, s.name ?? `${id}.${s.kind === 'video' ? 'mp4' : 'm4a'}`)
+        const g = await files.geminiUpload(s.url!, geminiMime(s), s.sizeBytes ?? 0, s.name ?? `${id}.${s.kind === 'video' ? 'mp4' : 'm4a'}`)
         s = { ...s, geminiFileUri: g.uri, geminiExpiresAt: g.expiresAt ?? new Date(Date.now() + 46 * 3600 * 1000).toISOString() }
       }
-      askFiles.push({ geminiFileUri: s.geminiFileUri, filename: s.name ?? id, mimeType: s.mimeType || (s.kind === 'video' ? 'video/mp4' : 'audio/mp4') })
+      askFiles.push({ geminiFileUri: s.geminiFileUri, filename: s.name ?? id, mimeType: geminiMime(s) })
       lines.push({
         id,
         line:

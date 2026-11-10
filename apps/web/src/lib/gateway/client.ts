@@ -208,6 +208,9 @@ async function refreshUserSession(): Promise<boolean> {
   return refreshInFlight
 }
 
+/** Un seul rafraîchissement de la session, partagé par les appels concurrents. */
+export const refreshSession = refreshUserSession
+
 /** Vide la session en gardant les préférences d'affichage. */
 export function logout(redirect = true) {
   const s = ls()

@@ -37,7 +37,8 @@ const Ctx = createContext<SessionValue | null>(null)
 const rank: Record<Permission, number> = { none: 0, read: 1, write: 2 }
 
 export function roleOf(org: OrgSettings, profile: Profile): MemberRole {
-  const explicit = org.members[profile.userId]?.role
+  // Réglage de la personne, sinon celui posé à son invitation (clé `email:<courriel>`).
+  const explicit = org.members[profile.userId]?.role ?? org.members[`email:${profile.email.toLowerCase()}`]?.role
   if (explicit) return explicit
   if (profile.orgRole === 'admin') return 'admin'
   if (org.createdBy && org.createdBy === profile.userId) return 'admin'
@@ -104,7 +105,7 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
   const value = useMemo<SessionValue | null>(() => {
     if (!profile || !org) return null
     const role = roleOf(org.json_data, profile)
-    const me: MemberSettings = org.json_data.members[profile.userId] ?? { role, categories: [], stationIds: [] }
+    const me: MemberSettings = org.json_data.members[profile.userId] ?? org.json_data.members[`email:${profile.email.toLowerCase()}`] ?? { role, categories: [], stationIds: [] }
     const perms = ROLES[role].permissions
     return {
       profile,

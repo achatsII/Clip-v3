@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
+import { nativeEnv } from '@/lib/bridge/native'
 import { ApiError } from '@/lib/gateway/client'
 import { applyTheme, readTheme } from '@/lib/theme'
 import { ConfirmProvider } from '../ui/Confirm'
@@ -26,6 +27,8 @@ export function Providers({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
+    // Installe tout de suite le récepteur du pont natif : un événement de la coquille arrivé tôt n'est pas perdu.
+    nativeEnv()
     const media = window.matchMedia('(prefers-color-scheme: dark)')
     const onChange = () => {
       if (readTheme().mode === 'system') applyTheme(readTheme())

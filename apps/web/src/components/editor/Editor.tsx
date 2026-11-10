@@ -36,7 +36,10 @@ import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { Badge } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
-import { qk, useFeedback } from '@/hooks/queries'
+import { qk, useFeedback, useInstructions } from '@/hooks/queries'
+import { LockBadge } from '@/components/billing/Billing'
+import { useBilling, useEntitlement, useGate, useLimit } from '@/lib/billing/state'
+import { useToggle } from '@/lib/toggles'
 import type { Doc } from '@/lib/gateway/data'
 import { diffSteps } from '@/lib/model/diff'
 import { STATUS } from '@/lib/model/catalog'
@@ -104,6 +107,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     enabled: !!instr.publishedId,
   })
   const feedback = useFeedback({ 'json_data.instructionId': { $eq: doc._id }, 'json_data.status': { $eq: 'new' } }, qk.feedbackFor(doc._id))
+  const instructions = useInstructions()
   const feedbackByStep = useMemo(() => {
     const m: Record<string, number> = {}
     for (const f of feedback.data ?? []) if (f.json_data.stepId) m[f.json_data.stepId] = (m[f.json_data.stepId] ?? 0) + 1
@@ -295,6 +299,13 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const approval = needsApproval(org.json_data, role)
   const canApprove = can('approve', 'write')
   const inReview = instr.status === 'review'
+  // Limite d'instructions publiées : une instruction déjà publiée se republie toujours.
+  const publishLimit = useLimit('published_instructions', instructions.data?.filter((d) => d.json_data.publishedVersion).length)
+  const blockedByLimit = !instr.publishedVersion && !!publishLimit?.reached
+  const translations = useEntitlement('translations')
+  const translateToggle = useToggle('translations')
+  const gate = useGate()
+  const { openPaywall } = useBilling()
 
   const primary = readOnly ? null : inReview ? (
     canApprove ? (
@@ -309,12 +320,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       Voir au poste
     </LinkButton>
   ) : approval ? (
-    <Button variant="primary" size="lg" disabled={!!problems.length} onClick={() => setDialog('review')} icon={<Send className="h-5 w-5" />}>
-      Demander l’approbation
+    <Button variant="primary" size="lg" disabled={!!problems.length} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', retry: () => setDialog('review') }) : setDialog('review'))} icon={<Send className="h-5 w-5" />}>
+      Demander l’approbation {blockedByLimit && <LockBadge />}
     </Button>
   ) : (
-    <Button variant="primary" size="lg" disabled={!!problems.length} loading={publishing} onClick={() => setDialog('checks')} icon={<Send className="h-5 w-5" />}>
-      {instr.publishedVersion ? `Publier la version ${instr.publishedVersion + 1}` : 'Publier'}
+    <Button variant="primary" size="lg" disabled={!!problems.length} loading={publishing} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', retry: () => setDialog('checks') }) : setDialog('checks'))} icon={<Send className="h-5 w-5" />}>
+      {instr.publishedVersion ? `Publier la version ${instr.publishedVersion + 1}` : 'Publier'} {blockedByLimit && <LockBadge />}
     </Button>
   )
 
@@ -369,7 +380,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               { label: 'Exporter en PDF', icon: <FileDown className="h-4 w-4" />, onClick: () => window.open(`/instructions/${doc._id}/imprimer`, '_blank') },
               { label: 'Exporter en JSON', icon: <FileJson className="h-4 w-4" />, onClick: exportJson },
               { label: 'Historique des versions', icon: <History className="h-4 w-4" />, onClick: () => setDialog('history') },
-              { label: 'Traduire', icon: <Languages className="h-4 w-4" />, onClick: () => setDialog('translate'), hidden: readOnly },
+              { label: 'Traduire', icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle, hint: translations === 'locked' ? <LockBadge /> : undefined },
               { label: 'Régénérer avec l’IA', icon: <Sparkles className="h-4 w-4" />, onClick: async () => (await confirm({ title: 'Régénérer l’instruction ?', description: 'L’IA repart de vos médias. Le brouillon actuel sera remplacé ; les versions publiées restent dans l’historique.', confirmLabel: 'Régénérer' })) && onRegenerate(), hidden: readOnly || !sources.length },
               {
                 label: 'Dupliquer',

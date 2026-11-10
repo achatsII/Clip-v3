@@ -1,0 +1,138 @@
+'use client'
+
+import { Camera, CheckCircle2, Loader2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Button } from '@/components/ui/Button'
+import { Input, Textarea } from '@/components/ui/Field'
+import { Modal } from '@/components/ui/Modal'
+import type { DataApi } from '@/lib/gateway/data'
+import type { FilesApi } from '@/lib/gateway/files'
+import { compressImage } from '@/lib/media/image'
+import { FEEDBACK_KINDS } from '@/lib/model/catalog'
+import { createFeedback } from '@/lib/model/repo'
+import type { Feedback, FeedbackKind } from '@/lib/model/types'
+import { cn } from '@/lib/util/cn'
+import type { PlayerStrings } from './i18n'
+
+const KIND_ORDER: FeedbackKind[] = ['unclear', 'error', 'danger', 'idea']
+const KIND_LABELS: Record<string, Record<FeedbackKind, string>> = {
+  en: { unclear: 'Not clear', error: 'Mistake', danger: 'Dangerous', idea: 'Better way', praise: 'Helpful' },
+  es: { unclear: 'No está claro', error: 'Error', danger: 'Peligroso', idea: 'Mejor manera', praise: 'Útil' },
+}
+
+/** Signaler en deux touchers : un motif en pictogramme, un mot facultatif, une photo facultative. */
+export function FeedbackSheet({
+  open,
+  onClose,
+  t,
+  lang,
+  data,
+  files,
+  base,
+}: {
+  open: boolean
+  onClose: () => void
+  t: PlayerStrings
+  lang: string
+  data: DataApi
+  files: FilesApi | null
+  base: Omit<Feedback, 'createdAt' | 'status' | 'kind' | 'comment' | 'photoUrl' | 'authorName'>
+}) {
+  const [kind, setKind] = useState<FeedbackKind | null>(null)
+  const [comment, setComment] = useState('')
+  const [name, setName] = useState(() => {
+    try {
+      return localStorage.getItem('clip_pref_operator_name') ?? ''
+    } catch {
+      return ''
+    }
+  })
+  const [photo, setPhoto] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const input = useRef<HTMLInputElement>(null)
+
+  function close() {
+    setKind(null)
+    setComment('')
+    setPhoto(null)
+    setSent(false)
+    setError(null)
+    onClose()
+  }
+
+  async function send() {
+    if (!kind) return
+    setBusy(true)
+    setError(null)
+    try {
+      let photoUrl: string | null = null
+      if (photo && files) {
+        const { blob } = await compressImage(photo)
+        photoUrl = (await files.upload(blob, photo.name, 'feedback')).url
+      }
+      await createFeedback(data, { ...base, kind, comment: comment.trim() || undefined, photoUrl, authorName: name.trim() || null })
+      try {
+        if (name.trim()) localStorage.setItem('clip_pref_operator_name', name.trim())
+      } catch {
+        /* préférence facultative */
+      }
+      setSent(true)
+      setTimeout(close, 2200)
+    } catch {
+      setError(lang === 'fr' ? 'Le retour n’est pas parti. Vérifiez la connexion et réessayez.' : 'Not sent. Check the connection and try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const labels = KIND_LABELS[lang]
+  return (
+    <Modal open={open} onClose={close} title={sent ? undefined : t.feedbackTitle} size="md">
+      {sent ? (
+        <div className="flex flex-col items-center py-8 text-center">
+          <CheckCircle2 className="animate-pop-in mb-3 h-16 w-16 text-emerald-500" />
+          <p className="text-xl font-black">{t.feedbackThanks}</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            {KIND_ORDER.map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKind(k)}
+                aria-pressed={kind === k}
+                className={cn('btn-press flex min-h-24 flex-col items-center justify-center gap-1 rounded-[24px] bg-gradient-to-br p-3 text-white', FEEDBACK_KINDS[k].className, kind === k ? 'ring-4 ring-slate-900/70 dark:ring-white' : kind ? 'opacity-50' : '')}
+              >
+                <span className="text-3xl" aria-hidden>
+                  {k === 'unclear' ? '🤔' : k === 'error' ? '❌' : k === 'danger' ? '⚠️' : '💡'}
+                </span>
+                <span className="text-base font-black">{labels?.[k] ?? FEEDBACK_KINDS[k].label}</span>
+              </button>
+            ))}
+          </div>
+          {kind && (
+            <div className="animate-slide-up space-y-3">
+              <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t.feedbackComment} rows={3} />
+              <div className="flex gap-2">
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t.feedbackName} className="flex-1" />
+                {files && (
+                  <Button onClick={() => input.current?.click()} icon={<Camera className="h-4 w-4" />}>
+                    {photo ? '✓' : t.feedbackPhoto}
+                  </Button>
+                )}
+                <input ref={input} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+              </div>
+              {error && <p className="text-sm font-bold text-rose-600">{error}</p>}
+              <Button variant="primary" size="lg" block loading={busy} icon={busy ? <Loader2 className="h-5 w-5 animate-spin" /> : undefined} onClick={send}>
+                {t.feedbackSend}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
+  )
+}

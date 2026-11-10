@@ -31,7 +31,6 @@ export type FeatureKey =
   | 'voice_assistant'
   | 'adoption_stats'
   | 'brand_kit'
-  | 'tv_cast'
   | 'full_export'
 
 export interface FeatureLabel {
@@ -53,7 +52,6 @@ export const FEATURE_LABELS: Record<FeatureKey, FeatureLabel> = {
   voice_assistant: { fr: 'Assistant vocal au poste', en: 'Voice assistant at the station' },
   adoption_stats: { fr: 'Statistiques d’adoption et retour sur investissement', en: 'Adoption statistics and ROI' },
   brand_kit: { fr: 'Logo et couleurs de l’usine, PDF sans mention CLIP', en: 'Plant logo and colors, PDF without CLIP mention' },
-  tv_cast: { fr: 'Écran TV synchronisé', en: 'Synchronized TV screen' },
   full_export: { fr: 'Export complet de toutes les instructions', en: 'Full export of all instructions' },
 }
 
@@ -69,7 +67,6 @@ export const FEATURE_ORDER: FeatureKey[] = [
   'bulk_import',
   'voice_assistant',
   'brand_kit',
-  'tv_cast',
   'full_export',
 ]
 

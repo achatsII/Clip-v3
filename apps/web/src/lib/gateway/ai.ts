@@ -5,6 +5,7 @@
  * part sur `/api/v2/ai/ask` et la plateforme débite le prix de l'opération ; éteinte, il part sur
  * `/api/v4/assistant/ask`, à l'identique. Aucun repli d'une route vers l'autre.
  */
+import { emitRefusal, emitSettled, refusalFrom } from '../billing/bus'
 import { BILLING_V2, PRODUCT_SLUG } from '../config'
 import { ApiError, GatewayClient } from './client'
 
@@ -80,12 +81,14 @@ export function onAiUsage(fn: AiUsageListener) {
   return () => usageListeners.delete(fn)
 }
 
-export function aiApi(client: GatewayClient) {
+export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}) {
+  const billing = options.billing ?? BILLING_V2
   async function ask<T = unknown>(operation: AiOperation, body: AskBody, opts: { scope?: string; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<AskResult<T>> {
     const timeoutMs = opts.timeoutMs ?? 180_000
     let env: AskEnvelope
     try {
-      env = BILLING_V2
+      // Facturation allumée : seulement la route mesurée, jamais de repli vers une route non débitée.
+      env = billing
         ? await client.call<AskEnvelope>('/api/v2/ai/ask', {
             method: 'POST',
             headers: { 'X-Product': PRODUCT_SLUG },
@@ -96,8 +99,21 @@ export function aiApi(client: GatewayClient) {
         : await client.call<AskEnvelope>('/api/v4/assistant/ask', { method: 'POST', body, timeoutMs, signal: opts.signal })
     } catch (e) {
       usageListeners.forEach((fn) => fn({ operation, model: null, usage: null, ok: false }))
+      if (billing && e instanceof ApiError) {
+        const refusal = refusalFrom(e.status, e.detail)
+        if (refusal) {
+          emitRefusal(refusal)
+          emitSettled()
+          throw new ApiError(refusal.code === 'insufficient_credits' ? 'Plus de crédits pour cette action. Rien n’a été débité.' : 'Cette fonction n’est pas incluse dans votre plan.', e.status, e.detail, refusal.code)
+        }
+        if (e.status === 502) {
+          emitSettled()
+          throw new ApiError("L'IA n'a pas répondu. Rien n'a été débité : réessayez.", 502, e.detail, 'ai_unavailable')
+        }
+      }
       throw e
     }
+    if (billing) emitSettled()
     const r = env.results ?? {}
     if (env.success === false || r.error) {
       usageListeners.forEach((fn) => fn({ operation, model: r.model ?? null, usage: null, ok: false }))

@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { BillingRoot } from '@/components/billing/BillingRoot'
 import { LogoMark } from '@/components/Logo'
 import { SessionProvider } from '@/components/providers/Session'
 import { AppShell } from '@/components/shell/AppShell'
@@ -15,7 +16,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </div>
       }
     >
-      <AppShell>{children}</AppShell>
+      <BillingRoot>
+        <AppShell>{children}</AppShell>
+      </BillingRoot>
     </SessionProvider>
   )
 }

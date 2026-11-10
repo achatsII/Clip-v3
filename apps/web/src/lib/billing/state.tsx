@@ -1,0 +1,129 @@
+'use client'
+
+/**
+ * L'état de facturation du compte connecté (gabarit BillingProvider du skill billing). Relu à la
+ * connexion, au retour sur l'onglet, après chaque opération d'IA et après chaque refus. Drapeau
+ * éteint : rien n'est lu, aucun verrou, aucune fonction nouvelle — l'app d'avant.
+ */
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { BILLING_V2 } from '../config'
+import { onRefusal, onSettled, type Refusal } from './bus'
+import { limitOf, type BillingClient, type BillingState, type LimitStatus } from './client'
+import type { FeatureKey } from './catalog'
+
+export interface PaywallRequest {
+  feature?: FeatureKey
+  refusal?: Refusal
+  /** L'action à relancer après l'achat (la saisie est gardée par l'écran). */
+  retry?: () => void
+}
+
+interface BillingContextValue {
+  enabled: boolean
+  state: BillingState | null
+  loading: boolean
+  refresh: () => Promise<BillingState | null>
+  paywall: PaywallRequest | null
+  openPaywall: (r: PaywallRequest) => void
+  closePaywall: () => void
+}
+
+const Ctx = createContext<BillingContextValue>({
+  enabled: false,
+  state: null,
+  loading: false,
+  refresh: async () => null,
+  paywall: null,
+  openPaywall: () => undefined,
+  closePaywall: () => undefined,
+})
+
+const QUIET_MS = 4000
+
+export function BillingProvider({ client, session, enabled = BILLING_V2, children }: { client: BillingClient; session: string | null; enabled?: boolean; children: ReactNode }) {
+  const [read, setRead] = useState<{ session: string; state: BillingState | null } | null>(null)
+  const [paywall, setPaywall] = useState<PaywallRequest | null>(null)
+  const current = enabled && session && read?.session === session ? read : null
+  const state = current?.state ?? null
+  const loading = enabled && session !== null && !current
+  const latest = useRef(0)
+  const lastRefusal = useRef(0)
+
+  const refresh = useCallback((): Promise<BillingState | null> => {
+    if (!enabled || !session) return Promise.resolve(null)
+    const s = session
+    const id = ++latest.current
+    return client.context().then(
+      (fresh) => {
+        if (id !== latest.current) return null
+        setRead({ session: s, state: fresh })
+        return fresh
+      },
+      () => {
+        if (id === latest.current) setRead((prev) => (prev?.session === s ? prev : { session: s, state: null }))
+        return null
+      },
+    )
+  }, [client, enabled, session])
+
+  useEffect(() => {
+    if (session) void refresh()
+  }, [session, refresh])
+
+  useEffect(() => {
+    if (!enabled) return
+    const onVisible = () => document.visibilityState === 'visible' && void refresh()
+    document.addEventListener('visibilitychange', onVisible)
+    const offSettled = onSettled(() => void refresh())
+    const offRefusal = onRefusal((refusal) => {
+      void refresh()
+      const now = Date.now()
+      if (now - lastRefusal.current < QUIET_MS) return
+      lastRefusal.current = now
+      setPaywall({ refusal })
+    })
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      offSettled()
+      offRefusal()
+    }
+  }, [enabled, refresh])
+
+  const value = useMemo<BillingContextValue>(
+    () => ({ enabled, state, loading, refresh, paywall, openPaywall: setPaywall, closePaywall: () => setPaywall(null) }),
+    [enabled, state, loading, refresh, paywall],
+  )
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+}
+
+export const useBilling = () => useContext(Ctx)
+
+/** `off` facturation éteinte · `pending` pas encore lu · `locked` hors plan · `open` inclus. */
+export type Entitlement = 'off' | 'pending' | 'locked' | 'open'
+
+export function useEntitlement(featureKey: FeatureKey): Entitlement {
+  const { enabled, state } = useBilling()
+  if (!enabled) return 'off'
+  if (!state) return 'pending'
+  // En période de grâce, les droits sont maintenus : on ne verrouille rien.
+  return state.features[featureKey] === true ? 'open' : 'locked'
+}
+
+/** Une limite comptée par l'app (`capacity_source: reported`) ; `null` = rien à verrouiller. */
+export function useLimit(featureKey: FeatureKey, used: number | undefined): LimitStatus | null {
+  const { enabled, state } = useBilling()
+  if (!enabled || !state || used === undefined) return null
+  return limitOf(state, featureKey, used)
+}
+
+/** Ouvre la fonction si elle est incluse, sinon le paywall (avec l'action à relancer). */
+export function useGate() {
+  const { openPaywall } = useBilling()
+  return useCallback(
+    (entitlement: Entitlement, feature: FeatureKey, action: () => void) => {
+      if (entitlement === 'locked') openPaywall({ feature, retry: action })
+      else action()
+    },
+    [openPaywall],
+  )
+}

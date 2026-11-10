@@ -114,6 +114,16 @@ export async function ingestNative(item: CapturedMedia, files: FilesApi, onProgr
   }
   let src: Source = { ...base, url: target.publicUrl, path: target.path }
   if (kind === 'photo') src.thumbnailUrl = target.publicUrl
+  // Une vidéo de galerie Android n'est pas réencodée par le téléphone : la Gateway la ramène en 720p.
+  if (kind === 'video' && (item.sizeBytes > VIDEO_OPTIMIZE_BYTES || Math.max(item.width ?? 0, item.height ?? 0) > 1920)) {
+    onProgress?.('optimize')
+    try {
+      const p = await files.processVideo(target.publicUrl)
+      src = { ...src, url: p.url, mimeType: 'video/mp4', sizeBytes: p.sizeBytes ?? src.sizeBytes, durationSec: src.durationSec ?? p.durationSec ?? undefined, path: undefined }
+    } catch {
+      /* l'original reste utilisable s'il passe sous 100 Mo */
+    }
+  }
   if (item.thumbnailDataUrl && kind === 'video') {
     const t = await files.upload(dataUrlToBlob(item.thumbnailDataUrl), `${item.fileName}.jpg`, 'thumbs').catch(() => null)
     if (t) src.thumbnailUrl = t.url

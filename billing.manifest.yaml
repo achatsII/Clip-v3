@@ -1,0 +1,141 @@
+# Catalogue de facturation de CLIP : ce que l'app vend, et ce que chaque plan donne.
+#
+# Ce fichier est la seule source du catalogue : la publication (skill billing-publish) le valide, puis
+# l'écrit dans la base de facturation et chez Stripe. Les raisons de chaque valeur sont dites dans le
+# compte rendu de la livraison. Un prix se corrige par une nouvelle version de plan, jamais en
+# modifiant une version publiée.
+manifest_version: 1
+
+product:
+  # À enregistrer à la Gateway avant la publication : l'app se connecte encore avec « html ».
+  slug: clip-v3
+  name: CLIP
+  # Vendu sur le web seulement pour l'instant : la coquille mobile ne vend rien (pas encore d'achat
+  # dans les magasins) et ne montre ni prix ni lien d'achat.
+  channels: [web]
+  acquisition: [self_serve]
+  is_self_service: true
+  application:
+    # Les routes que l'app appelle, au plus juste. Aucun assistant: : chaque appel d'IA passe par
+    # une opération ci-dessous (POST /api/v2/ai/ask), débitée par la plateforme.
+    default_scopes: [data:*, files:write, files:read, files:process, files:transcribe, ai:upload, ai:tts, ai:live, ai:generate_image]
+  org_model: { on_signup: personal, team_join: none }
+  default_plan_code: free
+  default_overage_policy: block
+  providers:
+    stripe:
+      enabled: true
+
+features:
+  # Une banque commune pour toute l'IA : chaque opération a son prix en crédits (ai_operations).
+  - key: ai_credits
+    kind: credit
+    name: Crédits IA
+    unit: credit
+    overage_policy: block
+  # Les quantités détenues, comptées par l'app (la plateforme ne reçoit pas encore ce compte).
+  - key: published_instructions
+    kind: limit
+    name: Instructions publiées
+    unit: instruction
+    capacity_source: reported
+  - key: stations
+    kind: limit
+    name: Postes
+    unit: station
+    capacity_source: reported
+  # Les rédacteurs et approbateurs ; les lecteurs et les opérateurs ne sont jamais comptés.
+  - key: editors
+    kind: limit
+    name: Rédacteurs
+    unit: editor
+    capacity_source: reported
+  - key: translations
+    kind: boolean
+    name: Traduction pour les opérateurs
+  - key: adoption_stats
+    kind: boolean
+    name: Statistiques d'adoption et retour sur investissement
+  - key: approvals
+    kind: boolean
+    name: Approbation avant publication
+  - key: bulk_import
+    kind: boolean
+    name: Import en lot
+  - key: voice_assistant
+    kind: boolean
+    name: Assistant vocal au poste
+  - key: brand_kit
+    kind: boolean
+    name: Logo et couleurs de l'usine
+  - key: full_export
+    kind: boolean
+    name: Export complet
+
+plans:
+  # Gratuit : de quoi publier ses premières instructions et voir la boucle complète
+  # (capture, génération, poste, retours). Coût d'IA plafonné par les crédits.
+  - code: free
+    kind: base
+    name: Gratuit
+    version: 1
+    status: active
+    sort_order: 10
+    availability: { channels: [web], audience: personal }
+    entitlements:
+      features: { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false }
+      limits: { published_instructions: 5, stations: 2, editors: 1 }
+      credits:
+        - { feature: ai_credits, amount: 1000, period: monthly, rollover: none }
+
+  # Solo : la personne qui documente son propre travail et le partage par code QR.
+  - code: solo
+    kind: base
+    name: Solo
+    version: 1
+    status: active
+    sort_order: 20
+    availability: { channels: [web], audience: personal }
+    prices:
+      - { interval: monthly, currency: CAD, amount_cents: 2900 }
+      - { interval: yearly, currency: CAD, amount_cents: 29000 }
+    entitlements:
+      features: { translations: true, adoption_stats: true, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false }
+      limits: { published_instructions: null, stations: 10, editors: 1 }
+      credits:
+        - { feature: ai_credits, amount: 10000, period: monthly, rollover: none }
+
+  # Usine : l'équipe de rédaction, l'approbation, les postes et tablettes de tout le plancher.
+  - code: usine
+    kind: base
+    name: Usine
+    version: 1
+    status: active
+    sort_order: 30
+    availability: { channels: [web], audience: personal }
+    prices:
+      - { interval: monthly, currency: CAD, amount_cents: 24900 }
+      - { interval: yearly, currency: CAD, amount_cents: 249000 }
+    entitlements:
+      features: { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true }
+      limits: { published_instructions: null, stations: 100, editors: 10 }
+      credits:
+        - { feature: ai_credits, amount: 60000, period: monthly, rollover: none }
+
+# Une ligne par appel à l'assistant d'Octopus. Les générations ont une opération par taille de lot :
+# l'app choisit d'après la durée de vidéo, le nombre de photos et de pages. Le prix d'une génération
+# couvre aussi la transcription des notes vocales et les vignettes qu'elle déclenche.
+ai_operations:
+  - { key: generate_s, capability: assistant.ask, feature: ai_credits, credits: 150, provider: google, level: mid }
+  - { key: generate_m, capability: assistant.ask, feature: ai_credits, credits: 300, provider: google, level: mid }
+  - { key: generate_l, capability: assistant.ask, feature: ai_credits, credits: 750, provider: google, level: mid }
+  - { key: import_s, capability: assistant.ask, feature: ai_credits, credits: 60, provider: google, level: mid }
+  - { key: import_l, capability: assistant.ask, feature: ai_credits, credits: 120, provider: google, level: mid }
+  - { key: step_assist, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
+  - { key: instruction_edit, capability: assistant.ask, feature: ai_credits, credits: 40, provider: google, level: mid }
+  - { key: translate, capability: assistant.ask, feature: ai_credits, credits: 30, provider: google, level: mid }
+  - { key: annotate, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
+  # Prépare l'illustration et couvre la génération d'image qui suit.
+  - { key: illustrate, capability: assistant.ask, feature: ai_credits, credits: 70, provider: google, level: mid }
+  - { key: ask_question, capability: assistant.ask, feature: ai_credits, credits: 2, provider: google, level: low }
+  - { key: standard_agent, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }

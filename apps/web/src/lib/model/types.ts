@@ -177,6 +177,7 @@ export interface Instruction {
   /** Copies légères pour les listes (évite de lire le brouillon complet). */
   coverUrl?: string | null
   stepCount?: number
+  sourceCount?: number
 }
 
 export interface Version {

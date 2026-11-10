@@ -38,13 +38,14 @@ export async function createInstruction(data: DataApi, actor: Actor, init: Parti
     updatedAt: now,
     coverUrl: null,
     stepCount: 0,
+    sourceCount: init.sources?.length ?? 0,
     ...init,
   }
   return data.insert<Instruction>(T.instruction, json, json.title)
 }
 
 export async function saveSources(data: DataApi, id: string, sources: Source[], actor: Actor) {
-  await data.patch(T.instruction, id, { sources, updatedAt: nowIso(), updatedBy: actor.id, updatedByName: actor.name })
+  await data.patch(T.instruction, id, { sources, sourceCount: sources.length, updatedAt: nowIso(), updatedBy: actor.id, updatedByName: actor.name })
 }
 
 /** Enregistre la copie de travail et les copies légères pour les listes. */
