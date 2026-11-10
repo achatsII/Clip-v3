@@ -19,3 +19,6 @@ test-results/
 /screenshots-tmp/
 apps/mobile/ios/
 apps/mobile/android/
+
+# Worktrees des agents
+.claude/worktrees/
