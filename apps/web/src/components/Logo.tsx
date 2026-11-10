@@ -1,15 +1,18 @@
+import { useId } from 'react'
 import { cn } from '@/lib/util/cn'
 
 export function LogoMark({ className }: { className?: string }) {
+  // Un id par instance : la barre latérale masquée (display:none) ne peut pas prêter son dégradé.
+  const id = `clip-g-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
   return (
     <svg viewBox="0 0 64 64" className={cn('h-10 w-10', className)} aria-hidden>
       <defs>
-        <linearGradient id="clip-g" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#00C6FF" />
           <stop offset="1" stopColor="#0078FF" />
         </linearGradient>
       </defs>
-      <rect width="64" height="64" rx="18" fill="url(#clip-g)" />
+      <rect width="64" height="64" rx="18" fill={`url(#${id})`} />
       <path d="M41.5 22.5a13 13 0 1 0 0 19" fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round" />
       <circle cx="44" cy="32" r="4" fill="#fff" />
     </svg>

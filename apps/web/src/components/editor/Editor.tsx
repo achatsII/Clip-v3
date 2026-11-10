@@ -30,7 +30,7 @@ import { useSession } from '@/components/providers/Session'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { Confetti } from '@/components/ui/Celebrate'
 import { useConfirm } from '@/components/ui/Confirm'
-import { Textarea } from '@/components/ui/Field'
+import { AutoTextarea, Textarea } from '@/components/ui/Field'
 import { Menu } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
@@ -93,7 +93,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [dialog, setDialog] = useState<null | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks'>(null)
   const [comment, setComment] = useState('')
   const [rating, setRating] = useState(instr.generation?.rating ?? null)
-  const [ratingComment, setRatingComment] = useState('')
+  const [ratingComment, setRatingComment] = useState<string | null>(null)
   const [questions, setQuestions] = useState<string[]>(instr.generation?.questions ?? [])
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latest = useRef(content)
@@ -351,21 +351,21 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
             {instr.publishedVersion && isDirty && !inReview && <Badge tone="warning">Modifications non publiées</Badge>}
             {instr.publishedAt && <span className="text-xs font-bold text-slate-400">Publiée {timeAgo(instr.publishedAt)}</span>}
           </div>
-          <input
+          <AutoTextarea
+            singleLine
             value={content.title}
             readOnly={readOnly}
             onChange={(e) => update({ ...content, title: e.target.value })}
             aria-label="Titre de l’instruction"
-            className="w-full bg-transparent text-3xl leading-tight font-black tracking-tighter text-slate-900 focus:outline-none sm:text-4xl dark:text-white"
+            className="w-full bg-transparent text-3xl leading-tight font-black tracking-tighter text-balance text-slate-900 focus:outline-none sm:text-4xl dark:text-white"
           />
-          <textarea
+          <AutoTextarea
             value={content.summary}
             readOnly={readOnly}
             onChange={(e) => update({ ...content, summary: e.target.value })}
-            rows={1}
             aria-label="Résumé"
             placeholder="À quoi sert cette instruction, en une phrase"
-            className="mt-1 w-full resize-none bg-transparent text-base font-medium text-slate-500 focus:outline-none dark:text-slate-400"
+            className="mt-1 w-full bg-transparent text-base font-medium text-slate-500 focus:outline-none dark:text-slate-400"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -440,25 +440,31 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
 
       {instr.generation && !rating && !readOnly && (
         <div className="glass-card mb-5 flex flex-col gap-3 rounded-[28px] p-4 sm:flex-row sm:items-center">
-          <Sparkles className="h-5 w-5 shrink-0 text-[var(--primary)]" />
+          <Sparkles className="h-5 w-5 shrink-0 text-[var(--primary)] max-sm:hidden" />
           <p className="flex-1 text-sm font-bold text-slate-600 dark:text-slate-300">Générée par l’IA {timeAgo(instr.generation.at)}. Le résultat vous convient ?</p>
-          <div className="flex items-center gap-2">
-            <Button size="sm" icon={<ThumbsUp className="h-4 w-4" />} onClick={() => rate('up')}>
-              Oui
-            </Button>
+          {ratingComment === null ? (
+            <div className="flex items-center gap-2">
+              <Button size="sm" icon={<ThumbsUp className="h-4 w-4" />} onClick={() => rate('up')}>
+                Oui
+              </Button>
+              <Button size="sm" icon={<ThumbsDown className="h-4 w-4" />} onClick={() => setRatingComment('')}>
+                Non
+              </Button>
+            </div>
+          ) : (
             <form
               className="flex items-center gap-2"
               onSubmit={(e) => {
                 e.preventDefault()
-                void rate('down', ratingComment)
+                void rate('down', ratingComment ?? '')
               }}
             >
-              <input value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Qu’est-ce qui manque ?" className="glass-input h-11 w-48 rounded-2xl px-3 text-sm font-bold sm:w-64" />
-              <Button size="sm" type="submit" icon={<ThumbsDown className="h-4 w-4" />}>
-                Non
+              <input autoFocus value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Qu’est-ce qui manque ?" aria-label="Ce qui manque" className="glass-input h-11 min-w-0 flex-1 rounded-2xl px-3 text-sm font-bold sm:w-72 sm:flex-none" />
+              <Button size="sm" type="submit" variant="primary">
+                Envoyer
               </Button>
             </form>
-          </div>
+          )}
         </div>
       )}
 
@@ -539,7 +545,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       </div>
 
       {!readOnly && (
-        <div className="pb-safe fixed inset-x-0 bottom-20 z-30 px-4 lg:bottom-6 lg:left-72 lg:px-10">
+        <div className="pb-safe pointer-events-none fixed inset-x-0 bottom-24 z-30 px-4 lg:bottom-6 lg:left-72 lg:px-10">
           <div className="mx-auto max-w-3xl">
             <AiCommandBar content={content} onApply={update} />
           </div>

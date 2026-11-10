@@ -9,7 +9,6 @@ import {
   MapPin,
   MessageSquareWarning,
   Moon,
-  Palette,
   Plus,
   ScanLine,
   Settings,
@@ -121,6 +120,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto space-y-1">
+          {canScan() && (
+            <button type="button" onClick={startScan} className="btn-press flex h-11 w-full items-center gap-3 rounded-2xl px-4 text-left text-sm font-bold text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5">
+              <ScanLine className="h-4 w-4" /> Scanner un code
+            </button>
+          )}
           {canCreate && (
             <Link href="/import" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/import') ? 'bg-primary-soft text-[var(--primary-strong)]' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
               <Upload className="h-4 w-4" /> Importer des documents
@@ -135,9 +139,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="block truncate text-sm font-black text-slate-900 dark:text-white">{displayName}</span>
               <span className="block truncate text-xs font-bold text-slate-500">{ROLES[role].label}</span>
             </span>
-            <button type="button" onClick={() => setAppearanceOpen(true)} className="btn-press flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10" aria-label="Apparence" title="Apparence">
-              <Palette className="h-4 w-4" />
-            </button>
             <button type="button" onClick={() => logout()} className="btn-press flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10" aria-label="Se déconnecter" title="Se déconnecter">
               <LogOut className="h-4 w-4" />
             </button>
@@ -163,13 +164,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-
-      {/* Bouton scanner sur grand écran */}
-      {canScan() && (
-        <button type="button" onClick={startScan} className="glass-card btn-press fixed top-5 right-6 z-30 hidden h-12 items-center gap-2 rounded-full px-5 text-sm font-black text-slate-700 lg:flex dark:text-slate-200">
-          <ScanLine className="h-4 w-4" /> Scanner
-        </button>
-      )}
 
       <main className="mx-auto w-full max-w-7xl px-4 pt-6 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">{children}</main>
 

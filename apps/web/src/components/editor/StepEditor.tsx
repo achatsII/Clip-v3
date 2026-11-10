@@ -91,7 +91,7 @@ export function StepEditor({
     <div className={cn('glass-panel rounded-[32px] p-4 sm:p-6', highlight && 'ring-4 ring-amber-300/60')}>
       <div className="mb-4 flex items-center gap-3">
         <span className="bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl font-black text-white tabular-nums">{index + 1}</span>
-        <p className="label-caps flex-1 text-slate-500">Étape {index + 1} sur {content.steps.length}</p>
+        <p className="label-caps min-w-0 flex-1 truncate text-slate-500">Étape {index + 1} sur {content.steps.length}</p>
         {!readOnly && (
           <>
             <IconButton label="Monter" onClick={() => onMove(-1)} disabled={index === 0}>

@@ -160,8 +160,8 @@ export default function ConnexionPage() {
                 </button>
               </>
             ) : (
-              <span className="inline-flex items-center gap-2">
-                <Factory className="h-4 w-4" /> Pas encore de compte ? Demandez une invitation à votre administrateur.
+              <span className="flex items-start justify-center gap-2 text-left">
+                <Factory className="mt-0.5 h-4 w-4 shrink-0" /> Pas encore de compte ? Demandez une invitation à votre administrateur.
               </span>
             )
           ) : (

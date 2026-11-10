@@ -1,6 +1,6 @@
 'use client'
 
-import { ImageOff, Lock, MapPin } from 'lucide-react'
+import { Lock, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { CategoryIcon } from '@/components/icons'
 import type { Doc } from '@/lib/gateway/data'
@@ -35,9 +35,9 @@ export function InstructionTile({ doc, stationNames }: { doc: Doc<Instruction>; 
           {i.kind === 'lockout' ? <Lock className="h-3.5 w-3.5" /> : <CategoryIcon category={i.category} className="h-3.5 w-3.5" />} {i.kind === 'lockout' ? 'Cadenassage' : cat.short}
         </span>
         <span className={cn('absolute top-3 right-3 rounded-xl border border-white/20 px-2.5 py-1.5 text-[10px] font-black tracking-widest uppercase shadow-lg', st.className)}>{st.label}</span>
-        {!i.coverUrl && !(i.stepCount ?? 0) && <ImageOff className="absolute inset-0 m-auto h-10 w-10 text-white/40" />}
+        {!i.coverUrl && <CategoryIcon category={i.category} className="absolute top-1/2 right-6 h-16 w-16 -translate-y-1/2 text-white/25" />}
         <span className="absolute inset-x-4 bottom-3">
-          <span className="line-clamp-2 text-lg leading-tight font-black tracking-tight">{i.title}</span>
+          <span className="line-clamp-2 text-lg leading-tight font-black tracking-tight text-balance">{i.title}</span>
         </span>
       </span>
       <span className="glass-card flex items-center gap-2 rounded-none border-0 px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400">

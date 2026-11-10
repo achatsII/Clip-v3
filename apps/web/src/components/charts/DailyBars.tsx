@@ -8,13 +8,24 @@ import { cn } from '@/lib/util/cn'
  * carrées à la ligne de base, 2 px d'air entre elles, info-bulle au survol et au toucher, axe
  * discret, vue en tableau. Une seule série : pas de légende, le titre la nomme.
  */
+/** Haut d'axe « rond » dont la moitié est entière : les trois repères tombent sur des valeurs lisibles. */
+export function niceMax(v: number) {
+  if (v <= 2) return 2
+  const p = 10 ** Math.floor(Math.log10(v))
+  for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) {
+    const n = Math.round(m * p)
+    if (n >= v && Number.isInteger(n / 2)) return n
+  }
+  return Math.ceil(v / p) * p * 2
+}
+
 export function DailyBars({ days, label, unit }: { days: Array<{ date: string; value: number }>; label: string; unit: string }) {
   const [hover, setHover] = useState<number | null>(null)
   const [table, setTable] = useState(false)
-  const max = Math.max(1, ...days.map((d) => d.value))
+  const max = niceMax(Math.max(0, ...days.map((d) => d.value)))
   const total = days.reduce((s, d) => s + d.value, 0)
   const fmt = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })
-  const ticks = [0, Math.round(max / 2), max]
+  const ticks = [0, max / 2, max]
 
   return (
     <figure>
@@ -52,7 +63,7 @@ export function DailyBars({ days, label, unit }: { days: Array<{ date: string; v
         <div className="relative flex h-56 gap-3">
           <div className="flex flex-col justify-between pb-6 text-right text-[11px] font-bold text-slate-400 tabular-nums" aria-hidden>
             {[...ticks].reverse().map((t, i) => (
-              <span key={i}>{t}</span>
+              <span key={i}>{t.toLocaleString('fr-CA')}</span>
             ))}
           </div>
           <div className="relative flex-1">
@@ -81,6 +92,9 @@ export function DailyBars({ days, label, unit }: { days: Array<{ date: string; v
                 </div>
               ))}
             </div>
+            {total === 0 && (
+              <p className="absolute inset-x-0 top-1/3 text-center text-sm font-bold text-slate-400">Rien encore sur cette période : les barres apparaîtront à la première consultation.</p>
+            )}
             <div className="absolute inset-x-0 bottom-0 flex justify-between text-[11px] font-bold text-slate-400" aria-hidden>
               <span>{days[0] && fmt(days[0].date)}</span>
               <span>{days[days.length - 1] && fmt(days[days.length - 1].date)}</span>

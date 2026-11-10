@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { forwardRef, useLayoutEffect, useRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { cn } from '@/lib/util/cn'
 
 const base =
@@ -59,7 +59,7 @@ export function Switch({ checked, onChange, label, description, disabled }: { ch
 
 export function Segmented<T extends string>({ value, onChange, options, className, size = 'md' }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: ReactNode; icon?: ReactNode }>; className?: string; size?: 'sm' | 'md' }) {
   return (
-    <div role="radiogroup" className={cn('glass-input inline-flex gap-1 rounded-2xl p-1', className)}>
+    <div role="radiogroup" className={cn('glass-input inline-flex shrink-0 gap-1 rounded-2xl p-1', className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -68,7 +68,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'btn-press inline-flex items-center justify-center gap-1.5 rounded-xl px-3 font-black',
+            'btn-press inline-flex items-center justify-center gap-1.5 rounded-xl px-3 font-black whitespace-nowrap',
             size === 'sm' ? 'h-9 text-xs' : 'h-10 text-sm',
             value === o.value ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white',
           )}
@@ -99,5 +99,41 @@ export function ChoiceTile({ selected, onClick, icon, title, description, classN
         {description && <span className="block text-sm font-medium text-slate-500 dark:text-slate-400">{description}</span>}
       </span>
     </button>
+  )
+}
+
+/** Zone de texte sans bordure qui grandit avec son contenu (titres et résumés modifiables sur place). */
+export function AutoTextarea({ value, className, singleLine, onChange, ...props }: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value'> & { value: string; singleLine?: boolean }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fit = () => {
+      el.style.height = 'auto'
+      el.style.height = `${el.scrollHeight}px`
+    }
+    fit()
+    let width = el.clientWidth
+    const ro = new ResizeObserver(() => {
+      if (el.clientWidth === width) return
+      width = el.clientWidth
+      fit()
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [value])
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      onKeyDown={singleLine ? (e) => e.key === 'Enter' && e.preventDefault() : undefined}
+      onChange={(e) => {
+        if (singleLine && /[\r\n]/.test(e.target.value)) e.target.value = e.target.value.replace(/[\r\n]+/g, ' ')
+        onChange?.(e)
+      }}
+      className={cn('block resize-none overflow-hidden', className)}
+      {...props}
+    />
   )
 }

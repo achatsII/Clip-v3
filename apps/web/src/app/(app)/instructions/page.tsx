@@ -87,10 +87,11 @@ export default function InstructionsPage() {
             <CreditPill />
             {can('instructions', 'write') && (
               <>
-                <LinkButton href="/import" icon={<Upload className="h-4 w-4" />} className="hidden sm:inline-flex">
+                <LinkButton href="/import" icon={<Upload className="h-4 w-4" />} className="max-sm:hidden">
                   Importer
                 </LinkButton>
-                <LinkButton href="/instructions/nouvelle" variant="primary" icon={<Plus className="h-5 w-5" />}>
+                {/* Sur téléphone, le « + » du bas suffit : une seule action principale à l'écran. */}
+                <LinkButton href="/instructions/nouvelle" variant="primary" icon={<Plus className="h-5 w-5" />} className="max-sm:hidden">
                   Nouvelle
                 </LinkButton>
               </>
@@ -110,7 +111,7 @@ export default function InstructionsPage() {
         )}
       </div>
 
-      <div className="no-scrollbar mb-6 flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="no-scrollbar mb-6 flex items-center gap-2 overflow-x-auto pr-8 pb-1 [mask-image:linear-gradient(to_right,black_calc(100%-3rem),transparent)]">
         {hasFocus && (
           <Segmented
             size="sm"

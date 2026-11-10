@@ -1,7 +1,7 @@
 'use client'
 
 import { ArrowUp, Sparkles } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AiCost } from '@/components/billing/AiCost'
 import { DictateButton } from '@/components/capture/DictateButton'
 import { useSession } from '@/components/providers/Session'
@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/Toast'
 import { editInstruction } from '@/lib/ai/assist'
 import { diffSteps, removedSteps } from '@/lib/model/diff'
 import type { InstructionContent } from '@/lib/model/types'
+import { cn } from '@/lib/util/cn'
 
 const EXAMPLES = ['Ajoute une étape de vérification à la fin', 'Commence par une étape de sécurité', 'Rends tout plus court', 'Ajoute les gants anticoupure partout où on manipule la lame']
 
@@ -21,6 +22,13 @@ export function AiCommandBar({ content, onApply }: { content: InstructionContent
   const toast = useToast()
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const [focused, setFocused] = useState(false)
+  // Sur téléphone, la barre se replie en un bouton : l'écran reste à l'étape qu'on modifie.
+  const [expanded, setExpanded] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (expanded) inputRef.current?.focus()
+  }, [expanded])
   const [proposal, setProposal] = useState<{ content: InstructionContent; explanation: string } | null>(null)
 
   async function send(request = text) {
@@ -41,30 +49,47 @@ export function AiCommandBar({ content, onApply }: { content: InstructionContent
 
   return (
     <>
+      {!expanded && (
+        <div className="flex justify-end lg:hidden">
+          <button type="button" onClick={() => setExpanded(true)} className="glass-float btn-press pointer-events-auto flex h-12 items-center gap-2 rounded-full px-4 text-sm font-black text-[var(--primary-strong)] dark:text-sky-300">
+            <Sparkles className="h-5 w-5" /> Modifier avec l’IA
+          </button>
+        </div>
+      )}
+      <div
+        className={cn('pointer-events-auto', !expanded && 'max-lg:hidden')}
+        onFocus={() => setFocused(true)}
+        onBlur={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+          setFocused(false)
+          if (!text.trim() && !busy) setExpanded(false)
+        }}
+      >
       <form
-        className="glass-panel flex items-center gap-2 rounded-full p-2 pl-4"
+        className="glass-float flex items-center gap-2 rounded-full p-2 pl-4 transition focus-within:ring-4 focus-within:ring-[rgba(var(--primary-rgb),0.18)]"
         onSubmit={(e) => {
           e.preventDefault()
           void send()
         }}
       >
         <Sparkles className="h-5 w-5 shrink-0 text-[var(--primary)]" />
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Demandez une modification à l’IA…" className="h-11 min-w-0 flex-1 bg-transparent text-[15px] font-bold placeholder:font-medium placeholder:text-slate-400 focus:outline-none" aria-label="Demande à l’IA" />
+        <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} placeholder="Demandez une modification à l’IA…" className="h-11 min-w-0 flex-1 bg-transparent text-[15px] font-bold placeholder:font-medium placeholder:text-slate-400 focus:outline-none" aria-label="Demande à l’IA" />
         <DictateButton onText={(t) => setText((c) => (c ? `${c} ${t}` : t))} />
         <Button type="submit" variant="primary" size="md" loading={busy} disabled={!text.trim()} className="h-11 w-11 !px-0 sm:w-auto sm:!px-5" aria-label="Envoyer">
           <ArrowUp className="h-5 w-5 sm:hidden" />
           <span className="hidden sm:inline">Modifier</span>
         </Button>
       </form>
-      {!text && (
-        <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-1">
+      {focused && !text && !busy && (
+        <div className="no-scrollbar animate-slide-up mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
           {EXAMPLES.map((ex) => (
-            <button key={ex} type="button" onClick={() => setText(ex)} className="glass-card btn-press shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+            <button key={ex} type="button" onClick={() => setText(ex)} className="glass-float btn-press shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300">
               {ex}
             </button>
           ))}
         </div>
       )}
+      </div>
       <Modal
         open={!!proposal}
         onClose={() => setProposal(null)}
