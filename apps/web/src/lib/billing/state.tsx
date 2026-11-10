@@ -102,28 +102,32 @@ export const useBilling = () => useContext(Ctx)
 export type Entitlement = 'off' | 'pending' | 'locked' | 'open'
 
 export function useEntitlement(featureKey: FeatureKey): Entitlement {
-  const { enabled, state } = useBilling()
+  const { enabled, state, loading } = useBilling()
   if (!enabled) return 'off'
-  if (!state) return 'pending'
-  // En période de grâce, les droits sont maintenus : on ne verrouille rien.
-  return state.features[featureKey] === true ? 'open' : 'locked'
+  // En période de grâce, les droits sont maintenus : l'état les rend encore.
+  if (state) return state.features[featureKey] === true ? 'open' : 'locked'
+  // Un état illisible ne sert jamais la fonction : une feature absente vaut « non ».
+  return loading ? 'pending' : 'locked'
 }
 
 /** Une limite comptée par l'app (`capacity_source: reported`) ; `null` = rien à verrouiller. */
 export function useLimit(featureKey: FeatureKey, used: number | undefined): LimitStatus | null {
-  const { enabled, state } = useBilling()
-  if (!enabled || !state || used === undefined) return null
+  const { enabled, state, loading } = useBilling()
+  if (!enabled || used === undefined) return null
+  if (!state) return loading ? null : { limit: 0, used, remaining: 0, reached: true }
   return limitOf(state, featureKey, used)
 }
 
 /** Ouvre la fonction si elle est incluse, sinon le paywall (avec l'action à relancer). */
 export function useGate() {
-  const { openPaywall } = useBilling()
+  const { openPaywall, refresh } = useBilling()
   return useCallback(
     (entitlement: Entitlement, feature: FeatureKey, action: () => void) => {
-      if (entitlement === 'locked') openPaywall({ feature, retry: action })
-      else action()
+      if (entitlement === 'off' || entitlement === 'open') return action()
+      if (entitlement === 'locked') return openPaywall({ feature, retry: action })
+      // Pas encore lu : on relit, puis on décide ; illisible, on ne sert pas la fonction.
+      void refresh().then((fresh) => (fresh?.features[feature] === true ? action() : openPaywall({ feature, retry: action })))
     },
-    [openPaywall],
+    [openPaywall, refresh],
   )
 }

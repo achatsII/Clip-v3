@@ -41,6 +41,14 @@ describe('BillingProvider et useEntitlement', () => {
     await waitFor(() => expect(w.getAllByTestId('out').at(-1)?.textContent).toBe('open|false|usine|2/100'))
   })
 
+  it('état illisible (passerelle en panne) : la fonction et la limite se ferment, jamais ouvertes', async () => {
+    const client = fakeBilling(async () => {
+      throw new Error('502')
+    })
+    const v = render(<BillingProvider client={client} session="u4" enabled><Probe /></BillingProvider>)
+    await waitFor(() => expect(v.getByTestId('out').textContent).toBe('locked|false|-|2/0!'))
+  })
+
   it('relit l’état après chaque opération d’IA (le solde a bougé)', async () => {
     const client = fakeBilling(async () => stateFor('solo', {}))
     render(<BillingProvider client={client} session="u3" enabled><Probe /></BillingProvider>)

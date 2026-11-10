@@ -9,7 +9,7 @@
 | **Next.js partout + coquille Expo** | une seule interface ; correctifs livrés à tous en un déploiement ; natif là où il compte | l'interface mobile est du web | **retenu** |
 
 - **`apps/web`** — Next.js (App Router), déployé sur Vercel. C'est **toute** l'interface : desktop,
-  tablette de poste, téléphone (navigateur ou coquille), écran TV.
+  tablette de poste, téléphone (navigateur ou coquille) ; un écran TV ouvre le même lien qu'une tablette.
 - **`apps/mobile`** — coquille Expo : une WebView qui charge l'app web, plus un **pont** (§3) pour la
   capture à poids contrôlé (caméra, micro), le scan de codes, l'envoi des gros fichiers, l'impression,
   le partage et, plus tard, les achats des magasins. Elle porte aussi l'écran de mise à jour forcée.
@@ -23,13 +23,13 @@ des capacités natives est figée dans une version de la coquille, et le web la 
 
 L'app web parle directement à la Gateway (`NEXT_PUBLIC_GATEWAY_URL`, QA par défaut), avec le jeton
 de l'utilisateur (connexion par formulaire, jetons en `localStorage`, un seul rafraîchissement sur
-401). Elle n'a que trois routes serveur, sans jeton propre ni secret de la Gateway :
+401). Elle n'a que deux routes serveur (une troisième est prévue), sans jeton propre ni secret de la Gateway :
 
 | Route | Rôle |
 |---|---|
 | `GET /api/config` | configuration publique : feature toggles, version minimale de la coquille, temps réel disponible |
 | `POST /api/share` | crée un **lien public à portée limitée** (poste, instruction) : la portée est bâtie côté serveur à partir du type de lien et de la ressource, jamais à partir du navigateur ; l'appel part avec le jeton de l'utilisateur |
-| `GET /api/realtime/token` | jeton Ably de courte durée pour l'écran TV (seulement si `ABLY_KEY` est configurée) |
+| `GET /api/realtime/token` | **prévue, pas encore bâtie** : jeton Ably de courte durée pour l'écran TV synchronisé (avec `ABLY_KEY`) |
 
 ### Identifiant d'application
 

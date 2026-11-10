@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/Modal'
 import { ErrorState, Skeleton } from '@/components/ui/States'
 import { Card, PageHeader, SectionTitle } from '@/components/ui/Surface'
 import { useFeedback, useInstructions } from '@/hooks/queries'
-import { useBilling, useEntitlement } from '@/lib/billing/state'
+import { useEntitlement, useGate } from '@/lib/billing/state'
 import { T } from '@/lib/model/repo'
 import type { UsageEvent } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
@@ -24,7 +24,7 @@ export default function StatsPage() {
   const instructions = useInstructions()
   const feedback = useFeedback()
   const detailed = useEntitlement('adoption_stats')
-  const { openPaywall } = useBilling()
+  const gate = useGate()
   const [roiOpen, setRoiOpen] = useState(false)
   const since = useMemo(() => new Date(Date.now() - DAYS * 86400_000).toISOString(), [])
 
@@ -94,7 +94,7 @@ export default function StatsPage() {
         <Kpi tile="from-sky-500 to-blue-700" icon={<Eye className="h-6 w-6" />} label="Consultations" value={events.isLoading ? null : stats.views.toLocaleString('fr-CA')} hint={`Tablettes ${stats.bySource.kiosk} · liens ${stats.bySource.link} · app ${stats.bySource.app}`} />
         <Kpi tile="from-emerald-400 to-teal-600" icon={<CheckCircle2 className="h-6 w-6" />} label="Réalisations" value={events.isLoading ? null : stats.completions.toLocaleString('fr-CA')} hint={`${stats.completionRate} % des consultations vont au bout`} />
         <Kpi tile="from-amber-400 to-orange-500" icon={<MessageSquareWarning className="h-6 w-6" />} label="Retours" value={feedback.isLoading ? null : fbRecent.length.toLocaleString('fr-CA')} hint={`${fbDone} traités`} />
-        <button type="button" onClick={() => (locked ? openPaywall({ feature: 'adoption_stats' }) : setRoiOpen(true))} className="btn-press lift text-left">
+        <button type="button" onClick={() => gate(detailed, 'adoption_stats', () => setRoiOpen(true))} className="btn-press lift text-left">
           <Kpi tile="from-violet-500 to-indigo-600" icon={locked ? <Lock className="h-6 w-6" /> : <Coins className="h-6 w-6" />} label="Valeur estimée" value={locked ? '—' : events.isLoading ? null : `${value.toLocaleString('fr-CA')} $`} hint={locked ? 'Retour sur investissement : plan supérieur' : `${Math.round(hoursSaved)} h gagnées · touchez pour vos hypothèses`} />
         </button>
       </div>

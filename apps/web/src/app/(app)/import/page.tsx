@@ -14,7 +14,7 @@ import { useToast } from '@/components/ui/Toast'
 import { qk, useStations } from '@/hooks/queries'
 import { enrichMedia, importDocument } from '@/lib/ai/generate'
 import { matchStation } from '@/lib/ai/normalize'
-import { useBilling, useEntitlement } from '@/lib/billing/state'
+import { useEntitlement, useGate } from '@/lib/billing/state'
 import { ingestFile } from '@/lib/media/ingest'
 import { nowIso, T } from '@/lib/model/repo'
 import { createInstruction, saveDraft } from '@/lib/model/service'
@@ -51,7 +51,7 @@ export default function ImportPage() {
   const stations = useStations()
   const toggle = useToggle('bulkImport')
   const entitlement = useEntitlement('bulk_import')
-  const { openPaywall } = useBilling()
+  const gate = useGate()
   const [jobId, setJobId] = useState<string | null>(null)
   const [items, setItems] = useState<ImportItem[]>([])
   const [running, setRunning] = useState(false)
@@ -158,12 +158,12 @@ export default function ImportPage() {
       <PageHeader title="Importer vos anciennes instructions" subtitle="Déposez vos PDF et documents Word, même par dizaines : chacun devient un brouillon structuré, prêt à relire." />
       <button
         type="button"
-        onClick={() => (locked ? openPaywall({ feature: 'bulk_import' }) : input.current?.click())}
+        onClick={() => gate(entitlement, 'bulk_import', () => input.current?.click())}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault()
-          if (locked) return openPaywall({ feature: 'bulk_import' })
-          void addFiles(Array.from(e.dataTransfer.files))
+          const files = Array.from(e.dataTransfer.files)
+          gate(entitlement, 'bulk_import', () => void addFiles(files))
         }}
         className="btn-press glass-panel flex w-full flex-col items-center justify-center gap-3 rounded-[40px] border-2 border-dashed border-[rgba(var(--primary-rgb),0.35)] px-6 py-14 text-center"
       >
