@@ -1,0 +1,9 @@
+{
+  "name": "@clip/bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Contrat du pont entre l'app web de CLIP V3 et sa coquille native Expo.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "sideEffects": false
+}
