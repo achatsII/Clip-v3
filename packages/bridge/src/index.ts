@@ -31,6 +31,7 @@ export type Capability =
   | 'share'
   | 'print'
   | 'openExternal'
+  | 'context.set'
 
 /** Injecté par la coquille dans `window.__CLIP_NATIVE__` avant le chargement de la page. */
 export interface NativeEnvironment {
@@ -106,6 +107,23 @@ export interface BridgeRequestMap {
   }
   print: { payload: { html: string }; result: Record<string, never> }
   openExternal: { payload: { url: string }; result: Record<string, never> }
+  /** Le web dit à la coquille qui est connecté, pour ses journaux (`organizationId`). */
+  'context.set': {
+    payload: { organizationId: string | null; userId: string | null }
+    result: Record<string, never>
+  }
+}
+
+/**
+ * Réponse publique de `GET {web}/api/config`, lue aussi par la coquille au démarrage et au
+ * retour au premier plan. Serveur injoignable : rien ne bloque et chaque toggle prend son repli.
+ */
+export interface PublicConfig {
+  configVersion: 1
+  /** Versions de la coquille à bloquer (contrainte semver, ex. "<1.2.0"), par plateforme. */
+  forceUpdate: Partial<Record<NativePlatform, { versions: string; storeUrl: string }>>
+  toggles: Record<string, boolean>
+  realtime: boolean
 }
 
 export type BridgeRequestType = keyof BridgeRequestMap
