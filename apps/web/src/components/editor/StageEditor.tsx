@@ -6,13 +6,12 @@ import { StepMediaArea } from '@/components/player/StepMediaArea'
 import { AutoTextarea } from '@/components/ui/Field'
 import { Menu } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
+import { useMessages, type Messages } from '@/lib/i18n'
 import { WARNINGS } from '@/lib/model/catalog'
 import type { InstructionContent, Source, Step, WarningLevel } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
 import { ASSIST_ACTIONS, useStepAssist } from './StepAssist'
 import { StepEditor } from './StepEditor'
-
-const LABELS = { zoom: 'Agrandir', doIt: 'À faire', avoid: 'À éviter' }
 
 /** Un texte modifiable qui garde l'allure du lecteur : on le touche, on écrit. */
 const editable = 'w-full rounded-xl bg-transparent transition hover:bg-slate-900/[0.03] focus:bg-white/80 focus:ring-4 focus:ring-[rgba(var(--primary-rgb),0.18)] focus:outline-none dark:hover:bg-white/5 dark:focus:bg-slate-900/60'
@@ -69,6 +68,7 @@ export interface StageEditorProps {
  * Sur téléphone, la vue du téléphone. Le média se règle dans une fenêtre (les réglages de la fiche).
  */
 export function StageEditor(props: StageEditorProps) {
+  const t = useMessages()
   const wide = useWide()
   const [mediaOpen, setMediaOpen] = useState(false)
   const assist = useStepAssist({ content: props.content, step: props.step, onApply: props.onChange })
@@ -77,7 +77,7 @@ export function StageEditor(props: StageEditorProps) {
     <>
       {wide ? <StageCanvas {...p} /> : <StagePhone {...p} />}
       {assist.element}
-      <Modal open={mediaOpen} onClose={() => setMediaOpen(false)} size="lg" title={`Média de l’étape ${props.index + 1}`}>
+      <Modal open={mediaOpen} onClose={() => setMediaOpen(false)} size="lg" title={t.editor.stage.mediaTitle(props.index + 1)}>
         <StepEditor
           content={props.content}
           step={props.step}
@@ -100,47 +100,48 @@ export function StageEditor(props: StageEditorProps) {
 type Inner = StageEditorProps & { assist: ReturnType<typeof useStepAssist>; openMedia: () => void }
 
 /** Toutes les actions sur l'étape, dans un menu : média, ajout, copie, déplacement, suppression. */
-function stepMenu(p: Inner) {
+function stepMenu(p: Inner, t: Messages) {
   const total = p.content.steps.length
   return [
-    { label: p.step.media.length ? 'Modifier le média' : 'Ajouter un média', icon: <ImagePlus className="h-4 w-4" />, onClick: p.openMedia },
-    { label: 'Ajouter une étape après', icon: <Plus className="h-4 w-4" />, onClick: p.onInsertAfter },
-    { label: 'Dupliquer l’étape', icon: <Copy className="h-4 w-4" />, onClick: p.onDuplicate },
-    ...(p.index > 0 ? [{ label: 'Déplacer avant', icon: <ArrowLeft className="h-4 w-4" />, onClick: () => p.onMove(-1) }] : []),
-    ...(p.index < total - 1 ? [{ label: 'Déplacer après', icon: <ArrowRight className="h-4 w-4" />, onClick: () => p.onMove(1) }] : []),
-    { label: 'Supprimer l’étape', icon: <Trash2 className="h-4 w-4" />, onClick: p.onDelete, danger: true },
+    { label: p.step.media.length ? t.editor.stage.editMedia : t.editor.stage.addMedia, icon: <ImagePlus className="h-4 w-4" />, onClick: p.openMedia },
+    { label: t.editor.step.addAfter, icon: <Plus className="h-4 w-4" />, onClick: p.onInsertAfter },
+    { label: t.editor.step.duplicate, icon: <Copy className="h-4 w-4" />, onClick: p.onDuplicate },
+    ...(p.index > 0 ? [{ label: t.editor.stage.moveBefore, icon: <ArrowLeft className="h-4 w-4" />, onClick: () => p.onMove(-1) }] : []),
+    ...(p.index < total - 1 ? [{ label: t.editor.stage.moveAfter, icon: <ArrowRight className="h-4 w-4" />, onClick: () => p.onMove(1) }] : []),
+    { label: t.editor.step.delete, icon: <Trash2 className="h-4 w-4" />, onClick: p.onDelete, danger: true },
   ]
 }
 
 /** Les retouches par l'IA, dans un menu. */
-function assistMenu(p: Inner) {
-  return [...ASSIST_ACTIONS.map(([k, label]) => ({ label, icon: <Sparkles className="h-4 w-4" />, onClick: () => void p.assist.run(k) })), { label: 'Autre demande…', icon: <Sparkles className="h-4 w-4" />, onClick: p.assist.openCustom }]
+function assistMenu(p: Inner, t: Messages) {
+  return [...ASSIST_ACTIONS.map((k) => ({ label: t.editor.assist.actions[k], icon: <Sparkles className="h-4 w-4" />, onClick: () => void p.assist.run(k) })), { label: t.editor.step.otherRequest, icon: <Sparkles className="h-4 w-4" />, onClick: p.assist.openCustom }]
 }
 
 /** Passer d'une étape à l'autre : précédente, le choix, suivante, et en ajouter une. */
 function StepNav({ p, className, add = true }: { p: Inner; className?: string; add?: boolean }) {
+  const t = useMessages()
   const total = p.content.steps.length
   return (
     <div className={cn('flex min-w-0 items-center gap-1.5', className)}>
-      <button type="button" onClick={() => p.onSelect(p.content.steps[p.index - 1]?.id)} disabled={p.index === 0} aria-label="Étape précédente" className="btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl hover:bg-slate-900/5 disabled:opacity-30 dark:hover:bg-white/10">
+      <button type="button" onClick={() => p.onSelect(p.content.steps[p.index - 1]?.id)} disabled={p.index === 0} aria-label={t.editor.stage.previous} className="btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl hover:bg-slate-900/5 disabled:opacity-30 dark:hover:bg-white/10">
         <ChevronLeft className="h-5 w-5" />
       </button>
       <label className="relative min-w-0 flex-1">
-        <span className="sr-only">Aller à l’étape</span>
+        <span className="sr-only">{t.editor.stage.goTo}</span>
         <select value={p.step.id} onChange={(e) => p.onSelect(e.target.value)} className="h-11 w-full appearance-none truncate rounded-2xl bg-slate-900/5 px-4 pr-8 text-sm font-black dark:bg-white/10">
           {p.content.steps.map((s, i) => (
             <option key={s.id} value={s.id}>
-              Étape {i + 1} sur {total} · {s.title}
+              {t.editor.step.of(i + 1, total)} · {s.title}
             </option>
           ))}
         </select>
         <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-slate-400" />
       </label>
-      <button type="button" onClick={() => p.onSelect(p.content.steps[p.index + 1]?.id)} disabled={p.index >= total - 1} aria-label="Étape suivante" className="btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl hover:bg-slate-900/5 disabled:opacity-30 dark:hover:bg-white/10">
+      <button type="button" onClick={() => p.onSelect(p.content.steps[p.index + 1]?.id)} disabled={p.index >= total - 1} aria-label={t.editor.stage.next} className="btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl hover:bg-slate-900/5 disabled:opacity-30 dark:hover:bg-white/10">
         <ChevronRight className="h-5 w-5" />
       </button>
       {!p.readOnly && add && (
-        <button type="button" onClick={p.onInsertAfter} aria-label="Ajouter une étape après" title="Ajouter une étape après" className="btn-press bg-gradient-primary shadow-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white">
+        <button type="button" onClick={p.onInsertAfter} aria-label={t.editor.step.addAfter} title={t.editor.step.addAfter} className="btn-press bg-gradient-primary shadow-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white">
           <Plus className="h-5 w-5" />
         </button>
       )}
@@ -150,15 +151,16 @@ function StepNav({ p, className, add = true }: { p: Inner; className?: string; a
 
 /** Le bouton « Améliorer » de l'IA ; il tourne pendant qu'elle travaille. */
 function AssistButton({ p, compact }: { p: Inner; compact?: boolean }) {
+  const t = useMessages()
   return (
     <Menu
       bare
-      label="Améliorer avec l’IA"
-      items={assistMenu(p)}
+      label={t.editor.step.improveWithAi}
+      items={assistMenu(p, t)}
       trigger={
         <span className={cn('btn-press bg-gradient-accent flex h-11 items-center gap-1.5 rounded-2xl text-sm font-black text-white', compact ? 'w-11 justify-center' : 'px-3.5')}>
           {p.assist.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {!compact && 'Améliorer'}
+          {!compact && t.editor.stage.improve}
         </span>
       }
     />
@@ -167,6 +169,7 @@ function AssistButton({ p, compact }: { p: Inner; compact?: boolean }) {
 
 /** Le texte de l'étape, comme au poste, modifiable sur place : titre, mise en garde, consigne, points clés. */
 function StageText({ p }: { p: Inner }) {
+  const t = useMessages()
   const { step, index, readOnly } = p
   const set = (patch: Partial<Step>) => p.onChange({ ...step, ...patch })
   const keyPoints = step.keyPoints ?? []
@@ -174,12 +177,12 @@ function StageText({ p }: { p: Inner }) {
     <>
       {p.agentWorking && (
         <p className="flex items-center gap-2 rounded-2xl bg-violet-50 px-4 py-2 text-sm font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
-          <Sparkles className="h-4 w-4 animate-pulse" /> L’assistant modifie cette étape…
+          <Sparkles className="h-4 w-4 animate-pulse" /> {t.editor.step.assistantWorking}
         </p>
       )}
       <div className="flex items-start gap-4">
         <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
-        <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label="Titre de l’étape" placeholder="Ce qu’il faut faire" className={cn(editable, 'px-2 pt-1 text-3xl leading-[1.05] font-black tracking-tighter text-slate-900 sm:text-4xl dark:text-white')} />
+        <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label={t.editor.stage.titleLabel} placeholder={t.editor.stage.titlePlaceholder} className={cn(editable, 'px-2 pt-1 text-3xl leading-[1.05] font-black tracking-tighter text-slate-900 sm:text-4xl dark:text-white')} />
       </div>
 
       {step.warning ? (
@@ -197,10 +200,10 @@ function StageText({ p }: { p: Inner }) {
             ) : (
               <p className="label-caps opacity-90">{WARNINGS[step.warning.level].label}</p>
             )}
-            <AutoTextarea value={step.warning.text} readOnly={readOnly} onChange={(e) => set({ warning: { level: step.warning!.level, text: e.target.value } })} aria-label="Texte de la mise en garde" placeholder="Le risque, en une phrase" className={cn(editable, 'px-1 text-lg leading-snug font-black text-inherit placeholder:text-current/60 hover:bg-black/5 focus:bg-black/10 dark:focus:bg-black/20')} />
+            <AutoTextarea value={step.warning.text} readOnly={readOnly} onChange={(e) => set({ warning: { level: step.warning!.level, text: e.target.value } })} aria-label={t.editor.step.warningText} placeholder={t.editor.stage.warningPlaceholder} className={cn(editable, 'px-1 text-lg leading-snug font-black text-inherit placeholder:text-current/60 hover:bg-black/5 focus:bg-black/10 dark:focus:bg-black/20')} />
           </div>
           {!readOnly && (
-            <button type="button" onClick={() => set({ warning: null })} aria-label="Retirer la mise en garde" className="btn-press flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/10">
+            <button type="button" onClick={() => set({ warning: null })} aria-label={t.editor.stage.removeWarning} className="btn-press flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/10">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -208,23 +211,23 @@ function StageText({ p }: { p: Inner }) {
       ) : (
         !readOnly && (
           <button type="button" onClick={() => set({ warning: { level: 'caution', text: '' } })} className="btn-press flex h-12 w-full items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-amber-300 text-sm font-black text-amber-700 dark:text-amber-300">
-            <TriangleAlert className="h-4 w-4" /> Ajouter une mise en garde
+            <TriangleAlert className="h-4 w-4" /> {t.editor.stage.addWarning}
           </button>
         )
       )}
 
-      <AutoTextarea value={step.text} readOnly={readOnly} onChange={(e) => set({ text: e.target.value })} aria-label="Texte de l’étape" placeholder="Comment faire, en une ou deux phrases" className={cn(editable, 'px-2 py-1 text-xl leading-relaxed font-bold text-slate-700 sm:text-2xl dark:text-slate-200')} />
+      <AutoTextarea value={step.text} readOnly={readOnly} onChange={(e) => set({ text: e.target.value })} aria-label={t.editor.stage.textLabel} placeholder={t.editor.stage.textPlaceholder} className={cn(editable, 'px-2 py-1 text-xl leading-relaxed font-bold text-slate-700 sm:text-2xl dark:text-slate-200')} />
 
       {(keyPoints.length > 0 || !readOnly) && (
         <div className="bg-primary-soft rounded-3xl p-4">
-          <p className="label-caps mb-2 text-[var(--primary-strong)] dark:text-sky-300">Points clés</p>
+          <p className="label-caps mb-2 text-[var(--primary-strong)] dark:text-sky-300">{t.editor.step.keyPoints}</p>
           <ul className="space-y-1">
             {keyPoints.map((k, i) => (
               <li key={i} className="flex items-start gap-2">
                 <Check className="mt-2 h-5 w-5 shrink-0 text-[var(--primary)]" />
-                <AutoTextarea singleLine value={k} readOnly={readOnly} onChange={(e) => set({ keyPoints: keyPoints.map((x, j) => (j === i ? e.target.value : x)) })} aria-label={`Point clé ${i + 1}`} className={cn(editable, 'px-1 py-1 text-lg font-bold text-slate-800 dark:text-slate-100')} />
+                <AutoTextarea singleLine value={k} readOnly={readOnly} onChange={(e) => set({ keyPoints: keyPoints.map((x, j) => (j === i ? e.target.value : x)) })} aria-label={t.editor.stage.keyPoint(i + 1)} className={cn(editable, 'px-1 py-1 text-lg font-bold text-slate-800 dark:text-slate-100')} />
                 {!readOnly && (
-                  <button type="button" onClick={() => set({ keyPoints: keyPoints.filter((_, j) => j !== i) })} aria-label="Retirer le point clé" className="btn-press flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-white/60">
+                  <button type="button" onClick={() => set({ keyPoints: keyPoints.filter((_, j) => j !== i) })} aria-label={t.editor.step.removeKeyPoint} className="btn-press flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-white/60">
                     <X className="h-4 w-4" />
                   </button>
                 )}
@@ -233,7 +236,7 @@ function StageText({ p }: { p: Inner }) {
           </ul>
           {!readOnly && keyPoints.length < 3 && (
             <button type="button" onClick={() => set({ keyPoints: [...keyPoints, ''] })} className="btn-press mt-1 flex h-10 items-center gap-1 rounded-xl px-2 text-sm font-black text-[var(--primary)]">
-              <Plus className="h-4 w-4" /> Ajouter un point clé
+              <Plus className="h-4 w-4" /> {t.editor.step.addKeyPoint}
             </button>
           )}
         </div>
@@ -244,6 +247,7 @@ function StageText({ p }: { p: Inner }) {
 
 /** Sur ordinateur : le poste en plein écran, à modifier sur place. */
 function StageCanvas(p: Inner) {
+  const t = useMessages()
   const { content, step, index, readOnly } = p
   const total = content.steps.length
   const hasMedia = step.media.length > 0
@@ -261,12 +265,12 @@ function StageCanvas(p: Inner) {
   }, [p, content.steps, index])
 
   return (
-    <div className={cn('fixed inset-y-0 left-0 z-40 flex flex-col bg-slate-50 dark:bg-slate-950', p.agentOpen ? 'right-[424px]' : 'right-0')} role="region" aria-label="Comme au poste">
+    <div className={cn('fixed inset-y-0 left-0 z-40 flex flex-col bg-slate-50 dark:bg-slate-950', p.agentOpen ? 'right-[424px]' : 'right-0')} role="region" aria-label={t.editor.views.stage}>
       {/* Au-dessus du contenu : les menus de l'en-tête s'ouvrent par-dessus l'étape. */}
       <header className="glass-nav relative z-20 border-b">
         <div className="flex h-16 items-center gap-3 px-4">
           <button type="button" onClick={p.onExit} className="btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-slate-700 hover:bg-slate-900/5 dark:text-slate-200 dark:hover:bg-white/10">
-            <ArrowLeft className="h-4 w-4" /> Fiche
+            <ArrowLeft className="h-4 w-4" /> {t.editor.views.form}
           </button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-black text-slate-900 dark:text-white">{content.title}</p>
@@ -276,7 +280,7 @@ function StageCanvas(p: Inner) {
           {!readOnly && (
             <div className="flex shrink-0 items-center gap-1.5">
               <AssistButton p={p} />
-              <Menu bare label="Actions sur l’étape" items={stepMenu(p)} trigger={<span className="btn-press glass-card flex h-11 w-11 items-center justify-center rounded-2xl"><MoreHorizontal className="h-5 w-5" /></span>} />
+              <Menu bare label={t.editor.stage.stepActions} items={stepMenu(p, t)} trigger={<span className="btn-press glass-card flex h-11 w-11 items-center justify-center rounded-2xl"><MoreHorizontal className="h-5 w-5" /></span>} />
             </div>
           )}
         </div>
@@ -288,21 +292,21 @@ function StageCanvas(p: Inner) {
       <div key={step.id} className={cn('animate-fade-in flex min-h-0 flex-1', p.agentWorking && 'ring-4 ring-violet-400/70 ring-inset')}>
         {hasMedia && (
           <div className="relative min-w-0 flex-[1.5] bg-slate-900">
-            <StepMediaArea step={step} labels={LABELS} />
+            <StepMediaArea step={step} labels={t.editor.mediaArea} />
           </div>
         )}
         <div className={cn('flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-8', hasMedia ? 'max-w-[560px]' : 'mx-auto w-full max-w-3xl pt-12')}>
           {hasMedia && !readOnly && (
             <div className="-mt-2 flex flex-wrap items-center justify-between gap-2">
               <button type="button" onClick={p.openMedia} className="btn-press glass-card flex h-11 items-center gap-2 rounded-2xl px-4 text-sm font-black">
-                <ImagePlus className="h-4 w-4" /> Modifier le média
+                <ImagePlus className="h-4 w-4" /> {t.editor.stage.editMedia}
               </button>
-              <p className="text-xs font-bold text-slate-400">Cliquez un texte pour le modifier.</p>
+              <p className="text-xs font-bold text-slate-400">{t.editor.stage.clickToEdit}</p>
             </div>
           )}
           {!hasMedia && !readOnly && (
             <button type="button" onClick={p.openMedia} className="btn-press flex h-28 w-full flex-col items-center justify-center gap-1 rounded-3xl border-2 border-dashed border-slate-300 text-sm font-black text-slate-500 dark:border-slate-700">
-              <ImagePlus className="h-6 w-6" /> Ajouter une photo, un extrait, un schéma
+              <ImagePlus className="h-6 w-6" /> {t.editor.stage.addMediaHint}
             </button>
           )}
           <StageText p={p} />
@@ -310,11 +314,11 @@ function StageCanvas(p: Inner) {
       </div>
 
       {/* La bande des étapes : on voit toute l'instruction, on va à une étape d'un clic. */}
-      <nav className="glass-nav flex h-24 shrink-0 items-center gap-2 overflow-x-auto border-t px-4" aria-label="Étapes">
+      <nav className="glass-nav flex h-24 shrink-0 items-center gap-2 overflow-x-auto border-t px-4" aria-label={t.editor.stage.stepsNav}>
         {content.steps.map((s, i) => {
           const img = thumbOf(s)
           return (
-            <button key={s.id} type="button" onClick={() => p.onSelect(s.id)} aria-current={s.id === step.id ? 'step' : undefined} title={`Étape ${i + 1} · ${s.title}`} className={cn('btn-press relative h-16 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 text-left', s.id === step.id ? 'ring-4 ring-[var(--primary)]' : 'opacity-80 hover:opacity-100')}>
+            <button key={s.id} type="button" onClick={() => p.onSelect(s.id)} aria-current={s.id === step.id ? 'step' : undefined} title={t.editor.stage.thumbTitle(i + 1, s.title)} className={cn('btn-press relative h-16 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 text-left', s.id === step.id ? 'ring-4 ring-[var(--primary)]' : 'opacity-80 hover:opacity-100')}>
               {img && <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />}
               <span className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
               <span className="absolute bottom-1 left-2 right-2 truncate text-[11px] font-black text-white">
@@ -324,7 +328,7 @@ function StageCanvas(p: Inner) {
           )
         })}
         {!readOnly && (
-          <button type="button" onClick={p.onAddEnd} aria-label="Ajouter une étape à la fin" title="Ajouter une étape à la fin" className="btn-press flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 text-slate-500 dark:border-slate-700">
+          <button type="button" onClick={p.onAddEnd} aria-label={t.editor.stage.addAtEnd} title={t.editor.stage.addAtEnd} className="btn-press flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 text-slate-500 dark:border-slate-700">
             <Plus className="h-5 w-5" />
           </button>
         )}
@@ -335,6 +339,7 @@ function StageCanvas(p: Inner) {
 
 /** Sur téléphone : la vue du téléphone, une étape à la fois, avec la barre pour passer de l'une à l'autre. */
 function StagePhone(p: Inner) {
+  const t = useMessages()
   const { step, readOnly } = p
   return (
     <div>
@@ -345,7 +350,7 @@ function StagePhone(p: Inner) {
         {!readOnly && (
           <>
             <AssistButton p={p} compact />
-            <Menu bare label="Actions sur l’étape" items={stepMenu(p)} trigger={<span className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl hover:bg-slate-900/5 dark:hover:bg-white/10"><MoreHorizontal className="h-5 w-5" /></span>} />
+            <Menu bare label={t.editor.stage.stepActions} items={stepMenu(p, t)} trigger={<span className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl hover:bg-slate-900/5 dark:hover:bg-white/10"><MoreHorizontal className="h-5 w-5" /></span>} />
           </>
         )}
       </div>
@@ -354,11 +359,11 @@ function StagePhone(p: Inner) {
         {/* Le média, comme au poste */}
         <div className="relative h-[42dvh] bg-slate-900 sm:h-[50dvh]">
           {step.media.length ? (
-            <StepMediaArea key={step.id} step={step} labels={LABELS} />
+            <StepMediaArea key={step.id} step={step} labels={t.editor.mediaArea} />
           ) : (
             <button type="button" disabled={readOnly} onClick={p.openMedia} className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/80">
               <ImagePlus className="h-10 w-10" />
-              <span className="font-black">{readOnly ? 'Aucun média' : 'Ajouter une photo, un extrait, un schéma'}</span>
+              <span className="font-black">{readOnly ? t.editor.step.noMedia : t.editor.stage.addMediaHint}</span>
             </button>
           )}
         </div>
@@ -369,10 +374,10 @@ function StagePhone(p: Inner) {
             <div className="-mt-1 flex flex-wrap items-center justify-between gap-2">
               {step.media.length > 0 && (
                 <button type="button" onClick={p.openMedia} className="btn-press glass-card flex h-11 items-center gap-2 rounded-2xl px-4 text-sm font-black">
-                  <ImagePlus className="h-4 w-4" /> Modifier le média
+                  <ImagePlus className="h-4 w-4" /> {t.editor.stage.editMedia}
                 </button>
               )}
-              <p className="text-xs font-bold text-slate-400">Touchez un texte pour le modifier.</p>
+              <p className="text-xs font-bold text-slate-400">{t.editor.stage.tapToEdit}</p>
             </div>
           )}
           <StageText p={p} />

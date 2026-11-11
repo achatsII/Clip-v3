@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { CategoryIcon, PpeIcon } from '@/components/icons'
 import { Input, Label, Select, Textarea } from '@/components/ui/Field'
 import type { Doc } from '@/lib/gateway/data'
+import { useMessages } from '@/lib/i18n'
 import { CATEGORIES, CATEGORY_KEYS, KINDS, PPE } from '@/lib/model/catalog'
 import type { CategoryKey, InstructionContent, InstructionKind, Station } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
@@ -26,6 +27,7 @@ export function MetaCard({
   onStations: (ids: string[]) => void
   onCreateStation?: (name: string) => Promise<string | null>
 }) {
+  const t = useMessages().editor.meta
   const [open, setOpen] = useState(false)
   const [tag, setTag] = useState('')
   const [stationQuery, setStationQuery] = useState('')
@@ -45,7 +47,7 @@ export function MetaCard({
           </span>
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-bold text-slate-500">
             <span className="inline-flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5" /> {linked.length ? linked.map((s) => s.json_data.name).join(', ') : 'Aucun poste'}
+              <MapPin className="h-3.5 w-3.5" /> {linked.length ? linked.map((s) => s.json_data.name).join(', ') : t.noStation}
             </span>
             {content.frequency && (
               <span className="inline-flex items-center gap-1">
@@ -54,10 +56,10 @@ export function MetaCard({
             )}
             {!!content.durationMin && (
               <span className="inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" /> {content.durationMin} min
+                <Clock className="h-3.5 w-3.5" /> {t.minutes(content.durationMin)}
               </span>
             )}
-            {!!content.ppe.length && <span>{content.ppe.length} EPI</span>}
+            {!!content.ppe.length && <span>{t.ppeCount(content.ppe.length)}</span>}
           </span>
         </span>
         <ChevronDown className={cn('h-5 w-5 shrink-0 text-slate-400 transition-transform', open && 'rotate-180')} />
@@ -66,14 +68,14 @@ export function MetaCard({
       {open && (
         <div className="animate-slide-up mt-6 grid gap-5 lg:grid-cols-2">
           <div>
-            <Label>Postes et équipements</Label>
+            <Label>{t.stations}</Label>
             <div className="flex flex-wrap gap-2">
               {linked.map((s) => (
                 <span key={s._id} className="glass-card inline-flex h-10 items-center gap-1.5 rounded-xl pr-1 pl-3 text-sm font-black">
                   {s.json_data.name}
                   {s.json_data.code && <span className="text-xs text-slate-400">{s.json_data.code}</span>}
                   {!readOnly && (
-                    <button type="button" aria-label={`Retirer ${s.json_data.name}`} onClick={() => onStations(stationIds.filter((id) => id !== s._id))} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-500 hover:text-white">
+                    <button type="button" aria-label={t.remove(s.json_data.name)} onClick={() => onStations(stationIds.filter((id) => id !== s._id))} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-500 hover:text-white">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -82,7 +84,7 @@ export function MetaCard({
             </div>
             {!readOnly && (
               <div className="relative mt-2">
-                <Input value={stationQuery} onChange={(e) => setStationQuery(e.target.value)} placeholder="Ajouter un poste (nom ou code)" />
+                <Input value={stationQuery} onChange={(e) => setStationQuery(e.target.value)} placeholder={t.stationPlaceholder} />
                 {stationQuery && (
                   <div className="glass-panel absolute inset-x-0 top-14 z-20 rounded-2xl p-1.5">
                     {matches.map((s) => (
@@ -108,7 +110,7 @@ export function MetaCard({
                         }}
                         className="flex h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-black text-[var(--primary)] hover:bg-slate-900/5"
                       >
-                        <Plus className="h-4 w-4" /> Créer le poste « {stationQuery.trim()} »
+                        <Plus className="h-4 w-4" /> {t.createStation(stationQuery.trim())}
                       </button>
                     )}
                   </div>
@@ -119,7 +121,7 @@ export function MetaCard({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="meta-kind">Format</Label>
+              <Label htmlFor="meta-kind">{t.format}</Label>
               <Select id="meta-kind" disabled={readOnly} value={content.kind} onChange={(e) => set({ kind: e.target.value as InstructionKind, lockout: e.target.value === 'lockout' ? content.lockout ?? { equipment: content.equipment ?? '', energyPoints: [], restartSteps: [] } : content.lockout })}>
                 {Object.entries(KINDS).map(([k, v]) => (
                   <option key={k} value={k}>
@@ -129,7 +131,7 @@ export function MetaCard({
               </Select>
             </div>
             <div>
-              <Label htmlFor="meta-cat">Catégorie</Label>
+              <Label htmlFor="meta-cat">{t.category}</Label>
               <Select id="meta-cat" disabled={readOnly} value={content.category} onChange={(e) => set({ category: e.target.value as CategoryKey })}>
                 {CATEGORY_KEYS.map((k) => (
                   <option key={k} value={k}>
@@ -139,17 +141,17 @@ export function MetaCard({
               </Select>
             </div>
             <div>
-              <Label htmlFor="meta-freq">Fréquence</Label>
-              <Input id="meta-freq" readOnly={readOnly} value={content.frequency ?? ''} onChange={(e) => set({ frequency: e.target.value })} placeholder="Une fois par mois" />
+              <Label htmlFor="meta-freq">{t.frequency}</Label>
+              <Input id="meta-freq" readOnly={readOnly} value={content.frequency ?? ''} onChange={(e) => set({ frequency: e.target.value })} placeholder={t.frequencyPlaceholder} />
             </div>
             <div>
-              <Label htmlFor="meta-dur">Durée (min)</Label>
+              <Label htmlFor="meta-dur">{t.duration}</Label>
               <Input id="meta-dur" type="number" inputMode="numeric" readOnly={readOnly} value={content.durationMin ?? ''} onChange={(e) => set({ durationMin: e.target.value ? Math.max(0, Number(e.target.value)) : null })} />
             </div>
           </div>
 
           <div className="lg:col-span-2">
-            <Label>Équipements de protection (EPI)</Label>
+            <Label>{t.ppe}</Label>
             <div className="flex flex-wrap gap-2">
               {Object.entries(PPE).map(([k, label]) => {
                 const on = content.ppe.includes(k)
@@ -172,21 +174,21 @@ export function MetaCard({
           </div>
 
           <div>
-            <Label htmlFor="meta-tools">Outils et matériel</Label>
-            <Textarea id="meta-tools" readOnly={readOnly} rows={3} value={content.tools.join('\n')} onChange={(e) => set({ tools: e.target.value.split('\n').map((t) => t.trimStart()) })} placeholder={'Clé de 13 mm\nChiffon propre'} />
+            <Label htmlFor="meta-tools">{t.tools}</Label>
+            <Textarea id="meta-tools" readOnly={readOnly} rows={3} value={content.tools.join('\n')} onChange={(e) => set({ tools: e.target.value.split('\n').map((line) => line.trimStart()) })} placeholder={t.toolsPlaceholder} />
           </div>
           <div>
-            <Label htmlFor="meta-safety">Mises en garde avant de commencer</Label>
-            <Textarea id="meta-safety" readOnly={readOnly} rows={3} value={content.safety.join('\n')} onChange={(e) => set({ safety: e.target.value.split('\n').map((t) => t.trimStart()) })} placeholder="Machine cadenassée avant toute intervention" />
+            <Label htmlFor="meta-safety">{t.safety}</Label>
+            <Textarea id="meta-safety" readOnly={readOnly} rows={3} value={content.safety.join('\n')} onChange={(e) => set({ safety: e.target.value.split('\n').map((line) => line.trimStart()) })} placeholder={t.safetyPlaceholder} />
           </div>
           <div className="lg:col-span-2">
-            <Label>Étiquettes de recherche</Label>
+            <Label>{t.tags}</Label>
             <div className="flex flex-wrap items-center gap-2">
-              {content.tags.map((t) => (
-                <span key={t} className="inline-flex h-9 items-center gap-1 rounded-xl bg-slate-900/5 pr-1 pl-3 text-sm font-bold dark:bg-white/10">
-                  <Tag className="h-3.5 w-3.5 text-slate-400" /> {t}
+              {content.tags.map((label) => (
+                <span key={label} className="inline-flex h-9 items-center gap-1 rounded-xl bg-slate-900/5 pr-1 pl-3 text-sm font-bold dark:bg-white/10">
+                  <Tag className="h-3.5 w-3.5 text-slate-400" /> {label}
                   {!readOnly && (
-                    <button type="button" aria-label={`Retirer ${t}`} onClick={() => set({ tags: content.tags.filter((x) => x !== t) })} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-rose-500 hover:text-white">
+                    <button type="button" aria-label={t.remove(label)} onClick={() => set({ tags: content.tags.filter((x) => x !== label) })} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-rose-500 hover:text-white">
                       <X className="h-3 w-3" />
                     </button>
                   )}
@@ -201,7 +203,7 @@ export function MetaCard({
                     setTag('')
                   }}
                 >
-                  <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="+ étiquette, n° de pièce…" aria-label="Ajouter une étiquette" className="h-11 text-sm" wrapperClassName="w-60" />
+                  <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder={t.tagPlaceholder} aria-label={t.addTag} className="h-11 text-sm" wrapperClassName="w-60" />
                 </form>
               )}
             </div>

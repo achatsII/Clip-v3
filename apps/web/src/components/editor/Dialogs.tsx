@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useVersions } from '@/hooks/queries'
 import { translateInstruction } from '@/lib/ai/assist'
 import type { Doc } from '@/lib/gateway/data'
+import { locale, useMessages } from '@/lib/i18n'
 import { LANGUAGES } from '@/lib/model/catalog'
 import { T } from '@/lib/model/repo'
 import type { Instruction, InstructionContent, Version } from '@/lib/model/types'
@@ -22,6 +23,7 @@ import { formatDate } from '@/lib/util/cn'
 export function ShareDialog({ open, onClose, doc, onLinked }: { open: boolean; onClose: () => void; doc: Doc<Instruction>; onLinked: () => void }) {
   const { data } = useSession()
   const toast = useToast()
+  const t = useMessages()
   const [busy, setBusy] = useState(false)
   const linkId = doc.json_data.shareLinkId
   const published = !!doc.json_data.publishedVersion
@@ -33,24 +35,24 @@ export function ShareDialog({ open, onClose, doc, onLinked }: { open: boolean; o
       const link = await createShareLink('instruction', doc._id)
       await data.patch(T.instruction, doc._id, { shareLinkId: link.id })
       onLinked()
-      toast.success('Lien créé', 'Toute personne qui a le lien voit la version publiée, sans compte.')
+      toast.success(t.editor.dialogs.share.created, t.editor.dialogs.share.createdDetail)
     } catch (e) {
-      toast.error('Le lien n’a pas pu être créé', errorText(e))
+      toast.error(t.editor.dialogs.share.createFailed, errorText(e))
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Partager l’instruction" size="md">
+    <Modal open={open} onClose={onClose} title={t.editor.dialogs.share.title} size="md">
       {!published ? (
-        <p className="font-medium text-slate-600 dark:text-slate-300">Publiez d’abord l’instruction : le lien et le code QR montrent toujours la version publiée, jamais le brouillon.</p>
+        <p className="font-medium text-slate-600 dark:text-slate-300">{t.editor.dialogs.share.publishFirst}</p>
       ) : linkId ? (
         <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
           <QrCode value={url} size={180} />
           <div className="min-w-0 flex-1">
-            <p className="font-black">Lien direct, sans compte</p>
-            <p className="mt-1 text-sm font-medium text-slate-500">Les opérateurs voient la version publiée et peuvent signaler ce qui n’est pas clair. Une nouvelle version publiée remplace l’ancienne au même lien.</p>
+            <p className="font-black">{t.editor.dialogs.share.direct}</p>
+            <p className="mt-1 text-sm font-medium text-slate-500">{t.editor.dialogs.share.directDetail}</p>
             <p className="glass-input mt-3 truncate rounded-xl px-3 py-2 text-xs font-bold">{url}</p>
             <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
               <Button
@@ -58,14 +60,14 @@ export function ShareDialog({ open, onClose, doc, onLinked }: { open: boolean; o
                 variant="primary"
                 icon={<Copy className="h-4 w-4" />}
                 onClick={async () => {
-                  if (await copyText(url)) toast.success('Lien copié')
-                  else toast.error('Copie impossible', 'Sélectionnez le lien et copiez-le à la main.')
+                  if (await copyText(url)) toast.success(t.editor.dialogs.share.copied)
+                  else toast.error(t.editor.dialogs.share.copyFailed, t.editor.dialogs.share.copyFailedDetail)
                 }}
               >
-                Copier le lien
+                {t.editor.dialogs.share.copy}
               </Button>
               <a href={url} target="_blank" rel="noreferrer" className="btn-press glass-card inline-flex h-11 items-center gap-2 rounded-2xl px-4 text-sm font-black">
-                Ouvrir
+                {t.common.open}
               </a>
             </div>
           </div>
@@ -73,9 +75,9 @@ export function ShareDialog({ open, onClose, doc, onLinked }: { open: boolean; o
       ) : (
         <div className="text-center">
           <Link2 className="mx-auto mb-3 h-10 w-10 text-[var(--primary)]" />
-          <p className="font-medium text-slate-600 dark:text-slate-300">Créez un lien et un code QR pour cette instruction. Pour une tablette de poste, utilisez plutôt le lien du poste (page Postes).</p>
+          <p className="font-medium text-slate-600 dark:text-slate-300">{t.editor.dialogs.share.intro}</p>
           <Button className="mt-5" variant="primary" loading={busy} onClick={create} icon={<Link2 className="h-4 w-4" />}>
-            Créer le lien et le code QR
+            {t.editor.dialogs.share.create}
           </Button>
         </div>
       )}
@@ -84,10 +86,11 @@ export function ShareDialog({ open, onClose, doc, onLinked }: { open: boolean; o
 }
 
 export function HistoryDialog({ open, onClose, doc, onRestore }: { open: boolean; onClose: () => void; doc: Doc<Instruction>; onRestore: (v: Version) => Promise<void> }) {
+  const t = useMessages().editor.dialogs.history
   const versions = useVersions(doc._id, open)
   const [restoring, setRestoring] = useState<string | null>(null)
   return (
-    <Modal open={open} onClose={onClose} title="Historique des versions" size="md">
+    <Modal open={open} onClose={onClose} title={t.title} size="md">
       {versions.isLoading ? (
         <SkeletonRows count={3} />
       ) : versions.error ? (
@@ -95,7 +98,7 @@ export function HistoryDialog({ open, onClose, doc, onRestore }: { open: boolean
       ) : !versions.data?.length ? (
         <div className="py-8 text-center">
           <History className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-          <p className="font-bold text-slate-500">Aucune version publiée pour l’instant. Chaque publication crée une version que vous pourrez retrouver ici.</p>
+          <p className="font-bold text-slate-500">{t.empty}</p>
         </div>
       ) : (
         <ol className="space-y-2">
@@ -106,7 +109,7 @@ export function HistoryDialog({ open, onClose, doc, onRestore }: { open: boolean
                 <span className="block text-sm font-black">{v.json_data.changelog}</span>
                 <span className="block text-xs font-bold text-slate-500">
                   {formatDate(v.json_data.createdAt)} · {v.json_data.publishedByName}
-                  {v.json_data.approvedByName ? ` · approuvée par ${v.json_data.approvedByName}` : ''}
+                  {v.json_data.approvedByName ? ` · ${t.approvedBy(v.json_data.approvedByName)}` : ''}
                 </span>
               </span>
               {v.json_data.number !== doc.json_data.publishedVersion && (
@@ -121,14 +124,14 @@ export function HistoryDialog({ open, onClose, doc, onRestore }: { open: boolean
                     onClose()
                   }}
                 >
-                  Restaurer
+                  {t.restore}
                 </Button>
               )}
             </li>
           ))}
         </ol>
       )}
-      <p className="mt-4 text-xs font-medium text-slate-400">Restaurer remet le contenu dans le brouillon ; rien n’est publié sans votre geste.</p>
+      <p className="mt-4 text-xs font-medium text-slate-400">{t.note}</p>
     </Modal>
   )
 }
@@ -136,24 +139,25 @@ export function HistoryDialog({ open, onClose, doc, onRestore }: { open: boolean
 export function TranslateDialog({ open, onClose, content, onTranslated }: { open: boolean; onClose: () => void; content: InstructionContent; onTranslated: (lang: string, t: NonNullable<InstructionContent['translations']>[string]) => void }) {
   const { ai } = useSession()
   const toast = useToast()
+  const t = useMessages().editor.dialogs.translate
   const [lang, setLang] = useState('en')
   const [busy, setBusy] = useState(false)
   const existing = Object.keys(content.translations ?? {})
   return (
-    <Modal open={open} onClose={onClose} title="Traduire pour les opérateurs" size="sm">
-      <p className="mb-4 text-sm font-medium text-slate-500">Les opérateurs choisissent leur langue dans le lecteur. Les médias restent les mêmes.</p>
+    <Modal open={open} onClose={onClose} title={t.title} size="sm">
+      <p className="mb-4 text-sm font-medium text-slate-500">{t.intro}</p>
       {!!existing.length && (
         <p className="mb-3 text-sm font-bold text-slate-600 dark:text-slate-300">
-          Déjà traduite : {existing.map((l) => LANGUAGES[l]?.label ?? l).join(', ')}
+          {t.already(existing.map((l) => LANGUAGES[l]?.label ?? l).join(', '))}
         </p>
       )}
-      <Select value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Langue">
+      <Select value={lang} onChange={(e) => setLang(e.target.value)} aria-label={t.language}>
         {/* Les plus demandées dans les usines d'abord, puis toutes les autres. */}
         {([true, false] as const).map((common) => (
-          <optgroup key={String(common)} label={common ? 'Les plus demandées' : 'Autres langues'}>
+          <optgroup key={String(common)} label={common ? t.mostRequested : t.otherLanguages}>
             {Object.entries(LANGUAGES)
               .filter(([k, v]) => k !== content.language && !!v.common === common)
-              .sort(([, a], [, b]) => (common ? 0 : a.label.localeCompare(b.label, 'fr')))
+              .sort(([, a], [, b]) => (common ? 0 : a.label.localeCompare(b.label, locale())))
               .map(([k, v]) => (
                 <option key={k} value={k}>
                   {v.label} — {v.native}
@@ -172,20 +176,20 @@ export function TranslateDialog({ open, onClose, content, onTranslated }: { open
         onClick={async () => {
           setBusy(true)
           try {
-            const t = await translateInstruction(ai, content, LANGUAGES[lang]?.label ?? lang)
-            onTranslated(lang, t)
-            toast.success('Traduction ajoutée', `${LANGUAGES[lang]?.label} sera proposée dans le lecteur à la prochaine publication.`)
+            const translated = await translateInstruction(ai, content, LANGUAGES[lang]?.label ?? lang)
+            onTranslated(lang, translated)
+            toast.success(t.added, t.addedDetail(LANGUAGES[lang]?.label ?? lang))
             onClose()
           } catch (e) {
-            toast.error('La traduction a échoué', errorText(e))
+            toast.error(t.failed, errorText(e))
           } finally {
             setBusy(false)
           }
         }}
       >
-        {existing.includes(lang) ? 'Mettre à jour la traduction' : 'Traduire'} <AiCost operation="translate" />
+        {existing.includes(lang) ? t.update : t.translate} <AiCost operation="translate" />
       </Button>
-      <p className="mt-3 text-xs font-medium text-slate-400">Retraduisez après une modification importante des étapes.</p>
+      <p className="mt-3 text-xs font-medium text-slate-400">{t.note}</p>
     </Modal>
   )
 }

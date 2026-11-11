@@ -4,6 +4,7 @@
  */
 import type { AiApi } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
+import { getLang, messages, messagesIn } from '../i18n'
 import { PPE } from '../model/catalog'
 import { uid } from '../model/repo'
 import { MAX_HTML_BYTES } from '../model/media'
@@ -38,6 +39,10 @@ type OrgAi = Pick<OrgSettings, 'standard' | 'learnings'>
 
 const COLORS: AnnotationColor[] = ['red', 'orange', 'yellow', 'green', 'blue', 'white', 'black']
 
+/**
+ * Une retouche d'étape : l'étape revient dans la langue de l'instruction (une instruction anglaise
+ * retouchée reste anglaise), l'explication dans celle de l'outil, qui la montre.
+ */
 export async function assistStep(ai: AiApi, org: OrgAi, content: InstructionContent, step: Step, request: string) {
   const res = await ai.ask<{ title: string; text: string; keyPoints: string[]; warningLevel: string; warningText: string; explanation: string }>(
     'step_assist',
@@ -45,14 +50,14 @@ export async function assistStep(ai: AiApi, org: OrgAi, content: InstructionCont
       provider: 'google',
       level: 'mid',
       thinking: 'disabled',
-      system_instruction: stepAssistSystem(org),
+      system_instruction: stepAssistSystem(org, content.language || 'fr', getLang()),
       prompt: stepAssistPrompt(content, step, request),
       json_schema: stepEditSchema,
     },
     { scope: step.id, timeoutMs: 60_000 },
   )
   const j = res.json
-  if (!j?.title) throw new ApiError("L'IA n'a pas pu corriger cette étape. Réessayez.", 502)
+  if (!j?.title) throw new ApiError(messages().editor.ai.stepFailed, 502)
   const next: Step = {
     ...step,
     title: j.title.trim(),
@@ -78,7 +83,7 @@ export async function translateInstruction(ai: AiApi, content: InstructionConten
     { scope: `translate-${language}`, timeoutMs: 120_000 },
   )
   const j = res.json
-  if (!j?.steps?.length) throw new ApiError("La traduction n'a pas pu être faite. Réessayez.", 502)
+  if (!j?.steps?.length) throw new ApiError(messages().editor.ai.translateFailed, 502)
   const ids = new Set(content.steps.map((s) => s.id))
   return {
     title: j.title,
@@ -126,7 +131,7 @@ export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, req
       out.push({ id: uid('an_'), type: m.shape === 'rect' ? 'rect' : 'circle', x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin, text: m.label, color })
     }
   }
-  if (!out.length) throw new ApiError("L'IA n'a rien trouvé à marquer sur cette image.", 422)
+  if (!out.length) throw new ApiError(messages().editor.ai.nothingToMark, 422)
   return out
 }
 
@@ -145,7 +150,7 @@ export async function illustrationPrompt(ai: AiApi, imageUrl: string, step: Step
     { scope: step.id, timeoutMs: 60_000 },
   )
   const p = res.json?.prompt?.trim()
-  if (!p) throw new ApiError("L'illustration n'a pas pu être préparée.", 502)
+  if (!p) throw new ApiError(messages().editor.ai.illustrationFailed, 502)
   return p
 }
 
@@ -163,7 +168,7 @@ export async function answerQuestion(ai: AiApi, content: InstructionContent, ste
     { scope: 'question', timeoutMs: 45_000 },
   )
   const j = res.json
-  if (!j?.answer) throw new ApiError('Je n’ai pas de réponse pour le moment.', 502)
+  if (!j?.answer) throw new ApiError(messages().editor.ai.noAnswer, 502)
   return { answer: j.answer.trim(), stepNumber: Math.round(j.stepNumber || 0), confident: !!j.confident }
 }
 
@@ -174,14 +179,14 @@ export async function suggestStandard(ai: AiApi, description: string, current: W
       provider: 'google',
       level: 'mid',
       thinking: 'disabled',
-      system_instruction: standardAgentSystem(),
+      system_instruction: standardAgentSystem(getLang()),
       prompt: `STANDARD ACTUEL : ${JSON.stringify({ rules: current.rules, startWithSafety: current.startWithSafety, maxWordsPerStep: current.maxWordsPerStep, tone: current.tone, glossary: current.glossary })}\n\nCE QUE LA PERSONNE DÉCRIT : ${description}`,
       json_schema: standardSchema,
     },
     { scope: 'standard', timeoutMs: 60_000 },
   )
   const j = res.json
-  if (!j?.rules?.length) throw new ApiError("L'IA n'a pas pu proposer de standard. Décrivez-le autrement.", 502)
+  if (!j?.rules?.length) throw new ApiError(messages().editor.ai.standardFailed, 502)
   return {
     proposal: {
       rules: j.rules.map((r) => r.trim()).filter(Boolean).slice(0, 12),
@@ -214,8 +219,9 @@ export async function createVisual(ai: AiApi, content: InstructionContent, step:
     { scope: `${step.id}:${request}`, timeoutMs: 150_000 },
   )
   let html = (res.json?.html ?? '').trim()
-  if (!html.includes('<')) throw new ApiError("L'IA n'a pas pu dessiner ce schéma. Reformulez la demande.", 502)
+  if (!html.includes('<')) throw new ApiError(messages().editor.ai.visualFailed, 502)
   if (!/^<!doctype|^<html/i.test(html)) html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;height:100%;background:#fff}</style></head><body>${html}</body></html>`
-  if (new Blob([html]).size > MAX_HTML_BYTES) throw new ApiError('Le schéma est trop lourd. Demandez quelque chose de plus simple.', 422)
-  return { kind: 'html', url: '', html, title: (res.json?.title ?? '').trim().slice(0, 80) || 'Schéma' }
+  if (new Blob([html]).size > MAX_HTML_BYTES) throw new ApiError(messages().editor.ai.visualTooHeavy, 422)
+  // Le titre fait partie de l'instruction : à défaut, il est dans sa langue.
+  return { kind: 'html', url: '', html, title: (res.json?.title ?? '').trim().slice(0, 80) || messagesIn(content.language || 'fr').editor.ai.visualTitle }
 }

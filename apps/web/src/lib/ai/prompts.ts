@@ -11,6 +11,15 @@ const TONE: Record<WritingStandard['tone'], string> = {
   vous: 'en vouvoyant (« Retirez le garde »)',
 }
 
+/**
+ * La langue dans laquelle l'IA écrit, d'après son code, avec sa préposition (« en français… ») :
+ * celle de l'instruction (`content.language`) pour ce qui y entre, celle de l'outil pour ce qui
+ * s'adresse à la personne.
+ */
+function writtenIn(language: string): string {
+  return language === 'fr' ? 'en français québécois clair' : language === 'en' ? 'en anglais nord-américain clair (English)' : `dans la langue « ${language} »`
+}
+
 export function standardBlock(org: Pick<OrgSettings, 'standard' | 'learnings'>): string {
   const s = org.standard
   const lines: string[] = []
@@ -113,8 +122,13 @@ export const STEP_ACTIONS = {
   safety: 'Vérifie la sécurité de cette étape : ajoute ou corrige la mise en garde si un risque existe ; sinon laisse-la vide.',
 } as const
 
-export function stepAssistSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>): string {
-  return `Tu corriges UNE étape d’une instruction de travail d’usine, selon la demande. Tu gardes le sens et les valeurs exactes ; tu n’inventes aucune valeur. Titre : verbe à l’infinitif + objet, 2 à 8 mots. Français québécois clair.
+/**
+ * `language` : la langue de l'instruction, dans laquelle l'étape est rendue, quelle que soit celle
+ * de la demande (les retouches en un geste sont écrites en français) ; `explainIn` : celle de
+ * l'outil, pour l'explication montrée à la personne.
+ */
+export function stepAssistSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, language = 'fr', explainIn = language): string {
+  return `Tu corriges UNE étape d’une instruction de travail d’usine, selon la demande. Tu gardes le sens et les valeurs exactes ; tu n’inventes aucune valeur. Titre : verbe à l’infinitif + objet, 2 à 8 mots. L’étape s’écrit ${writtenIn(language)}, la langue de l’instruction, quelle que soit celle de la demande${explainIn !== language ? ` ; l’explication (explanation), ${writtenIn(explainIn)}` : ''}.
 
 ${standardBlock(org)}`
 }
@@ -165,8 +179,9 @@ export function questionPrompt(content: InstructionContent, currentStep: number,
   return `${contentForPrompt(content)}\n\nL’opérateur est à l’étape ${currentStep + 1}.\nQUESTION : ${question}`
 }
 
-export function standardAgentSystem(): string {
-  return `Tu aides une usine à définir son standard de rédaction d’instructions de travail. À partir de ce que la personne décrit (règles, habitudes, exigences de sécurité, vocabulaire), tu produis un standard clair : 5 à 10 règles courtes en mots simples, si la première étape doit toujours porter sur la sécurité, le nombre maximal de mots par étape (10 à 60), le ton (infinitif, tu ou vous) et le vocabulaire propre à l’usine. Garde les bonnes pratiques reconnues (une action par étape, mises en garde à l’étape du risque, valeurs exactes avec unités) sauf si la personne demande autre chose.`
+/** `language` : la langue de l'outil de la personne, dans laquelle elle lit le standard proposé. */
+export function standardAgentSystem(language = 'fr'): string {
+  return `Tu aides une usine à définir son standard de rédaction d’instructions de travail. À partir de ce que la personne décrit (règles, habitudes, exigences de sécurité, vocabulaire), tu produis un standard clair : 5 à 10 règles courtes en mots simples, si la première étape doit toujours porter sur la sécurité, le nombre maximal de mots par étape (10 à 60), le ton (infinitif, tu ou vous) et le vocabulaire propre à l’usine. Garde les bonnes pratiques reconnues (une action par étape, mises en garde à l’étape du risque, valeurs exactes avec unités) sauf si la personne demande autre chose. Tu écris les règles, les définitions et l’explication ${writtenIn(language)} ; les termes du vocabulaire restent tels que la personne les écrit.`
 }
 
 /** Un schéma pour une étape : une page HTML autonome, lisible sur une tablette d'atelier. */
@@ -176,7 +191,8 @@ export function visualSystem(language: string): string {
 - Une vue 3D seulement si la demande l’exige : Three.js chargé uniquement depuis https://cdn.jsdelivr.net/npm/three@0.160.0/ (module), une scène simple qui tourne doucement et qu’on peut faire pivoter au doigt.
 - Libellés courts dans la langue « ${language} », gros (16 px ou plus), flèches et numéros pour l’ordre des gestes. Couleurs de sécurité : rouge danger, jaune prudence, vert correct, bleu information.
 - CSS et JS dans la page ; aucune image, police, formulaire, alerte, stockage ou appel réseau hors de la bibliothèque 3D.
-- Moins de 40 000 caractères. N’invente aucune valeur (couple, pression, cote) : seulement celles de l’étape.`
+- Moins de 40 000 caractères. N’invente aucune valeur (couple, pression, cote) : seulement celles de l’étape.
+- Le titre (title) s’écrit lui aussi dans la langue « ${language} ».`
 }
 
 export function visualPrompt(content: InstructionContent, step: Step, request: string): string {
