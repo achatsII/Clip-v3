@@ -148,13 +148,20 @@ export function TranslateDialog({ open, onClose, content, onTranslated }: { open
         </p>
       )}
       <Select value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Langue">
-        {Object.entries(LANGUAGES)
-          .filter(([k]) => k !== content.language)
-          .map(([k, v]) => (
-            <option key={k} value={k}>
-              {v.label} — {v.native}
-            </option>
-          ))}
+        {/* Les plus demandées dans les usines d'abord, puis toutes les autres. */}
+        {([true, false] as const).map((common) => (
+          <optgroup key={String(common)} label={common ? 'Les plus demandées' : 'Autres langues'}>
+            {Object.entries(LANGUAGES)
+              .filter(([k, v]) => k !== content.language && !!v.common === common)
+              .sort(([, a], [, b]) => (common ? 0 : a.label.localeCompare(b.label, 'fr')))
+              .map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v.label} — {v.native}
+                  {existing.includes(k) ? ' ✓' : ''}
+                </option>
+              ))}
+          </optgroup>
+        ))}
       </Select>
       <Button
         className="mt-4"

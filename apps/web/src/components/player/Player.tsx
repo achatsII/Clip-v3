@@ -31,7 +31,7 @@ import { answerQuestion } from '@/lib/ai/assist'
 import type { AiApi } from '@/lib/gateway/ai'
 import type { DataApi } from '@/lib/gateway/data'
 import type { FilesApi } from '@/lib/gateway/files'
-import { ENERGY, LANGUAGES, PPE, WARNINGS } from '@/lib/model/catalog'
+import { ENERGY, LANGUAGES, PPE, textDir, WARNINGS } from '@/lib/model/catalog'
 import { logUsage } from '@/lib/model/repo'
 import type { Branding, InstructionContent, Step } from '@/lib/model/types'
 import { LiveSpeaker, stepSpeech } from '@/lib/liveSpeech'
@@ -285,7 +285,9 @@ export function Player(props: PlayerProps) {
         }}
       >
         {view === 'document' ? (
-          <DocumentView content={content} t={t} energyById={energyById} />
+          <div dir={textDir(lang)}>
+            <DocumentView content={content} t={t} energyById={energyById} />
+          </div>
         ) : index === -1 ? (
           <Intro content={content} t={t} onStart={() => go(0)} />
         ) : index >= total ? (
@@ -310,7 +312,7 @@ export function Player(props: PlayerProps) {
                 <StepMediaArea step={step} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
               </div>
             )}
-            <div className={cn('flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-8', step.media[0] ? 'lg:max-w-[560px] lg:overflow-y-auto' : 'mx-auto w-full max-w-3xl pt-8 sm:pt-12')}>
+            <div dir={textDir(lang)} className={cn('flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-8', step.media[0] ? 'lg:max-w-[560px] lg:overflow-y-auto' : 'mx-auto w-full max-w-3xl pt-8 sm:pt-12')}>
               <div className="flex items-start gap-4">
                 <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
                 <h2 className="pt-1 text-3xl leading-[1.05] font-black tracking-tighter text-slate-900 sm:text-4xl dark:text-white">{step.title}</h2>

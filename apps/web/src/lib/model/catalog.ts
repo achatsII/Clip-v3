@@ -97,14 +97,58 @@ export const STATUS: Record<string, { label: string; className: string }> = {
   archived: { label: 'Archivée', className: 'bg-slate-400' },
 }
 
-export const LANGUAGES: Record<string, { label: string; native: string }> = {
-  fr: { label: 'Français', native: 'Français' },
-  en: { label: 'Anglais', native: 'English' },
-  es: { label: 'Espagnol', native: 'Español' },
-  pt: { label: 'Portugais', native: 'Português' },
-  ar: { label: 'Arabe', native: 'العربية' },
-  tl: { label: 'Tagalog', native: 'Tagalog' },
-  vi: { label: 'Vietnamien', native: 'Tiếng Việt' },
-  zh: { label: 'Chinois', native: '中文' },
-  uk: { label: 'Ukrainien', native: 'Українська' },
+/**
+ * Les langues des opérateurs. `label` : le nom en français, aussi donné à l'IA qui traduit ;
+ * `native` : le nom dans la langue, pour le choix au poste ; `common` : les plus demandées dans les
+ * usines du Québec, en tête de liste ; `rtl` : s'écrit de droite à gauche.
+ */
+export interface LanguageInfo {
+  label: string
+  native: string
+  common?: boolean
+  rtl?: boolean
 }
+
+export const LANGUAGES: Record<string, LanguageInfo> = {
+  fr: { label: 'Français', native: 'Français', common: true },
+  en: { label: 'Anglais', native: 'English', common: true },
+  es: { label: 'Espagnol', native: 'Español', common: true },
+  pt: { label: 'Portugais', native: 'Português', common: true },
+  ar: { label: 'Arabe', native: 'العربية', common: true, rtl: true },
+  ht: { label: 'Créole haïtien', native: 'Kreyòl ayisyen', common: true },
+  tl: { label: 'Tagalog', native: 'Tagalog', common: true },
+  vi: { label: 'Vietnamien', native: 'Tiếng Việt', common: true },
+  zh: { label: 'Chinois', native: '中文', common: true },
+  uk: { label: 'Ukrainien', native: 'Українська', common: true },
+  pa: { label: 'Pendjabi', native: 'ਪੰਜਾਬੀ', common: true },
+  hi: { label: 'Hindi', native: 'हिन्दी', common: true },
+  ru: { label: 'Russe', native: 'Русский', common: true },
+  ro: { label: 'Roumain', native: 'Română', common: true },
+  fa: { label: 'Persan', native: 'فارسی', common: true, rtl: true },
+  de: { label: 'Allemand', native: 'Deutsch' },
+  am: { label: 'Amharique', native: 'አማርኛ' },
+  bn: { label: 'Bengali', native: 'বাংলা' },
+  ko: { label: 'Coréen', native: '한국어' },
+  el: { label: 'Grec', native: 'Ελληνικά' },
+  gu: { label: 'Gujarati', native: 'ગુજરાતી' },
+  he: { label: 'Hébreu', native: 'עברית', rtl: true },
+  id: { label: 'Indonésien', native: 'Bahasa Indonesia' },
+  it: { label: 'Italien', native: 'Italiano' },
+  ja: { label: 'Japonais', native: '日本語' },
+  km: { label: 'Khmer', native: 'ខ្មែរ' },
+  rw: { label: 'Kinyarwanda', native: 'Ikinyarwanda' },
+  ln: { label: 'Lingala', native: 'Lingála' },
+  nl: { label: 'Néerlandais', native: 'Nederlands' },
+  ne: { label: 'Népalais', native: 'नेपाली' },
+  pl: { label: 'Polonais', native: 'Polski' },
+  so: { label: 'Somali', native: 'Soomaali' },
+  sw: { label: 'Swahili', native: 'Kiswahili' },
+  ta: { label: 'Tamoul', native: 'தமிழ்' },
+  th: { label: 'Thaï', native: 'ไทย' },
+  ti: { label: 'Tigrigna', native: 'ትግርኛ' },
+  tr: { label: 'Turc', native: 'Türkçe' },
+  ur: { label: 'Ourdou', native: 'اردو', rtl: true },
+}
+
+/** Le sens d'écriture d'une langue, pour l'attribut `dir`. */
+export const textDir = (lang: string): 'rtl' | 'ltr' => (LANGUAGES[lang]?.rtl ? 'rtl' : 'ltr')
