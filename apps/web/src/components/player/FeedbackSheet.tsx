@@ -15,25 +15,20 @@ import { cn } from '@/lib/util/cn'
 import type { PlayerStrings } from './i18n'
 
 const KIND_ORDER: FeedbackKind[] = ['unclear', 'error', 'danger', 'idea']
-const KIND_LABELS: Record<string, Record<FeedbackKind, string>> = {
-  en: { unclear: 'Not clear', error: 'Mistake', danger: 'Dangerous', idea: 'Better way', praise: 'Helpful' },
-  es: { unclear: 'No está claro', error: 'Error', danger: 'Peligroso', idea: 'Mejor manera', praise: 'Útil' },
-}
 
 /** Signaler en deux touchers : un motif en pictogramme, un mot facultatif, une photo facultative. */
 export function FeedbackSheet({
   open,
   onClose,
   t,
-  lang,
   data,
   files,
   base,
 }: {
   open: boolean
   onClose: () => void
+  /** Les mots du lecteur, dans la langue choisie au poste. */
   t: PlayerStrings
-  lang: string
   data: DataApi
   files: FilesApi | null
   base: Omit<Feedback, 'createdAt' | 'status' | 'kind' | 'comment' | 'photoUrl' | 'authorName'>
@@ -81,13 +76,12 @@ export function FeedbackSheet({
       setSent(true)
       setTimeout(close, 2200)
     } catch {
-      setError(lang === 'fr' ? 'Le retour n’est pas parti. Vérifiez la connexion et réessayez.' : 'Not sent. Check the connection and try again.')
+      setError(t.feedbackFailed)
     } finally {
       setBusy(false)
     }
   }
 
-  const labels = KIND_LABELS[lang]
   return (
     <Modal open={open} onClose={close} title={sent ? undefined : t.feedbackTitle} size="md">
       {sent ? (
@@ -109,7 +103,7 @@ export function FeedbackSheet({
                 <span className="text-3xl" aria-hidden>
                   {k === 'unclear' ? '🤔' : k === 'error' ? '❌' : k === 'danger' ? '⚠️' : '💡'}
                 </span>
-                <span className="text-base font-black">{labels?.[k] ?? FEEDBACK_KINDS[k].label}</span>
+                <span className="text-base font-black">{t.kinds[k]}</span>
               </button>
             ))}
           </div>

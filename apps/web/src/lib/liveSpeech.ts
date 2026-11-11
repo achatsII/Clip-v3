@@ -36,7 +36,7 @@ export interface LiveSpeakerDeps {
 }
 
 const SYSTEM = `Tu es une voix de lecture pour des opérateurs d’usine. Chaque message contient un texte à lire.
-Lis-le à voix haute, exactement et en entier, une seule fois, dans sa langue (le français avec l’accent du Québec).
+Lis-le à voix haute, exactement et en entier, une seule fois, dans la langue où il est écrit, sans le traduire ; le français se lit avec l’accent du Québec.
 N’ajoute rien : ni salutation, ni commentaire, ni question, ni résumé. Ton calme et clair, débit normal.`
 
 /** Le texte d'une étape à lire : titre, consigne, mise en garde. */

@@ -1,4 +1,11 @@
 import { ApiError, getAccessToken } from './gateway/client'
+import { messages } from './i18n'
+
+/** Le refus de /api/share dans la langue de l'outil : la route rend un code, jamais une phrase. */
+function shareError(code: string | undefined): string {
+  const t = messages().publicLinks.share.errors
+  return code && Object.prototype.hasOwnProperty.call(t, code) ? t[code as keyof typeof t] : t.linkFailed
+}
 
 export async function createShareLink(type: 'station' | 'instruction', id: string, opts: { mode?: 'focus' | 'only'; assistant?: boolean } = {}): Promise<{ id: string; url: string }> {
   const token = getAccessToken()
@@ -7,9 +14,9 @@ export async function createShareLink(type: 'station' | 'instruction', id: strin
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
     body: JSON.stringify({ type, id, ...opts }),
   }).catch(() => null)
-  if (!res) throw new ApiError('Pas de connexion au serveur', 0, null, 'network')
+  if (!res) throw new ApiError(messages().publicLinks.share.noConnection, 0, null, 'network')
   const json = (await res.json().catch(() => ({}))) as { id?: string; url?: string; error?: string }
-  if (!res.ok || !json.id) throw new ApiError(json.error ?? 'Le lien n’a pas pu être créé', res.status)
+  if (!res.ok || !json.id) throw new ApiError(shareError(json.error), res.status)
   return { id: json.id, url: json.url ?? `${window.location.origin}/${type === 'station' ? 'p' : 'i'}/${json.id}` }
 }
 

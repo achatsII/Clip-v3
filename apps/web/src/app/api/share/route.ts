@@ -4,6 +4,7 @@
  * La portée est bâtie ici, côté serveur, à partir du type de lien et de la ressource partagée
  * (skill api-plateforme-ii, §2.10.1) : le navigateur ne choisit jamais les données ouvertes.
  * L'appel à la Gateway part avec le jeton de l'utilisateur, qui doit déjà avoir ces droits.
+ * Un refus rend un code (`error`), que la page traduit dans la langue de l'outil (src/lib/share.ts).
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { buildScope, permissionsFor, type LinkType } from '@/lib/server/scope'
@@ -21,18 +22,18 @@ interface Body {
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get('authorization')
-  if (!auth?.startsWith('Bearer ') || auth.length < 20) return NextResponse.json({ error: 'Connexion requise' }, { status: 401 })
+  if (!auth?.startsWith('Bearer ') || auth.length < 20) return NextResponse.json({ error: 'authRequired' }, { status: 401 })
 
   let body: Body
   try {
     body = (await req.json()) as Body
   } catch {
-    return NextResponse.json({ error: 'Requête invalide' }, { status: 400 })
+    return NextResponse.json({ error: 'badRequest' }, { status: 400 })
   }
   const type = body.type
   const id = body.id ?? ''
   if ((type !== 'station' && type !== 'instruction') || !OBJECT_ID.test(id)) {
-    return NextResponse.json({ error: 'Lien inconnu' }, { status: 400 })
+    return NextResponse.json({ error: 'unknownLink' }, { status: 400 })
   }
 
   const proto = req.headers.get('x-forwarded-proto') ?? 'https'
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     }),
   }).catch(() => null)
 
-  if (!res) return NextResponse.json({ error: 'La Gateway ne répond pas' }, { status: 502 })
+  if (!res) return NextResponse.json({ error: 'gatewayDown' }, { status: 502 })
   const text = await res.text()
   let json: { id?: string; error?: string } = {}
   try {
@@ -60,7 +61,8 @@ export async function POST(req: NextRequest) {
   }
   if (!res.ok || !json.id) {
     const status = res.status === 401 || res.status === 403 ? res.status : 502
-    return NextResponse.json({ error: json.error ?? 'Le lien n’a pas pu être créé' }, { status })
+    // Le motif de la Gateway reste dans `detail`, pour le diagnostic : il n'est pas dans la langue de l'outil.
+    return NextResponse.json({ error: status === 401 ? 'authRequired' : 'linkFailed', detail: json.error }, { status })
   }
   return NextResponse.json({ id: json.id, url: `${origin}/${path}/${json.id}` })
 }

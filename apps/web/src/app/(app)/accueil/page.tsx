@@ -13,13 +13,14 @@ import { LinkButton } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/States'
 import { Card, SectionTitle } from '@/components/ui/Surface'
 import { useFeedback, useInstructions, useStations } from '@/hooks/queries'
+import { num, useMessages, type Messages } from '@/lib/i18n'
 import { FEEDBACK_KINDS } from '@/lib/model/catalog'
 import { T } from '@/lib/model/repo'
-import { cn, plural, timeAgo } from '@/lib/util/cn'
+import { cn, timeAgo } from '@/lib/util/cn'
 
-function greeting() {
+function greeting(g: Messages['home']['greeting'], name: string) {
   const h = new Date().getHours()
-  return h < 5 ? 'Bonne nuit' : h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir'
+  return h < 5 ? g.night(name) : h < 12 ? g.morning(name) : h < 18 ? g.afternoon(name) : g.evening(name)
 }
 
 /** Semaines consécutives (jusqu'à cette semaine) où au moins une instruction a été publiée. */
@@ -38,6 +39,7 @@ function streakOf(dates: string[]): number {
 
 export default function HomePage() {
   const router = useRouter()
+  const t = useMessages().home
   const { profile, displayName, org, role, can, me, data } = useSession()
   const instructions = useInstructions()
   const stations = useStations()
@@ -66,11 +68,11 @@ export default function HomePage() {
   const stationName = new Map((stations.data ?? []).map((s) => [s._id, s.json_data.name]))
 
   const setup = [
-    { done: published.length > 0, label: 'Publier une première instruction', href: '/instructions/nouvelle', icon: <Sparkles className="h-4 w-4" /> },
-    { done: (stations.data ?? []).some((s) => s.json_data.linkId), label: 'Créer un poste et son code QR', href: '/postes', icon: <QrCode className="h-4 w-4" /> },
-    { done: !!org.json_data.logoUrl, label: 'Ajouter le logo de l’usine', href: '/reglages', icon: <Palette className="h-4 w-4" /> },
-    { done: Object.keys(org.json_data.members).length > 1, label: 'Inviter un collègue', href: '/reglages?onglet=membres', icon: <UserPlus className="h-4 w-4" /> },
-    { done: org.json_data.standard.version > 1, label: 'Ajuster votre standard de rédaction', href: '/reglages?onglet=standard', icon: <PenLine className="h-4 w-4" /> },
+    { done: published.length > 0, label: t.setup.publish, href: '/instructions/nouvelle', icon: <Sparkles className="h-4 w-4" /> },
+    { done: (stations.data ?? []).some((s) => s.json_data.linkId), label: t.setup.station, href: '/postes', icon: <QrCode className="h-4 w-4" /> },
+    { done: !!org.json_data.logoUrl, label: t.setup.logo, href: '/reglages', icon: <Palette className="h-4 w-4" /> },
+    { done: Object.keys(org.json_data.members).length > 1, label: t.setup.invite, href: '/reglages?onglet=membres', icon: <UserPlus className="h-4 w-4" /> },
+    { done: org.json_data.standard.version > 1, label: t.setup.standard, href: '/reglages?onglet=standard', icon: <PenLine className="h-4 w-4" /> },
   ]
   const setupDone = setup.filter((s) => s.done).length
   const canCreate = can('instructions', 'write')
@@ -81,7 +83,7 @@ export default function HomePage() {
         <div>
           <p className="label-caps text-slate-500">{org.json_data.name}</p>
           <h1 className="text-4xl font-black tracking-tighter sm:text-5xl">
-            {greeting()}, {displayName.split(' ')[0]}
+            {greeting(t.greeting, displayName.split(' ')[0])}
           </h1>
         </div>
         <CreditPill />
@@ -94,13 +96,13 @@ export default function HomePage() {
           <span className="absolute -top-16 -right-10 h-64 w-64 rounded-full bg-white/25 blur-3xl" />
           <span className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              <span className="label-caps opacity-80">Nouvelle instruction</span>
-              <span className="mt-2 block text-3xl leading-tight font-black tracking-tighter sm:text-5xl">Filmez. Parlez.<br />L’IA rédige.</span>
+              <span className="label-caps opacity-80">{t.hero.eyebrow}</span>
+              <span className="mt-2 block text-3xl leading-tight font-black tracking-tighter sm:text-5xl">{t.hero.line1}<br />{t.hero.line2}</span>
               <span className="mt-3 flex flex-wrap gap-2 text-sm font-bold">
                 {[
-                  [<Video key="v" className="h-4 w-4" />, 'Vidéo'],
-                  [<Mic key="m" className="h-4 w-4" />, 'Note vocale'],
-                  [<PenLine key="p" className="h-4 w-4" />, 'PDF ou Word'],
+                  [<Video key="v" className="h-4 w-4" />, t.hero.video],
+                  [<Mic key="m" className="h-4 w-4" />, t.hero.voiceNote],
+                  [<PenLine key="p" className="h-4 w-4" />, t.hero.document],
                 ].map(([icon, label]) => (
                   <span key={label as string} className="inline-flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/15 px-3 py-1.5 backdrop-blur-md">
                     {icon} {label}
@@ -116,10 +118,10 @@ export default function HomePage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           <LinkButton href="/instructions" variant="primary" size="xl" block>
-            Trouver une instruction
+            {t.reader.find}
           </LinkButton>
           <LinkButton href="/postes" size="xl" block icon={<ScanLine className="h-6 w-6" />}>
-            Mes postes
+            {t.reader.myStations}
           </LinkButton>
         </div>
       )}
@@ -139,8 +141,8 @@ export default function HomePage() {
               </span>
             </span>
             <div>
-              <h2 className="text-lg font-black tracking-tight">Mettez votre usine en route</h2>
-              <p className="text-sm font-bold text-slate-500">Quelques minutes, une étape à la fois.</p>
+              <h2 className="text-lg font-black tracking-tight">{t.setup.title}</h2>
+              <p className="text-sm font-bold text-slate-500">{t.setup.hint}</p>
             </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -155,18 +157,18 @@ export default function HomePage() {
       )}
 
       <div className="grid gap-5 lg:grid-cols-3">
-        <Tile className="from-emerald-400 to-teal-600" icon={<CheckCircle2 className="h-6 w-6" />} label="Publiées" value={instructions.isLoading ? null : published.length} hint={stationCount ? `${coverage} % des postes couverts` : 'Aucun poste encore'} />
+        <Tile className="from-emerald-400 to-teal-600" icon={<CheckCircle2 className="h-6 w-6" />} label={t.tiles.published} value={instructions.isLoading ? null : published.length} hint={stationCount ? t.tiles.coverage(coverage) : t.tiles.noStation} />
         {can('stats') ? (
-          <Tile className="from-sky-500 to-blue-700" icon={<MapPin className="h-6 w-6" />} label="Consultations · 7 jours" value={views.isLoading ? null : views.data ?? 0} hint="Tablettes, codes QR et liens" href="/statistiques" />
+          <Tile className="from-sky-500 to-blue-700" icon={<MapPin className="h-6 w-6" />} label={t.tiles.views} value={views.isLoading ? null : views.data ?? 0} hint={t.tiles.viewsHint} href="/statistiques" />
         ) : (
-          <Tile className="from-sky-500 to-blue-700" icon={<MapPin className="h-6 w-6" />} label="Postes" value={stations.isLoading ? null : stationCount} hint="Avec leurs instructions" href="/postes" />
+          <Tile className="from-sky-500 to-blue-700" icon={<MapPin className="h-6 w-6" />} label={t.tiles.stations} value={stations.isLoading ? null : stationCount} hint={t.tiles.stationsHint} href="/postes" />
         )}
-        <Tile className="from-orange-400 to-rose-500" icon={<Flame className="h-6 w-6" />} label="Série" value={instructions.isLoading ? null : streak} hint={streak ? `semaine${streak > 1 ? 's' : ''} de suite avec une publication` : 'Publiez cette semaine pour lancer votre série'} />
+        <Tile className="from-orange-400 to-rose-500" icon={<Flame className="h-6 w-6" />} label={t.tiles.streak} value={instructions.isLoading ? null : streak} hint={streak ? t.tiles.streakWeeks(streak) : t.tiles.streakStart} />
       </div>
 
       {can('approve', 'write') && review.length > 0 && (
         <section>
-          <SectionTitle title={`À approuver (${review.length})`} hint="Les étapes modifiées sont marquées dans l’éditeur." />
+          <SectionTitle title={t.review.title(review.length)} hint={t.review.hint} />
           <div className="space-y-2">
             {review.map((d) => (
               <InstructionRow key={d._id} doc={d} stationNames={d.json_data.stationIds.map((s) => stationName.get(s) ?? '').filter(Boolean)} />
@@ -177,16 +179,15 @@ export default function HomePage() {
 
       {can('feedback', 'write') && (feedback.data?.length ?? 0) > 0 && (
         <section>
-          <SectionTitle title="Retours des opérateurs" action={<Link href="/retours" className="text-sm font-black text-[var(--primary)]">Tout voir</Link>} />
+          <SectionTitle title={t.feedback.title} action={<Link href="/retours" className="text-sm font-black text-[var(--primary)]">{t.feedback.seeAll}</Link>} />
           <div className="grid gap-3 md:grid-cols-3">
             {(feedback.data ?? []).slice(0, 3).map((f) => (
               <Link key={f._id} href={`/instructions/${f.json_data.instructionId}?etape=${f.json_data.stepId ?? ''}&retour=${f._id}`} className="btn-press lift glass-card block rounded-[24px] p-4">
                 <span className={cn('inline-flex rounded-lg bg-gradient-to-br px-2 py-1 text-[10px] font-black tracking-widest text-white uppercase', FEEDBACK_KINDS[f.json_data.kind].className)}>{FEEDBACK_KINDS[f.json_data.kind].label}</span>
                 <p className="mt-2 line-clamp-1 text-sm font-black">{f.json_data.instructionTitle}</p>
-                {f.json_data.comment && <p className="line-clamp-2 text-sm font-medium text-slate-600 dark:text-slate-300">« {f.json_data.comment} »</p>}
+                {f.json_data.comment && <p className="line-clamp-2 text-sm font-medium text-slate-600 dark:text-slate-300">{t.feedback.quote(f.json_data.comment)}</p>}
                 <p className="mt-1 text-xs font-bold text-slate-400">
-                  {f.json_data.stepIndex !== null && f.json_data.stepIndex !== undefined ? `Étape ${f.json_data.stepIndex + 1} · ` : ''}
-                  {timeAgo(f.json_data.createdAt)}
+                  {t.feedback.when(f.json_data.stepIndex !== null && f.json_data.stepIndex !== undefined ? f.json_data.stepIndex + 1 : null, timeAgo(f.json_data.createdAt))}
                 </p>
               </Link>
             ))}
@@ -196,7 +197,7 @@ export default function HomePage() {
 
       {canCreate && myDrafts.length > 0 && (
         <section>
-          <SectionTitle title="Reprendre" hint="Vos brouillons en cours" />
+          <SectionTitle title={t.drafts.title} hint={t.drafts.hint} />
           <div className="space-y-2">
             {myDrafts.map((d) => (
               <InstructionRow key={d._id} doc={d} stationNames={d.json_data.stationIds.map((s) => stationName.get(s) ?? '').filter(Boolean)} />
@@ -207,7 +208,7 @@ export default function HomePage() {
 
       {focusList.length > 0 && (
         <section>
-          <SectionTitle title="Pour vous" hint="Selon vos responsabilités" />
+          <SectionTitle title={t.forYou.title} hint={t.forYou.hint} />
           <div className="space-y-2">
             {focusList.map((d) => (
               <InstructionRow key={d._id} doc={d} stationNames={d.json_data.stationIds.map((s) => stationName.get(s) ?? '').filter(Boolean)} />
@@ -220,8 +221,8 @@ export default function HomePage() {
         <Card className="flex items-center gap-4">
           <Trophy className="h-10 w-10 text-amber-500" />
           <div>
-            <p className="font-black">{plural(published.length, 'instruction publiée', 'instructions publiées')}</p>
-            <p className="text-sm font-bold text-slate-500">Votre plancher a sa bibliothèque vivante. Gardez-la à jour avec les retours des opérateurs.</p>
+            <p className="font-black">{t.library.count(published.length)}</p>
+            <p className="text-sm font-bold text-slate-500">{t.library.hint}</p>
           </div>
         </Card>
       )}
@@ -229,7 +230,7 @@ export default function HomePage() {
       {instructions.isLoading && <Skeleton className="h-40" />}
       {can('feedback', 'write') && !feedback.data?.length && published.length > 0 && (
         <p className="flex items-center gap-2 text-sm font-bold text-slate-400">
-          <MessageSquareWarning className="h-4 w-4" /> Aucun retour à traiter. <ClipboardCheck className="h-4 w-4" />
+          <MessageSquareWarning className="h-4 w-4" /> {t.feedback.none} <ClipboardCheck className="h-4 w-4" />
         </p>
       )}
     </div>
@@ -245,7 +246,7 @@ function Tile({ className, icon, label, value, hint, href }: { className: string
         <span className="label-caps opacity-90">{label}</span>
         <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/25 bg-white/15 backdrop-blur-md">{icon}</span>
       </span>
-      <span className="relative mt-3 text-5xl font-black tracking-tighter tabular-nums">{value === null ? '—' : value.toLocaleString('fr-CA')}</span>
+      <span className="relative mt-3 text-5xl font-black tracking-tighter tabular-nums">{value === null ? '—' : num(value)}</span>
       <span className="relative mt-1 text-sm font-bold opacity-90">{hint}</span>
     </span>
   )

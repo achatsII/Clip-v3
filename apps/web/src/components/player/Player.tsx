@@ -23,11 +23,12 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EnergyIcon, PpeIcon } from '@/components/icons'
-import { MediaView } from '@/components/media/MediaView'
+import { MediaLabelsProvider } from '@/components/media/MediaView'
 import { Confetti } from '@/components/ui/Celebrate'
 import { Modal } from '@/components/ui/Modal'
 import { callNative, hasCapability, haptic } from '@/lib/bridge/native'
 import { answerQuestion } from '@/lib/ai/assist'
+import { answerLanguage } from '@/lib/ai/voice'
 import type { AiApi } from '@/lib/gateway/ai'
 import type { DataApi } from '@/lib/gateway/data'
 import type { FilesApi } from '@/lib/gateway/files'
@@ -37,7 +38,7 @@ import type { Branding, InstructionContent, Step } from '@/lib/model/types'
 import { LiveSpeaker, stepSpeech } from '@/lib/liveSpeech'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { FeedbackSheet } from './FeedbackSheet'
-import { strings } from './i18n'
+import { strings, type PlayerStrings } from './i18n'
 import { StepMediaArea } from './StepMediaArea'
 import { layoutOf } from '@/lib/model/media'
 import { VoiceAssistant } from './VoiceAssistant'
@@ -61,7 +62,8 @@ export interface PlayerProps {
   /** Aperçu d'un brouillon : ni événement, ni retour. */
   preview?: boolean
   onExit?: () => void
-  exitLabel?: string
+  /** Un texte dans la langue de l'outil, ou les mots du lecteur à lire dans la langue du poste (pages publiques). */
+  exitLabel?: string | ((t: PlayerStrings) => string)
   allowVoice?: boolean
   /** Questions écrites à l'IA (exige le droit `assistant:ask`). */
   allowQuestions?: boolean
@@ -112,6 +114,7 @@ export function Player(props: PlayerProps) {
   })
   const content = useMemo(() => localized(props.content, lang), [props.content, lang])
   const t = strings(lang)
+  const exitText = typeof exitLabel === 'function' ? exitLabel(t) : exitLabel
   const total = content.steps.length
   // -1 = avant de commencer ; total = terminé
   const [index, setIndex] = useState(-1)
@@ -218,27 +221,27 @@ export function Player(props: PlayerProps) {
     if (!deps.ai || !question.trim()) return
     setAnswer({ text: '', busy: true })
     try {
-      const r = await answerQuestion(deps.ai, content, Math.max(0, index), question.trim(), LANGUAGES[lang]?.label ?? 'français')
+      const r = await answerQuestion(deps.ai, content, Math.max(0, index), question.trim(), answerLanguage(lang))
       setAnswer({ text: r.answer, busy: false })
       if (speaker) void speaker.speak(`answer:${Date.now()}`, r.answer, lang)
     } catch {
-      setAnswer({ text: lang === 'fr' ? 'Je n’ai pas de réponse pour le moment. Demandez à votre superviseur.' : 'No answer right now. Ask your supervisor.', busy: false })
+      setAnswer({ text: t.noAnswer, busy: false })
     }
   }
 
   const progress = total ? ((index + 1) / total) * 100 : 0
   const energyById = new Map((content.lockout?.energyPoints ?? []).map((e) => [e.id, e]))
 
-  return (
+  const player = (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-50 dark:bg-slate-950" role="application" aria-label={content.title}>
       <Confetti show={index === total} />
       {/* En-tête */}
       <header className="pt-safe glass-nav z-10 border-b">
         <div className="flex h-16 items-center gap-2 px-3 sm:px-5">
           {onExit && (
-            <button type="button" onClick={onExit} className="btn-press flex h-12 items-center gap-2 rounded-2xl px-3 font-black text-slate-700 hover:bg-slate-900/5 dark:text-slate-200" aria-label={exitLabel ?? 'Fermer'}>
+            <button type="button" onClick={onExit} className="btn-press flex h-12 items-center gap-2 rounded-2xl px-3 font-black text-slate-700 hover:bg-slate-900/5 dark:text-slate-200" aria-label={exitText ?? t.close}>
               <X className="h-6 w-6" />
-              <span className="hidden sm:inline">{exitLabel}</span>
+              <span className="hidden sm:inline">{exitText}</span>
             </button>
           )}
           {showBranding && branding?.logoUrl && <img src={branding.logoUrl} alt={branding.orgName} className="hidden h-9 max-w-28 object-contain sm:block" />}
@@ -246,7 +249,7 @@ export function Player(props: PlayerProps) {
             <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
             {index >= 0 && index < total && (
               <p className="label-caps text-slate-500 tabular-nums">
-                {t.step} {index + 1} {t.of} {total}
+                {t.stepOf(index + 1, total)}
               </p>
             )}
           </div>
@@ -301,7 +304,7 @@ export function Player(props: PlayerProps) {
             }}
             onReport={() => setFeedbackOpen(true)}
             onExit={onExit}
-            exitLabel={exitLabel}
+            exitLabel={exitText}
             preview={preview}
           />
         ) : step ? (
@@ -322,7 +325,7 @@ export function Player(props: PlayerProps) {
                 <div className={cn('flex items-start gap-3 rounded-3xl p-4 shadow-lg', WARNINGS[step.warning.level].className)}>
                   <TriangleAlert className="mt-0.5 h-7 w-7 shrink-0" />
                   <div>
-                    <p className="label-caps opacity-90">{WARNINGS[step.warning.level].label}</p>
+                    <p className="label-caps opacity-90">{t.warningLevels[step.warning.level]}</p>
                     <p className="text-lg leading-snug font-black">{step.warning.text}</p>
                   </div>
                 </div>
@@ -381,7 +384,6 @@ export function Player(props: PlayerProps) {
           open={feedbackOpen}
           onClose={() => setFeedbackOpen(false)}
           t={t}
-          lang={lang}
           data={deps.data}
           files={deps.files}
           base={{
@@ -452,6 +454,8 @@ export function Player(props: PlayerProps) {
       )}
     </div>
   )
+  // Les commandes des médias (vidéo, page, zoom) suivent la langue du poste, pas celle de l'outil.
+  return <MediaLabelsProvider value={t.media}>{player}</MediaLabelsProvider>
 }
 
 function EnergyChip({ point }: { point: { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string } }) {
@@ -477,7 +481,7 @@ function Intro({ content, t, onStart }: { content: InstructionContent; t: Return
         {content.summary && <p className="mt-3 text-xl font-bold text-slate-600 dark:text-slate-300">{content.summary}</p>}
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="glass-card inline-flex h-11 items-center gap-2 rounded-2xl px-4 font-black">
-            <Layers className="h-5 w-5 text-[var(--primary)]" /> {content.steps.length} {t.step.toLowerCase()}s
+            <Layers className="h-5 w-5 text-[var(--primary)]" /> {t.stepCount(content.steps.length)}
           </span>
           {!!content.durationMin && (
             <span className="glass-card inline-flex h-11 items-center gap-2 rounded-2xl px-4 font-black">
@@ -486,7 +490,7 @@ function Intro({ content, t, onStart }: { content: InstructionContent; t: Return
           )}
           {content.kind === 'lockout' && (
             <span className="inline-flex h-11 items-center gap-2 rounded-2xl bg-gradient-to-br from-[#FF2B5E] to-[#FF6B00] px-4 font-black text-white">
-              <Lock className="h-5 w-5" /> {content.lockout?.locksRequired ?? content.lockout?.energyPoints.length ?? 0} {t.locks}
+              <Lock className="h-5 w-5" /> {t.lockCount(content.lockout?.locksRequired ?? content.lockout?.energyPoints.length ?? 0)}
             </span>
           )}
         </div>
@@ -499,7 +503,7 @@ function Intro({ content, t, onStart }: { content: InstructionContent; t: Return
             {content.ppe.map((p) => (
               <div key={p} className="flex flex-col items-center gap-2 rounded-[28px] bg-gradient-to-br from-[#2563eb] to-[#0ea5e9] p-4 text-center text-white shadow-[0_12px_30px_rgba(37,99,235,0.3)]">
                 <PpeIcon ppe={p} className="h-10 w-10" />
-                <span className="text-sm leading-tight font-black">{PPE[p] ?? p}</span>
+                <span className="text-sm leading-tight font-black">{t.ppeNames[p] ?? PPE[p] ?? p}</span>
               </div>
             ))}
           </div>
@@ -530,14 +534,14 @@ function Intro({ content, t, onStart }: { content: InstructionContent; t: Return
                 <span className={cn('flex h-14 min-w-14 items-center justify-center rounded-2xl px-2 text-lg font-black', ENERGY[e.type].color)}>{e.tag}</span>
                 <div className="min-w-0 text-sm font-bold text-slate-700 dark:text-slate-200">
                   <p className="text-base font-black text-slate-900 dark:text-white">
-                    {ENERGY[e.type].label} {e.magnitude ? `· ${e.magnitude}` : ''}
+                    {t.energyNames[e.type]} {e.magnitude ? `· ${e.magnitude}` : ''}
                   </p>
                   <p>{e.description}</p>
                   <p className="mt-1">
-                    <span className="opacity-60">{t.device} :</span> {e.isolationDevice} — {e.location}
+                    <span className="opacity-60">{t.deviceLabel}</span> {e.isolationDevice} — {e.location}
                   </p>
                   <p>
-                    <span className="opacity-60">{t.verify} :</span> {e.verification}
+                    <span className="opacity-60">{t.verifyLabel}</span> {e.verification}
                   </p>
                 </div>
               </div>
@@ -629,7 +633,7 @@ function DocumentView({ content, t, energyById }: { content: InstructionContent;
               <h3 className="pt-1 text-2xl font-black tracking-tight">{s.title}</h3>
             </div>
             {s.energyPointId && energyById.get(s.energyPointId) && <div className="mt-3"><EnergyChip point={energyById.get(s.energyPointId)!} /></div>}
-            {s.warning && <p className={cn('mt-3 rounded-2xl p-3 font-black', WARNINGS[s.warning.level].className)}>{WARNINGS[s.warning.level].label} : {s.warning.text}</p>}
+            {s.warning && <p className={cn('mt-3 rounded-2xl p-3 font-black', WARNINGS[s.warning.level].className)}>{t.warningLine(t.warningLevels[s.warning.level], s.warning.text)}</p>}
             {s.text && <p className="mt-3 text-lg font-bold text-slate-700 dark:text-slate-200">{s.text}</p>}
             {!!s.keyPoints?.length && (
               <ul className="mt-3 space-y-1 text-base font-bold">

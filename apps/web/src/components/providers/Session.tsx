@@ -9,6 +9,7 @@ import { fetchProfile, type Profile } from '@/lib/gateway/auth'
 import { gateway, hasSession } from '@/lib/gateway/client'
 import { dataApi, type DataApi, type Doc } from '@/lib/gateway/data'
 import { filesApi, type FilesApi } from '@/lib/gateway/files'
+import { messages, useMessages } from '@/lib/i18n'
 import { ROLES, type Feature, type Permission } from '@/lib/model/catalog'
 import { ensureOrg, logUsage, normalizeOrg, T } from '@/lib/model/repo'
 import type { MemberRole, MemberSettings, OrgSettings } from '@/lib/model/types'
@@ -51,6 +52,7 @@ export function roleOf(org: OrgSettings, profile: Profile): MemberRole {
 export function SessionProvider({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
   const router = useRouter()
   const qc = useQueryClient()
+  const t = useMessages().auth.session
   const loggedIn = typeof window !== 'undefined' && hasSession()
 
   useEffect(() => {
@@ -64,7 +66,8 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
     staleTime: 60_000,
     queryFn: async () => {
       const p = profileQ.data!
-      const doc = await ensureOrg(data, p.orgName || p.company || 'Mon usine')
+      // Une usine neuve prend son nom par défaut dans la langue de la personne qui la crée.
+      const doc = await ensureOrg(data, p.orgName || p.company || messages().auth.session.defaultOrgName)
       if (!doc.json_data.createdBy && p.userId) {
         await data.patch(T.org, doc._id, { createdBy: p.userId }).catch(() => undefined)
         doc.json_data.createdBy = p.userId
@@ -115,7 +118,7 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
       org,
       role,
       me: { ...me, role },
-      displayName: profile.fullname || profile.email.split('@')[0] || 'Moi',
+      displayName: profile.fullname || profile.email.split('@')[0] || t.me,
       can: (feature, level = 'read') => rank[perms[feature]] >= rank[level],
       data,
       files,
@@ -123,7 +126,7 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
       updateOrg,
       refreshOrg,
     }
-  }, [profile, org, updateOrg, refreshOrg])
+  }, [profile, org, updateOrg, refreshOrg, t])
 
   if (profileQ.error || orgQ.error) {
     return <SessionError onRetry={() => (profileQ.error ? profileQ.refetch() : orgQ.refetch())} />
@@ -137,13 +140,14 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
 }
 
 function SessionError({ onRetry }: { onRetry: () => void }) {
+  const { common, auth } = useMessages()
   return (
     <div className="flex min-h-dvh items-center justify-center p-6">
       <div className="glass-panel max-w-md rounded-[32px] p-8 text-center">
-        <h1 className="text-2xl font-black tracking-tight">Impossible d’ouvrir CLIP</h1>
-        <p className="mt-2 font-medium text-slate-500">Le serveur ne répond pas pour le moment. Vérifiez votre connexion, puis réessayez.</p>
+        <h1 className="text-2xl font-black tracking-tight">{auth.session.openFailed}</h1>
+        <p className="mt-2 font-medium text-slate-500">{auth.session.serverDown}</p>
         <button type="button" onClick={onRetry} className="btn-press bg-gradient-primary shadow-primary mt-6 h-12 rounded-full px-6 font-black text-white">
-          Réessayer
+          {common.retry}
         </button>
       </div>
     </div>

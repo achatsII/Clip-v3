@@ -12,7 +12,8 @@ beforeEach(() => {
   pause = vi.fn()
   HTMLMediaElement.prototype.play = play as unknown as HTMLMediaElement['play']
   HTMLMediaElement.prototype.pause = pause as unknown as HTMLMediaElement['pause']
-  localStorage.clear()
+  // Seul le choix de lecture repart à zéro : la langue de l'outil reste celle des tests (le français).
+  localStorage.removeItem('clip_pref_video_mode')
 })
 afterEach(cleanup)
 

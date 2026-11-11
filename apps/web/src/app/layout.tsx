@@ -3,9 +3,13 @@ import { Providers } from '@/components/providers/Providers'
 import { THEME_SCRIPT } from '@/lib/theme'
 import './globals.css'
 
+/**
+ * Les métadonnées se rendent au serveur, qui ne connaît pas la langue de l'outil (choisie dans le
+ * navigateur, `clip_pref_ui_lang`) : elles restent en français, la langue source.
+ */
 export const metadata: Metadata = {
   title: { default: 'CLIP — Instructions de travail', template: '%s · CLIP' },
-  description: "Filmez, parlez, l'IA rédige l'instruction de travail. Vos opérateurs la trouvent au bon poste, au bon moment.",
+  description: "Filmez, parlez, l'IA rédige l'instruction de travail. Vos opérateurs la trouvent au bon poste, au bon moment.", // i18n-ignore : rendu au serveur
   applicationName: 'CLIP',
   appleWebApp: { capable: true, title: 'CLIP', statusBarStyle: 'default' },
   icons: { icon: '/icon.svg' },

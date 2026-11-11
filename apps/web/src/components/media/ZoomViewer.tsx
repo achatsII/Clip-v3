@@ -4,6 +4,7 @@ import { Minus, Plus, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { IDENTITY, clampView, isZoomed, pinchView, zoomAround, type View } from '@/lib/ui/zoom'
+import { useMediaLabels } from './MediaView'
 
 /**
  * Regarder un média de près, en plein écran : pincer pour zoomer, glisser pour se déplacer,
@@ -22,6 +23,7 @@ export function ZoomViewer({ open, onClose, label, children }: { open: boolean; 
 type Gesture = { kind: 'pan'; id: number; x0: number; y0: number; v0: View; moved: boolean } | { kind: 'pinch'; d0: number; m0: { x: number; y: number }; v0: View } | { kind: 'wait' }
 
 function Viewer({ onClose, label, children }: { onClose: () => void; label: string; children: ReactNode }) {
+  const labels = useMediaLabels()
   const [view, setView] = useState<View>(IDENTITY)
   const frame = useRef<HTMLDivElement>(null)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
@@ -122,16 +124,16 @@ function Viewer({ onClose, label, children }: { onClose: () => void; label: stri
         </div>
       </div>
       <div className="pt-safe pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3">
-        <span className="rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white/85 tabular-nums">{isZoomed(view) ? `${Math.round(view.k * 100)} %` : 'Pincez ou touchez deux fois pour zoomer'}</span>
-        <button type="button" onClick={onClose} aria-label="Fermer" className="btn-press pointer-events-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/20">
+        <span className="rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white/85 tabular-nums">{isZoomed(view) ? labels.zoomLevel(Math.round(view.k * 100)) : labels.zoomHint}</span>
+        <button type="button" onClick={onClose} aria-label={labels.close} className="btn-press pointer-events-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/20">
           <X className="h-6 w-6" />
         </button>
       </div>
       <div className="pb-safe pointer-events-none absolute right-3 bottom-24 flex flex-col gap-2 max-sm:hidden">
-        <button type="button" onClick={() => zoomBy(1.4)} aria-label="Zoomer" className="btn-press pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/20">
+        <button type="button" onClick={() => zoomBy(1.4)} aria-label={labels.zoomIn} className="btn-press pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/20">
           <Plus className="h-5 w-5" />
         </button>
-        <button type="button" onClick={() => zoomBy(1 / 1.4)} disabled={!isZoomed(view)} aria-label="Dézoomer" className="btn-press pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/20 disabled:opacity-40">
+        <button type="button" onClick={() => zoomBy(1 / 1.4)} disabled={!isZoomed(view)} aria-label={labels.zoomOut} className="btn-press pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/20 disabled:opacity-40">
           <Minus className="h-5 w-5" />
         </button>
       </div>

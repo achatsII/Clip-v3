@@ -14,6 +14,7 @@ import { aiApi } from '@/lib/gateway/ai'
 import { dataApi } from '@/lib/gateway/data'
 import { filesApi } from '@/lib/gateway/files'
 import { canReadAloud, exchangeLink, guestClient, scopedId, type GuestLink } from '@/lib/gateway/guest'
+import { useMessages } from '@/lib/i18n'
 import { CATEGORIES } from '@/lib/model/catalog'
 import { listAllPublished, listPublishedForStation, logUsage, T } from '@/lib/model/repo'
 import type { Published, Station } from '@/lib/model/types'
@@ -31,16 +32,19 @@ export default function StationKioskPage() {
 }
 
 function Kiosk() {
+  const t = useMessages().publicLinks
   const { uuid } = useParams<{ uuid: string }>()
   const [dead, setDead] = useState(false)
   const link = useQuery({ queryKey: ['link', uuid], queryFn: () => exchangeLink(uuid), retry: 1, staleTime: Infinity })
 
   if (link.isLoading) return <PublicLoading />
-  if (link.error || dead || !link.data) return <PublicMessage title="Ce lien ne fonctionne plus" description="Le code QR a peut-être été remplacé. Demandez le nouveau code à votre superviseur." />
+  if (link.error || dead || !link.data) return <PublicMessage title={t.deadLink} description={t.kiosk.deadLinkHint} />
   return <KioskInner uuid={uuid} link={link.data} onDead={() => setDead(true)} />
 }
 
 function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onDead: () => void }) {
+  const { publicLinks } = useMessages()
+  const t = publicLinks.kiosk
   const client = useMemo(() => guestClient(uuid, link, onDead), [uuid, link, onDead])
   const data = useMemo(() => dataApi(client), [client])
   const files = useMemo(() => (link.permissions.some((p) => p.startsWith('files')) ? filesApi(client) : null), [client, link.permissions])
@@ -64,7 +68,7 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
   // Un lien régénéré invalide l'ancien : la page vérifie qu'elle porte le lien courant du poste.
   const revoked = station.data && station.data.json_data.linkId && station.data.json_data.linkId !== uuid
   if (station.isLoading || mine.isLoading) return <PublicLoading />
-  if (!stationId || !station.data || revoked) return <PublicMessage title="Ce lien ne fonctionne plus" description="Le code QR de ce poste a été remplacé. Demandez le nouveau code à votre superviseur." />
+  if (!stationId || !station.data || revoked) return <PublicMessage title={publicLinks.deadLink} description={t.replacedHint} />
 
   if (open) {
     return (
@@ -78,7 +82,7 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
         source="kiosk"
         deps={{ data, ai: canReadAloud(link.permissions) || voiceAllowed ? ai : null, files }}
         onExit={() => setOpen(null)}
-        exitLabel="Autres instructions"
+        exitLabel={(words) => words.backToList}
         allowVoice={voiceAllowed}
         allowQuestions={link.permissions.includes('assistant:ask')}
       />
@@ -101,21 +105,21 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
       <header className="mb-6 flex items-center gap-4">
         {branding?.logoUrl ? <img src={branding.logoUrl} alt={branding.orgName} className="h-12 max-w-36 object-contain" /> : null}
         <div className="min-w-0 flex-1">
-          <p className="label-caps text-slate-500">{branding?.orgName ?? 'Poste'}</p>
+          <p className="label-caps text-slate-500">{branding?.orgName ?? t.station}</p>
           <h1 className="truncate text-4xl font-black tracking-tighter sm:text-5xl">{station.data.json_data.name}</h1>
           {station.data.json_data.code && <p className="text-lg font-black text-slate-400">{station.data.json_data.code}</p>}
         </div>
-        <button type="button" onClick={() => void document.documentElement.requestFullscreen?.().catch(() => undefined)} className="btn-press glass-card hidden h-14 w-14 items-center justify-center rounded-2xl sm:flex" aria-label="Plein écran">
+        <button type="button" onClick={() => void document.documentElement.requestFullscreen?.().catch(() => undefined)} className="btn-press glass-card hidden h-14 w-14 items-center justify-center rounded-2xl sm:flex" aria-label={t.fullscreen}>
           <Maximize className="h-6 w-6" />
         </button>
       </header>
 
       <div className="glass-panel mb-6 flex items-center gap-3 rounded-[28px] px-5">
         <Search className="h-6 w-6 text-slate-400" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher une instruction, une pièce, un numéro…" className="h-16 min-w-0 flex-1 bg-transparent text-lg font-bold focus:outline-none" aria-label="Chercher" />
-        <MicButton label="Chercher en parlant" onText={(t) => setQuery((q) => (q ? `${q} ${t}` : t))} />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.searchPlaceholder} className="h-16 min-w-0 flex-1 bg-transparent text-lg font-bold focus:outline-none" aria-label={t.search} />
+        <MicButton label={t.searchByVoice} onText={(text) => setQuery((q) => (q ? `${q} ${text}` : text))} />
         {query && (
-          <button type="button" onClick={() => setQuery('')} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl" aria-label="Effacer">
+          <button type="button" onClick={() => setQuery('')} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl" aria-label={t.clear}>
             <X className="h-5 w-5" />
           </button>
         )}
@@ -124,25 +128,25 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
       {mineFiltered.length ? (
         <Grid items={mineFiltered} onOpen={setOpen} big />
       ) : (
-        <PublicMessage title={query ? 'Rien trouvé à ce poste' : 'Aucune instruction pour ce poste'} description={query ? 'Essayez un autre mot.' : 'Les instructions publiées pour ce poste apparaîtront ici automatiquement.'} />
+        <PublicMessage title={query ? t.noMatch : t.empty} description={query ? t.noMatchHint : t.emptyHint} />
       )}
 
       {!onlyMine ? (
         <section className="mt-10">
           {!showAll && !query ? (
             <button type="button" onClick={() => setShowAll(true)} className="btn-press glass-card mx-auto flex h-14 items-center gap-2 rounded-full px-6 font-black">
-              Voir les instructions des autres postes
+              {t.showOtherStations}
             </button>
           ) : (
             <>
-              <h2 className="mb-3 text-xl font-black tracking-tight">Autres postes</h2>
-              {all.isLoading ? <p className="font-bold text-slate-400">Chargement…</p> : others.length ? <Grid items={others} onOpen={setOpen} /> : <p className="font-bold text-slate-400">Rien d’autre à afficher.</p>}
+              <h2 className="mb-3 text-xl font-black tracking-tight">{t.otherStations}</h2>
+              {all.isLoading ? <p className="font-bold text-slate-400">{publicLinks.loading}</p> : others.length ? <Grid items={others} onOpen={setOpen} /> : <p className="font-bold text-slate-400">{t.nothingElse}</p>}
             </>
           )}
         </section>
       ) : (
         <p className="mt-10 flex items-center justify-center gap-2 text-sm font-bold text-slate-400">
-          <Lock className="h-4 w-4" /> Cette tablette montre seulement les instructions de ce poste.
+          <Lock className="h-4 w-4" /> {t.onlyThisStation}
         </p>
       )}
     </main>
@@ -150,6 +154,7 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
 }
 
 function Grid({ items, onOpen, big }: { items: Doc<Published>[]; onOpen: (p: Doc<Published>) => void; big?: boolean }) {
+  const t = useMessages().publicLinks.kiosk
   return (
     <div className={cn('grid gap-4', big ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4')}>
       {items.map((p) => {
@@ -165,7 +170,7 @@ function Grid({ items, onOpen, big }: { items: Doc<Published>[]; onOpen: (p: Doc
               </span>
               <span className="absolute inset-x-4 bottom-3">
                 <span className={cn('block leading-tight font-black tracking-tight', big ? 'text-2xl' : 'text-lg')}>{c.title}</span>
-                <span className="text-sm font-bold text-white/80">{c.steps.length} étapes{c.durationMin ? ` · ${c.durationMin} min` : ''}</span>
+                <span className="text-sm font-bold text-white/80">{t.cardMeta(c.steps.length, c.durationMin)}</span>
               </span>
             </span>
           </button>

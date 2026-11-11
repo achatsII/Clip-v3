@@ -1,11 +1,25 @@
 'use client'
 
 import { Check, FileText, Hand, Maximize2, Pause, Play, Repeat, Repeat1, RotateCcw, Volume2, VolumeX } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { annotationsMarkup } from '@/lib/annotations/markup'
+import { useMessages, type Messages } from '@/lib/i18n'
 import { VIDEO_MODES, setVideoMode, type VideoMode } from '@/lib/media/videoMode'
 import type { Annotation, StepMedia } from '@/lib/model/types'
 import { cn, formatClock } from '@/lib/util/cn'
+
+/**
+ * Les mots des commandes des médias. Dans l'outil, ceux de sa langue ; le lecteur des opérateurs
+ * fournit les siens (`MediaLabelsProvider`), dans la langue choisie au poste.
+ */
+export type MediaLabels = Messages['publicLinks']['media']
+const MediaLabelsContext = createContext<MediaLabels | null>(null)
+export const MediaLabelsProvider = MediaLabelsContext.Provider
+
+export function useMediaLabels(): MediaLabels {
+  const tool = useMessages().publicLinks.media
+  return useContext(MediaLabelsContext) ?? tool
+}
 
 /**
  * Les annotations par-dessus une image (coordonnées relatives, de 0 à 1). Le dessin est celui du
@@ -78,6 +92,7 @@ export function VideoSegment({
   className?: string
   big?: boolean
 }) {
+  const labels = useMediaLabels()
   const ref = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
   const [ended, setEnded] = useState(false)
@@ -165,31 +180,31 @@ export function VideoSegment({
     <div className={cn('group relative h-full w-full overflow-hidden bg-black', className)}>
       <video ref={ref} src={src} poster={poster} muted={muted} playsInline preload={auto ? 'auto' : 'metadata'} className="h-full w-full object-contain" onClick={toggle} />
       {!playing && (
-        <button type="button" onClick={toggle} aria-label={ended ? 'Revoir l’extrait' : 'Lire l’extrait'} className="absolute inset-0 m-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-md">
+        <button type="button" onClick={toggle} aria-label={ended ? labels.replayClip : labels.playClip} className="absolute inset-0 m-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-md">
           {ended ? <RotateCcw className="h-9 w-9" /> : <Play className="ml-1 h-10 w-10 fill-current" />}
         </button>
       )}
       {menu && (
         <>
-          <button type="button" aria-label="Fermer" className="absolute inset-0 cursor-default" onClick={() => setMenu(false)} />
-          <div className="absolute right-3 bottom-20 z-10 w-64 rounded-2xl bg-slate-900/95 p-1.5 text-white shadow-xl ring-1 ring-white/10" role="menu" aria-label="Lecture des vidéos">
-            <p className="px-3 pt-1.5 pb-1 text-[10px] font-black tracking-widest text-white/55 uppercase">Lecture des vidéos</p>
+          <button type="button" aria-label={labels.close} className="absolute inset-0 cursor-default" onClick={() => setMenu(false)} />
+          <div className="absolute right-3 bottom-20 z-10 w-64 rounded-2xl bg-slate-900/95 p-1.5 text-white shadow-xl ring-1 ring-white/10" role="menu" aria-label={labels.videoPlayback}>
+            <p className="px-3 pt-1.5 pb-1 text-[10px] font-black tracking-widest text-white/55 uppercase">{labels.videoPlayback}</p>
             {VIDEO_MODES.map((m) => (
               <button key={m.value} type="button" role="menuitemradio" aria-checked={effective === m.value} onClick={() => choose(m.value)} className={cn('flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left', effective === m.value ? 'bg-white/15' : 'hover:bg-white/10')}>
                 <ModeIcon mode={m.value} className="h-5 w-5 shrink-0" />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-black">{m.label}</span>
-                  <span className="block text-xs font-medium text-white/65">{m.hint}</span>
+                  <span className="block text-sm font-black">{labels.videoModes[m.value].label}</span>
+                  <span className="block text-xs font-medium text-white/65">{labels.videoModes[m.value].hint}</span>
                 </span>
                 {effective === m.value && <Check className="h-4 w-4 shrink-0" />}
               </button>
             ))}
-            <p className="px-3 pt-1 pb-1.5 text-[11px] font-medium text-white/50">Retenu sur cet appareil.</p>
+            <p className="px-3 pt-1 pb-1.5 text-[11px] font-medium text-white/50">{labels.savedOnDevice}</p>
           </div>
         </>
       )}
       <div className={cn('absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/70 to-transparent p-3', bare && 'hidden')}>
-        <button type="button" onClick={toggle} aria-label={playing ? 'Pause' : 'Lire'} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
+        <button type="button" onClick={toggle} aria-label={playing ? labels.pause : labels.play} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
           {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current" />}
         </button>
         <button
@@ -200,7 +215,7 @@ export function VideoSegment({
             v.currentTime = start
             if (v.paused && (ended || auto)) toggle()
           }}
-          aria-label="Reprendre l’extrait"
+          aria-label={labels.restartClip}
           className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}
         >
           <RotateCcw className="h-5 w-5" />
@@ -210,11 +225,11 @@ export function VideoSegment({
         </div>
         <span className={cn('text-xs font-black text-white tabular-nums', modeControl && 'max-sm:hidden')}>{formatClock(Math.max(0, t - start))} / {formatClock(len)}</span>
         {modeControl && (
-          <button type="button" onClick={() => setMenu((o) => !o)} aria-label={`Lecture : ${VIDEO_MODES.find((m) => m.value === effective)?.label}`} aria-expanded={menu} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
+          <button type="button" onClick={() => setMenu((o) => !o)} aria-label={labels.playbackMode(labels.videoModes[effective].label)} aria-expanded={menu} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
             <ModeIcon mode={effective} className="h-5 w-5" />
           </button>
         )}
-        <button type="button" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Activer le son' : 'Couper le son'} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
+        <button type="button" onClick={() => setMuted((m) => !m)} aria-label={muted ? labels.unmute : labels.mute} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
           {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
         </button>
       </div>
@@ -229,13 +244,14 @@ function ModeIcon({ mode, className }: { mode: VideoMode; className?: string }) 
 }
 
 export function DocumentPage({ media, className }: { media: Extract<StepMedia, { kind: 'document' }>; className?: string }) {
+  const labels = useMediaLabels()
   const href = `${media.url}#page=${media.page ?? 1}`
   if (media.pageImageUrl) {
     return (
       <div className={cn('relative h-full w-full bg-white', className)}>
-        <AnnotatedImage src={media.pageImageUrl} alt={`Page ${media.page ?? 1}`} />
+        <AnnotatedImage src={media.pageImageUrl} alt={labels.page(media.page ?? 1)} />
         <a href={href} target="_blank" rel="noreferrer" className="btn-press glass-card absolute top-3 right-3 flex h-11 items-center gap-2 rounded-2xl px-3 text-xs font-black text-slate-800">
-          <Maximize2 className="h-4 w-4" /> Page {media.page ?? 1}
+          <Maximize2 className="h-4 w-4" /> {labels.page(media.page ?? 1)}
         </a>
       </div>
     )
@@ -243,9 +259,9 @@ export function DocumentPage({ media, className }: { media: Extract<StepMedia, {
   return (
     <div className={cn('flex h-full w-full flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center dark:bg-slate-800', className)}>
       <FileText className="h-14 w-14 text-slate-400" />
-      <p className="font-black text-slate-700 dark:text-slate-200">{media.name ?? 'Document'} · page {media.page ?? 1}</p>
+      <p className="font-black text-slate-700 dark:text-slate-200">{labels.documentPage(media.name ?? labels.document, media.page ?? 1)}</p>
       <a href={href} target="_blank" rel="noreferrer" className="btn-press bg-gradient-primary shadow-primary flex h-12 items-center gap-2 rounded-full px-5 font-black text-white">
-        <Maximize2 className="h-4 w-4" /> Ouvrir la page
+        <Maximize2 className="h-4 w-4" /> {labels.openPage}
       </a>
     </div>
   )
@@ -263,7 +279,8 @@ export function MediaView({ media, className, big, autoPlay, videoMode, modeCont
  * (`sandbox` sans `allow-same-origin`) ; elle n'a accès ni aux jetons, ni aux données, ni à la page.
  */
 export function HtmlMedia({ html, title, className }: { html: string; title?: string; className?: string }) {
-  return <iframe srcDoc={html} sandbox="allow-scripts" referrerPolicy="no-referrer" title={title || 'Schéma'} loading="lazy" className={cn('h-full w-full border-0 bg-white', className)} />
+  const labels = useMediaLabels()
+  return <iframe srcDoc={html} sandbox="allow-scripts" referrerPolicy="no-referrer" title={title || labels.diagram} loading="lazy" className={cn('h-full w-full border-0 bg-white', className)} />
 }
 
 export function mediaThumb(media: StepMedia | undefined): string | null {

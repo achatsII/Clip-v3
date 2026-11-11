@@ -14,6 +14,7 @@ import {
   type Capability,
   type NativeEnvironment,
 } from '@clip/bridge'
+import { messages } from '@/lib/i18n'
 
 declare global {
   interface Window {
@@ -82,12 +83,12 @@ export function callNative<T extends BridgeRequestType>(
   opts: { timeoutMs?: number } = {},
 ): Promise<BridgeRequestMap[T]['result']> {
   const env = nativeEnv()
-  if (!env || !env.capabilities.includes(type as Capability)) return Promise.reject(new NativeError('unsupported', 'Fonction native indisponible'))
+  if (!env || !env.capabilities.includes(type as Capability)) return Promise.reject(new NativeError('unsupported', messages().auth.native.unavailable))
   const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
   return new Promise((resolve, reject) => {
     const timer = opts.timeoutMs ? setTimeout(() => {
       pending.delete(id)
-      reject(new NativeError('failed', 'La coquille native ne répond pas'))
+      reject(new NativeError('failed', messages().auth.native.noResponse))
     }, opts.timeoutMs) : null
     pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timer })
     window.ReactNativeWebView!.postMessage(JSON.stringify({ v: BRIDGE_VERSION, id, type, payload }))

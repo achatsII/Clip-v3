@@ -2,89 +2,34 @@
 
 import { Mic, MicOff, X } from 'lucide-react'
 import { useRef } from 'react'
+import { runVoiceTool, VOICE_TOOLS, voiceGreeting, voiceSystemPrompt } from '@/lib/ai/voice'
 import { useLiveVoice } from '@/lib/ai/useLiveVoice'
 import type { AiApi } from '@/lib/gateway/ai'
 import type { InstructionContent } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
+import { strings } from './i18n'
 
 /**
  * Assistant vocal en direct (Gemini Live, `/api/v1/ai/live/session`) : l'opérateur parle, les
  * mains libres. Le modèle navigue dans les étapes par des fonctions de l'app et répond aux
  * questions à partir de l'instruction. Signaler un problème ouvre le formulaire : rien
- * d'irréversible ne part à la voix.
+ * d'irréversible ne part à la voix. Sa consigne et ses fonctions sont dans src/lib/ai/voice.ts.
  */
-const LANG_HINT: Record<string, string> = { fr: 'français québécois', en: 'English', es: 'español' }
-
-function systemPrompt(content: InstructionContent, lang: string) {
-  const steps = content.steps.map((s, i) => `${i + 1}. ${s.title} — ${s.text}${s.warning ? ` (${s.warning.level} : ${s.warning.text})` : ''}`).join('\n')
-  return `Tu es l'assistant vocal d'un opérateur d'usine qui suit l'instruction « ${content.title} ». Il a les mains occupées. Parle en ${LANG_HINT[lang] ?? lang}, phrases très courtes, ton calme et clair.
-- Pour changer d'étape, appelle VRAIMENT la fonction (aller_etape_suivante, aller_etape_precedente, aller_a_etape) ; ne dis jamais que tu as changé d'étape sans l'avoir fait.
-- Avant de répondre à « où j'en suis », appelle etat_instruction.
-- Pour lire une étape, appelle etat_instruction puis lis son titre et son texte mot pour mot.
-- Réponds aux questions UNIQUEMENT à partir de l'instruction ci-dessous ; si la réponse n'y est pas, dis-le et conseille de demander au superviseur. Ne devine jamais une valeur.
-- Pour un danger ou une question de sécurité incertaine : dis d'arrêter et d'appeler le superviseur.
-- Si l'opérateur veut signaler un problème, appelle signaler_probleme : le formulaire s'ouvre à l'écran.
-
-INSTRUCTION :
-${steps}`
-}
-
-const TOOLS = [
-  { name: 'aller_etape_suivante', description: "Passe à l'étape suivante à l'écran. Appelle-la vraiment.", parameters: { type: 'OBJECT', properties: {} } },
-  { name: 'aller_etape_precedente', description: "Revient à l'étape précédente à l'écran. Appelle-la vraiment.", parameters: { type: 'OBJECT', properties: {} } },
-  {
-    name: 'aller_a_etape',
-    description: "Affiche l'étape demandée (1 = première). Appelle-la vraiment.",
-    parameters: { type: 'OBJECT', properties: { numero: { type: 'NUMBER', description: "Numéro de l'étape, 1 = première" } }, required: ['numero'] },
-  },
-  { name: 'etat_instruction', description: "Rend l'étape affichée en ce moment et son contenu. À appeler avant de dire où en est l'opérateur.", parameters: { type: 'OBJECT', properties: {} } },
-  { name: 'signaler_probleme', description: "Ouvre à l'écran le formulaire pour signaler qu'une étape n'est pas claire, fausse ou dangereuse.", parameters: { type: 'OBJECT', properties: {} } },
-]
-
 export function VoiceAssistant({ ai, content, lang, index, onClose, onGo, onReport }: { ai: AiApi; content: InstructionContent; lang: string; index: number; onClose: () => void; onGo: (i: number) => void; onReport: () => void }) {
+  const t = strings(lang).assistant
   const indexRef = useRef(index)
   indexRef.current = index
   const handlers = useRef({ onGo, onReport })
   handlers.current = { onGo, onReport }
 
-  const runTool = (name: string, args: Record<string, unknown>): Record<string, unknown> => {
-    const n = content.steps.length
-    const i = indexRef.current
-    if (name === 'aller_etape_suivante') {
-      if (i >= n - 1) {
-        handlers.current.onGo(n)
-        return { ok: true, message: 'Instruction terminée.' }
-      }
-      handlers.current.onGo(i + 1)
-      return { ok: true, etape: i + 2, titre: content.steps[i + 1]?.title }
-    }
-    if (name === 'aller_etape_precedente') {
-      if (i <= 0) return { ok: false, motif: 'Déjà à la première étape.' }
-      handlers.current.onGo(i - 1)
-      return { ok: true, etape: i, titre: content.steps[i - 1]?.title }
-    }
-    if (name === 'aller_a_etape') {
-      const k = Math.round(Number(args.numero))
-      if (!Number.isFinite(k) || k < 1 || k > n) return { ok: false, motif: `Il y a ${n} étapes.` }
-      handlers.current.onGo(k - 1)
-      return { ok: true, etape: k, titre: content.steps[k - 1].title }
-    }
-    if (name === 'etat_instruction') {
-      const s = content.steps[i]
-      return i < 0 ? { ecran: 'avant de commencer', etapes: n } : i >= n ? { ecran: 'terminé', etapes: n } : { etape: i + 1, sur: n, titre: s.title, texte: s.text, mise_en_garde: s.warning?.text ?? null, points_cles: s.keyPoints ?? [] }
-    }
-    if (name === 'signaler_probleme') {
-      handlers.current.onReport()
-      return { ok: true, message: 'Le formulaire est ouvert à l’écran.' }
-    }
-    return { ok: false, motif: 'Fonction inconnue' }
-  }
+  const runTool = (name: string, args: Record<string, unknown>): Record<string, unknown> =>
+    runVoiceTool(name, args, { content, index: indexRef.current, onGo: (i) => handlers.current.onGo(i), onReport: () => handlers.current.onReport() })
 
   const { state, lines, muted, setMuted, level } = useLiveVoice({
     ai,
-    systemPrompt: () => systemPrompt(content, lang),
-    tools: TOOLS,
-    greeting: lang === 'fr' ? 'Bonjour, présente-toi en une phrase et demande comment aider.' : 'Hello, introduce yourself in one sentence.',
+    systemPrompt: () => voiceSystemPrompt(content, lang),
+    tools: VOICE_TOOLS,
+    greeting: voiceGreeting(lang),
     onTool: runTool,
   })
 
@@ -99,13 +44,13 @@ export function VoiceAssistant({ ai, content, lang, index, onClose, onGo, onRepo
             </span>
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-black">{state === 'connecting' ? 'Connexion…' : state === 'error' ? 'Assistant indisponible' : muted ? 'Micro coupé' : 'Je vous écoute'}</p>
-            <p className="text-sm font-medium text-slate-500">{state === 'error' ? 'Vérifiez le micro et la connexion, puis réessayez.' : '« Étape suivante », « répète », « c’est quoi le couple ? »'}</p>
+            <p className="font-black">{state === 'connecting' ? t.connecting : state === 'error' ? t.unavailable : muted ? t.micOff : t.listening}</p>
+            <p className="text-sm font-medium text-slate-500">{state === 'error' ? t.checkMic : t.examples}</p>
           </div>
-          <button type="button" onClick={() => setMuted((m) => !m)} disabled={state !== 'listening'} className="btn-press flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/5 disabled:opacity-40 dark:bg-white/10" aria-label={muted ? 'Activer le micro' : 'Couper le micro'}>
+          <button type="button" onClick={() => setMuted((m) => !m)} disabled={state !== 'listening'} className="btn-press flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/5 disabled:opacity-40 dark:bg-white/10" aria-label={muted ? t.unmute : t.mute}>
             {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           </button>
-          <button type="button" onClick={onClose} className="btn-press flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/5 dark:bg-white/10" aria-label="Fermer l’assistant">
+          <button type="button" onClick={onClose} className="btn-press flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/5 dark:bg-white/10" aria-label={t.close}>
             <X className="h-5 w-5" />
           </button>
         </div>
