@@ -2,6 +2,7 @@
  * Ce qui a changé entre deux contenus : sert à l'approbateur (étapes surlignées) et au résumé
  * d'une version, sans appel d'IA.
  */
+import { messages } from '../i18n'
 import type { InstructionContent, Step } from './types'
 
 export type StepChange = 'added' | 'removed' | 'modified' | 'same'
@@ -32,21 +33,22 @@ export function removedSteps(before: InstructionContent | null, after: Instructi
   return (before?.steps ?? []).filter((s) => !ids.has(s.id))
 }
 
+/** Le résumé d'une version, écrit à la publication dans la langue de l'outil de qui publie. */
 export function summarizeChanges(before: InstructionContent | null, after: InstructionContent): string {
-  if (!before) return 'Première version.'
+  const t = messages().instructions.changes
+  if (!before) return t.first
   const d = diffSteps(before, after)
   const added = Object.values(d).filter((v) => v === 'added').length
   const modified = Object.values(d).filter((v) => v === 'modified').length
   const removed = removedSteps(before, after).length
   const parts: string[] = []
-  if (before.title !== after.title) parts.push('titre modifié')
-  if (modified) parts.push(`${modified} étape${modified > 1 ? 's' : ''} modifiée${modified > 1 ? 's' : ''}`)
-  if (added) parts.push(`${added} étape${added > 1 ? 's' : ''} ajoutée${added > 1 ? 's' : ''}`)
-  if (removed) parts.push(`${removed} étape${removed > 1 ? 's' : ''} retirée${removed > 1 ? 's' : ''}`)
-  if (JSON.stringify(before.ppe) !== JSON.stringify(after.ppe)) parts.push('EPI modifiés')
-  if (JSON.stringify(before.safety) !== JSON.stringify(after.safety)) parts.push('mises en garde modifiées')
-  if (JSON.stringify(before.lockout ?? null) !== JSON.stringify(after.lockout ?? null)) parts.push('points de cadenassage modifiés')
-  if (!parts.length) return 'Mise en forme.'
-  const text = parts.join(', ')
-  return text.charAt(0).toUpperCase() + text.slice(1) + '.'
+  if (before.title !== after.title) parts.push(t.title)
+  if (modified) parts.push(t.edited(modified))
+  if (added) parts.push(t.added(added))
+  if (removed) parts.push(t.removed(removed))
+  if (JSON.stringify(before.ppe) !== JSON.stringify(after.ppe)) parts.push(t.ppe)
+  if (JSON.stringify(before.safety) !== JSON.stringify(after.safety)) parts.push(t.safety)
+  if (JSON.stringify(before.lockout ?? null) !== JSON.stringify(after.lockout ?? null)) parts.push(t.lockout)
+  if (!parts.length) return t.formatting
+  return t.sentence(parts)
 }

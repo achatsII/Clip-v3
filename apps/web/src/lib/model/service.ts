@@ -4,6 +4,7 @@
  * publié, remplacé en entier à chaque publication.
  */
 import type { DataApi, Doc } from '../gateway/data'
+import { messages, messagesIn } from '../i18n'
 import { summarizeChanges } from './diff'
 import { coverOf, emptyContent, findPublished, nowIso, T } from './repo'
 import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Source, Version } from './types'
@@ -16,7 +17,7 @@ export interface Actor {
 export async function createInstruction(data: DataApi, actor: Actor, init: Partial<Instruction> = {}): Promise<Doc<Instruction>> {
   const now = nowIso()
   const json: Instruction = {
-    title: 'Nouvelle instruction',
+    title: messages().instructions.defaults.title,
     kind: 'procedure',
     category: 'production',
     tags: [],
@@ -89,7 +90,7 @@ export async function publishInstruction(
 ): Promise<number> {
   const instr = doc.json_data
   const content = instr.draft
-  if (!content || !content.steps.length) throw new Error('Une instruction publiée a au moins une étape.')
+  if (!content || !content.steps.length) throw new Error(messages().instructions.errors.publishWithoutSteps)
   const number = (instr.publishedVersion ?? 0) + 1
   const publishedAt = nowIso()
   const previous = opts.previous ?? null
@@ -176,7 +177,9 @@ export async function archiveInstruction(data: DataApi, doc: Doc<Instruction>) {
 
 export async function duplicateInstruction(data: DataApi, doc: Doc<Instruction>, actor: Actor): Promise<Doc<Instruction>> {
   const src = doc.json_data
-  const draft = src.draft ? { ...src.draft, title: `${src.draft.title} (copie)` } : emptyContent({ title: `${src.title} (copie)` })
+  // « (copie) » dans la langue du contenu copié (le français pour un contenu d'avant les langues) ;
+  // sans brouillon, dans celle du nouveau contenu.
+  const draft = src.draft ? { ...src.draft, title: messagesIn(src.draft.language || 'fr').instructions.defaults.copy(src.draft.title) } : emptyContent({ title: messages().instructions.defaults.copy(src.title) })
   return createInstruction(data, actor, {
     title: draft.title,
     kind: src.kind,

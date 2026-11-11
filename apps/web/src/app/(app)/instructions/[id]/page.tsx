@@ -17,6 +17,7 @@ import { creationOf } from '@/lib/ai/creation'
 import { clearJob, jobOf, subscribeJobs } from '@/lib/ai/jobs'
 import { startGeneration } from '@/lib/ai/runGeneration'
 import { Button, LinkButton } from '@/components/ui/Button'
+import { useMessages } from '@/lib/i18n'
 import { T } from '@/lib/model/repo'
 import type { GeneratingInfo, Instruction } from '@/lib/model/types'
 
@@ -26,6 +27,7 @@ export default function InstructionPage() {
   const router = useRouter()
   const qc = useQueryClient()
   const session = useSession()
+  const t = useMessages()
   const instruction = useInstruction(id)
   const stations = useStations()
   const job = useSyncExternalStore(subscribeJobs, () => jobOf(id), () => undefined)
@@ -101,7 +103,7 @@ export default function InstructionPage() {
   if (instruction.error) {
     const notFound = (instruction.error as { notFound?: boolean }).notFound
     return notFound ? (
-      <EmptyState icon={<SearchX className="h-7 w-7" />} title="Instruction introuvable" description="Elle a peut-être été archivée, ou le lien est incomplet." action={<LinkButton href="/instructions" variant="primary">Voir les instructions</LinkButton>} />
+      <EmptyState icon={<SearchX className="h-7 w-7" />} title={t.instructions.detail.notFoundTitle} description={t.instructions.detail.notFoundText} action={<LinkButton href="/instructions" variant="primary">{t.instructions.detail.seeAll}</LinkButton>} />
     ) : (
       <ErrorState error={instruction.error} onRetry={() => instruction.refetch()} />
     )
@@ -174,13 +176,13 @@ export default function InstructionPage() {
     return (
       <div className="mx-auto max-w-4xl">
         <Link href="/instructions" className="mb-4 inline-flex items-center gap-1 text-sm font-black text-slate-500">
-          <ArrowLeft className="h-4 w-4" /> Instructions
+          <ArrowLeft className="h-4 w-4" /> {t.instructions.detail.back}
         </Link>
         <CaptureBoard
           instructionId={id}
           initialSources={doc.json_data.sources}
           initialIntent={doc.json_data.intent}
-          heading={<PageHeader title="Compléter les médias" subtitle="Ajoutez ce qui manque, puis lancez la génération." />}
+          heading={<PageHeader title={t.instructions.detail.completeTitle} subtitle={t.instructions.detail.completeSubtitle} />}
           onGenerate={(_, kind) => void generate(kind)}
         />
       </div>
@@ -192,7 +194,7 @@ export default function InstructionPage() {
       {creation.kind === 'running' && (
         <p className="mb-4 flex items-center gap-3 rounded-[20px] bg-violet-50 p-4 text-sm font-bold text-violet-900 dark:bg-violet-500/10 dark:text-violet-100" role="status">
           <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
-          Une nouvelle version est en création ({launchedFrom(creation.info.device, creation.info.byName, true)}) : elle remplacera ce brouillon dès qu’elle sera prête.
+          {t.instructions.detail.newVersion(launchedFrom(creation.info.device, creation.info.byName, true))}
         </p>
       )}
       <Editor key={`${doc._id}-${doc.json_data.generation?.at ?? ''}`} doc={doc} stations={stations.data ?? []} onRegenerate={() => void generate('auto')} />
@@ -202,19 +204,20 @@ export default function InstructionPage() {
 
 /** Une création dont l'appareil ne donne plus signe de vie : on le dit, et on peut la relancer ici. */
 function Interrupted({ info, canWrite, onRelaunch, onMedia }: { info: GeneratingInfo; canWrite: boolean; onRelaunch: () => void; onMedia: () => void }) {
+  const t = useMessages().instructions.interrupted
   return (
     <div className="glass-panel animate-pop-in mx-auto max-w-xl rounded-[40px] p-8 text-center" role="status">
       <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-100 text-amber-600 dark:bg-amber-500/15">
         <PauseCircle className="h-7 w-7" />
       </div>
-      <h2 className="text-2xl font-black tracking-tight">La création s’est interrompue</h2>
-      <p className="mt-2 font-medium text-slate-500">{launchedFrom(info.device, info.byName)}, mais l’appareil ne répond plus : l’app a sans doute été fermée, ou le téléphone s’est mis en veille.</p>
-      <p className="mt-1 text-sm font-medium text-slate-400">Vos médias sont gardés : rien n’est perdu.</p>
+      <h2 className="text-2xl font-black tracking-tight">{t.title}</h2>
+      <p className="mt-2 font-medium text-slate-500">{t.text(launchedFrom(info.device, info.byName))}</p>
+      <p className="mt-1 text-sm font-medium text-slate-400">{t.kept}</p>
       {canWrite && (
         <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
-          <Button onClick={onMedia}>Revoir les médias</Button>
+          <Button onClick={onMedia}>{t.reviewMedia}</Button>
           <Button variant="primary" onClick={onRelaunch} icon={<Sparkles className="h-5 w-5" />}>
-            Relancer la création ici
+            {t.relaunch}
           </Button>
         </div>
       )}

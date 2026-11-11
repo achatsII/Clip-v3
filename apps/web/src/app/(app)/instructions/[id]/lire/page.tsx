@@ -11,6 +11,7 @@ import { T } from '@/lib/model/repo'
 import type { Published } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
 import { useEntitlement } from '@/lib/billing/state'
+import { useMessages } from '@/lib/i18n'
 import { BookOpen } from 'lucide-react'
 
 export default function ReadInstructionPage() {
@@ -18,6 +19,7 @@ export default function ReadInstructionPage() {
   const params = useSearchParams()
   const router = useRouter()
   const session = useSession()
+  const t = useMessages()
   const instruction = useInstruction(id)
   const voiceToggle = useToggle('voiceAssistant')
   const voiceRight = useEntitlement('voice_assistant')
@@ -41,9 +43,9 @@ export default function ReadInstructionPage() {
     return (
       <EmptyState
         icon={<BookOpen className="h-7 w-7" />}
-        title="Pas encore publiée"
-        description="Les opérateurs verront cette instruction une fois publiée. Vous pouvez la prévisualiser."
-        action={<LinkButton href={`/instructions/${id}/lire?apercu=1`} variant="primary">Prévisualiser le brouillon</LinkButton>}
+        title={t.instructions.read.notPublishedTitle}
+        description={t.instructions.read.notPublishedText}
+        action={<LinkButton href={`/instructions/${id}/lire?apercu=1`} variant="primary">{t.instructions.read.previewDraft}</LinkButton>}
       />
     )
   }
@@ -58,7 +60,7 @@ export default function ReadInstructionPage() {
       deps={{ data: session.data, ai: session.ai, files: session.files }}
       preview={preview}
       onExit={back}
-      exitLabel={preview ? 'Retour à l’éditeur' : 'Fermer'}
+      exitLabel={preview ? t.instructions.read.backToEditor : t.common.close}
       allowVoice={voice}
       allowQuestions
     />

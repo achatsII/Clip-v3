@@ -3,7 +3,7 @@
  * connecté, ou celui d'un lien public (jeton guest à portée limitée).
  */
 import type { DataApi, Doc } from '../gateway/data'
-import { contentLanguage } from '../i18n'
+import { contentLanguage, messages, messagesIn } from '../i18n'
 import type {
   Feedback,
   Instruction,
@@ -36,17 +36,12 @@ export function uid(prefix = ''): string {
 
 /* ───────────────────────── Organisation ───────────────────────── */
 
-export const DEFAULT_RULES = [
-  'Une seule action par étape, qui commence par un verbe à l’infinitif.',
-  'Des mots simples et courts ; un terme technique est expliqué la première fois.',
-  'Une mise en garde apparaît à l’étape où le danger se présente, pas seulement au début.',
-  'Chaque point clé dit pourquoi il compte : sécurité, qualité ou efficacité.',
-  'Les valeurs exactes (couple, température, quantité, pression) sont écrites avec leur unité.',
-]
+/** Les règles du standard de rédaction d'une usine neuve, dans la langue de la personne qui la crée. */
+export const defaultRules = (): string[] => [...messages().instructions.defaults.rules]
 
 export function defaultStandard(): WritingStandard {
   return {
-    rules: DEFAULT_RULES,
+    rules: defaultRules(),
     startWithSafety: true,
     maxWordsPerStep: 25,
     tone: 'infinitif',
@@ -81,7 +76,7 @@ export async function readOrg(data: DataApi): Promise<Doc<OrgSettings> | null> {
 }
 
 /** Complète un document d'organisation écrit par une version plus ancienne. */
-export function normalizeOrg(json: Partial<OrgSettings>, fallbackName = 'Mon usine'): OrgSettings {
+export function normalizeOrg(json: Partial<OrgSettings>, fallbackName = messages().instructions.defaults.orgName): OrgSettings {
   const base = defaultOrg(json.name || fallbackName)
   return {
     ...base,
@@ -123,8 +118,10 @@ export async function listInstructions(data: DataApi, filter?: Record<string, un
 }
 
 export function emptyContent(partial: Partial<InstructionContent> = {}): InstructionContent {
+  // Le titre par défaut s'écrit dans la langue du contenu.
+  const language = partial.language ?? contentLanguage()
   return {
-    title: 'Nouvelle instruction',
+    title: messagesIn(language).instructions.defaults.title,
     summary: '',
     kind: 'procedure',
     category: 'production',
@@ -134,7 +131,7 @@ export function emptyContent(partial: Partial<InstructionContent> = {}): Instruc
     safety: [],
     steps: [],
     lockout: null,
-    language: contentLanguage(),
+    language,
     ...partial,
   }
 }

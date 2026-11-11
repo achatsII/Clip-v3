@@ -2,11 +2,21 @@
  * Le document imprimable d'une instruction (export PDF) : un HTML autonome, styles en ligne et
  * images en URL absolue, imprimé par le navigateur ou par la coquille native (expo-print).
  * Un code QR mène à la version à jour : le papier renvoie toujours vers l'instruction vivante.
+ * Il s'écrit dans la langue de l'instruction (`content.language`), pas dans celle de l'outil : les
+ * titres que le lecteur des opérateurs a déjà viennent de ses mots, le reste du groupe `print`.
  */
-import { CATEGORIES, ENERGY, KINDS, PPE, WARNINGS } from '../model/catalog'
+import { strings, type PlayerStrings } from '@/components/player/i18n'
+import { LANGS, messagesIn, type Messages } from '../i18n'
 import { annotationsMarkup } from '../annotations/markup'
 import { layoutOf } from '../model/media'
 import type { Branding, InstructionContent, Step, StepMedia } from '../model/types'
+
+/** Les mots du document : ceux du lecteur (`player`), ceux de l'impression (`print`) et ceux du métier (`catalog`). */
+interface Words {
+  player: PlayerStrings
+  print: Messages['instructions']['print']
+  catalog: Messages['catalog']
+}
 
 const esc = (s: unknown) =>
   String(s ?? '')
@@ -24,28 +34,28 @@ function mediaImage(m: StepMedia | undefined): string | null {
 }
 
 /** L'image d'une étape et ses annotations, cadrées ensemble : la boîte prend les proportions de l'image. */
-function mediaBlock(m: StepMedia | undefined, img: string, ratio: number | undefined, key: string): string {
+function mediaBlock(m: StepMedia | undefined, img: string, ratio: number | undefined, key: string, w: Words): string {
   const r = ratio && ratio > 0 ? ratio : null
   const marks = m?.kind === 'image' && m.annotations?.length ? annotationsMarkup(m.annotations, { ratio: r ?? 16 / 10, idPrefix: `p${key}`, print: true }) : ''
   const frame = r ? `aspect-ratio:${r};width:min(100%, calc(62mm * ${r}))` : 'aspect-ratio:16/10;width:100%'
-  const vid = m?.kind === 'video' ? '<span class="vid">▶ extrait vidéo dans l’app</span>' : ''
+  const vid = m?.kind === 'video' ? `<span class="vid">${w.print.videoClip}</span>` : ''
   return `<div class="media"><div class="frame" style="${frame}"><img src="${esc(img)}" alt="" style="object-fit:${r ? 'fill' : 'contain'}"><div class="ann">${marks}</div></div>${vid}</div>`
 }
 
 /** Un schéma interactif ne s'imprime pas : la page renvoie à l'app (le code QR de la version à jour). */
-const HTML_PLACEHOLDER = '<div class="ph">◇ Schéma interactif<small>à voir dans l’app</small></div>'
+const htmlPlaceholder = (w: Words) => `<div class="ph">${w.print.visual}<small>${w.print.visualHint}</small></div>`
 
 /** Les médias d'une étape selon sa disposition : un seul, ou une grille de deux à quatre. */
-function stepMediaBlock(s: Step, ratios: Record<string, number> | undefined, key: string): string {
+function stepMediaBlock(s: Step, ratios: Record<string, number> | undefined, key: string, w: Words): string {
   const layout = layoutOf(s)
   const list = layout === 'focus' ? s.media.slice(0, 1) : layout === 'compare' ? s.media.slice(0, 2) : s.media.slice(0, 4)
   const one = (m: StepMedia, k: string) => {
-    if (m.kind === 'html') return HTML_PLACEHOLDER
+    if (m.kind === 'html') return htmlPlaceholder(w)
     const img = mediaImage(m)
-    return img ? mediaBlock(m, img, ratios?.[img], k) : ''
+    return img ? mediaBlock(m, img, ratios?.[img], k, w) : ''
   }
   const label = (m: StepMedia) =>
-    `${m.verdict ? `<span class="verdict">${m.verdict === 'do' ? '✓ À faire' : '✕ À éviter'}</span>` : ''}${m.caption ? `<span class="cap">${esc(m.caption)}</span>` : ''}`
+    `${m.verdict ? `<span class="verdict">${m.verdict === 'do' ? `✓ ${esc(w.player.doIt)}` : `✕ ${esc(w.player.avoid)}`}</span>` : ''}${m.caption ? `<span class="cap">${esc(m.caption)}</span>` : ''}`
   if (list.length <= 1) return list[0] ? `<div class="tile ${list[0].verdict ?? ''}">${one(list[0], key)}${label(list[0])}</div>` : ''
   return `<div class="mgrid">${list.map((m, j) => `<div class="tile ${m.verdict ?? ''}">${one(m, `${key}-${j}`)}${label(m)}</div>`).join('')}</div>`
 }
@@ -65,17 +75,25 @@ export interface PrintMeta {
 }
 
 export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): string {
+  // La langue de l'instruction ; un contenu d'avant les langues est en français.
+  const lang = content.language || 'fr'
+  const words: Words = { player: strings(lang), print: messagesIn(lang).instructions.print, catalog: messagesIn(lang).catalog }
+  const t = words.print
+  const p = words.player
+  const cat = words.catalog
+  // « fr-CA », « en-CA » ; une langue que l'outil ne parle pas garde son code.
+  const htmlLang = (LANGS as readonly string[]).includes(lang) ? t.locale : lang
   const color = meta.branding.color || '#0078FF'
-  const date = meta.publishedAt ? new Date(meta.publishedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('fr-CA')
-  const ppe = content.ppe.map((p) => `<span class="chip">${esc(PPE[p] ?? p)}</span>`).join('')
+  const date = meta.publishedAt ? t.date(meta.publishedAt) : t.today()
+  const ppe = content.ppe.map((k) => `<span class="chip">${esc((cat.ppe as Record<string, string>)[k] ?? k)}</span>`).join('')
   const steps = content.steps
     .map((s, i) => {
       const w = s.warning
       return `<article class="step">
-        ${stepMediaBlock(s, meta.ratios, String(i))}
+        ${stepMediaBlock(s, meta.ratios, String(i), words)}
         <div class="body">
           <h3><span class="n">${i + 1}</span>${esc(s.title)}</h3>
-          ${w ? `<p class="warn ${w.level}"><b>${esc(WARNINGS[w.level].label)} :</b> ${esc(w.text)}</p>` : ''}
+          ${w ? `<p class="warn ${w.level}"><b>${t.warning(esc(cat.warnings[w.level]))}</b> ${esc(w.text)}</p>` : ''}
           ${s.text ? `<p class="text">${esc(s.text)}</p>` : ''}
           ${s.keyPoints?.length ? `<ul class="kp">${s.keyPoints.map((k) => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
         </div>
@@ -84,18 +102,18 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
     .join('')
   const lockout =
     content.kind === 'lockout' && content.lockout?.energyPoints.length
-      ? `<section class="block"><h2>Sources d’énergie à isoler</h2>
-        <table><thead><tr><th>Repère</th><th>Énergie</th><th>Dispositif d’isolement</th><th>Emplacement</th><th>Cadenassage</th><th>Vérification</th></tr></thead><tbody>
+      ? `<section class="block"><h2>${esc(p.energy)}</h2>
+        <table><thead><tr><th>${t.tag}</th><th>${t.energy}</th><th>${t.isolationDevice}</th><th>${esc(p.location)}</th><th>${esc(p.method)}</th><th>${t.verification}</th></tr></thead><tbody>
         ${content.lockout.energyPoints
-          .map((e) => `<tr><td><b>${esc(e.tag)}</b></td><td>${esc(ENERGY[e.type]?.label)}${e.magnitude ? ` — ${esc(e.magnitude)}` : ''}<br><small>${esc(e.description)}</small></td><td>${esc(e.isolationDevice)}</td><td>${esc(e.location)}</td><td>${esc(e.lockingMethod)}</td><td>${esc(e.verification)}</td></tr>`)
+          .map((e) => `<tr><td><b>${esc(e.tag)}</b></td><td>${esc((cat.energy as Record<string, string>)[e.type])}${e.magnitude ? ` — ${esc(e.magnitude)}` : ''}<br><small>${esc(e.description)}</small></td><td>${esc(e.isolationDevice)}</td><td>${esc(e.location)}</td><td>${esc(e.lockingMethod)}</td><td>${esc(e.verification)}</td></tr>`)
           .join('')}
         </tbody></table>
-        ${content.lockout.material?.filter(Boolean).length ? `<p><b>Matériel :</b> ${content.lockout.material.filter(Boolean).map(esc).join(', ')}</p>` : ''}
-        ${content.lockout.restartSteps?.filter(Boolean).length ? `<h3>Retrait des cadenas et remise en marche</h3><ol>${content.lockout.restartSteps.filter(Boolean).map((r) => `<li>${esc(r)}</li>`).join('')}</ol>` : ''}
+        ${content.lockout.material?.filter(Boolean).length ? `<p><b>${t.material}</b> ${content.lockout.material.filter(Boolean).map(esc).join(', ')}</p>` : ''}
+        ${content.lockout.restartSteps?.filter(Boolean).length ? `<h3>${t.restart}</h3><ol>${content.lockout.restartSteps.filter(Boolean).map((r) => `<li>${esc(r)}</li>`).join('')}</ol>` : ''}
       </section>`
       : ''
 
-  return `<!doctype html><html lang="fr-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="${esc(htmlLang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(content.title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
 <style>
@@ -130,24 +148,24 @@ table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid 
 footer{margin-top:16px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:10px;color:#64748b;display:flex;justify-content:space-between}
 @media screen{body{max-width:900px;margin:0 auto}}
 </style></head><body>
-${meta.draft ? '<div class="draft">Brouillon — non publié</div>' : ''}
+${meta.draft ? `<div class="draft">${t.draft}</div>` : ''}
 <header>
   ${meta.branding.logoUrl ? `<img class="logo" src="${esc(meta.branding.logoUrl)}" alt="">` : ''}
   <div class="t">
-    <div class="eyebrow">${esc(meta.branding.orgName)} · ${esc(KINDS[content.kind].label)} · ${esc(CATEGORIES[content.category]?.label ?? '')}</div>
+    <div class="eyebrow">${esc(meta.branding.orgName)} · ${esc(cat.kinds[content.kind].label)} · ${esc((cat.categories as Record<string, { label: string }>)[content.category]?.label ?? '')}</div>
     <h1>${esc(content.title)}</h1>
-    <div class="meta">${meta.version ? `Version ${meta.version} du ${esc(date)}` : `Imprimé le ${esc(date)}`}${meta.approvedByName ? ` · Approuvée par ${esc(meta.approvedByName)}` : ''}${meta.stationNames.length ? ` · Poste : ${meta.stationNames.map(esc).join(', ')}` : ''}${content.durationMin ? ` · ${content.durationMin} min` : ''}${content.frequency ? ` · ${esc(content.frequency)}` : ''}</div>
+    <div class="meta">${meta.version ? t.version(meta.version, esc(date)) : t.printedOn(esc(date))}${meta.approvedByName ? ` · ${t.approvedBy(esc(meta.approvedByName))}` : ''}${meta.stationNames.length ? ` · ${t.stations(meta.stationNames.map(esc).join(', '))}` : ''}${content.durationMin ? ` · ${t.minutes(content.durationMin)}` : ''}${content.frequency ? ` · ${esc(content.frequency)}` : ''}</div>
     ${content.summary ? `<p class="text">${esc(content.summary)}</p>` : ''}
   </div>
-  ${meta.qrSvg ? `<div class="qr">${meta.qrSvg}<div>Version à jour</div></div>` : ''}
+  ${meta.qrSvg ? `<div class="qr">${meta.qrSvg}<div>${t.upToDate}</div></div>` : ''}
 </header>
 <div class="grid">
-  ${ppe ? `<section class="block"><h2>Équipements de protection</h2>${ppe}</section>` : ''}
-  ${content.tools.filter(Boolean).length ? `<section class="block"><h2>Outils et matériel</h2>${content.tools.filter(Boolean).map((t) => `<span class="chip" style="background:#f1f5f9;color:#334155">${esc(t)}</span>`).join('')}</section>` : ''}
+  ${ppe ? `<section class="block"><h2>${esc(p.ppe)}</h2>${ppe}</section>` : ''}
+  ${content.tools.filter(Boolean).length ? `<section class="block"><h2>${esc(p.tools)}</h2>${content.tools.filter(Boolean).map((tool) => `<span class="chip" style="background:#f1f5f9;color:#334155">${esc(tool)}</span>`).join('')}</section>` : ''}
 </div>
-${content.safety.filter(Boolean).length ? `<section class="block safety"><h2>Mises en garde</h2><ul>${content.safety.filter(Boolean).map((s) => `<li>${esc(s)}</li>`).join('')}</ul></section>` : ''}
+${content.safety.filter(Boolean).length ? `<section class="block safety"><h2>${esc(p.safety)}</h2><ul>${content.safety.filter(Boolean).map((s) => `<li>${esc(s)}</li>`).join('')}</ul></section>` : ''}
 ${lockout}
 <section class="steps">${steps}</section>
-<footer><span>${meta.liveUrl ? `Version à jour : ${esc(meta.liveUrl)}` : 'Toute copie imprimée peut être périmée : vérifiez la version dans l’app.'}</span><span>${meta.showClipMention ? 'Créé avec CLIP' : ''}</span></footer>
+<footer><span>${meta.liveUrl ? t.liveUrl(esc(meta.liveUrl)) : t.mayBeStale}</span><span>${meta.showClipMention ? t.madeWithClip : ''}</span></footer>
 </body></html>`
 }

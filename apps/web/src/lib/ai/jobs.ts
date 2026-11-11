@@ -2,6 +2,8 @@
  * Les générations en cours, hors des composants : une génération lancée va au bout et
  * s'enregistre même si l'on quitte l'écran (tant que l'onglet reste ouvert).
  */
+import { messages } from '../i18n'
+
 export type JobState =
   | { status: 'running'; stage: string; detail?: string; startedAt: number }
   | { status: 'done'; finishedAt: number }
@@ -47,7 +49,7 @@ export function runJob(id: string, fn: (setStage: (stage: string, detail?: strin
       emit()
     })
     .catch((e: unknown) => {
-      jobs.set(id, { status: 'error', message: e instanceof Error ? e.message : 'La génération a échoué.' })
+      jobs.set(id, { status: 'error', message: e instanceof Error ? e.message : messages().capture.progress.failed })
       emit()
     })
 }

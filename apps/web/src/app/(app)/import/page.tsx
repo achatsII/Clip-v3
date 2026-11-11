@@ -15,6 +15,7 @@ import { qk, useStations } from '@/hooks/queries'
 import { enrichMedia, importDocument } from '@/lib/ai/generate'
 import { matchStation } from '@/lib/ai/normalize'
 import { useEntitlement, useGate } from '@/lib/billing/state'
+import { messages, useMessages } from '@/lib/i18n'
 import { ingestFile } from '@/lib/media/ingest'
 import { nowIso, T } from '@/lib/model/repo'
 import { createInstruction, saveDraft } from '@/lib/model/service'
@@ -41,11 +42,10 @@ interface ImportJob {
   updatedAt: string
 }
 
-const LABEL: Record<ItemStatus, string> = { waiting: 'En attente', uploading: 'Envoi et conversion…', uploaded: 'Prêt à analyser', analyzing: 'L’IA restructure…', done: 'Brouillon créé', error: 'Échec' }
-
 export default function ImportPage() {
   const session = useSession()
   const { data, files, ai, org, profile, displayName, can } = session
+  const t = useMessages()
   const toast = useToast()
   const qc = useQueryClient()
   const stations = useStations()
@@ -68,7 +68,7 @@ export default function ImportPage() {
   useEffect(() => {
     if (last.data && !jobId && last.data.json_data.items.some((i) => i.status !== 'done')) {
       setJobId(last.data._id)
-      setItems(last.data.json_data.items.map((i) => (i.status === 'analyzing' || i.status === 'uploading' ? { ...i, status: i.source ? 'uploaded' : 'error', error: i.source ? undefined : 'Envoi interrompu : redéposez le fichier.' } : i)))
+      setItems(last.data.json_data.items.map((i) => (i.status === 'analyzing' || i.status === 'uploading' ? { ...i, status: i.source ? 'uploaded' : 'error', error: i.source ? undefined : messages().importer.errors.interrupted } : i)))
     }
   }, [last.data, jobId])
 
@@ -95,7 +95,7 @@ export default function ImportPage() {
 
   async function addFiles(list: File[]) {
     const docs = list.filter((f) => /\.(pdf|docx?|odt)$/i.test(f.name) || f.type === 'application/pdf')
-    if (docs.length < list.length) toast.info('Seuls les PDF et les documents Word sont importés ici', 'Les vidéos et photos se déposent dans une nouvelle instruction.')
+    if (docs.length < list.length) toast.info(t.importer.onlyDocuments, t.importer.onlyDocumentsText)
     if (!docs.length) return
     const added: ImportItem[] = docs.map((f) => ({ id: `${Date.now()}-${f.name}-${Math.random().toString(36).slice(2, 6)}`, name: f.name, status: 'waiting' }))
     let next = [...itemsRef.current, ...added]
@@ -110,7 +110,7 @@ export default function ImportPage() {
         const source = await ingestFile(docs[k], files)
         next = update(item.id, { status: 'uploaded', source })
       } catch (e) {
-        next = update(item.id, { status: 'error', error: e instanceof Error ? e.message : 'Envoi impossible' })
+        next = update(item.id, { status: 'error', error: e instanceof Error ? e.message : t.importer.errors.upload })
       }
       id = await persist(next, id)
     }
@@ -136,7 +136,7 @@ export default function ImportPage() {
           })
           next = update(item.id, { status: 'done', instructionId: doc._id, title: content.title })
         } catch (e) {
-          next = update(item.id, { status: 'error', error: e instanceof Error ? e.message : 'Analyse impossible' })
+          next = update(item.id, { status: 'error', error: e instanceof Error ? e.message : t.importer.errors.analysis })
         }
         await persist(next)
       }
@@ -146,8 +146,8 @@ export default function ImportPage() {
     }
   }
 
-  if (!can('instructions', 'write')) return <p className="font-bold text-slate-500">Votre rôle ne permet pas d’importer.</p>
-  if (!toggle) return <EmptyState icon={<Upload className="h-7 w-7" />} title="Import en lot indisponible pour le moment" description="Vous pouvez déposer un document dans une nouvelle instruction." />
+  if (!can('instructions', 'write')) return <p className="font-bold text-slate-500">{t.importer.readOnly}</p>
+  if (!toggle) return <EmptyState icon={<Upload className="h-7 w-7" />} title={t.importer.unavailableTitle} description={t.importer.unavailableText} />
 
   const done = items.filter((i) => i.status === 'done').length
   const pending = items.filter((i) => i.status === 'uploaded').length
@@ -155,7 +155,7 @@ export default function ImportPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader title="Importer vos anciennes instructions" subtitle="Déposez vos PDF et documents Word, même par dizaines : chacun devient un brouillon structuré, prêt à relire." />
+      <PageHeader title={t.importer.title} subtitle={t.importer.subtitle} />
       <button
         type="button"
         onClick={() => gate(entitlement, 'bulk_import', () => input.current?.click())}
@@ -170,9 +170,9 @@ export default function ImportPage() {
         <span className="bg-gradient-primary shadow-primary flex h-16 w-16 items-center justify-center rounded-3xl text-white">
           <FileUp className="h-8 w-8" />
         </span>
-        <span className="text-xl font-black tracking-tight">Glissez vos fichiers ici, ou touchez pour les choisir {locked && <LockBadge />}</span>
+        <span className="text-xl font-black tracking-tight">{t.importer.drop.title} {locked && <LockBadge />}</span>
         <span className="text-sm font-bold text-slate-500">
-          PDF, Word (.docx, .doc, .odt) · <AiCost operation="import_s" className="font-bold" /> par document court
+          {t.importer.drop.before} <AiCost operation="import_s" className="font-bold" /> {t.importer.drop.after}
         </span>
       </button>
       <input ref={input} type="file" multiple accept=".pdf,.doc,.docx,.odt,application/pdf" className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files ?? [])); e.target.value = '' }} />
@@ -181,16 +181,16 @@ export default function ImportPage() {
         <Panel className="mt-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p className="font-black">
-              {done} sur {items.length} terminé{done > 1 ? 's' : ''}
+              {t.importer.batch.progress(done, items.length)}
             </p>
             {pending > 0 && !running && (
               <Button variant="primary" icon={<Play className="h-4 w-4" />} onClick={run}>
-                Reprendre l’analyse ({pending})
+                {t.importer.batch.resume(pending)}
               </Button>
             )}
             {running && (
               <span className="inline-flex items-center gap-2 text-sm font-black text-[var(--primary)]">
-                <Loader2 className="h-4 w-4 animate-spin" /> En cours — gardez cet onglet ouvert
+                <Loader2 className="h-4 w-4 animate-spin" /> {t.importer.batch.running}
               </span>
             )}
           </div>
@@ -202,16 +202,16 @@ export default function ImportPage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black">{i.title ?? i.name}</span>
-                  <span className={cn('block text-xs font-bold', i.status === 'error' ? 'text-rose-600' : 'text-slate-500')}>{i.status === 'error' ? i.error : LABEL[i.status]}</span>
+                  <span className={cn('block text-xs font-bold', i.status === 'error' ? 'text-rose-600' : 'text-slate-500')}>{i.status === 'error' ? i.error : t.importer.status[i.status]}</span>
                 </span>
                 {i.instructionId && (
                   <Link href={`/instructions/${i.instructionId}`} className="btn-press glass-card inline-flex h-10 items-center rounded-xl px-3 text-xs font-black">
-                    Relire
+                    {t.importer.batch.review}
                   </Link>
                 )}
                 {i.status === 'error' && i.source && (
                   <Button size="sm" icon={<RotateCcw className="h-4 w-4" />} onClick={() => { update(i.id, { status: 'uploaded', error: undefined }); void run() }}>
-                    Réessayer
+                    {t.common.retry}
                   </Button>
                 )}
               </li>

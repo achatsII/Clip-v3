@@ -6,6 +6,7 @@
  * (app fermée, téléphone en veille), la génération est « interrompue » : on peut la relancer.
  */
 import type { DataApi } from '../gateway/data'
+import { messages } from '../i18n'
 import { T } from '../model/repo'
 import type { GeneratingInfo, Instruction } from '../model/types'
 
@@ -29,11 +30,30 @@ export function diffCreations(before: ReadonlySet<string>, after: ReadonlySet<st
   return { started: [...after].filter((id) => !before.has(id)), finished: [...before].filter((id) => !after.has(id)) }
 }
 
-/** Ce que dit chaque étape, sur l'appareil qui génère comme sur les autres. */
-export const STAGE_LABELS: Record<string, string> = {
-  prepare: 'Préparation des médias',
-  analyze: 'L’IA regarde et écoute vos notes',
-  finish: 'Mise en forme des étapes',
+/** Les étapes d'une création. Leur clé s'écrit dans l'instruction ; leur libellé se lit au rendu. */
+export const STAGE_KEYS = ['prepare', 'analyze', 'finish'] as const
+export type StageKey = (typeof STAGE_KEYS)[number]
+
+/** Ce que dit une étape, dans la langue de chaque appareil (celui qui génère comme les autres). */
+export function stageLabel(stage: string): string | undefined {
+  return (STAGE_KEYS as readonly string[]).includes(stage) ? messages().capture.progress.stages[stage as StageKey] : undefined
+}
+
+/**
+ * Le détail d'une étape s'écrit lui aussi sans mots, pour se lire dans la langue de chaque
+ * appareil : « 2/5 » (la source qu'on prépare, sur le total) ou les vignettes des extraits.
+ */
+export const DETAIL_THUMBNAILS = 'thumbnails'
+export const sourceDetail = (index: number, total: number) => `${index}/${total}`
+
+/** Ce que dit le détail d'une étape ; un détail déjà écrit en mots (version antérieure) passe tel quel. */
+export function detailLabel(detail?: string | null): string | undefined {
+  if (!detail) return undefined
+  const t = messages().capture.progress
+  const source = /^(\d+)\/(\d+)$/.exec(detail)
+  if (source) return t.sourceOf(Number(source[1]), Number(source[2]))
+  if (detail === DETAIL_THUMBNAILS) return t.thumbnails
+  return detail
 }
 
 export interface CreationClock {

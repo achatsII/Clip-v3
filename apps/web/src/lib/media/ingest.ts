@@ -8,6 +8,7 @@ import { callNative, onNativeEvent } from '../bridge/native'
 import { GATEWAY_URL } from '../config'
 import { getAccessToken } from '../gateway/client'
 import { DIRECT_UPLOAD_URL, folderPath, parseDirectUpload, presignedPutHeaders, type FilesApi } from '../gateway/files'
+import { messages } from '../i18n'
 import { uid } from '../model/repo'
 import type { Source, SourceKind } from '../model/types'
 import { audioDuration, compressImage, dataUrlToBlob, pdfPageCount, videoInfo } from './image'
@@ -31,7 +32,7 @@ export const ACCEPTED_FILES = 'image/*,video/*,audio/*,application/pdf,.pdf,.doc
 
 export async function ingestFile(file: File, files: FilesApi, onProgress?: IngestProgress, capturedOn: Source['capturedOn'] = 'web'): Promise<Source> {
   const kind = kindOfFile(file)
-  if (!kind) throw new Error('Ce type de fichier n’est pas pris en charge.')
+  if (!kind) throw new Error(messages().capture.upload.unsupported)
   const base: Source = { id: uid('src_'), kind, name: file.name, createdAt: new Date().toISOString(), capturedOn }
   const up = (r: number) => onProgress?.('upload', r)
   onProgress?.('prepare')
@@ -109,7 +110,7 @@ async function uploadNativeFile(item: CapturedMedia, files: FilesApi, folder: st
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
   if (res.status < 200 || res.status >= 300) {
-    throw new Error(`L’envoi a été refusé (${refused || '—'} puis ${res.status}). Réessayez ; si ça revient, signalez-le.`)
+    throw new Error(messages().capture.upload.refused(refused || '—', res.status))
   }
   const f = parseDirectUpload(res.bodyText)
   return { url: f.url, path: f.path }

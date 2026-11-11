@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { launchedFrom } from '@/components/capture/GenerationProgress'
 import { SectionTitle } from '@/components/ui/Surface'
 import { useCreations } from '@/hooks/useCreations'
-import { creationOf, STAGE_LABELS } from '@/lib/ai/creation'
+import { creationOf, stageLabel } from '@/lib/ai/creation'
+import { useMessages } from '@/lib/i18n'
 import { cn, timeAgo } from '@/lib/util/cn'
 
 /**
@@ -13,13 +14,14 @@ import { cn, timeAgo } from '@/lib/util/cn'
  * elles s'ouvrent d'un toucher (la page suit la création jusqu'au bout).
  */
 export function CreationList() {
+  const t = useMessages().instructions
   const creations = useCreations()
   const now = Date.now()
   const items = (creations.data ?? []).map((d) => ({ d, c: creationOf(d.json_data, now) })).filter((x) => x.c.kind !== 'none')
   if (!items.length) return null
   return (
     <section>
-      <SectionTitle title="En création" hint="Elles s’ouvrent dès qu’elles sont prêtes." />
+      <SectionTitle title={t.creations.title} hint={t.creations.hint} />
       <div className="space-y-2">
         {items.map(({ d, c }) =>
           c.kind === 'none' ? null : (
@@ -30,10 +32,10 @@ export function CreationList() {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{d.json_data.title}</span>
                 <span className="block truncate text-xs font-bold text-slate-500">
-                  {c.kind === 'running' ? `${STAGE_LABELS[c.info.stage] ?? 'En cours'} · ${launchedFrom(c.info.device, c.info.byName, true)} ${timeAgo(c.info.startedAt)}` : 'Interrompue : l’appareil qui la créait ne répond plus'}
+                  {c.kind === 'running' ? t.creations.running(stageLabel(c.info.stage) ?? t.creations.inProgress, launchedFrom(c.info.device, c.info.byName, true), timeAgo(c.info.startedAt)) : t.creations.interrupted}
                 </span>
               </span>
-              <span className={cn('shrink-0 rounded-xl px-2.5 py-1 text-[10px] font-black tracking-widest text-white uppercase', c.kind === 'running' ? 'bg-violet-500' : 'bg-amber-500')}>{c.kind === 'running' ? 'En création' : 'Interrompue'}</span>
+              <span className={cn('shrink-0 rounded-xl px-2.5 py-1 text-[10px] font-black tracking-widest text-white uppercase', c.kind === 'running' ? 'bg-violet-500' : 'bg-amber-500')}>{c.kind === 'running' ? t.status.creating : t.status.interrupted}</span>
             </Link>
           ),
         )}

@@ -4,9 +4,10 @@
  */
 import type { AiApi, AiOperation, AskFile } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
-import { contentLanguage } from '../i18n'
+import { contentLanguage, messages } from '../i18n'
 import type { FilesApi } from '../gateway/files'
 import type { InstructionContent, OrgSettings, Source, StepMedia } from '../model/types'
+import { sourceDetail } from './creation'
 import { AiInstruction, normalizeInstruction } from './normalize'
 import { generationPrompt, generationSystem, importSystem, SourceLine } from './prompts'
 import { instructionSchema } from './schemas'
@@ -38,10 +39,11 @@ export function measureSources(sources: Source[]) {
 /** Choisit l'opération selon la taille réelle des sources (une opération par taille de lot). */
 export function generationTier(sources: Source[]): Tier {
   const m = measureSources(sources)
-  if (m.videoSec <= 180 && m.audioSec <= 300 && m.photos <= 15 && m.pages <= 10) return { op: 'generate_s', label: 'courte', tooBig: false }
-  if (m.videoSec <= 600 && m.audioSec <= 900 && m.photos <= 40 && m.pages <= 30) return { op: 'generate_m', label: 'moyenne', tooBig: false }
+  const t = messages().capture.tiers
+  if (m.videoSec <= 180 && m.audioSec <= 300 && m.photos <= 15 && m.pages <= 10) return { op: 'generate_s', label: t.short, tooBig: false }
+  if (m.videoSec <= 600 && m.audioSec <= 900 && m.photos <= 40 && m.pages <= 30) return { op: 'generate_m', label: t.medium, tooBig: false }
   const tooBig = m.videoSec > 1800 || m.photos > 80 || m.pages > 60 || m.audioSec > 2700
-  return { op: 'generate_l', label: 'longue', tooBig }
+  return { op: 'generate_l', label: t.long, tooBig }
 }
 
 function fmtDuration(sec?: number) {
@@ -139,13 +141,15 @@ export interface GenerateOutput {
 }
 
 export async function generateInstruction(input: GenerateInput): Promise<GenerateOutput> {
+  const t = messages().capture.generate
   const usable = input.sources.filter((s) => s.url || s.text)
-  if (!usable.length) throw new ApiError('Ajoutez au moins une photo, une vidéo, une note ou un document.', 400)
+  if (!usable.length) throw new ApiError(t.noSources, 400)
   const tier = generationTier(usable)
-  if (tier.tooBig) throw new ApiError('C’est beaucoup pour une seule instruction : gardez au plus 30 minutes de vidéo, ou séparez-la en plusieurs instructions.', 400)
+  if (tier.tooBig) throw new ApiError(t.tooBig, 400)
 
   input.onStage?.('prepare')
-  const prepared = await prepareForAi(usable, input.files, (i, n) => input.onStage?.('prepare', `${i + 1} sur ${n}`))
+  // Le détail s'écrit sans mots (« 2/5 ») : chaque appareil le lit dans sa langue.
+  const prepared = await prepareForAi(usable, input.files, (i, n) => input.onStage?.('prepare', sourceDetail(i + 1, n)))
   const m = measureSources(prepared.sources)
 
   input.onStage?.('analyze')
@@ -165,12 +169,12 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
     },
     { scope: 'generation', timeoutMs: 300_000, signal: input.signal },
   )
-  if (!result.json) throw new ApiError("L'IA n'a pas rendu d'instruction. Réessayez ; rien n'a été perdu.", 502)
+  if (!result.json) throw new ApiError(messages().capture.generate.noInstruction, 502)
 
   input.onStage?.('finish')
   // Les sources gardent leur ordre : S1 = première source utilisable.
   const { content, stationGuess, questions } = normalizeInstruction(result.json, prepared.sources, contentLanguage())
-  if (!content.steps.length) throw new ApiError("L'IA n'a trouvé aucune étape dans ces sources. Ajoutez une vidéo ou une note qui décrit les gestes.", 422)
+  if (!content.steps.length) throw new ApiError(messages().capture.generate.noSteps, 422)
   return { content, sources: mergeSources(input.sources, prepared.sources), stationGuess, questions, model: result.model, operation: tier.op }
 }
 
@@ -206,7 +210,7 @@ export async function importDocument(input: {
     },
     { scope: 'import', timeoutMs: 300_000 },
   )
-  if (!result.json) throw new ApiError("L'IA n'a pas pu lire ce document.", 502)
+  if (!result.json) throw new ApiError(messages().capture.generate.unreadableDocument, 502)
   const n = normalizeInstruction(result.json, [input.source], contentLanguage())
   return { ...n, model: result.model, operation }
 }

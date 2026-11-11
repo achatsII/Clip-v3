@@ -2,11 +2,12 @@ import { callNative, hasCapability, inNativeShell } from '../bridge/native'
 import type { AiApi } from '../gateway/ai'
 import type { DataApi, Doc } from '../gateway/data'
 import type { FilesApi } from '../gateway/files'
+import { messages } from '../i18n'
 import { nowIso, T } from '../model/repo'
 import { saveDraft, type Actor } from '../model/service'
 import type { Instruction, OrgSettings, Station } from '../model/types'
 import { publishRealtime } from '../realtime/client'
-import { creationReporter } from './creation'
+import { creationReporter, DETAIL_THUMBNAILS } from './creation'
 import { enrichMedia, generateInstruction } from './generate'
 import { runJob } from './jobs'
 import { matchStation } from './normalize'
@@ -56,7 +57,7 @@ export function startGeneration(input: {
       // Les URI Gemini sont gardées : une régénération dans les 48 h ne retéléverse rien.
       await data.patch(T.instruction, doc._id, { sources: out.sources })
 
-      stage('finish', 'Vignettes des extraits')
+      stage('finish', DETAIL_THUMBNAILS)
       const content = await enrichMedia(out.content, files, async (png, name) => (await files.upload(png, name, 'pages')).url)
 
       const matched = matchStation(out.stationGuess, stations.map((s) => ({ id: s._id, name: s.json_data.name, code: s.json_data.code })))
@@ -79,7 +80,7 @@ export function startGeneration(input: {
       })
       tell('done')
     } catch (e) {
-      await report.fail(e instanceof Error ? e.message : 'La génération a échoué.')
+      await report.fail(e instanceof Error ? e.message : messages().capture.progress.failed)
       tell('failed')
       throw e
     } finally {

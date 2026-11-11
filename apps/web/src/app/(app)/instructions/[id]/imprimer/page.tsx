@@ -17,10 +17,12 @@ import { T } from '@/lib/model/repo'
 import type { Published } from '@/lib/model/types'
 import { linkUrl } from '@/lib/share'
 import { useEntitlement } from '@/lib/billing/state'
+import { useMessages } from '@/lib/i18n'
 
 export default function PrintPage() {
   const { id } = useParams<{ id: string }>()
   const session = useSession()
+  const t = useMessages()
   const instruction = useInstruction(id)
   const stations = useStations()
   const versions = useVersions(id)
@@ -103,14 +105,14 @@ export default function PrintPage() {
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-100 dark:bg-slate-900">
       <div className="glass-nav pt-safe flex items-center gap-3 border-b px-4 py-3">
         <Link href={`/instructions/${id}`} className="btn-press flex h-11 items-center gap-1 rounded-2xl px-3 text-sm font-black">
-          <ArrowLeft className="h-4 w-4" /> Retour
+          <ArrowLeft className="h-4 w-4" /> {t.common.back}
         </Link>
-        <p className="flex-1 truncate text-sm font-bold text-slate-500">Aperçu du PDF — choisissez « Enregistrer en PDF » dans la fenêtre d’impression.</p>
+        <p className="flex-1 truncate text-sm font-bold text-slate-500">{t.instructions.printPreview.hint}</p>
         <Button variant="primary" icon={<Printer className="h-4 w-4" />} onClick={print} disabled={!html}>
-          Imprimer ou enregistrer en PDF
+          {t.instructions.printPreview.print}
         </Button>
       </div>
-      <iframe ref={frame} title="Aperçu du PDF" srcDoc={html} className="min-h-0 w-full flex-1 bg-white" />
+      <iframe ref={frame} title={t.instructions.printPreview.frame} srcDoc={html} className="min-h-0 w-full flex-1 bg-white" />
     </div>
   )
 }

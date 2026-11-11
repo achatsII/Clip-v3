@@ -9,6 +9,7 @@
  * Hors de tout fournisseur (page de connexion), aucun micro.
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { locale, messages } from '../i18n'
 import { openMic, startRecording, stopStream, type Recording } from './recorder'
 
 export type Transcriber = (audio: Blob, fileName: string) => Promise<string>
@@ -16,12 +17,13 @@ export type Transcriber = (audio: Blob, fileName: string) => Promise<string>
 interface DictationConfig {
   transcribe: Transcriber | null
   speech: boolean
-  lang: string
+  /** La langue de la reconnaissance vocale ; sans elle, celle de l'outil au moment de parler (`locale()`). */
+  lang?: string
 }
 
-const Ctx = createContext<DictationConfig>({ transcribe: null, speech: false, lang: 'fr-CA' })
+const Ctx = createContext<DictationConfig>({ transcribe: null, speech: false })
 
-export function DictationProvider({ transcribe = null, speech = false, lang = 'fr-CA', children }: { transcribe?: Transcriber | null; speech?: boolean; lang?: string; children: ReactNode }) {
+export function DictationProvider({ transcribe = null, speech = false, lang, children }: { transcribe?: Transcriber | null; speech?: boolean; lang?: string; children: ReactNode }) {
   return <Ctx.Provider value={{ transcribe, speech, lang }}>{children}</Ctx.Provider>
 }
 
@@ -114,9 +116,9 @@ export function useDictation(onText: (text: string) => void, onProblem: (title: 
       stream.current = null
       const text = (await cfg.transcribe(blob, `dictee.${r.mime.includes('mp4') ? 'm4a' : 'webm'}`)).trim()
       if (text) textRef.current(text)
-      else problemRef.current('Rien entendu', 'Parlez un peu plus près du micro.')
+      else problemRef.current(messages().capture.dictation.nothingHeard, messages().capture.dictation.nothingHeardText)
     } catch {
-      problemRef.current('La dictée n’a pas fonctionné', 'Réessayez ou tapez le texte.')
+      problemRef.current(messages().capture.dictation.failed, messages().capture.dictation.failedText)
     } finally {
       setState('idle')
     }
@@ -127,7 +129,7 @@ export function useDictation(onText: (text: string) => void, onProblem: (title: 
     if (engine === 'speech') {
       const Ctor = speechCtor()!
       const r = new Ctor()
-      r.lang = cfg.lang
+      r.lang = cfg.lang ?? locale()
       r.continuous = true
       r.interimResults = false
       const parts: string[] = []
@@ -135,7 +137,7 @@ export function useDictation(onText: (text: string) => void, onProblem: (title: 
         for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) parts.push(e.results[i][0].transcript)
       }
       r.onerror = (e) => {
-        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') problemRef.current('Le micro n’est pas accessible', 'Autorisez le micro pour ce site.')
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') problemRef.current(messages().capture.dictation.noMic, messages().capture.dictation.noMicSite)
       }
       r.onend = () => {
         speech.current = null
@@ -156,7 +158,7 @@ export function useDictation(onText: (text: string) => void, onProblem: (title: 
         setState('recording')
         timer.current = setTimeout(() => void stop(), 120_000)
       } catch {
-        problemRef.current('Le micro n’est pas accessible', 'Autorisez le micro dans les réglages du téléphone ou du navigateur.')
+        problemRef.current(messages().capture.dictation.noMic, messages().capture.dictation.noMicDevice)
       }
     }
   }, [cfg, stop])

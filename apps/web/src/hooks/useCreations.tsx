@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import { creationOf, diffCreations, POLL_BUSY_MS, POLL_IDLE_MS } from '@/lib/ai/creation'
 import { ranHere } from '@/lib/ai/jobs'
 import type { DataApi } from '@/lib/gateway/data'
+import { messages } from '@/lib/i18n'
 import { T } from '@/lib/model/repo'
 import type { Instruction } from '@/lib/model/types'
 import { qk } from './queries'
@@ -69,16 +70,17 @@ export function CreationWatcher() {
     for (const id of finished) {
       void qc.invalidateQueries({ queryKey: qk.instruction(id) })
       if (ranHere(id) || where.current === `/instructions/${id}`) continue
-      const title = titles.current.get(id) ?? 'L’instruction'
-      const open = { label: 'Ouvrir', onClick: () => router.push(`/instructions/${id}`) }
+      const t = messages()
+      const title = titles.current.get(id) ?? t.instructions.watcher.untitled
+      const open = { label: t.common.open, onClick: () => router.push(`/instructions/${id}`) }
       void data
         .get<Instruction>(T.instruction, id)
         .then((doc) => {
           const i = doc?.json_data
           if (!i || i.generating) return
           const failed = !!i.generationError && (!i.generation || i.generationError.at > i.generation.at)
-          if (failed) toast.error(`« ${title} » n’a pas pu être créée`, i.generationError!.message, open)
-          else if (i.draft) toast.success(`« ${title} » est prête`, 'Créée sur un autre appareil.', open)
+          if (failed) toast.error(t.instructions.watcher.failed(title), i.generationError!.message, open)
+          else if (i.draft) toast.success(t.instructions.watcher.ready(title), t.instructions.watcher.readyText, open)
         })
         .catch(() => undefined)
     }

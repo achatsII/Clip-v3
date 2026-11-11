@@ -6,6 +6,7 @@ import type { CapturedMedia } from '@clip/bridge'
 import { nativeEnv } from '../bridge/native'
 import type { DataApi } from '../gateway/data'
 import type { FilesApi } from '../gateway/files'
+import { messages } from '../i18n'
 import { ingestFile, ingestNative, kindOfFile, type IngestStage } from '../media/ingest'
 import { uid } from '../model/repo'
 import { createInstruction, saveSources, type Actor } from '../model/service'
@@ -110,7 +111,7 @@ export class CaptureSession {
       await this.persist()
       if (pending.previewUrl) setTimeout(() => URL.revokeObjectURL(pending.previewUrl!), 30_000)
     } catch (e) {
-      this.updatePending(pending.tempId, { stage: 'error', error: e instanceof Error ? e.message : 'Envoi impossible' })
+      this.updatePending(pending.tempId, { stage: 'error', error: e instanceof Error ? e.message : messages().capture.upload.failed })
     }
   }
 

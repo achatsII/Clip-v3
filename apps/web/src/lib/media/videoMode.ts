@@ -5,14 +5,20 @@
  * en boucle dès l'affichage, une seule fois dès l'affichage, ou seulement quand on touche Lecture.
  */
 import { useSyncExternalStore } from 'react'
+import { messages } from '../i18n'
 
 export type VideoMode = 'loop' | 'once' | 'tap'
 
-export const VIDEO_MODES: Array<{ value: VideoMode; label: string; hint: string }> = [
-  { value: 'loop', label: 'En boucle', hint: 'Démarre seule et recommence' },
-  { value: 'once', label: 'Une fois', hint: 'Démarre seule, joue une fois' },
-  { value: 'tap', label: 'Au toucher', hint: 'Attend qu’on touche Lecture' },
-]
+/** Les choix, dans l'ordre ; le libellé et l'indice se lisent au rendu, dans la langue de l'outil. */
+export const VIDEO_MODES: Array<{ value: VideoMode; label: string; hint: string }> = (['loop', 'once', 'tap'] as const).map((value) => ({
+  value,
+  get label() {
+    return messages().capture.videoModes[value].label
+  },
+  get hint() {
+    return messages().capture.videoModes[value].hint
+  },
+}))
 
 const KEY = 'clip_pref_video_mode'
 const listeners = new Set<() => void>()

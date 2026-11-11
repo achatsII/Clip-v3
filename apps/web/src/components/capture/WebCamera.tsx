@@ -4,6 +4,7 @@ import { Camera, Check, RefreshCcw, Video, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { CAPTURE_PRESETS } from '@clip/bridge'
+import { messages, useMessages } from '@/lib/i18n'
 import { extFor, openCamera, startRecording, stopStream, type Recording } from '@/lib/media/recorder'
 import { cn, formatClock } from '@/lib/util/cn'
 
@@ -12,6 +13,8 @@ import { cn, formatClock } from '@/lib/util/cn'
  * Plusieurs photos d'affilée ; une vidéo par prise.
  */
 export function WebCamera({ open, mode: initialMode, onClose, onCaptured }: { open: boolean; mode: 'photo' | 'video'; onClose: () => void; onCaptured: (files: File[]) => void }) {
+  const t = useMessages()
+  const tc = t.capture.camera
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const recRef = useRef<Recording | null>(null)
@@ -36,7 +39,7 @@ export function WebCamera({ open, mode: initialMode, onClose, onCaptured }: { op
         await videoRef.current.play().catch(() => undefined)
       }
     } catch {
-      setError('La caméra n’est pas accessible. Autorisez-la dans le navigateur, ou importez un fichier.')
+      setError(messages().capture.camera.noCamera)
     }
   }, [facing, mode])
 
@@ -114,9 +117,9 @@ export function WebCamera({ open, mode: initialMode, onClose, onCaptured }: { op
 
   if (!open || typeof document === 'undefined') return null
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={mode === 'photo' ? 'Prendre des photos' : 'Filmer'}>
+    <div className="fixed inset-0 z-[70] flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={mode === 'photo' ? tc.takePhotos : tc.film}>
       <div className="pt-safe flex items-center justify-between px-4 py-3">
-        <button type="button" onClick={() => (recording ? undefined : onClose())} aria-label="Fermer" className="btn-press flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md">
+        <button type="button" onClick={() => (recording ? undefined : onClose())} aria-label={t.common.close} className="btn-press flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md">
           <X className="h-6 w-6" />
         </button>
         {recording ? (
@@ -128,12 +131,12 @@ export function WebCamera({ open, mode: initialMode, onClose, onCaptured }: { op
             {(['photo', 'video'] as const).map((m) => (
               <button key={m} type="button" onClick={() => setMode(m)} className={cn('btn-press flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-black', mode === m ? 'bg-white text-slate-900' : 'text-white/80')}>
                 {m === 'photo' ? <Camera className="h-4 w-4" /> : <Video className="h-4 w-4" />}
-                {m === 'photo' ? 'Photo' : 'Vidéo'}
+                {m === 'photo' ? tc.photo : tc.video}
               </button>
             ))}
           </div>
         )}
-        <button type="button" disabled={recording} onClick={() => setFacing((f) => (f === 'environment' ? 'user' : 'environment'))} aria-label="Changer de caméra" className="btn-press flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md disabled:opacity-40">
+        <button type="button" disabled={recording} onClick={() => setFacing((f) => (f === 'environment' ? 'user' : 'environment'))} aria-label={tc.switchCamera} className="btn-press flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md disabled:opacity-40">
           <RefreshCcw className="h-5 w-5" />
         </button>
       </div>
@@ -146,7 +149,7 @@ export function WebCamera({ open, mode: initialMode, onClose, onCaptured }: { op
         )}
         {flash && <div className="absolute inset-0 bg-white/70" />}
         {mode === 'video' && !recording && !error && (
-          <p className="absolute inset-x-0 bottom-4 text-center text-sm font-bold text-white/80">720p · environ 19 Mo la minute · {CAPTURE_PRESETS.video.maxDurationSec / 60} min au plus</p>
+          <p className="absolute inset-x-0 bottom-4 text-center text-sm font-bold text-white/80">{tc.videoHint(CAPTURE_PRESETS.video.maxDurationSec / 60)}</p>
         )}
       </div>
 
@@ -161,15 +164,15 @@ export function WebCamera({ open, mode: initialMode, onClose, onCaptured }: { op
       <div className="pb-safe flex items-center justify-between px-8 pt-5 pb-6">
         <span className="w-24" />
         {mode === 'photo' ? (
-          <button type="button" onClick={takePhoto} disabled={!!error} aria-label="Prendre la photo" className="btn-press flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/20 disabled:opacity-40">
+          <button type="button" onClick={takePhoto} disabled={!!error} aria-label={tc.takePhoto} className="btn-press flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/20 disabled:opacity-40">
             <span className="h-14 w-14 rounded-full bg-white" />
           </button>
         ) : recording ? (
-          <button type="button" onClick={stopVideo} aria-label="Arrêter" className="btn-press recording-pulse flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-rose-500">
+          <button type="button" onClick={stopVideo} aria-label={tc.stop} className="btn-press recording-pulse flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-rose-500">
             <span className="h-8 w-8 rounded-lg bg-white" />
           </button>
         ) : (
-          <button type="button" onClick={startVideo} disabled={!!error} aria-label="Filmer" className="btn-press flex h-20 w-20 items-center justify-center rounded-full border-4 border-white disabled:opacity-40">
+          <button type="button" onClick={startVideo} disabled={!!error} aria-label={tc.film} className="btn-press flex h-20 w-20 items-center justify-center rounded-full border-4 border-white disabled:opacity-40">
             <span className="h-14 w-14 rounded-full bg-rose-500" />
           </button>
         )}

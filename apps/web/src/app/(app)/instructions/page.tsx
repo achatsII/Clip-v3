@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/ui/Surface'
 import { MicButton } from '@/components/ui/MicButton'
 import { useInstructions, useStations } from '@/hooks/queries'
 import { useLimit } from '@/lib/billing/state'
+import { useMessages } from '@/lib/i18n'
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/model/catalog'
 import type { CategoryKey } from '@/lib/model/types'
 import { cn, normalizeText } from '@/lib/util/cn'
@@ -32,6 +33,8 @@ export default function InstructionsPage() {
   const router = useRouter()
   const params = useSearchParams()
   const { me, can, profile } = useSession()
+  const t = useMessages()
+  const tl = t.instructions.list
   const instructions = useInstructions()
   const stations = useStations()
   // Rien tant qu'on est loin de la limite : la jauge ne s'allume qu'à 80 % des instructions publiées.
@@ -85,19 +88,19 @@ export default function InstructionsPage() {
   return (
     <div>
       <PageHeader
-        title="Instructions"
-        subtitle={instructions.data ? `${list.length} sur ${instructions.data.length}` : undefined}
+        title={tl.title}
+        subtitle={instructions.data ? tl.count(list.length, instructions.data.length) : undefined}
         actions={
           <>
             <CreditPill />
             {can('instructions', 'write') && (
               <>
                 <LinkButton href="/import" icon={<Upload className="h-4 w-4" />} className="max-sm:hidden">
-                  Importer
+                  {tl.import}
                 </LinkButton>
                 {/* Sur téléphone, le « + » du bas suffit : une seule action principale à l'écran. */}
                 <LinkButton href="/instructions/nouvelle" variant="primary" icon={<Plus className="h-5 w-5" />} className="max-sm:hidden">
-                  Nouvelle
+                  {tl.new}
                 </LinkButton>
               </>
             )}
@@ -109,10 +112,10 @@ export default function InstructionsPage() {
 
       <div className="glass-panel mb-4 flex items-center gap-3 rounded-[24px] px-4">
         <Search className="h-5 w-5 shrink-0 text-slate-400" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un titre, un poste, un numéro de pièce…" className="h-14 min-w-0 flex-1 bg-transparent text-[15px] font-bold focus:outline-none" aria-label="Chercher" />
-        <MicButton label="Chercher en parlant" onText={(t) => setQuery((q) => (q ? `${q} ${t}` : t))} />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tl.searchPlaceholder} className="h-14 min-w-0 flex-1 bg-transparent text-[15px] font-bold focus:outline-none" aria-label={tl.search} />
+        <MicButton label={tl.searchByVoice} onText={(text) => setQuery((q) => (q ? `${q} ${text}` : text))} />
         {query && (
-          <button type="button" onClick={() => setQuery('')} className="btn-press flex h-10 w-10 items-center justify-center rounded-xl text-slate-400" aria-label="Effacer">
+          <button type="button" onClick={() => setQuery('')} className="btn-press flex h-10 w-10 items-center justify-center rounded-xl text-slate-400" aria-label={tl.clear}>
             <X className="h-4 w-4" />
           </button>
         )}
@@ -125,8 +128,8 @@ export default function InstructionsPage() {
             value={scope}
             onChange={setScope}
             options={[
-              { value: 'mine', label: 'Pour moi' },
-              { value: 'all', label: 'Tout' },
+              { value: 'mine', label: tl.scope.mine },
+              { value: 'all', label: tl.scope.all },
             ]}
           />
         )}
@@ -135,10 +138,10 @@ export default function InstructionsPage() {
           value={status}
           onChange={setStatus}
           options={[
-            { value: 'all', label: 'Toutes' },
-            { value: 'published', label: 'Publiées' },
-            { value: 'draft', label: 'Brouillons' },
-            { value: 'review', label: 'À approuver' },
+            { value: 'all', label: tl.filters.all },
+            { value: 'published', label: tl.filters.published },
+            { value: 'draft', label: tl.filters.draft },
+            { value: 'review', label: tl.filters.review },
           ]}
         />
         {CATEGORY_KEYS.filter((k) => categoriesInUse.has(k)).map((k) => (
@@ -159,8 +162,8 @@ export default function InstructionsPage() {
             }
           }}
           options={[
-            { value: 'grid', label: <LayoutGrid className="h-4 w-4" aria-label="Tuiles" /> },
-            { value: 'list', label: <List className="h-4 w-4" aria-label="Liste" /> },
+            { value: 'grid', label: <LayoutGrid className="h-4 w-4" aria-label={tl.tiles} /> },
+            { value: 'list', label: <List className="h-4 w-4" aria-label={tl.rows} /> },
           ]}
         />
       </div>
@@ -172,12 +175,12 @@ export default function InstructionsPage() {
       ) : !instructions.data?.length ? (
         <EmptyState
           icon={<BookOpen className="h-7 w-7" />}
-          title="Créez votre première instruction"
-          description="Filmez un expert qui montre la tâche, ajoutez une note vocale : l’IA rédige les étapes en quelques minutes."
-          action={can('instructions', 'write') ? <LinkButton href="/instructions/nouvelle" variant="primary" size="lg" icon={<Plus className="h-5 w-5" />}>Nouvelle instruction</LinkButton> : undefined}
+          title={tl.emptyTitle}
+          description={tl.emptyText}
+          action={can('instructions', 'write') ? <LinkButton href="/instructions/nouvelle" variant="primary" size="lg" icon={<Plus className="h-5 w-5" />}>{tl.newInstruction}</LinkButton> : undefined}
         />
       ) : !list.length ? (
-        <EmptyState icon={<SearchX className="h-7 w-7" />} title="Rien ne correspond" description="Essayez un autre mot, ou retirez un filtre." action={<button type="button" className="font-black text-[var(--primary)]" onClick={() => { setQuery(''); setCategory(null); setStatus('all'); setScope('all') }}>Tout afficher</button>} />
+        <EmptyState icon={<SearchX className="h-7 w-7" />} title={tl.noMatchTitle} description={tl.noMatchText} action={<button type="button" className="font-black text-[var(--primary)]" onClick={() => { setQuery(''); setCategory(null); setStatus('all'); setScope('all') }}>{tl.showAll}</button>} />
       ) : view === 'grid' ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {list.map((d) => (
