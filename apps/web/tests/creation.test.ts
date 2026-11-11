@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/bridge/native', () => ({ inNativeShell: () => true, hasCapability: (c: string) => c === 'keepAwake', callNative: vi.fn(async () => ({})) }))
 vi.mock('@/lib/ai/generate', () => ({ generateInstruction: vi.fn(), enrichMedia: vi.fn(async (c: unknown) => c) }))
+vi.mock('@/lib/realtime/client', () => ({ publishRealtime: vi.fn() }))
 
 import { statusOf } from '@/components/InstructionCard'
 import { creationOf, creationReporter, diffCreations, HEARTBEAT_MS, STALE_MS, type CreationClock } from '@/lib/ai/creation'
@@ -9,6 +10,7 @@ import { enrichMedia, generateInstruction } from '@/lib/ai/generate'
 import { clearJob, jobOf } from '@/lib/ai/jobs'
 import { startGeneration } from '@/lib/ai/runGeneration'
 import { callNative } from '@/lib/bridge/native'
+import { publishRealtime } from '@/lib/realtime/client'
 import type { Instruction } from '@/lib/model/types'
 
 const T0 = Date.parse('2026-11-11T15:00:00Z')
@@ -116,6 +118,8 @@ describe('la génération écrit son état dans l’instruction', () => {
     expect(first.generating).toMatchObject({ device: 'app', byName: 'Mélanie', stage: 'prepare' })
     expect(last).toMatchObject({ generating: null, generationError: null, title: 'Changer la matrice', stepCount: 1 })
     expect(vi.mocked(callNative).mock.calls.map((c) => c[1])).toEqual([{ on: true }, { on: false }])
+    // Les autres appareils l'apprennent aussitôt : le début, chaque nouvelle étape, la fin.
+    expect(vi.mocked(publishRealtime).mock.calls.map((c) => [c[0].phase, c[0].stage ?? null])).toEqual([['start', null], ['stage', 'finish'], ['done', null]])
     expect(jobOf('i9')?.status).toBe('done')
     clearJob('i9')
   })
@@ -126,6 +130,7 @@ describe('la génération écrit son état dans l’instruction', () => {
     await run(patch)
     expect(patch.mock.calls.at(-1)![2]).toMatchObject({ generating: null, generationError: { message: 'La vidéo est illisible.' } })
     expect(jobOf('i9')).toMatchObject({ status: 'error', message: 'La vidéo est illisible.' })
+    expect(vi.mocked(publishRealtime).mock.calls.map((c) => c[0].phase)).toEqual(['start', 'failed'])
     clearJob('i9')
   })
 })

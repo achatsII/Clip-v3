@@ -74,12 +74,16 @@ export function creationReporter(data: Pick<DataApi, 'patch'>, id: string, who: 
       void write({ generating: { startedAt: at, heartbeatAt: at, stage, detail: null, byName: who.name ?? null, device: who.device }, generationError: null })
       stopBeat = clock.every(() => void write({ 'generating.heartbeatAt': iso(), 'generating.stage': stage, 'generating.detail': detail }), HEARTBEAT_MS)
     },
-    /** Une nouvelle étape s'écrit tout de suite ; un simple détail attend le prochain signe de vie. */
-    stage(next: string, nextDetail?: string) {
+    /**
+     * Une nouvelle étape s'écrit tout de suite ; un simple détail attend le prochain signe de vie.
+     * Rend vrai si l'étape a changé (l'écriture part ; `settle` dit quand elle est faite).
+     */
+    stage(next: string, nextDetail?: string): boolean {
       const changed = next !== stage
       stage = next
       detail = nextDetail ?? null
       if (changed && stopBeat) void write({ 'generating.stage': stage, 'generating.detail': detail, 'generating.heartbeatAt': iso() })
+      return changed
     },
     stop,
     /** Attend que les écritures en cours soient parties (avant la dernière). */

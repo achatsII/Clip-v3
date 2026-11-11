@@ -5,6 +5,7 @@ import type { FilesApi } from '../gateway/files'
 import { nowIso, T } from '../model/repo'
 import { saveDraft, type Actor } from '../model/service'
 import type { Instruction, OrgSettings, Station } from '../model/types'
+import { publishRealtime } from '../realtime/client'
 import { creationReporter } from './creation'
 import { enrichMedia, generateInstruction } from './generate'
 import { runJob } from './jobs'
@@ -30,11 +31,14 @@ export function startGeneration(input: {
   return runJob(doc._id, async (setStage) => {
     // L'état s'écrit dans l'instruction : les autres appareils voient la création en cours.
     const report = creationReporter(data, doc._id, { name: actor.name, device: inNativeShell() ? 'app' : 'web' })
+    // Les autres appareils de l'usine l'apprennent aussitôt (temps réel), une fois l'état écrit.
+    const tell = (phase: 'start' | 'stage' | 'done' | 'failed', stage?: string) => publishRealtime({ type: 'creation', id: doc._id, phase, title: doc.json_data.title, stage })
     const stage = (key: string, detail?: string) => {
       setStage(key, detail)
-      report.stage(key, detail)
+      if (report.stage(key, detail)) void report.settle().then(() => tell('stage', key))
     }
     report.start()
+    void report.settle().then(() => tell('start'))
     keepAwake(true)
     try {
       const instr = doc.json_data
@@ -73,8 +77,10 @@ export function startGeneration(input: {
           stationGuess: out.stationGuess,
         },
       })
+      tell('done')
     } catch (e) {
       await report.fail(e instanceof Error ? e.message : 'La génération a échoué.')
+      tell('failed')
       throw e
     } finally {
       report.stop()

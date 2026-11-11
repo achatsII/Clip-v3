@@ -152,6 +152,15 @@ toast avec « Ouvrir ».
 - **Cartes** : « En création ».
 - **Page de l'instruction** : elle suit l'étape, puis montre l'instruction dès qu'elle est prête.
 
+**Le temps réel (Ably), s'il est configuré** (`ABLY_KEY`, côté serveur).
+- **Le jeton** : chaque appareil connecté demande un jeton à `/api/realtime/token`. La route relit
+  la personne par `/api/v1/auth/me`, puis ne donne accès qu'au canal de son organisation
+  (`clip:org:{id}`).
+- **Les annonces** : l'appareil qui génère annonce le début, chaque nouvelle étape et la fin, une
+  fois l'état écrit. Les messages ne portent que l'identifiant et le titre.
+- **À la réception** : les autres relisent aussitôt la Gateway. La relecture à intervalle reste en
+  filet.
+
 Sans signe de vie depuis deux minutes (app fermée, téléphone en veille), la création est
 « interrompue » : on la relance ici, ou on revoit les médias. Dans l'app mobile, l'écran reste
 allumé pendant la génération.
