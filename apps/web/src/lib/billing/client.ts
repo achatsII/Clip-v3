@@ -55,7 +55,20 @@ export type PublicPlan = {
   }
 }
 
-export type PlansOffer = { product: string; channel: string; currency: string; plans: PublicPlan[] }
+/**
+ * Sur iOS et Android : l'achat dans le magasin est-il permis à cette organisation. On n'achète que
+ * si `allowed` ; sinon une phrase selon `reason`, sans lien ni prix d'un paiement hors du magasin.
+ * `team_organization` : plusieurs membres (un abonnement du magasin est à une personne) ;
+ * `managed_elsewhere` : un abonnement payant vit ailleurs (`managed_in`) ; `not_sold_in_app` : rien
+ * à acheter ici ; `org_unresolved` : l'organisation ne peut pas recevoir l'achat.
+ */
+export type StorePurchase = {
+  allowed: boolean
+  reason: 'not_sold_in_app' | 'org_unresolved' | 'managed_elsewhere' | 'team_organization' | null
+  managed_in: 'web' | 'ios' | 'android' | null
+}
+
+export type PlansOffer = { product: string; channel: string; currency: string; plans: PublicPlan[]; store_purchase?: StorePurchase }
 
 export type CheckResult = { allowed: boolean; feature_key: string; reason: string | null; upgrade_hint?: { plan_code: string | null; addon_code: string | null } | null }
 
@@ -63,12 +76,15 @@ export class BillingError extends Error {
   readonly status: number
   readonly code: string | null
   readonly body: Record<string, unknown> | null
-  constructor(status: number, code: string | null, body: Record<string, unknown> | null, message: string) {
+  /** Sur 429 et 503 : dans combien de secondes réessayer (en-tête Retry-After) ; null sinon. */
+  readonly retryAfterSeconds: number | null
+  constructor(status: number, code: string | null, body: Record<string, unknown> | null, message: string, retryAfterSeconds: number | null = null) {
     super(message)
     this.name = 'BillingError'
     this.status = status
     this.code = code
     this.body = body
+    this.retryAfterSeconds = retryAfterSeconds
   }
   get reason(): string | null {
     return typeof this.body?.reason === 'string' ? this.body.reason : null
@@ -107,7 +123,8 @@ export function hasFeature(state: BillingState | null, featureKey: string): bool
 export interface BillingClientConfig {
   gatewayUrl?: string
   product?: string
-  channel?: 'web' | 'ios' | 'android'
+  /** Le canal de vente : le web paie par Stripe, l'app mobile par le magasin. Une fonction : lu à chaque appel. */
+  channel?: 'web' | 'ios' | 'android' | (() => 'web' | 'ios' | 'android')
   getToken?: () => string | null
   refresh?: () => Promise<boolean>
   fetch?: typeof fetch
@@ -116,7 +133,7 @@ export interface BillingClientConfig {
 export function createBillingClient(config: BillingClientConfig = {}) {
   const base = (config.gatewayUrl ?? GATEWAY_URL).replace(/\/+$/, '')
   const product = config.product ?? PRODUCT_SLUG
-  const channel = config.channel ?? 'web'
+  const channel = () => (typeof config.channel === 'function' ? config.channel() : config.channel ?? 'web')
   const getToken = config.getToken ?? getAccessToken
   const refresh = config.refresh ?? refreshSession
   // fetch se relit à chaque appel (une app qui le remplace après coup passe par le sien).
@@ -143,7 +160,8 @@ export function createBillingClient(config: BillingClientConfig = {}) {
       const code = typeof problem?.code === 'string' ? problem.code : null
       const refusal = refusalFrom(res.status, problem)
       if (refusal) emitRefusal(refusal)
-      throw new BillingError(res.status, code, problem, typeof problem?.detail === 'string' ? problem.detail : `Erreur ${res.status}`)
+      const retry = Number(res.headers.get('retry-after'))
+      throw new BillingError(res.status, code, problem, typeof problem?.detail === 'string' ? problem.detail : `Erreur ${res.status}`, Number.isFinite(retry) && retry > 0 ? retry : null)
     }
     return parsed as T
   }
@@ -151,7 +169,14 @@ export function createBillingClient(config: BillingClientConfig = {}) {
   return {
     context: () => call<BillingState>('GET', '/api/v2/billing/context'),
     check: (featureKey: string, options: { quantity?: number; intent?: 'use' | 'add' } = {}) => call<CheckResult>('POST', '/api/v2/billing/check', { feature_key: featureKey, ...options }),
-    plans: () => call<PlansOffer>('GET', `/api/v2/billing/plans?channel=${channel}`),
+    plans: () => call<PlansOffer>('GET', `/api/v2/billing/plans?channel=${channel()}`),
+    /**
+     * Après un achat ou une restauration dans le magasin : la plateforme relit l'achat chez
+     * RevenueCat et rend l'état à jour, sans attendre le webhook. Corps vide : le client ne déclare
+     * jamais un achat. 429 rate_limited (retryAfterSeconds), 503 store_unavailable (le webhook
+     * prendra le relais), 409 org_unresolved (l'organisation ne peut pas recevoir l'achat).
+     */
+    mobileSync: () => call<BillingState>('POST', '/api/v2/billing/mobile/sync'),
     async checkout(planCode: string, interval: 'monthly' | 'yearly', urls: { success: string; cancel: string }, key = operationKey(`paiement:${planCode}:${interval}`)): Promise<string> {
       const data = await call<{ checkout_url: string }>('POST', '/api/v2/billing/checkout', { plan_code: planCode, interval, success_url: urls.success, cancel_url: urls.cancel, idempotency_key: key })
       return data.checkout_url

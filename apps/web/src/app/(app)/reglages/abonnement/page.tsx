@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { useState } from 'react'
 import { billingClient } from '@/components/billing/BillingRoot'
 import { entitlementLines, formatPrice, usePlans } from '@/components/billing/Billing'
+import { canBuyInStore, devicePlatform, StoreAccount, StoreBuy } from '@/components/billing/Store'
 import { UsageMeter, useUsage } from '@/components/billing/Usage'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -43,6 +44,8 @@ function Subscription() {
   const [interval, setInterval] = useState<'monthly' | 'yearly'>('yearly')
   const [busy, setBusy] = useState<string | null>(null)
   const inShell = !!nativeEnv()
+  // Dans l'app : on vend dans le magasin (prix du magasin), jamais par Stripe.
+  const platform = devicePlatform()
   const isAdmin = role === 'admin'
   const c = creditsOf(state, 'ai_credits')
   const usage = useUsage()
@@ -95,6 +98,7 @@ function Subscription() {
                 Gérer l’abonnement et les factures
               </Button>
             )}
+            {platform && <StoreAccount client={billingClient} state={state} platform={platform} />}
           </Panel>
           {c && (
             <Panel>
@@ -129,7 +133,7 @@ function Subscription() {
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-black tracking-tight">Les plans</h2>
-          {!inShell && <Segmented value={interval} onChange={setInterval} options={[{ value: 'monthly', label: 'Mensuel' }, { value: 'yearly', label: 'Annuel · 2 mois offerts' }]} />}
+          {(!inShell || canBuyInStore()) && <Segmented value={interval} onChange={setInterval} options={[{ value: 'monthly', label: 'Mensuel' }, { value: 'yearly', label: inShell ? 'Annuel' : 'Annuel · 2 mois offerts' }]} />}
         </div>
         {plans.isLoading ? (
           <div className="grid gap-5 md:grid-cols-3">
@@ -171,6 +175,11 @@ function Subscription() {
                         ))}
                       </ul>
                     </div>
+                    {platform && price && !current && (
+                      <div className="relative mt-6">
+                        <StoreBuy client={billingClient} plan={p} interval={interval} storePurchase={plans.data?.store_purchase} platform={platform} tone={highlight ? 'onColor' : 'light'} />
+                      </div>
+                    )}
                     {!inShell && price && !current && (
                       <div className="relative mt-6">
                         {isAdmin ? (
@@ -187,9 +196,9 @@ function Subscription() {
               })}
           </div>
         )}
-        {inShell && <p className="mt-4 text-sm font-bold text-slate-500">Votre plan se gère par l’administrateur de votre usine.</p>}
+        {inShell && !canBuyInStore() && <p className="mt-4 text-sm font-bold text-slate-500">Votre plan se gère par l’administrateur de votre usine.</p>}
       </section>
-      <p className="text-sm font-medium text-slate-500">Besoin de plusieurs usines, de l’authentification unique ou d’un contrat ? Écrivez-nous : un plan Entreprise se prépare sur mesure.</p>
+      {!inShell && <p className="text-sm font-medium text-slate-500">Besoin de plusieurs usines, de l’authentification unique ou d’un contrat ? Écrivez-nous : un plan Entreprise se prépare sur mesure.</p>}
     </div>
   )
 }

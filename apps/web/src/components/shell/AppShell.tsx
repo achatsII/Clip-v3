@@ -25,7 +25,7 @@ import { Logo } from '@/components/Logo'
 import { Modal } from '@/components/ui/Modal'
 import { Segmented } from '@/components/ui/Field'
 import { useToast } from '@/components/ui/Toast'
-import { hasCapability } from '@/lib/bridge/native'
+import { callNative, hasCapability } from '@/lib/bridge/native'
 import { BILLING_V2 } from '@/lib/config'
 import { logout } from '@/lib/gateway/client'
 import { canScan, clipPathFromScan, scanNative } from '@/lib/media/scan'
@@ -43,6 +43,12 @@ interface NavItem {
   icon: ReactNode
   badge?: number
   show: boolean
+}
+
+/** Se déconnecter : le magasin de l'app oublie aussi l'organisation (le compte suivant ne verra pas ses achats). */
+function signOut() {
+  if (hasCapability('store.connect')) void callNative('store.connect', { orgId: null }).catch(() => undefined)
+  logout()
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -143,7 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="block truncate text-sm font-black text-slate-900 dark:text-white">{displayName}</span>
               <span className="block truncate text-xs font-bold text-slate-500">{ROLES[role].label}</span>
             </span>
-            <button type="button" onClick={() => logout()} className="btn-press flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10" aria-label="Se déconnecter" title="Se déconnecter">
+            <button type="button" onClick={signOut} className="btn-press flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10" aria-label="Se déconnecter" title="Se déconnecter">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -218,7 +224,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button type="button" onClick={() => { setMoreOpen(false); setAppearanceOpen(true) }} className="glass-card btn-press flex h-14 items-center gap-3 rounded-2xl px-4 text-left font-black text-slate-800 dark:text-slate-100">
             <Moon className="h-5 w-5" /> Apparence
           </button>
-          <button type="button" onClick={() => logout()} className="btn-press flex h-14 items-center gap-3 rounded-2xl px-4 text-left font-black text-rose-600">
+          <button type="button" onClick={signOut} className="btn-press flex h-14 items-center gap-3 rounded-2xl px-4 text-left font-black text-rose-600">
             <LogOut className="h-5 w-5" /> Se déconnecter
           </button>
         </div>

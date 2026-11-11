@@ -33,6 +33,11 @@ export type Capability =
   | 'print'
   | 'openExternal'
   | 'context.set'
+  /** L'achat d'un abonnement dans le magasin (App Store, Google Play), par RevenueCat : annoncés ensemble. */
+  | 'store.connect'
+  | 'store.offers'
+  | 'store.purchase'
+  | 'store.restore'
 
 /** Injecté par la coquille dans `window.__CLIP_NATIVE__` avant le chargement de la page. */
 export interface NativeEnvironment {
@@ -121,7 +126,42 @@ export interface BridgeRequestMap {
     payload: { organizationId: string | null; userId: string | null }
     result: Record<string, never>
   }
+  /**
+   * Le magasin connaît l'acheteur par son organisation (en minuscules), jamais par la personne :
+   * à la connexion et à chaque changement d'organisation ; `null` à la déconnexion.
+   */
+  'store.connect': { payload: { orgId: string | null }; result: Record<string, never> }
+  /** Ce que le magasin dit de chaque produit demandé (prix dans la devise du compte du magasin). */
+  'store.offers': { payload: { productIds: string[] }; result: { offers: Record<string, StoreOffer> } }
+  /**
+   * Ouvre l'achat d'un produit du magasin. `cancelled` n'est pas une erreur ; `failed` porte la
+   * raison (`failure`), que la page dit avec ses mots.
+   */
+  'store.purchase': { payload: { productId: string }; result: { outcome: 'purchased' | 'cancelled' | 'pending' | 'failed'; failure?: StoreFailure } }
+  /** « Restaurer mes achats », que les magasins exigent. */
+  'store.restore': { payload: Record<string, never>; result: { ok: boolean; failure?: StoreFailure } }
 }
+
+/**
+ * Ce que le magasin dit d'un produit : le prix que la personne paiera, dans la devise de son compte
+ * du magasin ; `perMonth` pour l'économie de l'annuel ; l'offre d'introduction, s'il y en a une.
+ */
+export interface StoreOffer {
+  priceString: string
+  price: number
+  currencyCode: string
+  perMonth: number | null
+  intro: { priceString: string; price: number; periodUnit: string; periodNumberOfUnits: number } | null
+  /** iOS seulement ; null si le magasin ne le dit pas. */
+  introEligible: boolean | null
+}
+
+/**
+ * Pourquoi un achat ou une restauration n'a pas abouti : l'organisation n'est pas encore connectée
+ * au magasin, le produit n'y existe pas encore, l'achat appartient à une autre organisation, pas
+ * de réseau, achats interdits sur l'appareil, ou une autre erreur du magasin.
+ */
+export type StoreFailure = 'not_ready' | 'product_missing' | 'other_account' | 'network' | 'not_allowed' | 'store'
 
 /**
  * Réponse publique de `GET {web}/api/config`, lue aussi par la coquille au démarrage et au

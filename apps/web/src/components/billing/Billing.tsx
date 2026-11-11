@@ -15,6 +15,7 @@ import { BillingError, creditsOf, limitOf, type BillingClient, type PublicPlan }
 import { LIMIT_TITLE, limitReason } from '@/lib/billing/usage'
 import { useBilling, useEntitlement } from '@/lib/billing/state'
 import { useToggle } from '@/lib/toggles'
+import { devicePlatform, StoreBuy } from './Store'
 import { cn, formatDate } from '@/lib/util/cn'
 
 export function formatPrice(cents: number, currency: string) {
@@ -159,6 +160,7 @@ export function Paywall({ client }: { client: BillingClient }) {
   const credits = refusedCredits || feature === 'ai_credits'
   const plan = plans.data ? planFor(plans.data.plans, state, credits ? 'ai_credits' : feature, paywall.refusal?.upgradePlan) : null
   const inShell = !!nativeEnv()
+  const platform = devicePlatform()
   const isAdmin = role === 'admin'
   const c = creditsOf(state, 'ai_credits')
   // Une limite comptée par l'app : on dit ce que le plan permet et où l'on en est.
@@ -240,17 +242,32 @@ export function Paywall({ client }: { client: BillingClient }) {
       ) : (
         <p className="mt-4 font-bold text-slate-500">Voyez les plans sur la page Abonnement.</p>
       )}
-      {!inShell && plan && monthly && yearly && (
+      {plan && monthly && yearly && (!inShell || platform) && (
         <div className="mt-4 flex justify-center gap-2">
           {(['monthly', 'yearly'] as const).map((iv) => (
             <button key={iv} type="button" onClick={() => setInterval(iv)} className={cn('btn-press h-10 rounded-xl px-4 text-sm font-black', interval === iv ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card')}>
-              {iv === 'monthly' ? 'Mensuel' : `Annuel${saving > 0 ? ` · −${saving} %` : ''}`}
+              {/* Dans l'app, les prix sont ceux du magasin : l'économie ne se calcule pas sur le catalogue. */}
+              {iv === 'monthly' ? 'Mensuel' : `Annuel${!inShell && saving > 0 ? ` · −${saving} %` : ''}`}
             </button>
           ))}
         </div>
       )}
       <div className="mt-6 flex flex-col gap-2">
-        {!plan ? null : inShell ? (
+        {!plan ? null : inShell && platform ? (
+          // Dans l'app : l'achat dans le magasin, s'il est permis ; sinon une phrase, sans lien ni prix.
+          <StoreBuy
+            client={client}
+            plan={plan}
+            interval={interval}
+            storePurchase={plans.data?.store_purchase}
+            platform={platform}
+            onActive={() => {
+              const retry = paywall.retry
+              closePaywall()
+              retry?.()
+            }}
+          />
+        ) : inShell ? (
           <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">Ce plan se gère par l’administrateur de votre usine.</p>
         ) : isAdmin ? (
           <Button variant="primary" size="lg" block loading={busy} onClick={buy}>

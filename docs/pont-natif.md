@@ -23,8 +23,12 @@ chargement de la page). La page n'appelle que ce qui est annoncé ; sinon, elle 
 | `haptics`, `keepAwake` | Vibration, écran allumé pendant la lecture | expo-haptics, expo-keep-awake |
 | `share`, `print`, `openExternal` | Feuille de partage, impression (PDF), navigateur du système | expo-sharing, expo-print, expo-web-browser |
 | `context.set` | Organisation et utilisateur connectés, pour les journaux | — |
+| `store.connect`, `store.offers`, `store.purchase`, `store.restore` | Achat d'un abonnement dans l'App Store ou Google Play : l'organisation comme acheteur, les prix du magasin, l'achat, « Restaurer mes achats ». Annoncée seulement avec une clé RevenueCat, hors Expo Go, toggle `storePurchases` allumé | react-native-purchases |
 
-Chaque erreur revient avec un code du contrat : `cancelled` (la personne a fermé l'écran),
+Un achat ou une restauration qui n'aboutit pas répond normalement, avec sa raison
+(`failure` : `not_ready`, `product_missing`, `other_account`, `network`, `not_allowed`, `store`) ;
+l'abandon (`cancelled`) n'est pas une erreur. Chaque autre erreur revient avec un code du contrat :
+`cancelled` (la personne a fermé l'écran),
 `permission_denied`, `unsupported` (type inconnu ou capacité non annoncée en ce moment),
 `too_large` (fichier choisi de plus de 1 Go), `network` (envoi qui n'aboutit pas après une
 nouvelle tentative), `failed` (requête invalide ou échec d'un module).
@@ -65,8 +69,9 @@ coquille lit `GET {web}/api/config` avec l'en-tête `X-App-Version` :
   vise la version installée, un écran bloquant propose « Mettre à jour » vers `storeUrl` ;
 - **feature toggle `nativeCapture`** : à `false`, les capacités de capture ne sont plus annoncées (la
   page passe à la capture du navigateur ; les envois en cours peuvent finir) ;
+- **feature toggle `storePurchases`** : l'achat dans le magasin n'est annoncé que s'il est à `true` ;
 - **serveur injoignable** : rien ne bloque, et la capture native reste annoncée (le comportement de
-  base de la coquille).
+  base de la coquille) ; l'achat dans le magasin, lui, ne l'est pas (une fonction nouvelle).
 
 ## Sécurité
 
@@ -125,13 +130,13 @@ configuration, navigation) et `npm run typecheck`.
 | Variable | Rôle |
 |---|---|
 | `EXPO_PUBLIC_CLIP_WEB_URL` | Adresse de l'app web, figée dans la build. Sans elle, la coquille affiche un écran de configuration. |
+| `EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` | Clés **publiques** de RevenueCat (projet `clip-v3`), variables d'EAS figées dans la build. Sans elles, aucun achat dans l'app. |
 
 ## Ce qui reste à faire
 
-- **Achats des magasins** (RevenueCat, `react-native-purchases`) : quand la facturation v2 sera
-  déployée, ajouter au contrat une capacité d'achat (offres du magasin, achat, restauration, gestion)
-  que la page de l'abonnement appellera dans la coquille. Sur iOS et Android, aucun paiement Stripe ne
-  doit s'ouvrir dans la coquille.
+- **Achats des magasins** : le code est en place (capacités `store.*`). Restent la mise en route des
+  magasins et de RevenueCat (skill `mobile`), puis `billing-publish`. Les achats ne s'essaient que
+  sur une build de développement, TestFlight ou le test interne (jamais Expo Go).
 - **Liens universels** : ouvrir directement dans l'app les liens `https://…/p/…` des postes.
 - **Confirmer** l'identifiant `com.intelligenceindustrielle.clip` avant la création des fiches dans les
   magasins (skill `mobile`).

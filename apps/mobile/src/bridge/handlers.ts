@@ -14,6 +14,7 @@ import { discardMedia, pendingMedia, toCapturedMedia } from '../media/mediaStore
 import { MAX_PICK_BYTES, pickFromLibrary, tooLarge } from '../media/pick'
 import { finalizeDocument } from '../media/pipeline'
 import { uploadMultipart, uploadPut } from '../media/upload'
+import { connectStore, purchaseInStore, restoreInStore, storeEnabled, storeOffers } from '../store/store'
 import { BridgeError, cancelled } from './errors'
 import type { BridgeEvent, CapturedMedia } from './protocol'
 import type { BridgeHandlers } from './router'
@@ -144,6 +145,32 @@ export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandle
     'context.set': async ({ organizationId, userId }) => {
       setSessionContext(organizationId, userId)
       return {}
+    },
+
+    // L'achat dans le magasin : la capacité n'est annoncée que si le module est utilisable.
+    'store.connect': async ({ orgId }) => {
+      if (!storeEnabled()) throw new BridgeError('unsupported', 'L’achat dans le magasin n’est pas offert dans cette version.')
+      await connectStore(orgId)
+      return {}
+    },
+    'store.offers': async ({ productIds }) => {
+      if (!storeEnabled()) throw new BridgeError('unsupported', 'L’achat dans le magasin n’est pas offert dans cette version.')
+      try {
+        return { offers: await storeOffers(productIds) }
+      } catch (e) {
+        logError(e, { action: 'store.offers' })
+        throw new BridgeError('network', 'Le magasin ne répond pas.')
+      }
+    },
+    'store.purchase': async ({ productId }) => {
+      if (!storeEnabled()) throw new BridgeError('unsupported', 'L’achat dans le magasin n’est pas offert dans cette version.')
+      const result = await purchaseInStore(productId)
+      if (result.outcome === 'failed') logError(new Error(`store_${result.failure}`), { action: 'store.purchase' })
+      return result
+    },
+    'store.restore': async () => {
+      if (!storeEnabled()) throw new BridgeError('unsupported', 'L’achat dans le magasin n’est pas offert dans cette version.')
+      return restoreInStore()
     },
   }
 }

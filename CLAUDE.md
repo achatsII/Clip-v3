@@ -138,9 +138,20 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   chiffres de la page Statistiques (`src/lib/stats/adoption.ts`) et propose, au choix, un plan avec
   son prix, jamais dans la coquille. Il passe par le feature toggle `valueReport` et la feature
   `adoption_stats`.
-- La coquille mobile n'offre aucun achat : dans la coquille, le paywall ne montre ni prix ni lien de
-  paiement. Avant de soumettre aux magasins, décider de la posture (vente dans le magasin par
-  RevenueCat, ou app « miroir » permise seulement aux comptes d'entreprise sous contrat) ; le
-  manifeste ne vend aujourd'hui que sur `web`.
+- **Dans l'app mobile, on vend dans le magasin** (posture `in_app_purchase`, décidée pour garder la
+  vision : le champion s'abonne seul dans l'App Store). Solo, Équipe et Usine se vendent sur iOS et
+  Android par RevenueCat (projet `clip-v3`), jamais par Stripe.
+  - La coquille annonce les capacités `store.connect`, `store.offers`, `store.purchase` et
+    `store.restore` seulement à trois conditions : une clé publique RevenueCat
+    (`EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `…_ANDROID_KEY`), hors d'Expo Go, et le toggle
+    `storePurchases` allumé.
+  - La page achète par le pont, puis fait relire l'achat par `mobileSync`
+    (`src/lib/billing/store.ts`, `src/components/billing/Store.tsx`).
+  - L'achat n'est offert que si `store_purchase.allowed` (une organisation d'une seule personne).
+    Sinon, une phrase, sans lien ni prix d'ailleurs.
+  - Avant l'achat : le prix du magasin, les mentions, la politique de confidentialité
+    d'Intelligence Industrielle et, sur iPhone, les conditions standard d'Apple. Ensuite :
+    « Restaurer mes achats » et la gestion dans le magasin.
+  - Le module natif part dans une build EAS, jamais dans une mise à jour à distance seule.
 - Le drapeau reste éteint partout tant que le catalogue n'est pas publié ; on l'allume en QA quand
   `GET /api/v2/billing/context` y répond pour `clip-v3`.

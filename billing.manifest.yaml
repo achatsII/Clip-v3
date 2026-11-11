@@ -10,21 +10,37 @@ product:
   # À enregistrer à la Gateway avant la publication : l'app se connecte encore avec « html ».
   slug: clip-v3
   name: CLIP
-  # Vendu sur le web seulement pour l'instant : la coquille mobile ne vend rien (pas encore d'achat
-  # dans les magasins) et ne montre ni prix ni lien d'achat.
-  channels: [web]
+  # Le web (Stripe) et l'app mobile (App Store et Google Play, par RevenueCat) : le champion découvre
+  # CLIP dans le magasin et s'y abonne seul (VISION.md) ; l'usine peut toujours payer sur le web.
+  channels: [web, ios, android]
   acquisition: [self_serve]
   is_self_service: true
   application:
     # Les routes que l'app appelle, au plus juste. Aucun assistant: : chaque appel d'IA passe par
     # une opération ci-dessous (POST /api/v2/ai/ask), débitée par la plateforme.
-    default_scopes: [data:*, files:write, files:read, files:process, files:transcribe, ai:upload, ai:tts, ai:live, ai:generate_image]
+    default_scopes: [data:*, files:write, files:read, files:process, files:transcribe, ai:upload, ai:live, ai:generate_image]
   org_model: { on_signup: personal, team_join: none }
   default_plan_code: free
   default_overage_policy: block
   providers:
     stripe:
       enabled: true
+    # Sur iPhone et Android, on vend dans le magasin (jamais par Stripe). L'acheteur, pour RevenueCat,
+    # est l'organisation. La publication crée les droits et les produits chez RevenueCat (sync).
+    revenuecat:
+      enabled: true
+      # Projet à créer à la mise en route des magasins s'il n'existe pas.
+      project: clip-v3
+      app_user_id_scope: organization
+      posture: in_app_purchase
+      store_catalog: sync
+      apps:
+        ios: { bundle_id: com.intelligenceindustrielle.clip }
+        android: { package_name: com.intelligenceindustrielle.clip }
+      iap_justification:
+        reason: "Le champion découvre CLIP dans l'App Store ou Google Play et s'abonne seul (Solo) avant de convaincre son usine : une vente à une personne, donc dans le magasin (Apple 3.1.1 et 3.1.3(b), facturation de Google Play)."
+        approved_by: "skill billing"
+        approved_on: "2026-11-11"
 
 features:
   # Une banque commune pour toute l'IA : chaque opération a son prix en crédits (ai_operations).
@@ -73,6 +89,11 @@ features:
     name: Export complet
 
 plans:
+  # Un produit de magasin par prix, store_product_id = clip_v3_<plan>_<intervalle>_v<version> : les
+  # magasins n'acceptent que minuscules, chiffres, « _ » et « . », d'où clip_v3 pour le slug clip-v3.
+  # Un produit ne se réécrit pas : chaque nouvelle version vendue en prend de nouveaux. Le droit
+  # RevenueCat du plan (store_entitlement) reste le même pour toutes ses versions.
+  #
   # La grille suit la valeur : les postes (la couverture du plancher), les rédacteurs (la capacité de
   # création) et les instructions publiées. Les opérateurs et les lecteurs ne se comptent jamais.
   # Les banques de crédits suivent l'usage réel d'un profil type (en crédits), avec de la marge ;
@@ -86,7 +107,8 @@ plans:
     version: 1
     status: active
     sort_order: 10
-    availability: { channels: [web], audience: personal }
+    # Montré comme plan courant dans l'app ; rien à acheter.
+    availability: { channels: [web, ios, android], audience: personal }
     entitlements:
       features: { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false }
       limits: { published_instructions: 3, stations: 1, editors: 1 }
@@ -101,10 +123,10 @@ plans:
     version: 1
     status: active
     sort_order: 20
-    availability: { channels: [web], audience: personal }
+    availability: { channels: [web, ios, android], audience: personal, store_entitlement: clip-v3.solo }
     prices:
-      - { interval: monthly, currency: CAD, amount_cents: 4900 }
-      - { interval: yearly, currency: CAD, amount_cents: 49000 }
+      - { interval: monthly, currency: CAD, amount_cents: 4900, store_product_id: clip_v3_solo_monthly_v1 }
+      - { interval: yearly, currency: CAD, amount_cents: 49000, store_product_id: clip_v3_solo_yearly_v1 }
     entitlements:
       features: { translations: false, adoption_stats: true, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false }
       limits: { published_instructions: 30, stations: 5, editors: 1 }
@@ -118,10 +140,10 @@ plans:
     version: 1
     status: active
     sort_order: 30
-    availability: { channels: [web], audience: personal }
+    availability: { channels: [web, ios, android], audience: personal, store_entitlement: clip-v3.equipe }
     prices:
-      - { interval: monthly, currency: CAD, amount_cents: 29900 }
-      - { interval: yearly, currency: CAD, amount_cents: 299000 }
+      - { interval: monthly, currency: CAD, amount_cents: 29900, store_product_id: clip_v3_equipe_monthly_v1 }
+      - { interval: yearly, currency: CAD, amount_cents: 299000, store_product_id: clip_v3_equipe_yearly_v1 }
     entitlements:
       features: { translations: true, adoption_stats: true, approvals: true, bulk_import: false, voice_assistant: false, brand_kit: true, full_export: false }
       limits: { published_instructions: null, stations: 25, editors: 5 }
@@ -135,10 +157,10 @@ plans:
     version: 1
     status: active
     sort_order: 40
-    availability: { channels: [web], audience: personal }
+    availability: { channels: [web, ios, android], audience: personal, store_entitlement: clip-v3.usine }
     prices:
-      - { interval: monthly, currency: CAD, amount_cents: 89900 }
-      - { interval: yearly, currency: CAD, amount_cents: 899000 }
+      - { interval: monthly, currency: CAD, amount_cents: 89900, store_product_id: clip_v3_usine_monthly_v1 }
+      - { interval: yearly, currency: CAD, amount_cents: 899000, store_product_id: clip_v3_usine_yearly_v1 }
     entitlements:
       features: { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true }
       limits: { published_instructions: null, stations: 100, editors: 15 }

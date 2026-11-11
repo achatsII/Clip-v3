@@ -6,9 +6,22 @@ import { AI_COSTS, FEATURE_LABELS, FEATURE_ORDER } from '@/lib/billing/catalog'
 import { AI_OPERATIONS } from '@/lib/gateway/ai'
 
 interface Manifest {
-  product: { slug: string; channels: string[]; default_plan_code: string; application: { default_scopes: string[] } }
+  product: {
+    slug: string
+    channels: string[]
+    default_plan_code: string
+    application: { default_scopes: string[] }
+    providers: { revenuecat?: { enabled: boolean; project: string; app_user_id_scope: string; posture: string; apps: Record<string, Record<string, string>>; iap_justification: { reason: string } } }
+  }
   features: Array<{ key: string; kind: string }>
-  plans: Array<{ code: string; status: string; prices?: unknown[]; entitlements: { features?: Record<string, boolean>; limits?: Record<string, number | null>; credits?: Array<{ feature: string }> } }>
+  plans: Array<{
+    code: string
+    status: string
+    version: number
+    availability: { channels: string[]; audience: string; store_entitlement?: string }
+    prices?: Array<{ interval: string; store_product_id?: string }>
+    entitlements: { features?: Record<string, boolean>; limits?: Record<string, number | null>; credits?: Array<{ feature: string }> }
+  }>
   ai_operations: Array<{ key: string; capability: string; feature: string; credits: number }>
 }
 
@@ -50,5 +63,29 @@ describe('billing.manifest.yaml ↔ code de l’app', () => {
     for (const p of manifest.plans) {
       for (const k of [...Object.keys(p.entitlements.features ?? {}), ...Object.keys(p.entitlements.limits ?? {}), ...(p.entitlements.credits ?? []).map((c) => c.feature)]) expect(keys.has(k), `${p.code}.${k}`).toBe(true)
     }
+  })
+
+  it('vendu dans les magasins : RevenueCat déclaré, un produit unique par prix, le droit de chaque plan', () => {
+    const mobile: string[] = manifest.product.channels.filter((c) => c === 'ios' || c === 'android')
+    if (!mobile.length) return
+    const rc = manifest.product.providers.revenuecat
+    expect(rc).toMatchObject({ enabled: true, app_user_id_scope: 'organization', posture: 'in_app_purchase' })
+    for (const ch of mobile) expect(rc?.apps?.[ch], ch).toBeTruthy()
+    expect(rc?.iap_justification.reason.length).toBeGreaterThanOrEqual(80)
+    const ids: string[] = []
+    for (const p of manifest.plans) {
+      const onMobile = p.availability.channels.some((c) => mobile.includes(c))
+      if (!onMobile) continue
+      expect(p.availability.audience, p.code).toBe('personal')
+      if (!p.prices?.length) continue
+      // Le droit du plan, le même pour toutes ses versions ; un produit par prix, propre à cette version.
+      expect(p.availability.store_entitlement, p.code).toBe(`${manifest.product.slug}.${p.code}`)
+      for (const price of p.prices) {
+        expect(price.store_product_id, `${p.code} ${price.interval}`).toBe(`${manifest.product.slug.replace(/-/g, '_')}_${p.code}_${price.interval}_v${p.version}`)
+        expect(price.store_product_id).toMatch(/^[a-z0-9_.]+$/)
+        ids.push(price.store_product_id!)
+      }
+    }
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })

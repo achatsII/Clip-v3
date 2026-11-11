@@ -58,6 +58,8 @@ export function isExternalUrl(v: unknown): v is string {
 }
 
 const nonEmptyString = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0
+/** Un identifiant de produit des magasins : minuscules, chiffres, « _ » et « . ». */
+const isStoreProductId = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9_.]{1,100}$/.test(v)
 
 export const validators: Validators = {
   'camera.photo': (p) => {
@@ -161,6 +163,19 @@ export const validators: Validators = {
     if (!isRecord(p) || !isExternalUrl(p.url)) return fail('url doit être une adresse web, mailto: ou tel:')
     return ok({ url: p.url })
   },
+  'store.connect': (p) => {
+    if (!isRecord(p) || !(p.orgId === null || nonEmptyString(p.orgId))) return fail('orgId est un texte ou null')
+    return ok({ orgId: typeof p.orgId === 'string' ? p.orgId.toLowerCase() : null })
+  },
+  'store.offers': (p) => {
+    if (!isRecord(p) || !Array.isArray(p.productIds) || p.productIds.length > 20 || !p.productIds.every(isStoreProductId)) return fail('productIds : jusqu’à 20 identifiants de produit')
+    return ok({ productIds: p.productIds as string[] })
+  },
+  'store.purchase': (p) => {
+    if (!isRecord(p) || !isStoreProductId(p.productId)) return fail('productId est un identifiant de produit')
+    return ok({ productId: p.productId })
+  },
+  'store.restore': () => ok({}),
   'context.set': (p) => {
     if (!isRecord(p)) return fail('contexte vide')
     const { organizationId, userId } = p
