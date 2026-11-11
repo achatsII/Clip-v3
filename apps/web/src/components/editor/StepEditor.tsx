@@ -157,7 +157,7 @@ export function StepEditor({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {step.media.map((m, i) => (
             <button key={`${m.url}-${i}`} type="button" onClick={() => setMediaIndex(i)} className={cn('btn-press flex h-11 items-center gap-1.5 rounded-2xl px-3 text-xs font-black', i === mediaIndex ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card')}>
-              {m.kind === 'video' ? 'Extrait' : m.kind === 'document' ? `Page ${m.page ?? 1}` : m.frame ? 'Image' : m.generated ? 'Illustration' : 'Photo'} {i + 1}
+              {m.kind === 'video' ? 'Extrait' : m.kind === 'document' ? `Page ${m.page ?? 1}` : m.kind === 'html' ? 'Schéma' : m.frame ? 'Image' : m.generated ? 'Illustration' : 'Photo'} {i + 1}
               <span
                 role="button"
                 tabIndex={0}

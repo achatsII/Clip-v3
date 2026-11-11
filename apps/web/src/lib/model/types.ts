@@ -76,10 +76,32 @@ export interface VideoFrame {
   end: number
 }
 
-export type StepMedia =
-  | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame }
-  | { kind: 'video'; url: string; sourceId?: string; start: number; end: number; posterUrl?: string }
-  | { kind: 'document'; url: string; sourceId?: string; page?: number; pageImageUrl?: string; name?: string }
+/** Un média montre ce qu'il faut faire, ou ce qu'il faut éviter (photo « bon » / « pas bon »). */
+export type MediaVerdict = 'do' | 'dont'
+
+/** Ce que tout média d'une étape peut porter : une légende courte et un verdict. */
+interface MediaCommon {
+  caption?: string
+  verdict?: MediaVerdict
+}
+
+export type StepMedia = MediaCommon &
+  (
+    | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame }
+    | { kind: 'video'; url: string; sourceId?: string; start: number; end: number; posterUrl?: string }
+    | { kind: 'document'; url: string; sourceId?: string; page?: number; pageImageUrl?: string; name?: string }
+    /**
+     * Un schéma généré par l'IA : une page HTML autonome (SVG, dessin, vue 3D), affichée dans un
+     * cadre isolé (iframe sans accès à l'app). `url` reste vide : le HTML voyage avec l'instruction.
+     */
+    | { kind: 'html'; url: string; html: string; title?: string; sourceId?: string }
+  )
+
+/**
+ * Comment l'étape montre ses médias : un à la fois (le premier, les autres au choix), côte à côte
+ * pour comparer ce qu'il faut faire et ce qu'il faut éviter, ou tous en grille.
+ */
+export type StepLayout = 'focus' | 'compare' | 'grid'
 
 export type WarningLevel = 'danger' | 'caution' | 'info'
 
@@ -92,6 +114,8 @@ export interface Step {
   keyPoints?: string[]
   warning?: { level: WarningLevel; text: string } | null
   media: StepMedia[]
+  /** Disposition des médias ; un à la fois par défaut. */
+  layout?: StepLayout
   durationSec?: number | null
   /** Pour une fiche de cadenassage : le point d'isolement que l'étape traite. */
   energyPointId?: string | null

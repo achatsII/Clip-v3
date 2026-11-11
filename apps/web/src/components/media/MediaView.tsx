@@ -60,6 +60,7 @@ export function VideoSegment({
   autoPlay = true,
   mode,
   modeControl,
+  bare,
   className,
   big,
 }: {
@@ -72,6 +73,8 @@ export function VideoSegment({
   mode?: VideoMode
   /** Montre le choix du mode dans la barre de la vidéo (lecteur). */
   modeControl?: boolean
+  /** Sans barre de commandes : une tuile de grille ou de comparaison (toucher = lecture ou pause). */
+  bare?: boolean
   className?: string
   big?: boolean
 }) {
@@ -185,7 +188,7 @@ export function VideoSegment({
           </div>
         </>
       )}
-      <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/70 to-transparent p-3">
+      <div className={cn('absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/70 to-transparent p-3', bare && 'hidden')}>
         <button type="button" onClick={toggle} aria-label={playing ? 'Pause' : 'Lire'} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
           {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current" />}
         </button>
@@ -248,15 +251,25 @@ export function DocumentPage({ media, className }: { media: Extract<StepMedia, {
   )
 }
 
-export function MediaView({ media, className, big, autoPlay, videoMode, modeControl }: { media: StepMedia; className?: string; big?: boolean; autoPlay?: boolean; videoMode?: VideoMode; modeControl?: boolean }) {
+export function MediaView({ media, className, big, autoPlay, videoMode, modeControl, bare }: { media: StepMedia; className?: string; big?: boolean; autoPlay?: boolean; videoMode?: VideoMode; modeControl?: boolean; bare?: boolean }) {
   if (media.kind === 'image') return <AnnotatedImage src={media.url} annotations={media.annotations} alt={media.alt} className={className} />
-  if (media.kind === 'video') return <VideoSegment url={media.url} start={media.start} end={media.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} mode={videoMode} modeControl={modeControl} />
+  if (media.kind === 'video') return <VideoSegment url={media.url} start={media.start} end={media.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} mode={videoMode} modeControl={modeControl} bare={bare} />
+  if (media.kind === 'html') return <HtmlMedia html={media.html} title={media.title} className={className} />
   return <DocumentPage media={media} className={className} />
+}
+
+/**
+ * Un schéma généré par l'IA (SVG, dessin, vue 3D) : sa page HTML tourne dans un cadre isolé
+ * (`sandbox` sans `allow-same-origin`) ; elle n'a accès ni aux jetons, ni aux données, ni à la page.
+ */
+export function HtmlMedia({ html, title, className }: { html: string; title?: string; className?: string }) {
+  return <iframe srcDoc={html} sandbox="allow-scripts" referrerPolicy="no-referrer" title={title || 'Schéma'} loading="lazy" className={cn('h-full w-full border-0 bg-white', className)} />
 }
 
 export function mediaThumb(media: StepMedia | undefined): string | null {
   if (!media) return null
   if (media.kind === 'image') return media.url
   if (media.kind === 'video') return media.posterUrl ?? null
-  return media.pageImageUrl ?? null
+  if (media.kind === 'document') return media.pageImageUrl ?? null
+  return null
 }

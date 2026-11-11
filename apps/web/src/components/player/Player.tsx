@@ -8,7 +8,6 @@ import {
   Clock,
   Languages,
   Layers,
-  Maximize2,
   Lock,
   MessageCircleQuestion,
   Mic,
@@ -25,8 +24,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EnergyIcon, PpeIcon } from '@/components/icons'
 import { MediaView } from '@/components/media/MediaView'
-import { ZoomViewer } from '@/components/media/ZoomViewer'
-import { useVideoMode } from '@/lib/media/videoMode'
 import { Confetti } from '@/components/ui/Celebrate'
 import { Modal } from '@/components/ui/Modal'
 import { callNative, hasCapability, haptic } from '@/lib/bridge/native'
@@ -41,6 +38,8 @@ import { Speaker, stepSpeech } from '@/lib/tts'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { FeedbackSheet } from './FeedbackSheet'
 import { strings } from './i18n'
+import { StepMediaArea } from './StepMediaArea'
+import { layoutOf } from '@/lib/model/media'
 import { VoiceAssistant } from './VoiceAssistant'
 import { Input } from '@/components/ui/Field'
 
@@ -307,7 +306,7 @@ export function Player(props: PlayerProps) {
             {/* Sans photo ni vidéo, pas de panneau : le texte prend la place, en haut de l'écran. */}
             {step.media[0] && (
               <div className="relative h-[46dvh] shrink-0 bg-slate-900 sm:h-[52dvh] lg:h-auto lg:flex-[1.5]">
-                <StepMediaPanel step={step} zoomLabel={t.zoom} />
+                <StepMediaArea step={step} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
               </div>
             )}
             <div className={cn('flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-8', step.media[0] ? 'lg:max-w-[560px] lg:overflow-y-auto' : 'mx-auto w-full max-w-3xl pt-8 sm:pt-12')}>
@@ -449,37 +448,6 @@ export function Player(props: PlayerProps) {
         />
       )}
     </div>
-  )
-}
-
-/**
- * Le média de l'étape : les autres médias se choisissent en haut à gauche, et « Agrandir » ouvre le
- * média affiché en plein écran pour zoomer (pincer, double-toucher, molette).
- */
-function StepMediaPanel({ step, zoomLabel }: { step: Step; zoomLabel: string }) {
-  const [i, setI] = useState(0)
-  const [zoomed, setZoomed] = useState(false)
-  const videoMode = useVideoMode()
-  const media = step.media[i] ?? step.media[0]
-  return (
-    <>
-      <MediaView key={i} media={media} big videoMode={videoMode} modeControl />
-      {step.media.length > 1 && (
-        <div className="absolute top-3 left-3 flex gap-1.5">
-          {step.media.map((m, j) => (
-            <button key={j} type="button" onClick={() => setI(j)} className={cn('btn-press h-11 rounded-2xl px-4 text-xs font-black backdrop-blur-md', i === j ? 'bg-white text-slate-900' : 'bg-black/40 text-white')}>
-              {m.kind === 'video' ? '▶' : m.kind === 'document' ? '📄' : '📷'} {j + 1}
-            </button>
-          ))}
-        </div>
-      )}
-      <button type="button" onClick={() => setZoomed(true)} aria-label={zoomLabel} title={zoomLabel} className="btn-press absolute top-3 right-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-black/50 text-white ring-1 ring-white/20">
-        <Maximize2 className="h-5 w-5" />
-      </button>
-      <ZoomViewer open={zoomed} onClose={() => setZoomed(false)} label={zoomLabel}>
-        <MediaView media={media} big videoMode={videoMode} />
-      </ZoomViewer>
-    </>
   )
 }
 
@@ -648,8 +616,8 @@ function DocumentView({ content, t, energyById }: { content: InstructionContent;
       {content.steps.map((s, i) => (
         <article id={`doc-step-${i}`} key={s.id} className="glass-panel overflow-hidden rounded-[32px] p-0">
           {s.media[0] && (
-            <div className="aspect-video bg-slate-900">
-              <MediaView media={s.media[0]} autoPlay={false} />
+            <div className={cn('bg-slate-900', layoutOf(s) === 'focus' ? 'aspect-video' : 'aspect-[16/7]')}>
+              <StepMediaArea step={s} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
             </div>
           )}
           <div className="p-5 sm:p-7">

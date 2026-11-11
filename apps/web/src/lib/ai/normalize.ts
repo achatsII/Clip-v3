@@ -117,6 +117,7 @@ export function resolveMedia(ref: AiMediaRef, sourcesById: Map<string, Source>):
 function mediaKey(m: StepMedia): string {
   if (m.kind === 'video') return `v:${m.url}#${m.start}`
   if (m.kind === 'image' && m.frame) return `f:${m.frame.videoUrl}@${m.frame.at}`
+  if (m.kind === 'html') return `h:${m.html.length}:${m.html.slice(0, 64)}`
   return `${m.kind}:${m.url}${m.kind === 'document' ? `#${m.page ?? 1}` : ''}`
 }
 

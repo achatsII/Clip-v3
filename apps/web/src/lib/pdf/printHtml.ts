@@ -18,7 +18,8 @@ function mediaImage(m: StepMedia | undefined): string | null {
   if (!m) return null
   if (m.kind === 'image') return m.url
   if (m.kind === 'video') return m.posterUrl ?? null
-  return m.pageImageUrl ?? null
+  if (m.kind === 'document') return m.pageImageUrl ?? null
+  return null
 }
 
 /** L'image d'une étape et ses annotations, cadrées ensemble : la boîte prend les proportions de l'image. */

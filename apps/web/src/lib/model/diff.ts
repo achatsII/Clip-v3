@@ -12,7 +12,8 @@ function stepSignature(s: Step): string {
     x: s.text,
     k: s.keyPoints ?? [],
     w: s.warning ?? null,
-    m: s.media.map((m) => (m.kind === 'video' ? `${m.url}#${m.start}-${m.end}` : m.kind === 'image' ? `${m.url}:${(m.annotations ?? []).length}` : `${m.url}:${m.page ?? ''}`)),
+    l: s.layout ?? 'focus',
+    m: s.media.map((m) => `${m.kind === 'video' ? `${m.url}#${m.start}-${m.end}` : m.kind === 'image' ? `${m.url}:${(m.annotations ?? []).length}` : m.kind === 'html' ? `html:${m.html.length}:${m.html.slice(0, 64)}` : `${m.url}:${m.page ?? ''}`}|${m.verdict ?? ''}|${m.caption ?? ''}`),
   })
 }
 

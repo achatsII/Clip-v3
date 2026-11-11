@@ -48,7 +48,7 @@ export default function PrintPage() {
     () =>
       (contentForRatios?.steps ?? [])
         .map((st) => st.media[0])
-        .map((m) => (m?.kind === 'image' ? m.url : m?.kind === 'video' ? m.posterUrl : m?.pageImageUrl))
+        .map((m) => (m?.kind === 'image' ? m.url : m?.kind === 'video' ? m.posterUrl : m?.kind === 'document' ? m.pageImageUrl : undefined))
         .filter((u): u is string => !!u),
     [contentForRatios],
   )
