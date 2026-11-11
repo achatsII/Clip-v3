@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Copy, ExternalLink, Lock, Mic, QrCode, RefreshCw, Tablet, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { LockBadge } from '@/components/billing/Billing'
 import { InstructionRow } from '@/components/InstructionCard'
 import { QrCode as Qr } from '@/components/QrCode'
@@ -12,11 +12,13 @@ import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { useConfirm } from '@/components/ui/Confirm'
 import { ChoiceTile, Input, Label, Switch } from '@/components/ui/Field'
+import { MicButton } from '@/components/ui/MicButton'
 import { EmptyState, ErrorState, Skeleton, errorText } from '@/components/ui/States'
 import { Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { qk, useInstructions, useStations } from '@/hooks/queries'
 import { useEntitlement, useGate } from '@/lib/billing/state'
+import { insertDictation } from '@/lib/media/dictation'
 import { nowIso, T } from '@/lib/model/repo'
 import type { Station } from '@/lib/model/types'
 import { copyText, createShareLink, linkUrl } from '@/lib/share'
@@ -39,6 +41,7 @@ export default function StationPage() {
   const [assistant, setAssistant] = useState(false)
   const station = stations.data?.find((s) => s._id === id)
   const canWrite = can('stations', 'write')
+  const nameRef = useRef<HTMLInputElement>(null)
 
   if (stations.isLoading) return <Skeleton className="h-96" />
   if (stations.error) return <ErrorState error={stations.error} onRetry={() => stations.refetch()} />
@@ -74,13 +77,17 @@ export default function StationPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="label-caps text-slate-500">{s.area || 'Poste'}</p>
-          <input
-            defaultValue={s.name}
-            readOnly={!canWrite}
-            onBlur={(e) => e.target.value.trim() && e.target.value !== s.name && void patch({ name: e.target.value.trim() })}
-            className="w-full bg-transparent text-4xl font-black tracking-tighter focus:outline-none"
-            aria-label="Nom du poste"
-          />
+          <div className="flex items-center gap-1">
+            <input
+              ref={nameRef}
+              defaultValue={s.name}
+              readOnly={!canWrite}
+              onBlur={(e) => e.target.value.trim() && e.target.value !== s.name && void patch({ name: e.target.value.trim() })}
+              className="w-full min-w-0 bg-transparent text-4xl font-black tracking-tighter focus:outline-none"
+              aria-label="Nom du poste"
+            />
+            {canWrite && <MicButton label="Dicter le nom du poste" onText={(t) => insertDictation(nameRef.current, t)} />}
+          </div>
           {s.code && <p className="text-lg font-black text-slate-400">{s.code}</p>}
         </div>
         {canWrite && (

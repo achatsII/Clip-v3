@@ -10,6 +10,7 @@ import { LinkButton } from '@/components/ui/Button'
 import { Segmented } from '@/components/ui/Field'
 import { EmptyState, ErrorState, SkeletonCards } from '@/components/ui/States'
 import { PageHeader } from '@/components/ui/Surface'
+import { MicButton } from '@/components/ui/MicButton'
 import { useInstructions, useStations } from '@/hooks/queries'
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/model/catalog'
 import type { CategoryKey } from '@/lib/model/types'
@@ -104,6 +105,7 @@ export default function InstructionsPage() {
       <div className="glass-panel mb-4 flex items-center gap-3 rounded-[24px] px-4">
         <Search className="h-5 w-5 shrink-0 text-slate-400" />
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un titre, un poste, un numéro de pièce…" className="h-14 min-w-0 flex-1 bg-transparent text-[15px] font-bold focus:outline-none" aria-label="Chercher" />
+        <MicButton label="Chercher en parlant" onText={(t) => setQuery((q) => (q ? `${q} ${t}` : t))} />
         {query && (
           <button type="button" onClick={() => setQuery('')} className="btn-press flex h-10 w-10 items-center justify-center rounded-xl text-slate-400" aria-label="Effacer">
             <X className="h-4 w-4" />

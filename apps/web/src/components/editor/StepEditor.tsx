@@ -172,7 +172,6 @@ export function StepEditor({
           </Label>
           <div className="flex items-start gap-2">
             <Textarea id={`x-${step.id}`} rows={3} value={step.text} readOnly={readOnly} onChange={(e) => set({ text: e.target.value })} />
-            {!readOnly && <DictateButton onText={(t) => set({ text: step.text ? `${step.text} ${t}` : t })} />}
           </div>
         </div>
         <div>
@@ -295,7 +294,6 @@ export function StepEditor({
       >
         <div className="flex items-start gap-2">
           <Textarea autoFocus value={customText} onChange={(e) => setCustomText(e.target.value)} placeholder="Ex. : précise qu’il faut tourner dans le sens horaire" />
-          <DictateButton onText={(t) => setCustomText((c) => (c ? `${c} ${t}` : t))} />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {['Ajoute qu’il faut porter des gants', 'Mentionne la valeur de serrage', 'Coupe en deux étapes plus courtes'].map((ex) => (

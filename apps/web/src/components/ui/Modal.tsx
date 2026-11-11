@@ -26,20 +26,40 @@ export function Modal({
   bare?: boolean
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
+  // `onClose` change à chaque rendu du parent (fonction écrite sur place) : on le lit dans une
+  // référence, sinon l'effet repartait à chaque lettre tapée et volait le focus (le clavier du
+  // téléphone se fermait).
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  const dismissRef = useRef(dismissable)
+  dismissRef.current = dismissable
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && dismissable) onClose()
+      if (e.key === 'Escape' && dismissRef.current) closeRef.current()
     }
     document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    setTimeout(() => panelRef.current?.querySelector<HTMLElement>('[data-autofocus], input, textarea, button')?.focus(), 30)
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [open, dismissable, onClose])
+  }, [open])
+
+  // Une seule fois à l'ouverture : le champ marqué, sinon le premier champ ; jamais le bouton
+  // « Fermer ». Rien si un champ a déjà le focus (autoFocus).
+  useEffect(() => {
+    if (!open) return
+    const timer = setTimeout(() => {
+      const panel = panelRef.current
+      if (!panel || panel.contains(document.activeElement)) return
+      const target = panel.querySelector<HTMLElement>('[data-autofocus]') ?? panel.querySelector<HTMLElement>('input:not([type=hidden]):not([type=file]), textarea, select')
+      ;(target ?? panel).focus()
+    }, 30)
+    return () => clearTimeout(timer)
+  }, [open])
 
   if (!open || typeof document === 'undefined') return null
   const widths = { sm: 'sm:max-w-md', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' }
@@ -49,8 +69,9 @@ export function Modal({
       <div className="animate-fade-in absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => dismissable && onClose()} />
       <div
         ref={panelRef}
+        tabIndex={-1}
         className={cn(
-          'glass-panel animate-slide-up relative flex max-h-[92dvh] w-full flex-col rounded-t-[32px] sm:animate-pop-in sm:rounded-[32px]',
+          'glass-panel animate-slide-up relative flex max-h-[92dvh] w-full flex-col rounded-t-[32px] outline-none sm:animate-pop-in sm:rounded-[32px]',
           'bg-white/90 dark:bg-slate-850/95',
           widths[size],
         )}

@@ -1,6 +1,8 @@
 'use client'
 
-import { forwardRef, useLayoutEffect, useRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { forwardRef, useImperativeHandle, useLayoutEffect, useRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { MicButton } from '@/components/ui/MicButton'
+import { insertDictation, useDictationAvailable } from '@/lib/media/dictation'
 import { cn } from '@/lib/util/cn'
 
 const base =
@@ -15,12 +17,54 @@ export function Label({ children, htmlFor, hint }: { children: ReactNode; htmlFo
   )
 }
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(function Input({ className, invalid, ...rest }, ref) {
-  return <input ref={ref} className={cn(base, 'h-12', invalid && 'ring-2 ring-rose-400/60', className)} {...rest} />
+/** Les champs où la dictée n'a pas de sens : courriel, mot de passe, nombres, dates… */
+const NO_DICTATION_TYPES = new Set(['email', 'password', 'number', 'tel', 'url', 'date', 'time', 'datetime-local', 'month', 'week', 'color', 'range', 'file', 'hidden', 'checkbox', 'radio'])
+const NO_DICTATION_MODES = new Set(['numeric', 'decimal', 'email', 'tel', 'url', 'none'])
+
+/** Chaque champ de texte a son micro, sauf demande contraire (`dictation={false}`). */
+export function wantsDictation(p: { type?: string; inputMode?: string; readOnly?: boolean; disabled?: boolean }, override?: boolean): boolean {
+  if (override !== undefined) return override
+  if (p.readOnly || p.disabled) return false
+  if (p.type && NO_DICTATION_TYPES.has(p.type)) return false
+  if (p.inputMode && NO_DICTATION_MODES.has(p.inputMode)) return false
+  return true
+}
+
+type DictationProps = {
+  /** Micro de dictée : par défaut sur les champs de texte, jamais sur courriel, mot de passe, nombres. */
+  dictation?: boolean
+  /** Classes du conteneur (largeur dans une rangée) quand le champ a son micro. */
+  wrapperClassName?: string
+}
+
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean } & DictationProps>(function Input({ className, invalid, dictation, wrapperClassName, ...rest }, ref) {
+  const inner = useRef<HTMLInputElement>(null)
+  useImperativeHandle(ref, () => inner.current as HTMLInputElement, [])
+  const available = useDictationAvailable()
+  const eligible = wantsDictation(rest, dictation)
+  const field = <input ref={inner} className={cn(base, 'h-12', eligible && available && 'pr-12', invalid && 'ring-2 ring-rose-400/60', className)} {...rest} />
+  if (!eligible) return field
+  return (
+    <div className={cn('relative w-full min-w-0', wrapperClassName)}>
+      {field}
+      {available && <MicButton onText={(t) => insertDictation(inner.current, t)} className="absolute top-1/2 right-0.5 -translate-y-1/2" />}
+    </div>
+  )
 })
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className, ...rest }, ref) {
-  return <textarea ref={ref} className={cn(base, 'min-h-24 py-3 leading-relaxed', className)} {...rest} />
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement> & DictationProps>(function Textarea({ className, dictation, wrapperClassName, ...rest }, ref) {
+  const inner = useRef<HTMLTextAreaElement>(null)
+  useImperativeHandle(ref, () => inner.current as HTMLTextAreaElement, [])
+  const available = useDictationAvailable()
+  const eligible = wantsDictation(rest, dictation)
+  const field = <textarea ref={inner} className={cn(base, 'min-h-24 py-3 leading-relaxed', eligible && available && 'pr-12', className)} {...rest} />
+  if (!eligible) return field
+  return (
+    <div className={cn('relative w-full min-w-0', wrapperClassName)}>
+      {field}
+      {available && <MicButton onText={(t) => insertDictation(inner.current, t)} className="absolute right-1 bottom-1.5" />}
+    </div>
+  )
 })
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select({ className, children, ...rest }, ref) {
@@ -102,9 +146,14 @@ export function ChoiceTile({ selected, onClick, icon, title, description, classN
   )
 }
 
-/** Zone de texte sans bordure qui grandit avec son contenu (titres et résumés modifiables sur place). */
-export function AutoTextarea({ value, className, singleLine, onChange, ...props }: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value'> & { value: string; singleLine?: boolean }) {
+/**
+ * Zone de texte sans bordure qui grandit avec son contenu (titres et résumés modifiables sur
+ * place). Son micro paraît quand on l'édite (et reste visible pendant la dictée).
+ */
+export function AutoTextarea({ value, className, singleLine, onChange, dictation, ...props }: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value'> & { value: string; singleLine?: boolean; dictation?: boolean }) {
   const ref = useRef<HTMLTextAreaElement>(null)
+  const available = useDictationAvailable()
+  const eligible = wantsDictation(props, dictation)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
@@ -122,7 +171,7 @@ export function AutoTextarea({ value, className, singleLine, onChange, ...props 
     ro.observe(el)
     return () => ro.disconnect()
   }, [value])
-  return (
+  const field = (
     <textarea
       ref={ref}
       rows={1}
@@ -132,8 +181,20 @@ export function AutoTextarea({ value, className, singleLine, onChange, ...props 
         if (singleLine && /[\r\n]/.test(e.target.value)) e.target.value = e.target.value.replace(/[\r\n]+/g, ' ')
         onChange?.(e)
       }}
-      className={cn('block resize-none overflow-hidden', className)}
+      className={cn('block resize-none overflow-hidden', eligible && available && 'pr-12', className)}
       {...props}
     />
+  )
+  if (!eligible) return field
+  return (
+    <div className="group relative">
+      {field}
+      {available && (
+        <MicButton
+          onText={(t) => insertDictation(ref.current, t)}
+          className="invisible absolute top-0 right-0 group-focus-within:visible aria-pressed:visible disabled:visible"
+        />
+      )}
+    </div>
   )
 }

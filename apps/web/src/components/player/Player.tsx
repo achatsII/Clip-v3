@@ -40,6 +40,7 @@ import { cn, formatDuration } from '@/lib/util/cn'
 import { FeedbackSheet } from './FeedbackSheet'
 import { strings } from './i18n'
 import { VoiceAssistant } from './VoiceAssistant'
+import { Input } from '@/components/ui/Field'
 
 export interface PlayerDeps {
   data: DataApi
@@ -397,7 +398,7 @@ export function Player(props: PlayerProps) {
             void ask()
           }}
         >
-          <input autoFocus value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t.askPlaceholder} className="glass-input h-14 flex-1 rounded-2xl px-4 text-lg font-bold" />
+          <Input autoFocus value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t.askPlaceholder} aria-label={t.ask} className="h-14 text-lg" wrapperClassName="flex-1" />
           <button type="submit" disabled={!question.trim() || answer?.busy} className="btn-press bg-gradient-primary shadow-primary flex h-14 w-14 items-center justify-center rounded-2xl text-white disabled:opacity-50" aria-label={t.send}>
             <Send className="h-6 w-6" />
           </button>

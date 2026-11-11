@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions, useMicrophonePermissions, type Camera
 import * as Haptics from 'expo-haptics'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import { useEffect, useRef, useState } from 'react'
-import { Alert, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BridgeError, cancelled } from '../bridge/errors'
@@ -41,6 +41,7 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
   const [torch, setTorch] = useState(false)
   const [withoutSound, setWithoutSound] = useState(false)
   const { zoom, reset: resetZoom, handlers: pinch } = usePinchZoom()
+  const [fromLibrary, setFromLibrary] = useState(false)
 
   const maxDuration = capture.payload.maxDurationSec ?? CAPTURE_PRESETS.video.maxDurationSec
   const remaining = maxDuration - elapsed
@@ -122,12 +123,14 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
   async function pickExisting() {
     if (phase !== 'idle') return
     setPhase('finishing')
+    setFromLibrary(true)
     try {
       const items = await pickFromLibrary(['video'], false)
       if (items.length) captureController.complete(capture.id, { items })
       else setPhase('idle')
     } catch (e) {
       setPhase('idle')
+      setFromLibrary(false)
       if (e instanceof BridgeError && e.code === 'cancelled') return
       logError(e, { screen: 'camera.video', action: 'pick' })
       Alert.alert('La vidéo n’a pas pu être ajoutée', e instanceof BridgeError ? e.message : 'Réessayez avec une autre vidéo.')
@@ -205,7 +208,16 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
               : 'Filmez la personne qui explique, au plus près des gestes. Pincez pour zoomer.'}
           </Text>
         ) : null}
-        {phase === 'finishing' ? <Text style={styles.hint}>Préparation de la vidéo…</Text> : null}
+        {phase === 'finishing' ? (
+          <View style={styles.preparing}>
+            <ActivityIndicator color={colors.white} size="large" />
+            <Text style={styles.hint}>
+              {fromLibrary
+                ? 'Préparation de la vidéo… Si elle est sur iCloud, l’iPhone la télécharge d’abord, puis la réduit en 720p.'
+                : 'Préparation de la vidéo…'}
+            </Text>
+          </View>
+        ) : null}
         <ZoomReset zoom={zoom} onReset={resetZoom} />
         <View style={styles.controls}>
           <View style={[styles.side, styles.sideLeft]}>
@@ -245,6 +257,7 @@ const styles = StyleSheet.create({
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', paddingHorizontal: 24 },
   side: { flex: 1, alignItems: 'flex-end' },
   sideLeft: { alignItems: 'flex-start' },
+  preparing: { alignItems: 'center', gap: 10 },
   hint: {
     ...type.body,
     color: colors.white,

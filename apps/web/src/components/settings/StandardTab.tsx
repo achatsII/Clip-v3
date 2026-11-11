@@ -225,7 +225,6 @@ export function StandardTab() {
             <p className="mb-3 text-sm font-medium text-slate-500">Parlez ou écrivez comme à un nouvel employé : vos habitudes, vos exigences de sécurité, vos mots. L’IA en fait un standard que vous validez.</p>
             <div className="flex items-start gap-2">
               <Textarea rows={6} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ex. : chez nous, on commence toujours par les EPI et le cadenassage. Phrases très courtes, on tutoie. On dit « la presse » pour la presse hydraulique 200 t…" />
-              <DictateButton size="lg" onText={(t) => setDescription((d) => (d ? `${d} ${t}` : t))} />
             </div>
           </>
         )}

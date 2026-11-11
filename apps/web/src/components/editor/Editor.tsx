@@ -30,7 +30,7 @@ import { useSession } from '@/components/providers/Session'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { Confetti } from '@/components/ui/Celebrate'
 import { useConfirm } from '@/components/ui/Confirm'
-import { AutoTextarea, Textarea } from '@/components/ui/Field'
+import { AutoTextarea, Input, Textarea } from '@/components/ui/Field'
 import { Menu } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
@@ -459,7 +459,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
                 void rate('down', ratingComment ?? '')
               }}
             >
-              <input autoFocus value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Qu’est-ce qui manque ?" aria-label="Ce qui manque" className="glass-input h-11 min-w-0 flex-1 rounded-2xl px-3 text-sm font-bold sm:w-72 sm:flex-none" />
+              <Input autoFocus value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Qu’est-ce qui manque ?" aria-label="Ce qui manque" className="h-11 text-sm" wrapperClassName="flex-1 sm:w-72 sm:flex-none" />
               <Button size="sm" type="submit" variant="primary">
                 Envoyer
               </Button>

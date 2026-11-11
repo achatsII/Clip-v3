@@ -72,19 +72,27 @@ export function CaptureBoard({
   }
 
   async function pickNative() {
+    const tempId = session.beginImport('video', 'Photos et vidéos du téléphone')
     try {
       const r = await callNative('media.pick', { kinds: ['photo', 'video'], multiple: true })
+      session.dismissPending(tempId)
       if (r.items.length) session.addNative(r.items)
     } catch (e) {
-      if (!(e instanceof NativeError && e.code === 'cancelled')) toast.error('La galerie n’a pas pu s’ouvrir')
+      session.dismissPending(tempId)
+      if (e instanceof NativeError && e.code === 'cancelled') return
+      if (e instanceof NativeError && e.code === 'too_large') toast.error('Fichier trop lourd', e.message)
+      else toast.error('La galerie n’a pas pu s’ouvrir', e instanceof Error ? e.message : undefined)
     }
   }
 
   async function pickNativeFiles() {
+    const tempId = session.beginImport('document', 'Documents du téléphone')
     try {
       const r = await callNative('file.pick', { mimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'], multiple: true })
+      session.dismissPending(tempId)
       if (r.items.length) session.addNative(r.items)
     } catch (e) {
+      session.dismissPending(tempId)
       if (!(e instanceof NativeError && e.code === 'cancelled')) toast.error('Les fichiers n’ont pas pu s’ouvrir')
     }
   }
@@ -152,7 +160,6 @@ export function CaptureBoard({
             placeholder="Ex. : nettoyage des rails de la machine 1234, une fois par mois"
             className="min-h-14 text-base"
           />
-          <DictateButton size="lg" onText={(t) => session.setIntent(`${snap.intent ? `${snap.intent} ` : ''}${t}`)} />
         </div>
       </div>
 
@@ -274,7 +281,6 @@ export function CaptureBoard({
       >
         <div className="flex items-start gap-2">
           <Textarea autoFocus rows={5} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex. : serrer à 25 N·m ; toujours vérifier le niveau d’huile avant." />
-          <DictateButton onText={(t) => setNote((n) => (n ? `${n} ${t}` : t))} />
         </div>
       </Modal>
       <Modal open={pickerOpen} onClose={() => setPickerOpen(false)} title="Importer" size="sm">

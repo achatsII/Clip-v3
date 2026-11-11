@@ -151,6 +151,16 @@ export class CaptureSession {
     if (victim?.path) void this.deps.files.remove([victim.path])
   }
 
+  /**
+   * Un import de la galerie du téléphone : la page le montre dès l'ouverture, car l'iPhone peut
+   * d'abord télécharger la vidéo d'iCloud, puis la réduire en 720p, sans rien afficher lui-même.
+   */
+  beginImport(kind: SourceKind, name: string): string {
+    const tempId = uid('tmp_')
+    this.set({ pending: [...this.snap.pending, { tempId, kind, name, stage: 'import' }] })
+    return tempId
+  }
+
   dismissPending(tempId: string) {
     this.set({ pending: this.snap.pending.filter((p) => p.tempId !== tempId) })
   }

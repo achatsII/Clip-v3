@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera'
 import * as Haptics from 'expo-haptics'
 import { useRef, useState } from 'react'
-import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BridgeError, cancelled } from '../bridge/errors'
@@ -173,6 +173,12 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
       </View>
 
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 16 }]}>
+        {picking ? (
+          <View style={styles.preparing}>
+            <ActivityIndicator color={colors.white} />
+            <Text style={styles.hint}>Préparation des photos… (téléchargement d’iCloud au besoin)</Text>
+          </View>
+        ) : null}
         {count > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
             {taken.map((t) =>
@@ -236,4 +242,5 @@ const styles = StyleSheet.create({
   side: { flex: 1, alignItems: 'flex-end' },
   sideLeft: { alignItems: 'flex-start' },
   zoomRow: { alignItems: 'center' },
+  preparing: { alignItems: 'center', gap: 8 },
 })

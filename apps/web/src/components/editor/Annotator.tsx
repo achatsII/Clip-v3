@@ -5,6 +5,7 @@ import { useRef, useState } from 'react'
 import { AnnotatedImage } from '@/components/media/MediaView'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
@@ -154,7 +155,7 @@ export function Annotator({ open, onClose, src, step, value, onSave }: { open: b
             setTextAt(null)
           }}
         >
-          <input autoFocus value={textValue} onChange={(e) => setTextValue(e.target.value)} placeholder="Texte à afficher (ex. Vis A)" className="glass-input h-11 flex-1 rounded-2xl px-4 text-sm font-bold" />
+          <Input autoFocus value={textValue} onChange={(e) => setTextValue(e.target.value)} placeholder="Texte à afficher (ex. Vis A)" className="h-11 text-sm" wrapperClassName="flex-1" />
           <Button type="submit" size="sm" variant="primary">
             Ajouter
           </Button>

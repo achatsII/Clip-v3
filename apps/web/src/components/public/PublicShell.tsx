@@ -3,10 +3,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { LogoMark } from '@/components/Logo'
+import { DictationProvider } from '@/lib/media/dictation'
 
 export function PublicFrame({ children }: { children: ReactNode }) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: true } } }))
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  // Sans compte, pas de transcription par la Gateway : la dictée passe par le navigateur, s'il sait faire.
+  return (
+    <QueryClientProvider client={client}>
+      <DictationProvider speech>{children}</DictationProvider>
+    </QueryClientProvider>
+  )
 }
 
 export function PublicMessage({ title, description, action }: { title: string; description: string; action?: ReactNode }) {

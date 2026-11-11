@@ -3,11 +3,13 @@
 import { AlertCircle, Check, Loader2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { SourceIcon } from '@/components/icons'
+import { Textarea } from '@/components/ui/Field'
 import type { PendingUpload } from '@/lib/capture/session'
 import type { Source } from '@/lib/model/types'
 import { cn, formatBytes, formatDuration } from '@/lib/util/cn'
 
 const STAGE: Record<string, string> = {
+  import: 'Préparation sur le téléphone (téléchargement d’iCloud au besoin)…',
   prepare: 'Préparation…',
   upload: 'Envoi…',
   optimize: 'Optimisation de la vidéo…',
@@ -56,7 +58,7 @@ export function SourceCard({ source, onRemove, onEditText }: { source: Source; o
         {(source.kind === 'note' || source.kind === 'audio') &&
           (editing ? (
             <div className="mt-2">
-              <textarea value={text} onChange={(e) => setText(e.target.value)} className="glass-input min-h-20 w-full rounded-xl p-2 text-sm font-medium" />
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} className="min-h-20 text-sm font-medium" />
               <div className="mt-1 flex gap-2">
                 <button type="button" className="text-sm font-black text-[var(--primary)]" onClick={() => { onEditText?.(text); setEditing(false) }}>
                   Enregistrer
@@ -93,7 +95,7 @@ export function PendingCard({ item, onDismiss }: { item: PendingUpload; onDismis
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-black text-slate-900 dark:text-white">{item.name}</p>
-        <p className={cn('flex items-center gap-1.5 text-xs font-bold', failed ? 'text-rose-600' : 'text-slate-500')}>
+        <p className={cn('flex items-start gap-1.5 text-xs font-bold', failed ? 'text-rose-600' : 'text-slate-500')}>
           {failed && <AlertCircle className="h-3.5 w-3.5" />}
           {failed ? item.error ?? STAGE.error : STAGE[item.stage] ?? 'Envoi…'}
           {!failed && item.stage === 'upload' && typeof item.progress === 'number' && <span className="tabular-nums">{Math.round(item.progress * 100)} %</span>}

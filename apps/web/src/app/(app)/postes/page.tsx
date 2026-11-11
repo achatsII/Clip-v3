@@ -8,6 +8,7 @@ import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Input, Label, Select } from '@/components/ui/Field'
+import { MicButton } from '@/components/ui/MicButton'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState, ErrorState, SkeletonRows, errorText } from '@/components/ui/States'
 import { PageHeader } from '@/components/ui/Surface'
@@ -101,7 +102,8 @@ export default function StationsPage() {
       {(stations.data?.length ?? 0) > 8 && (
         <div className="glass-panel mb-5 flex items-center gap-3 rounded-[24px] px-4">
           <Search className="h-5 w-5 text-slate-400" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un poste ou un code" className="h-14 flex-1 bg-transparent text-[15px] font-bold focus:outline-none" aria-label="Chercher un poste" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un poste ou un code" className="h-14 min-w-0 flex-1 bg-transparent text-[15px] font-bold focus:outline-none" aria-label="Chercher un poste" />
+          <MicButton label="Chercher en parlant" onText={(t) => setQuery((q) => (q ? `${q} ${t}` : t))} />
         </div>
       )}
 

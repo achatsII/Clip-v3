@@ -12,10 +12,13 @@ import { filesApi, type FilesApi } from '@/lib/gateway/files'
 import { ROLES, type Feature, type Permission } from '@/lib/model/catalog'
 import { ensureOrg, logUsage, normalizeOrg, T } from '@/lib/model/repo'
 import type { MemberRole, MemberSettings, OrgSettings } from '@/lib/model/types'
+import { DictationProvider, type Transcriber } from '@/lib/media/dictation'
 import { applyBrandColor } from '@/lib/theme'
 
 export const data = dataApi(gateway)
 export const files = filesApi(gateway)
+/** La dictée des champs passe par la transcription de la Gateway (compte connecté). */
+const transcribeDictation: Transcriber = (audio, name) => files.transcribe(audio, name)
 export const ai = aiApi(gateway)
 
 interface SessionValue {
@@ -126,7 +129,11 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
     return <SessionError onRetry={() => (profileQ.error ? profileQ.refetch() : orgQ.refetch())} />
   }
   if (!value) return <>{fallback}</>
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  return (
+    <Ctx.Provider value={value}>
+      <DictationProvider transcribe={transcribeDictation}>{children}</DictationProvider>
+    </Ctx.Provider>
+  )
 }
 
 function SessionError({ onRetry }: { onRetry: () => void }) {

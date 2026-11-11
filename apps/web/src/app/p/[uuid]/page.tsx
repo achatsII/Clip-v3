@@ -8,6 +8,7 @@ import { CategoryIcon } from '@/components/icons'
 import { mediaThumb } from '@/components/media/MediaView'
 import { Player } from '@/components/player/Player'
 import { PublicFrame, PublicLoading, PublicMessage } from '@/components/public/PublicShell'
+import { MicButton } from '@/components/ui/MicButton'
 import { ToastProvider } from '@/components/ui/Toast'
 import { aiApi } from '@/lib/gateway/ai'
 import { dataApi } from '@/lib/gateway/data'
@@ -110,7 +111,8 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
 
       <div className="glass-panel mb-6 flex items-center gap-3 rounded-[28px] px-5">
         <Search className="h-6 w-6 text-slate-400" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher une instruction, une pièce, un numéro…" className="h-16 flex-1 bg-transparent text-lg font-bold focus:outline-none" aria-label="Chercher" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher une instruction, une pièce, un numéro…" className="h-16 min-w-0 flex-1 bg-transparent text-lg font-bold focus:outline-none" aria-label="Chercher" />
+        <MicButton label="Chercher en parlant" onText={(t) => setQuery((q) => (q ? `${q} ${t}` : t))} />
         {query && (
           <button type="button" onClick={() => setQuery('')} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl" aria-label="Effacer">
             <X className="h-5 w-5" />

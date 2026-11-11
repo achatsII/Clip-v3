@@ -12,7 +12,7 @@ import { uid } from '../model/repo'
 import type { Source, SourceKind } from '../model/types'
 import { audioDuration, compressImage, dataUrlToBlob, pdfPageCount, videoInfo } from './image'
 
-export type IngestStage = 'prepare' | 'upload' | 'optimize' | 'transcribe' | 'convert'
+export type IngestStage = 'import' | 'prepare' | 'upload' | 'optimize' | 'transcribe' | 'convert'
 export type IngestProgress = (stage: IngestStage, ratio?: number) => void
 
 const WORD = /\.(docx?|odt)$/i

@@ -201,7 +201,7 @@ export function MetaCard({
                     setTag('')
                   }}
                 >
-                  <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="+ étiquette, n° de pièce…" className="glass-input h-9 w-44 rounded-xl px-3 text-sm font-bold" />
+                  <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="+ étiquette, n° de pièce…" aria-label="Ajouter une étiquette" className="h-11 text-sm" wrapperClassName="w-60" />
                 </form>
               )}
             </div>
