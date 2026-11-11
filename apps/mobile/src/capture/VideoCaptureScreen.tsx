@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Alert, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { cancelled } from '../bridge/errors'
+import { BridgeError, cancelled } from '../bridge/errors'
 import { CAPTURE_PRESETS } from '../bridge/protocol'
 import { logError } from '../logging/log'
+import { pickFromLibrary } from '../media/pick'
 import { finalizeVideo } from '../media/pipeline'
 import { IconButton, Pill } from '../ui/components'
 import { formatClock } from '../ui/format'
@@ -16,6 +17,8 @@ import { useBackAction } from './backAction'
 import { captureController, type ActiveCapture } from './controller'
 import { PermissionPanel } from './PermissionPanel'
 import { ShutterButton } from './ShutterButton'
+import { usePinchZoom } from './usePinchZoom'
+import { ZoomReset } from './ZoomReset'
 
 const KEEP_AWAKE_TAG = 'clip-video'
 
@@ -37,6 +40,7 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
   const [facing, setFacing] = useState<CameraType>('back')
   const [torch, setTorch] = useState(false)
   const [withoutSound, setWithoutSound] = useState(false)
+  const { zoom, reset: resetZoom, handlers: pinch } = usePinchZoom()
 
   const maxDuration = capture.payload.maxDurationSec ?? CAPTURE_PRESETS.video.maxDurationSec
   const remaining = maxDuration - elapsed
@@ -114,6 +118,22 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
     cameraRef.current?.stopRecording()
   }
 
+  /** Une vidéo déjà sur le téléphone, ramenée en 720p comme une vidéo filmée ici. */
+  async function pickExisting() {
+    if (phase !== 'idle') return
+    setPhase('finishing')
+    try {
+      const items = await pickFromLibrary(['video'], false)
+      if (items.length) captureController.complete(capture.id, { items })
+      else setPhase('idle')
+    } catch (e) {
+      setPhase('idle')
+      if (e instanceof BridgeError && e.code === 'cancelled') return
+      logError(e, { screen: 'camera.video', action: 'pick' })
+      Alert.alert('La vidéo n’a pas pu être ajoutée', e instanceof BridgeError ? e.message : 'Réessayez avec une autre vidéo.')
+    }
+  }
+
   const portrait = height > width
   const nearEnd = phase === 'recording' && remaining <= 30
 
@@ -128,10 +148,13 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
         mute={withoutSound}
         videoQuality={CAPTURE_PRESETS.video.quality}
         videoBitrate={CAPTURE_PRESETS.video.bitrate}
+        zoom={zoom}
         onCameraReady={() => setReady(true)}
         onRecordingProgress={(p) => setSizeBytes(p.fileSize)}
         onMountError={(e) => logError(new Error(e.message), { screen: 'camera.video', action: 'mount' })}
       />
+      {/* Calque du pincement : sous les boutons, au-dessus de l'aperçu. */}
+      <View style={StyleSheet.absoluteFill} {...pinch} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
         {phase === 'idle' ? (
@@ -178,17 +201,26 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
         {phase === 'idle' ? (
           <Text style={styles.hint}>
             {portrait
-              ? 'Astuce : tenez le téléphone à l’horizontale et filmez la personne qui explique.'
-              : 'Filmez la personne qui explique, au plus près des gestes.'}
+              ? 'Astuce : tenez le téléphone à l’horizontale et filmez la personne qui explique. Pincez pour zoomer.'
+              : 'Filmez la personne qui explique, au plus près des gestes. Pincez pour zoomer.'}
           </Text>
         ) : null}
         {phase === 'finishing' ? <Text style={styles.hint}>Préparation de la vidéo…</Text> : null}
-        <ShutterButton
-          variant={phase === 'recording' ? 'stop' : 'record'}
-          label={phase === 'recording' ? 'Arrêter l’enregistrement' : 'Commencer à filmer'}
-          onPress={phase === 'recording' ? stop : () => void start()}
-          disabled={!ready || phase === 'finishing'}
-        />
+        <ZoomReset zoom={zoom} onReset={resetZoom} />
+        <View style={styles.controls}>
+          <View style={[styles.side, styles.sideLeft]}>
+            {phase === 'idle' ? (
+              <IconButton icon="image" label="Choisir une vidéo du téléphone" onPress={() => void pickExisting()} size={touch.large} />
+            ) : null}
+          </View>
+          <ShutterButton
+            variant={phase === 'recording' ? 'stop' : 'record'}
+            label={phase === 'recording' ? 'Arrêter l’enregistrement' : 'Commencer à filmer'}
+            onPress={phase === 'recording' ? stop : () => void start()}
+            disabled={!ready || phase === 'finishing'}
+          />
+          <View style={styles.side} />
+        </View>
       </View>
     </View>
   )
@@ -210,6 +242,9 @@ const styles = StyleSheet.create({
   recDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.white },
   timer: { color: colors.white, ...type.timer, fontSize: 16 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center', gap: 16 },
+  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', paddingHorizontal: 24 },
+  side: { flex: 1, alignItems: 'flex-end' },
+  sideLeft: { alignItems: 'flex-start' },
   hint: {
     ...type.body,
     color: colors.white,

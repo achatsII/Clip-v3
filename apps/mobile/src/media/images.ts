@@ -42,10 +42,17 @@ export async function thumbnailDataUrl(uri: string): Promise<string | undefined>
   }
 }
 
-/** Vignette et dimensions d'une vidéo, lues sur une image prise à une demi-seconde. */
-export async function videoPreview(uri: string): Promise<{ thumbnail?: string; width?: number; height?: number }> {
+/**
+ * Vignette et dimensions d'une vidéo. L'image est prise à une seconde (les premières images d'une
+ * vidéo de téléphone sont souvent noires, le temps que l'exposition se règle), au début pour une
+ * vidéo très courte.
+ */
+export async function videoPreview(uri: string, durationSec?: number): Promise<{ thumbnail?: string; width?: number; height?: number }> {
+  const at = durationSec !== undefined && durationSec < 2 ? 0 : 1000
   try {
-    const frame = await VideoThumbnails.getThumbnailAsync(uri, { time: 500, quality: 0.6 })
+    const frame = await VideoThumbnails.getThumbnailAsync(uri, { time: at, quality: 0.6 }).catch(() =>
+      VideoThumbnails.getThumbnailAsync(uri, { time: 0, quality: 0.6 }),
+    )
     const thumbnail = await thumbnailDataUrl(frame.uri)
     try {
       new File(frame.uri).delete()

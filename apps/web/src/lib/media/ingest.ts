@@ -7,7 +7,7 @@ import type { CapturedMedia } from '@clip/bridge'
 import { callNative, onNativeEvent } from '../bridge/native'
 import { GATEWAY_URL } from '../config'
 import { getAccessToken } from '../gateway/client'
-import type { FilesApi } from '../gateway/files'
+import { DIRECT_UPLOAD_URL, folderPath, parseDirectUpload, presignedPutHeaders, type FilesApi } from '../gateway/files'
 import { uid } from '../model/repo'
 import type { Source, SourceKind } from '../model/types'
 import { audioDuration, compressImage, dataUrlToBlob, pdfPageCount, videoInfo } from './image'
@@ -85,6 +85,36 @@ export async function ingestFile(file: File, files: FilesApi, onProgress?: Inges
   return { ...base, name, originalName: file.name, url: u.url, path: u.path, mimeType: 'application/pdf', sizeBytes: u.sizeBytes, pageCount }
 }
 
+/**
+ * Envoie le fichier d'un média natif, sans qu'il transite par la page : PUT sur une URL présignée
+ * (avec les en-têtes qu'elle signe), sinon envoi direct par la Gateway, comme le fait le navigateur.
+ */
+async function uploadNativeFile(item: CapturedMedia, files: FilesApi, folder: string): Promise<{ url: string; path: string }> {
+  let refused = 0
+  try {
+    const target = await files.presign(item.fileName, item.mimeType, folder)
+    const r = await callNative('upload.put', { localId: item.localId, url: target.uploadUrl, headers: presignedPutHeaders(target.uploadUrl, item.mimeType) })
+    if (r.status >= 200 && r.status < 300) return { url: target.publicUrl, path: target.path }
+    refused = r.status
+  } catch (e) {
+    // Une session expirée ne se règle pas par un autre chemin ; le reste, si.
+    if ((e as { status?: number })?.status === 401) throw e
+  }
+  const token = getAccessToken()
+  const res = await callNative('upload.multipart', {
+    localId: item.localId,
+    url: DIRECT_UPLOAD_URL,
+    fieldName: 'files',
+    fields: { path: folderPath(folder) },
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`L’envoi a été refusé (${refused || '—'} puis ${res.status}). Réessayez ; si ça revient, signalez-le.`)
+  }
+  const f = parseDirectUpload(res.bodyText)
+  return { url: f.url, path: f.path }
+}
+
 /** Envoie un média capturé par la coquille native (le fichier ne transite pas par la page). */
 export async function ingestNative(item: CapturedMedia, files: FilesApi, onProgress?: IngestProgress, platform: Source['capturedOn'] = 'ios'): Promise<Source> {
   const kind: SourceKind = item.kind === 'document' ? 'document' : item.kind
@@ -101,24 +131,23 @@ export async function ingestNative(item: CapturedMedia, files: FilesApi, onProgr
     capturedOn: platform,
   }
   const folder = kind === 'document' ? 'documents' : 'captures'
-  const target = await files.presign(item.fileName, item.mimeType, folder)
   const off = onNativeEvent((e) => {
     if (e.type === 'upload.progress' && e.localId === item.localId && e.totalBytes > 0) onProgress?.('upload', e.sentBytes / e.totalBytes)
   })
+  let stored: { url: string; path: string }
   try {
     onProgress?.('upload', 0)
-    const r = await callNative('upload.put', { localId: item.localId, url: target.uploadUrl, headers: { 'Content-Type': item.mimeType } })
-    if (r.status < 200 || r.status >= 300) throw new Error('L’envoi a été refusé')
+    stored = await uploadNativeFile(item, files, folder)
   } finally {
     off()
   }
-  let src: Source = { ...base, url: target.publicUrl, path: target.path }
-  if (kind === 'photo') src.thumbnailUrl = target.publicUrl
+  let src: Source = { ...base, url: stored.url, path: stored.path }
+  if (kind === 'photo') src.thumbnailUrl = stored.url
   // Une vidéo de galerie Android n'est pas réencodée par le téléphone : la Gateway la ramène en 720p.
   if (kind === 'video' && (item.sizeBytes > VIDEO_OPTIMIZE_BYTES || Math.max(item.width ?? 0, item.height ?? 0) > 1920)) {
     onProgress?.('optimize')
     try {
-      const p = await files.processVideo(target.publicUrl)
+      const p = await files.processVideo(stored.url)
       src = { ...src, url: p.url, mimeType: 'video/mp4', sizeBytes: p.sizeBytes ?? src.sizeBytes, durationSec: src.durationSec ?? p.durationSec ?? undefined, path: undefined }
     } catch {
       /* l'original reste utilisable s'il passe sous 100 Mo */

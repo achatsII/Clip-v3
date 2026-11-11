@@ -167,6 +167,9 @@ export function ShellScreen({
         allowsBackForwardNavigationGestures
         setSupportMultipleWindows={false}
         pullToRefreshEnabled={false}
+        // Pas de zoom des écrans par pincement (Android ; iOS suit la balise viewport de l'app web).
+        setBuiltInZoomControls={false}
+        setDisplayZoomControls={false}
         bounces={false}
         keyboardDisplayRequiresUserAction={false}
         contentInsetAdjustmentBehavior="never"

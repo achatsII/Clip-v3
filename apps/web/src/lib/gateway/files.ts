@@ -16,9 +16,32 @@ export interface UploadedFile {
 
 export type ProgressFn = (sent: number, total: number) => void
 
-function folderPath(folder: string) {
+export function folderPath(folder: string) {
   return `${APP_DATA_IDENTIFIER}/${folder}`
 }
+
+/**
+ * Les en-têtes d'un PUT sur une URL présignée de la Gateway. L'URL signe `Content-Disposition`
+ * (sans lui, Spaces répond 400 « Missing one or more required signed header ») et porte l'ACL
+ * `public-read`, qui ne s'applique que si elle est aussi envoyée en en-tête (sinon le fichier
+ * reste privé et l'IA ne peut pas le lire). Vérifié sur la QA le 2026-11-11.
+ */
+export function presignedPutHeaders(uploadUrl: string, contentType: string): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': contentType }
+  try {
+    const query = new URL(uploadUrl).searchParams
+    const signed = (query.get('X-Amz-SignedHeaders') ?? '').toLowerCase().split(';')
+    if (signed.includes('content-disposition')) headers['Content-Disposition'] = 'inline'
+    const acl = query.get('x-amz-acl')
+    if (acl) headers['x-amz-acl'] = acl
+  } catch {
+    /* URL illisible : le PUT échouera et l'envoi repassera par la Gateway */
+  }
+  return headers
+}
+
+/** L'envoi direct par la Gateway (repli quand le PUT présigné échoue). */
+export const DIRECT_UPLOAD_URL = `${GATEWAY_URL}/api/v1/files/upload/direct`
 
 function safeName(name: string) {
   const base = name.normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -42,6 +65,19 @@ function xhrSend(
     xhr.ontimeout = () => reject(new ApiError("L'envoi a pris trop de temps", 0, null, 'timeout'))
     xhr.send(body)
   })
+}
+
+/** Le premier fichier rendu par `POST /api/v1/files/upload/direct`. */
+export function parseDirectUpload(text: string): { url: string; path: string; size?: number; type?: string } {
+  let json: { files?: Array<{ url?: string; path?: string; size?: number; type?: string }> } | null = null
+  try {
+    json = JSON.parse(text)
+  } catch {
+    json = null
+  }
+  const f = json?.files?.[0]
+  if (!f?.url) throw new ApiError("L'envoi du fichier n'a pas été confirmé", 500, json ?? text)
+  return { url: f.url, path: f.path ?? '', size: f.size, type: f.type }
 }
 
 export interface PresignedTarget {
@@ -69,11 +105,9 @@ export function filesApi(client: GatewayClient) {
     form.append('files', file, safeName(name))
     form.append('path', folderPath(folder))
     const token = client.source.getToken()
-    const { status, text } = await xhrSend('POST', `${GATEWAY_URL}/api/v1/files/upload/direct`, form, token ? { Authorization: `Bearer ${token}` } : {}, onProgress)
+    const { status, text } = await xhrSend('POST', DIRECT_UPLOAD_URL, form, token ? { Authorization: `Bearer ${token}` } : {}, onProgress)
     if (status < 200 || status >= 300) throw new ApiError("L'envoi du fichier a échoué", status, text)
-    const json = JSON.parse(text) as { files?: Array<{ url: string; path: string; size: number; type: string; uploadSuccess?: boolean }> }
-    const f = json.files?.[0]
-    if (!f?.url) throw new ApiError("L'envoi du fichier n'a pas été confirmé", 500, json)
+    const f = parseDirectUpload(text)
     return { url: f.url, path: f.path, sizeBytes: f.size ?? file.size, mimeType: f.type || file.type, name }
   }
 
@@ -85,7 +119,7 @@ export function filesApi(client: GatewayClient) {
       const type = file.type || 'application/octet-stream'
       try {
         const target = await presign(name, type, folder)
-        const { status } = await xhrSend('PUT', target.uploadUrl, file, { 'Content-Type': type }, onProgress)
+        const { status } = await xhrSend('PUT', target.uploadUrl, file, presignedPutHeaders(target.uploadUrl, type), onProgress)
         if (status >= 200 && status < 300) {
           return { url: target.publicUrl, path: target.path, sizeBytes: file.size, mimeType: type, name }
         }

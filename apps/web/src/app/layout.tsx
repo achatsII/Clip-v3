@@ -15,6 +15,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Une app, pas un document : les écrans ne se zooment pas au pincement (ni au focus d'un champ sur iOS).
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#f8fafc' },

@@ -21,7 +21,7 @@ const KIND_LABEL: Record<string, string> = { photo: 'Photo', video: 'Vidéo', au
 function Thumb({ url, kind }: { url?: string; kind: Source['kind'] }) {
   if (url) {
     return (
-      <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-200 dark:bg-slate-700">
+      <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-200 dark:bg-slate-700">
         <img src={url} alt="" className="h-full w-full object-cover" />
         {kind === 'video' && <span className="absolute inset-0 flex items-center justify-center bg-black/25"><SourceIcon kind="video" className="h-6 w-6 text-white" /></span>}
       </span>
@@ -87,7 +87,7 @@ export function PendingCard({ item, onDismiss }: { item: PendingUpload; onDismis
   const failed = item.stage === 'error'
   return (
     <div className={cn('glass-card flex items-center gap-4 rounded-[24px] p-3 pr-2', failed && 'ring-2 ring-rose-300 dark:ring-rose-500/40')}>
-      <span className="relative">
+      <span className="relative block shrink-0">
         <Thumb url={item.previewUrl} kind={item.kind} />
         {!failed && <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30"><Loader2 className="h-6 w-6 animate-spin text-white" /></span>}
       </span>

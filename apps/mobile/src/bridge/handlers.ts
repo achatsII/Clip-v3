@@ -1,7 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker'
 import { Directory, File, Paths } from 'expo-file-system'
 import * as Haptics from 'expo-haptics'
-import * as ImagePicker from 'expo-image-picker'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
@@ -11,14 +10,13 @@ import { Linking, Platform, Share } from 'react-native'
 import { captureController } from '../capture/controller'
 import { logError, setSessionContext } from '../logging/log'
 import { discardMedia } from '../media/mediaStore'
-import { finalizeDocument, finalizePhoto, finalizeVideo } from '../media/pipeline'
+import { MAX_PICK_BYTES, pickFromLibrary, tooLarge } from '../media/pick'
+import { finalizeDocument } from '../media/pipeline'
 import { uploadMultipart, uploadPut } from '../media/upload'
 import { BridgeError, cancelled } from './errors'
 import type { BridgeEvent, CapturedMedia } from './protocol'
 import type { BridgeHandlers } from './router'
 
-/** Au-delà, un fichier choisi n'est pas envoyé : la page doit proposer autre chose. */
-const MAX_PICK_BYTES = 1024 * 1024 * 1024
 const KEEP_AWAKE_TAG = 'clip-page'
 
 const DEFAULT_DOCUMENT_TYPES = [
@@ -26,10 +24,6 @@ const DEFAULT_DOCUMENT_TYPES = [
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
-
-function tooLarge(name: string): BridgeError {
-  return new BridgeError('too_large', `« ${name} » dépasse 1 Go. Choisissez un fichier plus court ou plus léger.`)
-}
 
 /** Les modules natifs derrière chaque capacité du pont. `emit` livre un événement à la page. */
 export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandlers {
@@ -42,39 +36,7 @@ export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandle
     'audio.record': (payload) => captureController.open('audio', payload),
     scan: (payload) => captureController.open('scan', payload),
 
-    'media.pick': async ({ kinds, multiple }) => {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: kinds.map((k) => (k === 'photo' ? 'images' : 'videos')),
-        allowsMultipleSelection: multiple ?? true,
-        selectionLimit: multiple === false ? 1 : 30,
-        orderedSelection: true,
-        quality: 1,
-        exif: false,
-        // iOS : la vidéo choisie est réencodée en H.264 720p à l'export (Android : telle quelle,
-        // la page la réduit au besoin par la Gateway).
-        videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
-      })
-      if (result.canceled) throw cancelled()
-      const items: CapturedMedia[] = []
-      for (const asset of result.assets) {
-        if ((asset.fileSize ?? 0) > MAX_PICK_BYTES) throw tooLarge(asset.fileName ?? 'Ce fichier')
-        if (asset.type === 'video' || asset.type === 'pairedVideo') {
-          const media = await finalizeVideo(
-            asset.uri,
-            asset.duration ? asset.duration / 1000 : undefined,
-            asset.fileName ?? undefined,
-          )
-          if (media.sizeBytes > MAX_PICK_BYTES) {
-            await discardMedia([media.localId])
-            throw tooLarge(media.fileName)
-          }
-          items.push(media)
-        } else {
-          items.push(await finalizePhoto(asset.uri, asset.width, asset.height))
-        }
-      }
-      return { items }
-    },
+    'media.pick': async ({ kinds, multiple }) => ({ items: await pickFromLibrary(kinds, multiple ?? true) }),
 
     'file.pick': async ({ mimeTypes, multiple }) => {
       const result = await DocumentPicker.getDocumentAsync({

@@ -4,10 +4,11 @@ import { useRef, useState } from 'react'
 import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { cancelled } from '../bridge/errors'
+import { BridgeError, cancelled } from '../bridge/errors'
 import type { CapturedMedia } from '../bridge/protocol'
 import { logError } from '../logging/log'
 import { discardMedia } from '../media/mediaStore'
+import { pickFromLibrary } from '../media/pick'
 import { finalizePhoto } from '../media/pipeline'
 import { IconButton, Pill, PrimaryButton } from '../ui/components'
 import { colors, radii, touch, type } from '../ui/theme'
@@ -15,6 +16,8 @@ import { useBackAction } from './backAction'
 import { captureController, type ActiveCapture } from './controller'
 import { PermissionPanel } from './PermissionPanel'
 import { ShutterButton } from './ShutterButton'
+import { usePinchZoom } from './usePinchZoom'
+import { ZoomReset } from './ZoomReset'
 
 /**
  * Plusieurs photos d'affilée. Chaque photo est réduite (1920 px, JPEG) pendant qu'on prend la
@@ -32,6 +35,8 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
   const [finishing, setFinishing] = useState(false)
   const nextKey = useRef(1)
   const [taken, setTaken] = useState<Array<{ key: number; media?: CapturedMedia }>>([])
+  const [picking, setPicking] = useState(false)
+  const { zoom, reset: resetZoom, handlers: pinch } = usePinchZoom()
 
   const maxCount = capture.payload.maxCount ?? 30
   const count = taken.length
@@ -83,6 +88,27 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
     }
   }
 
+  /** Des photos déjà sur le téléphone, ajoutées à la série comme si on venait de les prendre. */
+  async function pickExisting() {
+    if (picking || finishing || full) return
+    setPicking(true)
+    try {
+      const items = (await pickFromLibrary(['photo'], true)).slice(0, maxCount - count)
+      for (const media of items) {
+        const key = nextKey.current++
+        pending.current.push(Promise.resolve(media))
+        setTaken((prev) => [...prev, { key, media }])
+      }
+    } catch (e) {
+      if (!(e instanceof BridgeError && e.code === 'cancelled')) {
+        logError(e, { screen: 'camera.photo', action: 'pick' })
+        Alert.alert('Les photos n’ont pas pu être ajoutées', e instanceof BridgeError ? e.message : 'Réessayez.')
+      }
+    } finally {
+      setPicking(false)
+    }
+  }
+
   async function finish() {
     setFinishing(true)
     const results = await Promise.all(pending.current)
@@ -119,9 +145,12 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
         facing={facing}
         enableTorch={torch}
         animateShutter
+        zoom={zoom}
         onCameraReady={() => setReady(true)}
         onMountError={(e) => logError(new Error(e.message), { screen: 'camera.photo', action: 'mount' })}
       />
+      {/* Calque du pincement : sous les boutons, au-dessus de l'aperçu. */}
+      <View style={StyleSheet.absoluteFill} {...pinch} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
         <IconButton icon="x" label="Fermer" onPress={close} size={touch.min + 8} />
@@ -155,10 +184,17 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
             )}
           </ScrollView>
         ) : (
-          <Text style={styles.hint}>Prenez autant de photos que nécessaire, une par étape.</Text>
+          <Text style={styles.hint}>Prenez autant de photos que nécessaire, une par étape. Pincez pour zoomer.</Text>
         )}
+        <View style={styles.zoomRow}>
+          <ZoomReset zoom={zoom} onReset={resetZoom} />
+        </View>
         <View style={styles.controls}>
-          <View style={styles.side} />
+          <View style={[styles.side, styles.sideLeft]}>
+            {!full ? (
+              <IconButton icon="image" label="Choisir des photos du téléphone" onPress={() => void pickExisting()} disabled={picking || finishing} size={touch.large} />
+            ) : null}
+          </View>
           <ShutterButton onPress={shoot} disabled={!ready || full || finishing} label="Prendre la photo" />
           <View style={styles.side}>
             {count > 0 ? (
@@ -198,4 +234,6 @@ const styles = StyleSheet.create({
   hint: { ...type.body, color: colors.white, textAlign: 'center', paddingHorizontal: 24, textShadowColor: '#000', textShadowRadius: 6 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
   side: { flex: 1, alignItems: 'flex-end' },
+  sideLeft: { alignItems: 'flex-start' },
+  zoomRow: { alignItems: 'center' },
 })

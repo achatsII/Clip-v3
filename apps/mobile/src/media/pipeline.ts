@@ -27,7 +27,7 @@ export async function finalizeVideo(
     fileName,
     durationSec,
   })
-  const preview = await videoPreview(record.uri)
+  const preview = await videoPreview(record.uri, durationSec)
   if (preview.width && preview.height) {
     await localStore.patchMedia(record.localId, { width: preview.width, height: preview.height })
   }
