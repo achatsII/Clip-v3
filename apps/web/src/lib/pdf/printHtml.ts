@@ -5,7 +5,8 @@
  */
 import { CATEGORIES, ENERGY, KINDS, PPE, WARNINGS } from '../model/catalog'
 import { annotationsMarkup } from '../annotations/markup'
-import type { Branding, InstructionContent, StepMedia } from '../model/types'
+import { layoutOf } from '../model/media'
+import type { Branding, InstructionContent, Step, StepMedia } from '../model/types'
 
 const esc = (s: unknown) =>
   String(s ?? '')
@@ -31,6 +32,24 @@ function mediaBlock(m: StepMedia | undefined, img: string, ratio: number | undef
   return `<div class="media"><div class="frame" style="${frame}"><img src="${esc(img)}" alt="" style="object-fit:${r ? 'fill' : 'contain'}"><div class="ann">${marks}</div></div>${vid}</div>`
 }
 
+/** Un schéma interactif ne s'imprime pas : la page renvoie à l'app (le code QR de la version à jour). */
+const HTML_PLACEHOLDER = '<div class="ph">◇ Schéma interactif<small>à voir dans l’app</small></div>'
+
+/** Les médias d'une étape selon sa disposition : un seul, ou une grille de deux à quatre. */
+function stepMediaBlock(s: Step, ratios: Record<string, number> | undefined, key: string): string {
+  const layout = layoutOf(s)
+  const list = layout === 'focus' ? s.media.slice(0, 1) : layout === 'compare' ? s.media.slice(0, 2) : s.media.slice(0, 4)
+  const one = (m: StepMedia, k: string) => {
+    if (m.kind === 'html') return HTML_PLACEHOLDER
+    const img = mediaImage(m)
+    return img ? mediaBlock(m, img, ratios?.[img], k) : ''
+  }
+  const label = (m: StepMedia) =>
+    `${m.verdict ? `<span class="verdict">${m.verdict === 'do' ? '✓ À faire' : '✕ À éviter'}</span>` : ''}${m.caption ? `<span class="cap">${esc(m.caption)}</span>` : ''}`
+  if (list.length <= 1) return list[0] ? `<div class="tile ${list[0].verdict ?? ''}">${one(list[0], key)}${label(list[0])}</div>` : ''
+  return `<div class="mgrid">${list.map((m, j) => `<div class="tile ${m.verdict ?? ''}">${one(m, `${key}-${j}`)}${label(m)}</div>`).join('')}</div>`
+}
+
 export interface PrintMeta {
   branding: Branding
   version: number | null
@@ -51,10 +70,9 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
   const ppe = content.ppe.map((p) => `<span class="chip">${esc(PPE[p] ?? p)}</span>`).join('')
   const steps = content.steps
     .map((s, i) => {
-      const img = mediaImage(s.media[0])
       const w = s.warning
       return `<article class="step">
-        ${img ? mediaBlock(s.media[0], img, meta.ratios?.[img], String(i)) : ''}
+        ${stepMediaBlock(s, meta.ratios, String(i))}
         <div class="body">
           <h3><span class="n">${i + 1}</span>${esc(s.title)}</h3>
           ${w ? `<p class="warn ${w.level}"><b>${esc(WARNINGS[w.level].label)} :</b> ${esc(w.text)}</p>` : ''}
@@ -99,6 +117,10 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .step{border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
 .media{position:relative;background:#0f172a;display:flex;justify-content:center}.frame{position:relative}.frame img{width:100%;height:100%;display:block}
 .ann{position:absolute;inset:0;container-type:inline-size}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:3px;background:#0f172a}.tile{position:relative}.tile.do{outline:3px solid #10b981;outline-offset:-3px}.tile.dont{outline:3px solid #f43f5e;outline-offset:-3px}
+.verdict{position:absolute;left:5px;top:5px;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:6px}.do .verdict{background:#10b981}.dont .verdict{background:#f43f5e}
+.cap{display:block;background:#0f172a;color:#fff;font-size:9px;font-weight:800;padding:3px 6px}
+.ph{aspect-ratio:16/10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#f1f5f9;color:#334155;font-size:11px;font-weight:900;text-align:center}.ph small{font-size:9px;font-weight:700;color:#64748b}
 .vid{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:800;padding:3px 6px;border-radius:6px}
 .body{padding:10px 12px}.step h3{font-size:15px;margin:0 0 6px;font-weight:900;display:flex;gap:8px;align-items:flex-start}
 .n{display:inline-flex;min-width:24px;height:24px;border-radius:8px;background:${esc(color)};color:#fff;align-items:center;justify-content:center;font-size:13px}

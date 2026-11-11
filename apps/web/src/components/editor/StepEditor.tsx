@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowDown, ArrowUp, Clock, Copy, Film, Image as ImageIcon, ImagePlus, Pencil, Plus, Sparkles, Trash2, Wand2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Clock, Copy, Film, Image as ImageIcon, ImagePlus, Pencil, Plus, Shapes, Sparkles, Trash2, Wand2, X } from 'lucide-react'
 import { useState } from 'react'
 import { AiCost } from '@/components/billing/AiCost'
 import { DictateButton } from '@/components/capture/DictateButton'
@@ -13,15 +13,20 @@ import { Menu } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { assistStep, illustrationPrompt } from '@/lib/ai/assist'
+import { assistStep, createVisual, illustrationPrompt } from '@/lib/ai/assist'
 import { ApiError } from '@/lib/gateway/client'
 import { STEP_ACTIONS } from '@/lib/ai/prompts'
 import { WARNINGS } from '@/lib/model/catalog'
+import { LAYOUTS, layoutOf, mediaLabel } from '@/lib/model/media'
 import type { InstructionContent, Source, Step, StepMedia, WarningLevel } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
 import { Annotator } from './Annotator'
 import { FramePicker } from './FramePicker'
 import { MediaPicker } from './MediaPicker'
+import { StepMediaArea } from '@/components/player/StepMediaArea'
+
+/** Assez pour comparer et pour une grille, sans noyer l'étape. */
+const MAX_MEDIA = 6
 
 export function StepEditor({
   content,
@@ -58,6 +63,8 @@ export function StepEditor({
   const [custom, setCustom] = useState(false)
   const [customText, setCustomText] = useState('')
   const [suggestion, setSuggestion] = useState<{ step: Step; explanation: string } | null>(null)
+  const [visualOpen, setVisualOpen] = useState(false)
+  const [visualText, setVisualText] = useState('')
   const [mediaIndex, setMediaIndex] = useState(0)
   const media = step.media[Math.min(mediaIndex, step.media.length - 1)]
   const confirm = useConfirm()
@@ -115,6 +122,23 @@ export function StepEditor({
   }
 
   const set = (patch: Partial<Step>) => onChange({ ...step, ...patch })
+  const setMediaAt = (i: number, patch: Partial<Pick<StepMedia, 'caption' | 'verdict'>>) => set({ media: step.media.map((m, j) => (j === i ? ({ ...m, ...patch } as StepMedia) : m)) })
+
+  async function makeVisual() {
+    setBusy('visual')
+    try {
+      const v = await createVisual(ai, content, step, visualText)
+      onChange({ ...step, media: [...step.media, v].slice(-MAX_MEDIA) })
+      setMediaIndex(Math.min(step.media.length, MAX_MEDIA - 1))
+      setVisualOpen(false)
+      setVisualText('')
+      toast.success('Schéma ajouté', 'Il s’ajoute aux médias de l’étape. Vous pouvez le mettre en premier ou le comparer.')
+    } catch (e) {
+      toast.error('Le schéma n’a pas pu être dessiné', errorText(e))
+    } finally {
+      setBusy(null)
+    }
+  }
 
   return (
     <div className={cn('glass-panel rounded-[32px] p-4 sm:p-6', highlight && 'ring-4 ring-amber-300/60')}>
@@ -144,8 +168,10 @@ export function StepEditor({
 
       {/* Média */}
       <div className="relative aspect-video overflow-hidden rounded-[24px] bg-slate-900">
-        {media ? (
-          <MediaView key={`${media.url}-${media.kind === 'video' ? media.start : ''}`} media={media} autoPlay={false} />
+        {media && layoutOf(step) !== 'focus' ? (
+          <StepMediaArea step={step} labels={{ zoom: 'Agrandir', doIt: 'À faire', avoid: 'À éviter' }} />
+        ) : media ? (
+          <MediaView key={`${media.url}-${media.kind === 'video' ? media.start : ''}-${media.kind === 'html' ? media.html.length : ''}`} media={media} autoPlay={false} />
         ) : (
           <button type="button" disabled={readOnly} onClick={() => setPickerOpen(true)} className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/80">
             <ImagePlus className="h-10 w-10" />
@@ -157,7 +183,7 @@ export function StepEditor({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {step.media.map((m, i) => (
             <button key={`${m.url}-${i}`} type="button" onClick={() => setMediaIndex(i)} className={cn('btn-press flex h-11 items-center gap-1.5 rounded-2xl px-3 text-xs font-black', i === mediaIndex ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card')}>
-              {m.kind === 'video' ? 'Extrait' : m.kind === 'document' ? `Page ${m.page ?? 1}` : m.kind === 'html' ? 'Schéma' : m.frame ? 'Image' : m.generated ? 'Illustration' : 'Photo'} {i + 1}
+              {m.verdict ? (m.verdict === 'do' ? '✓ ' : '✕ ') : ''}{mediaLabel(m)} {i + 1}
               <span
                 role="button"
                 tabIndex={0}
@@ -201,6 +227,32 @@ export function StepEditor({
                 Illustration IA <AiCost operation="illustrate" />
               </Button>
             </>
+          )}
+          <Button size="sm" onClick={() => setVisualOpen(true)} loading={busy === 'visual'} icon={<Shapes className="h-4 w-4" />}>
+            Schéma IA <AiCost operation="visual" />
+          </Button>
+        </div>
+      )}
+      {!readOnly && media && (
+        <div className="mt-3 space-y-3 rounded-[24px] bg-slate-900/[0.03] p-3 dark:bg-white/5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Segmented
+              size="sm"
+              value={media.verdict ?? 'none'}
+              onChange={(v) => setMediaAt(mediaIndex, { verdict: v === 'none' ? undefined : v })}
+              options={[
+                { value: 'none', label: 'Neutre' },
+                { value: 'do', label: '✓ À faire' },
+                { value: 'dont', label: '✕ À éviter' },
+              ]}
+            />
+            <Input value={media.caption ?? ''} onChange={(e) => setMediaAt(mediaIndex, { caption: e.target.value || undefined })} placeholder="Légende (facultatif)" aria-label="Légende du média" className="h-11 text-sm" wrapperClassName="min-w-48 flex-1" />
+          </div>
+          {step.media.length > 1 && (
+            <div>
+              <p className="label-caps mb-1.5 text-slate-500">Disposition au poste</p>
+              <Segmented size="sm" value={layoutOf(step)} onChange={(v) => set({ layout: v === 'focus' ? undefined : v })} options={LAYOUTS.map((l) => ({ value: l.value, label: l.label }))} />
+            </div>
           )}
         </div>
       )}
@@ -301,13 +353,29 @@ export function StepEditor({
         current={media}
         onSourceAdded={onSourceAdded}
         onPick={(m) => {
-          set({ media: [m, ...step.media.filter((x) => x.url !== m.url || x.kind === 'video')].slice(0, 3) })
+          set({ media: [m, ...step.media.filter((x) => x.url !== m.url || x.kind === 'video' || x.kind === 'html')].slice(0, MAX_MEDIA) })
           setMediaIndex(0)
         }}
       />
       {frameSource && (
         <FramePicker open={framing} onClose={() => setFraming(false)} videoUrl={frameSource.videoUrl} start={frameSource.start} end={frameSource.end} initialAt={frameSource.at} onPicked={applyFrame} />
       )}
+      <Modal
+        open={visualOpen}
+        onClose={() => setVisualOpen(false)}
+        title="Un schéma pour cette étape"
+        footer={
+          <>
+            <Button onClick={() => setVisualOpen(false)}>Annuler</Button>
+            <Button variant="primary" loading={busy === 'visual'} onClick={() => void makeVisual()} icon={<Shapes className="h-4 w-4" />}>
+              Dessiner le schéma <AiCost operation="visual" />
+            </Button>
+          </>
+        }
+      >
+        <p className="mb-3 text-sm font-medium text-slate-500">L’IA dessine un schéma clair (vue de face, de dessus, en coupe, ou en 3D) à partir de l’étape. Décrivez ce qu’il doit montrer, ou laissez vide.</p>
+        <Textarea autoFocus rows={4} value={visualText} onChange={(e) => setVisualText(e.target.value)} placeholder="Ex. : vue de face du panneau avec les 3 boutons, le rouge à gauche, et une flèche vers le vert" aria-label="Ce que le schéma doit montrer" />
+      </Modal>
       {annotating !== null && step.media[annotating]?.kind === 'image' && (
         <Annotator
           open

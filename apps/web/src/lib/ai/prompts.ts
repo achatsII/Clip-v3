@@ -159,7 +159,8 @@ export function annotateSystem(): string {
   return 'Tu repères sur une photo d’atelier ce que le geste d’une étape de travail touche (poignée, vis, bouton, sectionneur, pièce…). Tu rends 1 à 3 marques avec leur boîte [ymin, xmin, ymax, xmax] normalisée de 0 à 1000, serrée sur l’objet. "circle" pour un petit élément, "rect" pour une zone, "arrow" pour montrer un sens ou un point précis. Libellés en français, 1 à 4 mots.'
 }
 
-export function annotatePrompt(step: Step): string {
+export function annotatePrompt(step: Step, request?: string): string {
+  if (request?.trim()) return `ÉTAPE : ${step.title} — ${step.text}\nDEMANDE PRÉCISE : ${request.trim()}\nMarque exactement ce qui est demandé, rien d’autre. Si un texte est demandé, mets-le tel quel dans label. Si une couleur est demandée, donne-la dans color.`
   return `ÉTAPE : ${step.title} — ${step.text}\nMarque sur la photo ce que l’opérateur doit regarder ou toucher pour cette étape.`
 }
 
@@ -181,4 +182,20 @@ export function questionPrompt(content: InstructionContent, currentStep: number,
 
 export function standardAgentSystem(): string {
   return `Tu aides une usine à définir son standard de rédaction d’instructions de travail. À partir de ce que la personne décrit (règles, habitudes, exigences de sécurité, vocabulaire), tu produis un standard clair : 5 à 10 règles courtes en mots simples, si la première étape doit toujours porter sur la sécurité, le nombre maximal de mots par étape (10 à 60), le ton (infinitif, tu ou vous) et le vocabulaire propre à l’usine. Garde les bonnes pratiques reconnues (une action par étape, mises en garde à l’étape du risque, valeurs exactes avec unités) sauf si la personne demande autre chose.`
+}
+
+/** Un schéma pour une étape : une page HTML autonome, lisible sur une tablette d'atelier. */
+export function visualSystem(language: string): string {
+  return `Tu crées des schémas pour des instructions de travail en usine. Tu rends UNE page HTML complète et autonome (<!doctype html>…), qui remplit tout son cadre (100 % de la largeur et de la hauteur, sans défilement) :
+- Un schéma 2D en SVG (viewBox, mis à l’échelle) par défaut : vue de face, de dessus ou en coupe, traits nets, formes simples, fond blanc, fort contraste.
+- Une vue 3D seulement si la demande l’exige : Three.js chargé uniquement depuis https://cdn.jsdelivr.net/npm/three@0.160.0/ (module), une scène simple qui tourne doucement et qu’on peut faire pivoter au doigt.
+- Libellés courts dans la langue « ${language} », gros (16 px ou plus), flèches et numéros pour l’ordre des gestes. Couleurs de sécurité : rouge danger, jaune prudence, vert correct, bleu information.
+- CSS et JS dans la page ; aucune image, police, formulaire, alerte, stockage ou appel réseau hors de la bibliothèque 3D.
+- Moins de 40 000 caractères. N’invente aucune valeur (couple, pression, cote) : seulement celles de l’étape.`
+}
+
+export function visualPrompt(content: InstructionContent, step: Step, request: string): string {
+  const kp = step.keyPoints?.length ? `\nPoints clés : ${step.keyPoints.join(' ; ')}` : ''
+  const w = step.warning ? `\nMise en garde (${step.warning.level}) : ${step.warning.text}` : ''
+  return `INSTRUCTION : ${content.title}${content.equipment ? ` (${content.equipment})` : ''}\nÉTAPE : ${step.title} — ${step.text}${kp}${w}\nSCHÉMA DEMANDÉ : ${request.trim() || 'le schéma qui rend ce geste évident'}`
 }

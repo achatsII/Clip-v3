@@ -54,6 +54,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   de `billing-publish` avant d'être publié ; le verrou `billing.manifest.lock.json` dira ce qui est
   publié (rien ne l'est encore). Le slug `clip-v3` doit d'abord être enregistré à la Gateway comme
   application.
+- La grille (manifeste) : Gratuit (1 rédacteur, 3 publiées, 1 poste, 300 crédits) · Solo 49 $/mois (1, 30,
+  5, 2 500) · Équipe 299 $/mois, mis en avant (5 rédacteurs, illimitées, 25 postes, 12 000) · Usine
+  899 $/mois (15, illimitées, 100, 40 000) · Entreprise sur devis, hors manifeste. Annuel = 10 mois.
 - Ce qui se facture : `ai_credits`, une banque de crédits d'IA par mois · `published_instructions`,
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,
@@ -75,6 +78,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   | `illustrate` | Illustration générée à partir d'une photo (l'image comprise) | 70 |
   | `ask_question` | Répondre à une question d'opérateur sur l'instruction | 2 |
   | `standard_agent` | Rédiger le standard de rédaction à partir d'une description | 5 |
+  | `edit_agent` | Un échange avec l'assistant d'édition (il rend les modifications à faire) | 20 |
+  | `visual` | Schéma généré : une page HTML autonome (SVG, dessin, vue 3D) | 60 |
 
   La taille d'une génération ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) se décide sur
   la durée des vidéos et des notes vocales, le nombre de photos et de pages ; au-delà de la plus grande

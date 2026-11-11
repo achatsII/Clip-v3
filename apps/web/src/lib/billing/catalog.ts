@@ -18,6 +18,8 @@ export const AI_COSTS: Record<AiOperation, number> = {
   illustrate: 70,
   ask_question: 2,
   standard_agent: 5,
+  edit_agent: 20,
+  visual: 60,
 }
 
 export type FeatureKey =
@@ -74,5 +76,10 @@ export const FEATURE_ORDER: FeatureKey[] = [
 export const PLAN_PITCH: Record<string, string> = {
   free: 'Pour essayer avec vos premières instructions.',
   solo: 'Pour la personne qui documente son travail et le partage par code QR.',
-  usine: 'Pour toute l’usine : équipe de rédaction, approbation, postes et tablettes.',
+  equipe: 'Pour un atelier ou une petite usine : l’équipe rédige, approuve et traduit.',
+  usine: 'Pour toute l’usine : postes et tablettes partout, support prioritaire.',
 }
+
+/** Le plan mis en avant sur la page des plans. */
+export const FEATURED_PLAN = 'equipe'
+

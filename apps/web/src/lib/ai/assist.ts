@@ -6,7 +6,8 @@ import type { AiApi } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
 import { PPE } from '../model/catalog'
 import { uid } from '../model/repo'
-import type { Annotation, InstructionContent, OrgSettings, Step, TranslatedContent, WritingStandard } from '../model/types'
+import { MAX_HTML_BYTES } from '../model/media'
+import type { Annotation, AnnotationColor, InstructionContent, OrgSettings, Step, StepMedia, TranslatedContent, WritingStandard } from '../model/types'
 import { AiStep, normalizeSteps, warningFrom } from './normalize'
 import {
   annotatePrompt,
@@ -22,6 +23,8 @@ import {
   stepAssistSystem,
   translatePrompt,
   translateSystem,
+  visualPrompt,
+  visualSystem,
 } from './prompts'
 import {
   annotationSchema,
@@ -31,9 +34,12 @@ import {
   standardSchema,
   stepEditSchema,
   translationSchema,
+  visualSchema,
 } from './schemas'
 
 type OrgAi = Pick<OrgSettings, 'standard' | 'learnings'>
+
+const COLORS: AnnotationColor[] = ['red', 'orange', 'yellow', 'green', 'blue', 'white', 'black']
 
 export async function assistStep(ai: AiApi, org: OrgAi, content: InstructionContent, step: Step, request: string) {
   const res = await ai.ask<{ title: string; text: string; keyPoints: string[]; warningLevel: string; warningText: string; explanation: string }>(
@@ -126,8 +132,12 @@ export async function translateInstruction(ai: AiApi, content: InstructionConten
   }
 }
 
-export async function annotateImage(ai: AiApi, imageUrl: string, step: Step): Promise<Annotation[]> {
-  const res = await ai.ask<{ marks: Array<{ label: string; shape: 'circle' | 'rect' | 'arrow'; box: number[] }> }>(
+/**
+ * Des marques sur une photo : ce que le geste de l'étape touche, ou exactement ce que la personne
+ * demande (« encercle le bouton vert et écris Démarrer »).
+ */
+export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, request?: string): Promise<Annotation[]> {
+  const res = await ai.ask<{ marks: Array<{ label: string; shape: 'circle' | 'rect' | 'arrow'; box: number[]; color?: AnnotationColor }> }>(
     'annotate',
     {
       provider: 'google',
@@ -135,15 +145,16 @@ export async function annotateImage(ai: AiApi, imageUrl: string, step: Step): Pr
       thinking: 'disabled',
       mediaResolution: 'high',
       system_instruction: annotateSystem(),
-      prompt: annotatePrompt(step),
+      prompt: annotatePrompt(step, request),
       files: [{ url: imageUrl, filename: 'photo.jpg', mimeType: 'image/jpeg' }],
       json_schema: annotationSchema,
     },
-    { scope: step.id, timeoutMs: 60_000 },
+    { scope: request ? `${step.id}:${request}` : step.id, timeoutMs: 60_000 },
   )
   const marks = res.json?.marks ?? []
   const out: Annotation[] = []
-  for (const m of marks.slice(0, 3)) {
+  for (const m of marks.slice(0, request ? 5 : 3)) {
+    const color: AnnotationColor = m.color && COLORS.includes(m.color) ? m.color : 'red'
     if (!Array.isArray(m.box) || m.box.length < 4) continue
     const [ymin, xmin, ymax, xmax] = m.box.map((v) => Math.min(1000, Math.max(0, Number(v) || 0)) / 1000)
     if (xmax <= xmin || ymax <= ymin) continue
@@ -152,9 +163,9 @@ export async function annotateImage(ai: AiApi, imageUrl: string, step: Step): Pr
     if (m.shape === 'arrow') {
       const fromX = cx > 0.5 ? Math.max(0.05, xmin - 0.18) : Math.min(0.95, xmax + 0.18)
       const fromY = cy > 0.5 ? Math.max(0.05, ymin - 0.14) : Math.min(0.95, ymax + 0.14)
-      out.push({ id: uid('an_'), type: 'arrow', x: fromX, y: fromY, x2: cx, y2: cy, text: m.label, color: 'red' })
+      out.push({ id: uid('an_'), type: 'arrow', x: fromX, y: fromY, x2: cx, y2: cy, text: m.label, color })
     } else {
-      out.push({ id: uid('an_'), type: m.shape === 'rect' ? 'rect' : 'circle', x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin, text: m.label, color: 'red' })
+      out.push({ id: uid('an_'), type: m.shape === 'rect' ? 'rect' : 'circle', x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin, text: m.label, color })
     }
   }
   if (!out.length) throw new ApiError("L'IA n'a rien trouvé à marquer sur cette image.", 422)
@@ -223,4 +234,30 @@ export async function suggestStandard(ai: AiApi, description: string, current: W
     },
     explanation: (j.explanation ?? '').trim(),
   }
+}
+
+/**
+ * Un schéma pour une étape (opération `visual`) : une page HTML autonome — SVG, dessin, vue 3D —
+ * qui devient un média de l'étape, affiché dans un cadre isolé.
+ */
+export async function createVisual(ai: AiApi, content: InstructionContent, step: Step, request: string): Promise<Extract<StepMedia, { kind: 'html' }>> {
+  const res = await ai.ask<{ title: string; html: string }>(
+    'visual',
+    {
+      provider: 'google',
+      level: 'mid',
+      thinking: 'enabled',
+      effort: 'low',
+      system_instruction: visualSystem(content.language || 'fr'),
+      prompt: visualPrompt(content, step, request),
+      json_schema: visualSchema,
+      maxOutputTokens: 24000,
+    },
+    { scope: `${step.id}:${request}`, timeoutMs: 150_000 },
+  )
+  let html = (res.json?.html ?? '').trim()
+  if (!html.includes('<')) throw new ApiError("L'IA n'a pas pu dessiner ce schéma. Reformulez la demande.", 502)
+  if (!/^<!doctype|^<html/i.test(html)) html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;height:100%;background:#fff}</style></head><body>${html}</body></html>`
+  if (new Blob([html]).size > MAX_HTML_BYTES) throw new ApiError('Le schéma est trop lourd. Demandez quelque chose de plus simple.', 422)
+  return { kind: 'html', url: '', html, title: (res.json?.title ?? '').trim().slice(0, 80) || 'Schéma' }
 }

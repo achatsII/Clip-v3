@@ -147,10 +147,11 @@ export const annotationSchema = {
           label: str('Ce que la marque montre, 1 à 4 mots'),
           shape: { type: 'string', enum: ['circle', 'rect', 'arrow'] },
           box: { type: 'array', items: { type: 'number' }, description: '[ymin, xmin, ymax, xmax] normalisés de 0 à 1000' },
+          color: { type: 'string', enum: ['red', 'orange', 'yellow', 'green', 'blue', 'white', 'black'], description: 'Rouge par défaut ; la couleur demandée sinon' },
         },
         required: ['label', 'shape', 'box'],
       },
-      description: '1 à 3 marques, sur ce que le geste de l’étape touche',
+      description: '1 à 5 marques, sur ce que le geste de l’étape touche ou sur ce qui est demandé',
     },
   },
   required: ['marks'],
@@ -188,4 +189,13 @@ export const standardSchema = {
     explanation: str('Ce que tu as retenu, en une ou deux phrases'),
   },
   required: ['rules', 'startWithSafety', 'maxWordsPerStep', 'tone', 'glossary', 'explanation'],
+}
+
+export const visualSchema = {
+  type: 'object',
+  properties: {
+    title: str('Titre court du schéma, 2 à 6 mots'),
+    html: str('La page HTML complète et autonome'),
+  },
+  required: ['title', 'html'],
 }

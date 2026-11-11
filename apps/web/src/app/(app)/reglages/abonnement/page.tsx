@@ -13,7 +13,7 @@ import { ErrorState, Skeleton } from '@/components/ui/States'
 import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
-import { PLAN_PITCH } from '@/lib/billing/catalog'
+import { FEATURED_PLAN, PLAN_PITCH } from '@/lib/billing/catalog'
 import { BillingError, creditsOf } from '@/lib/billing/client'
 import { useBilling } from '@/lib/billing/state'
 import { BILLING_V2 } from '@/lib/config'
@@ -132,7 +132,7 @@ function Subscription() {
               .map((p) => {
                 const price = p.prices.find((x) => x.interval === interval) ?? p.prices[0]
                 const current = p.is_current || p.code === state?.plan_code
-                const highlight = p.code === 'usine'
+                const highlight = p.code === FEATURED_PLAN
                 return (
                   <div key={p.code} className={cn('relative flex flex-col overflow-hidden rounded-[32px] p-6', highlight ? 'bg-gradient-primary shadow-primary text-white' : 'glass-panel')}>
                     {highlight && <span className="grid-pattern absolute inset-0 opacity-40" />}

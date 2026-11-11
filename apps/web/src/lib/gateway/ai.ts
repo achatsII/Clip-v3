@@ -23,6 +23,8 @@ export const AI_OPERATIONS = [
   'illustrate',
   'ask_question',
   'standard_agent',
+  'edit_agent',
+  'visual',
 ] as const
 export type AiOperation = (typeof AI_OPERATIONS)[number]
 
