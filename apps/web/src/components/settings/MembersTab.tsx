@@ -17,7 +17,8 @@ import { useBilling, useLimit } from '@/lib/billing/state'
 import { countEditors, countText } from '@/lib/billing/usage'
 import { gateway } from '@/lib/gateway/client'
 import { currentGrantId, isNotAdmin, orgApi, type Member } from '@/lib/gateway/org'
-import { CATEGORIES, CATEGORY_KEYS, ROLES } from '@/lib/model/catalog'
+import { messages, useMessages } from '@/lib/i18n'
+import { CATEGORIES, CATEGORY_KEYS, ROLES, type Feature } from '@/lib/model/catalog'
 import type { CategoryKey, MemberRole, MemberSettings } from '@/lib/model/types'
 import { cn, initials } from '@/lib/util/cn'
 
@@ -25,13 +26,16 @@ const org$ = orgApi(gateway)
 
 /** En une phrase : ce sur quoi la personne se concentre, ce qu'elle voit, ce qu'elle modifie. */
 export function summaryOf(m: MemberSettings, stationNames: Map<string, string>): string {
+  const t = messages().settings.members
   const role = ROLES[m.role]
   const focus = [...m.categories.map((c) => CATEGORIES[c].label.toLowerCase()), ...m.stationIds.map((s) => stationNames.get(s)).filter(Boolean)]
-  return `${role.summary}${focus.length ? ` Se concentre sur : ${focus.join(', ')}.` : ' Voit tout, sans focus particulier.'}`
+  return `${role.summary} ${focus.length ? t.focus(focus.join(', ')) : t.noFocus}`
 }
 
 export function MembersTab() {
   const { org, updateOrg, profile, can } = useSession()
+  const words = useMessages()
+  const t = words.settings.members
   const toast = useToast()
   const stations = useStations()
   const { openPaywall } = useBilling()
@@ -58,7 +62,7 @@ export function MembersTab() {
       return
     }
     await updateOrg({ [`members.${key}`]: value })
-    toast.success('Accès mis à jour')
+    toast.success(t.accessUpdated)
     setEditing(null)
   }
 
@@ -73,11 +77,11 @@ export function MembersTab() {
       if (!grantId) throw new Error('grant')
       await org$.invite(invite.email, [grantId])
       await updateOrg({ [`members.email:${invite.email.trim().toLowerCase()}`]: { role: invite.role, categories: [], stationIds: [], email: invite.email.trim().toLowerCase() } })
-      toast.success('Invitation envoyée', `${invite.email} recevra un courriel pour rejoindre l’usine.`)
+      toast.success(t.inviteSent, t.inviteSentHint(invite.email))
       setInviteOpen(false)
       setInvite({ email: '', role: 'author' })
     } catch (e) {
-      toast.error('L’invitation n’est pas partie', e instanceof Error && e.message === 'grant' ? 'L’accès de l’application n’a pas pu être déterminé : invitez depuis le portail de votre organisation.' : isNotAdmin(e) ? 'Seul un administrateur de l’organisation peut inviter.' : errorText(e))
+      toast.error(t.inviteFailed, e instanceof Error && e.message === 'grant' ? t.noGrant : isNotAdmin(e) ? t.notAdmin : errorText(e))
     } finally {
       setBusy(false)
     }
@@ -88,12 +92,12 @@ export function MembersTab() {
       <Panel>
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-black tracking-tight">Membres et responsabilités</h2>
-            <p className="text-sm font-medium text-slate-500">Un rôle, quelques responsabilités : c’est fini. Les opérateurs au poste n’ont pas besoin de compte.</p>
+            <h2 className="text-xl font-black tracking-tight">{t.title}</h2>
+            <p className="text-sm font-medium text-slate-500">{t.intro}</p>
           </div>
           {canWrite && (
             <Button variant="primary" icon={<UserPlus className="h-4 w-4" />} onClick={() => setInviteOpen(true)}>
-              Inviter {editorLimit?.reached && <LockBadge />}
+              {t.invite} {editorLimit?.reached && <LockBadge />}
             </Button>
           )}
         </div>
@@ -102,12 +106,12 @@ export function MembersTab() {
           <SkeletonRows count={3} />
         ) : members.error ? (
           isNotAdmin(members.error) ? (
-            <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">Seul un administrateur de l’organisation voit la liste des membres.</p>
+            <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{t.adminOnly}</p>
           ) : (
             <ErrorState error={members.error} onRetry={() => members.refetch()} />
           )
         ) : !members.data?.length ? (
-          <EmptyState icon={<Users className="h-7 w-7" />} title="Vous êtes seul pour l’instant" description="Invitez une collègue : elle rédigera, approuvera ou consultera selon le rôle choisi." />
+          <EmptyState icon={<Users className="h-7 w-7" />} title={t.emptyTitle} description={t.emptyDescription} />
         ) : (
           <ul className="space-y-2">
             {members.data.map((m) => {
@@ -119,14 +123,14 @@ export function MembersTab() {
                     <span className="bg-gradient-accent flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-black text-white">{initials(name)}</span>
                     <span className="min-w-0">
                       <span className="block truncate text-[15px] font-black">
-                        {name} {m.user_id === profile.userId && <span className="text-xs text-slate-400">(vous)</span>}
+                        {name} {m.user_id === profile.userId && <span className="text-xs text-slate-400">{t.you}</span>}
                       </span>
                       <span className="block text-sm font-medium text-slate-500">{summaryOf(s, stationNames)}</span>
                     </span>
                   </span>
                   <span className="flex shrink-0 gap-2">
                     <Button size="sm" variant="ghost" icon={<Eye className="h-4 w-4" />} onClick={() => setViewAs({ name, value: s })}>
-                      Voir comme
+                      {t.viewAs}
                     </Button>
                     {canWrite && (
                       <Button size="sm" onClick={() => setEditing({ key: m.user_id, name, value: s })}>
@@ -141,7 +145,7 @@ export function MembersTab() {
               <li key={k} className="flex items-center gap-3 rounded-[22px] border-2 border-dashed border-slate-200 p-3 dark:border-slate-700">
                 <Mail className="h-5 w-5 text-slate-400" />
                 <span className="flex-1 text-sm font-bold text-slate-500">
-                  {k.slice(6)} · invitation envoyée · {ROLES[v.role].label}
+                  {k.slice(6)} · {t.invitationSent} · {ROLES[v.role].label}
                 </span>
               </li>
             ))}
@@ -155,9 +159,9 @@ export function MembersTab() {
         title={editing?.name}
         footer={
           <>
-            <Button onClick={() => setEditing(null)}>Annuler</Button>
+            <Button onClick={() => setEditing(null)}>{words.common.cancel}</Button>
             <Button variant="primary" onClick={() => editing && void saveMember(editing.key, editing.value)}>
-              Enregistrer
+              {words.common.save}
             </Button>
           </>
         }
@@ -165,7 +169,7 @@ export function MembersTab() {
         {editing && (
           <div className="space-y-5">
             <div>
-              <Label>Rôle</Label>
+              <Label>{t.role}</Label>
               <div className="grid gap-2">
                 {(Object.keys(ROLES) as MemberRole[]).map((r) => (
                   <button key={r} type="button" onClick={() => setEditing({ ...editing, value: { ...editing.value, role: r } })} className={cn('btn-press rounded-2xl border-2 p-3 text-left', editing.value.role === r ? 'border-[var(--primary)] bg-primary-soft' : 'glass-card border-transparent')}>
@@ -176,7 +180,7 @@ export function MembersTab() {
               </div>
             </div>
             <div>
-              <Label hint="Ce qu’elle voit en premier">Responsabilités</Label>
+              <Label hint={t.responsibilitiesHint}>{t.responsibilities}</Label>
               <div className="flex flex-wrap gap-2">
                 {CATEGORY_KEYS.map((c: CategoryKey) => {
                   const on = editing.value.categories.includes(c)
@@ -192,9 +196,9 @@ export function MembersTab() {
                   className="mt-3"
                   value=""
                   onChange={(e) => e.target.value && setEditing({ ...editing, value: { ...editing.value, stationIds: [...new Set([...editing.value.stationIds, e.target.value])] } })}
-                  aria-label="Ajouter un poste"
+                  aria-label={t.addStation}
                 >
-                  <option value="">+ Un poste dont elle est responsable…</option>
+                  <option value="">{t.addStationOption}</option>
                   {stations.data.map((s) => (
                     <option key={s._id} value={s._id}>
                       {s.json_data.name}
@@ -218,23 +222,23 @@ export function MembersTab() {
       <Modal
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
-        title="Inviter une collègue"
+        title={t.inviteTitle}
         footer={
           <>
-            <Button onClick={() => setInviteOpen(false)}>Annuler</Button>
+            <Button onClick={() => setInviteOpen(false)}>{words.common.cancel}</Button>
             <Button variant="primary" loading={busy} disabled={!/^\S+@\S+\.\S+$/.test(invite.email)} onClick={sendInvite}>
-              Envoyer l’invitation {inviteBlocked && <LockBadge />}
+              {t.sendInvite} {inviteBlocked && <LockBadge />}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <div>
-            <Label htmlFor="inv-email">Courriel</Label>
-            <Input id="inv-email" type="email" inputMode="email" value={invite.email} onChange={(e) => setInvite({ ...invite, email: e.target.value })} placeholder="collegue@usine.com" />
+            <Label htmlFor="inv-email">{t.email}</Label>
+            <Input id="inv-email" type="email" inputMode="email" value={invite.email} onChange={(e) => setInvite({ ...invite, email: e.target.value })} placeholder={t.emailPlaceholder} />
           </div>
           <div>
-            <Label htmlFor="inv-role">Rôle</Label>
+            <Label htmlFor="inv-role">{t.role}</Label>
             <Select id="inv-role" value={invite.role} onChange={(e) => setInvite({ ...invite, role: e.target.value as MemberRole })}>
               {(Object.keys(ROLES) as MemberRole[]).map((r) => (
                 <option key={r} value={r}>
@@ -245,31 +249,29 @@ export function MembersTab() {
           </div>
           {inviteBlocked && editorLimit?.limit != null && (
             <div className="rounded-[20px] bg-amber-50 p-4 dark:bg-amber-500/10">
-              <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
-                Votre plan compte {countText('editors', editorLimit.limit)}, et {editorLimit.limit > 1 ? 'les places sont prises' : 'la place est prise'} : pour l’inviter comme {ROLES[invite.role].label.toLowerCase()}, il faut un plan qui en compte plus. Comme lecteur, c’est gratuit et sans limite.
-              </p>
+              <p className="text-sm font-bold text-amber-900 dark:text-amber-100">{t.editorLimit(countText('editors', editorLimit.limit), editorLimit.limit, ROLES[invite.role].label.toLowerCase())}</p>
               <Button size="sm" className="mt-3" onClick={() => setInvite({ ...invite, role: 'reader' })}>
-                Inviter plutôt comme lecteur
+                {t.inviteAsReader}
               </Button>
             </div>
           )}
-          <p className="text-xs font-medium text-slate-400">Les opérateurs n’ont pas besoin d’être invités : ils ouvrent les instructions par le code QR de leur poste.</p>
+          <p className="text-xs font-medium text-slate-400">{t.operatorsNote}</p>
         </div>
       </Modal>
 
-      <Modal open={!!viewAs} onClose={() => setViewAs(null)} title={`Voir comme ${viewAs?.name ?? ''}`}>
+      <Modal open={!!viewAs} onClose={() => setViewAs(null)} title={t.viewAsTitle(viewAs?.name ?? '')}>
         {viewAs && (
           <div className="space-y-3 text-sm font-bold">
             <p>{summaryOf(viewAs.value, stationNames)}</p>
             <ul className="space-y-1">
               {Object.entries(ROLES[viewAs.value.role].permissions).map(([f, p]) => (
                 <li key={f} className="flex justify-between rounded-xl bg-slate-900/5 px-3 py-2 dark:bg-white/10">
-                  <span>{{ instructions: 'Instructions', publish: 'Publier', approve: 'Approuver', stations: 'Postes', feedback: 'Retours', stats: 'Statistiques', members: 'Membres', settings: 'Réglages' }[f]}</span>
-                  <span className={cn(p === 'none' ? 'text-slate-400' : p === 'read' ? 'text-sky-600' : 'text-emerald-600')}>{p === 'none' ? 'Aucun accès' : p === 'read' ? 'Lecture' : 'Modification'}</span>
+                  <span>{t.features[f as Feature]}</span>
+                  <span className={cn(p === 'none' ? 'text-slate-400' : p === 'read' ? 'text-sky-600' : 'text-emerald-600')}>{p === 'none' ? t.access.none : p === 'read' ? t.access.read : t.access.write}</span>
                 </li>
               ))}
             </ul>
-            <p className="text-xs font-medium text-slate-400">Les accès de CLIP s’appliquent à l’écran ; tant que l’application partage l’identifiant « html » de la Gateway, ils ne sont pas appliqués aux données côté serveur.</p>
+            <p className="text-xs font-medium text-slate-400">{t.serverNote}</p>
           </div>
         )}
       </Modal>

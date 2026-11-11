@@ -18,6 +18,7 @@ import { Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { qk, useInstructions, useStations } from '@/hooks/queries'
 import { useEntitlement, useGate } from '@/lib/billing/state'
+import { useMessages } from '@/lib/i18n'
 import { insertDictation } from '@/lib/media/dictation'
 import { nowIso, T } from '@/lib/model/repo'
 import type { Station } from '@/lib/model/types'
@@ -29,6 +30,7 @@ export default function StationPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { data, can } = useSession()
+  const t = useMessages()
   const qc = useQueryClient()
   const toast = useToast()
   const confirm = useConfirm()
@@ -45,9 +47,10 @@ export default function StationPage() {
 
   if (stations.isLoading) return <Skeleton className="h-96" />
   if (stations.error) return <ErrorState error={stations.error} onRetry={() => stations.refetch()} />
-  if (!station) return <EmptyState icon={<QrCode className="h-7 w-7" />} title="Poste introuvable" action={<Link href="/postes" className="font-black text-[var(--primary)]">Tous les postes</Link>} />
+  if (!station) return <EmptyState icon={<QrCode className="h-7 w-7" />} title={t.stations.detail.notFound} action={<Link href="/postes" className="font-black text-[var(--primary)]">{t.stations.detail.allStations}</Link>} />
 
   const s = station.json_data
+  const w = t.stations.detail
   const url = s.linkId ? linkUrl('station', s.linkId) : null
   const linked = (instructions.data ?? []).filter((d) => d.json_data.stationIds.includes(id))
 
@@ -61,9 +64,9 @@ export default function StationPage() {
     try {
       const link = await createShareLink('station', id, { mode, assistant: withAssistant })
       await patch({ linkId: link.id, linkMode: mode, linkCreatedAt: nowIso() })
-      toast.success(s.linkId ? 'Nouveau code QR créé' : 'Code QR créé', s.linkId ? 'L’ancien code ne fonctionne plus dans CLIP. Remplacez les étiquettes.' : 'Imprimez-le, ou ouvrez le mode tablette.')
+      toast.success(s.linkId ? w.qrReplaced : w.qrCreated, s.linkId ? w.qrReplacedHint : w.qrCreatedHint)
     } catch (e) {
-      toast.error('Le code QR n’a pas pu être créé', errorText(e))
+      toast.error(w.qrFailed, errorText(e))
     } finally {
       setBusy(false)
     }
@@ -72,11 +75,11 @@ export default function StationPage() {
   return (
     <div className="space-y-6">
       <Link href="/postes" className="inline-flex items-center gap-1 text-sm font-black text-slate-500">
-        <ArrowLeft className="h-4 w-4" /> Postes
+        <ArrowLeft className="h-4 w-4" /> {w.back}
       </Link>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="label-caps text-slate-500">{s.area || 'Poste'}</p>
+          <p className="label-caps text-slate-500">{s.area || w.eyebrow}</p>
           <div className="flex items-center gap-1">
             <input
               ref={nameRef}
@@ -84,9 +87,9 @@ export default function StationPage() {
               readOnly={!canWrite}
               onBlur={(e) => e.target.value.trim() && e.target.value !== s.name && void patch({ name: e.target.value.trim() })}
               className="w-full min-w-0 bg-transparent text-4xl font-black tracking-tighter focus:outline-none"
-              aria-label="Nom du poste"
+              aria-label={w.nameLabel}
             />
-            {canWrite && <MicButton label="Dicter le nom du poste" onText={(t) => insertDictation(nameRef.current, t)} />}
+            {canWrite && <MicButton label={w.dictateName} onText={(text) => insertDictation(nameRef.current, text)} />}
           </div>
           {s.code && <p className="text-lg font-black text-slate-400">{s.code}</p>}
         </div>
@@ -95,20 +98,20 @@ export default function StationPage() {
             variant="ghost"
             icon={<Trash2 className="h-4 w-4" />}
             onClick={async () => {
-              if (!(await confirm({ title: `Supprimer « ${s.name} » ?`, description: 'Ses instructions restent, sans ce poste. Le code QR cesse de fonctionner.', confirmLabel: 'Supprimer le poste', danger: true }))) return
+              if (!(await confirm({ title: w.deleteTitle(s.name), description: w.deleteDescription, confirmLabel: w.deleteConfirm, danger: true }))) return
               await data.remove(T.station, id)
               await qc.invalidateQueries({ queryKey: qk.stations })
               router.push('/postes')
             }}
           >
-            Supprimer
+            {t.common.delete}
           </Button>
         )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <Panel>
-          <h2 className="mb-4 text-lg font-black tracking-tight">Code QR et tablette</h2>
+          <h2 className="mb-4 text-lg font-black tracking-tight">{w.qrTitle}</h2>
           {url ? (
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
               <Qr value={url} size={200} />
@@ -116,39 +119,37 @@ export default function StationPage() {
                 <p className="text-sm font-bold text-slate-500">
                   {s.linkMode === 'only' ? (
                     <span className="inline-flex items-center gap-1">
-                      <Lock className="h-3.5 w-3.5" /> Montre seulement les instructions de ce poste.
+                      <Lock className="h-3.5 w-3.5" /> {w.onlyThisStation}
                     </span>
-                  ) : (
-                    'Montre d’abord les instructions de ce poste ; les autres restent à un geste.'
-                  )}{' '}
-                  Créé le {formatDate(s.linkCreatedAt)}.
+                  ) : w.thisStationFirst}{' '}
+                  {w.createdOn(formatDate(s.linkCreatedAt))}
                 </p>
                 <p className="glass-input truncate rounded-xl px-3 py-2 text-xs font-bold">{url}</p>
                 <div className="flex flex-wrap gap-2">
                   <a href={url} target="_blank" rel="noreferrer" className="btn-press bg-gradient-primary shadow-primary inline-flex h-12 items-center gap-2 rounded-full px-5 text-sm font-black text-white">
-                    <Tablet className="h-4 w-4" /> Ouvrir le mode tablette
+                    <Tablet className="h-4 w-4" /> {w.openTablet}
                   </a>
                   <Button
                     icon={<Copy className="h-4 w-4" />}
                     onClick={async () => {
-                      if (await copyText(url)) toast.success('Lien copié')
+                      if (await copyText(url)) toast.success(w.linkCopied)
                     }}
                   >
-                    Copier
+                    {w.copy}
                   </Button>
                   <Link href={`/postes/etiquettes?poste=${id}`} className="btn-press glass-card inline-flex h-12 items-center gap-2 rounded-full px-5 text-sm font-black">
-                    <ExternalLink className="h-4 w-4" /> Imprimer l’étiquette
+                    <ExternalLink className="h-4 w-4" /> {w.printLabel}
                   </Link>
                 </div>
-                <p className="text-xs font-medium text-slate-400">Sur la tablette du poste : ouvrez ce lien, puis « Ajouter à l’écran d’accueil » et le mode d’accès guidé (iPad) ou l’épinglage d’écran (Android).</p>
+                <p className="text-xs font-medium text-slate-400">{w.tabletTip}</p>
               </div>
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="font-medium text-slate-600 dark:text-slate-300">Choisissez ce que verra l’opérateur qui scanne le code de ce poste.</p>
+              <p className="font-medium text-slate-600 dark:text-slate-300">{w.choose}</p>
               <div className="grid gap-2 sm:grid-cols-2">
-                <ChoiceTile selected={false} onClick={() => makeLink('focus', assistant)} title="Ce poste d’abord" description="Les autres instructions restent à un geste (recommandé)" />
-                <ChoiceTile selected={false} onClick={() => makeLink('only', assistant)} icon={<Lock className="h-5 w-5" />} title="Seulement ce poste" description="Rien d’autre n’est visible" />
+                <ChoiceTile selected={false} onClick={() => makeLink('focus', assistant)} title={w.focusTitle} description={w.focusDescription} />
+                <ChoiceTile selected={false} onClick={() => makeLink('only', assistant)} icon={<Lock className="h-5 w-5" />} title={w.onlyTitle} description={w.onlyDescription} />
               </div>
             </div>
           )}
@@ -159,10 +160,10 @@ export default function StationPage() {
                 onChange={(v) => gate(voice, 'voice_assistant', () => setAssistant(v))}
                 label={
                   <span className="inline-flex items-center gap-2">
-                    <Mic className="h-4 w-4" /> Assistant vocal au poste {voice === 'locked' && <LockBadge />}
+                    <Mic className="h-4 w-4" /> {w.voiceAssistant} {voice === 'locked' && <LockBadge />}
                   </span>
                 }
-                description="Les opérateurs naviguent et posent leurs questions à voix haute. S’applique au prochain code créé."
+                description={w.voiceAssistantDescription}
               />
             </div>
           )}
@@ -173,23 +174,23 @@ export default function StationPage() {
               loading={busy}
               icon={<RefreshCw className="h-4 w-4" />}
               onClick={async () => {
-                if (await confirm({ title: 'Remplacer le code QR ?', description: 'L’ancien code ne fonctionnera plus dans CLIP. Il faudra réimprimer l’étiquette.', confirmLabel: 'Créer un nouveau code' })) void makeLink(s.linkMode ?? 'focus', assistant)
+                if (await confirm({ title: w.replaceTitle, description: w.replaceDescription, confirmLabel: w.replaceConfirm })) void makeLink(s.linkMode ?? 'focus', assistant)
               }}
             >
-              Remplacer le code QR
+              {w.replace}
             </Button>
           )}
         </Panel>
 
         <Panel>
-          <h2 className="mb-4 text-lg font-black tracking-tight">Détails</h2>
+          <h2 className="mb-4 text-lg font-black tracking-tight">{w.details}</h2>
           <div className="space-y-3">
             <div>
-              <Label htmlFor="code">Code</Label>
+              <Label htmlFor="code">{w.code}</Label>
               <Input id="code" defaultValue={s.code} readOnly={!canWrite} onBlur={(e) => e.target.value !== (s.code ?? '') && void patch({ code: e.target.value.trim() || undefined })} />
             </div>
             <div>
-              <Label htmlFor="area">Zone ou ligne</Label>
+              <Label htmlFor="area">{w.area}</Label>
               <Input id="area" defaultValue={s.area} readOnly={!canWrite} onBlur={(e) => e.target.value !== (s.area ?? '') && void patch({ area: e.target.value.trim() || undefined })} />
             </div>
           </div>
@@ -197,7 +198,7 @@ export default function StationPage() {
       </div>
 
       <section>
-        <h2 className="mb-3 text-lg font-black tracking-tight">Instructions de ce poste ({linked.length})</h2>
+        <h2 className="mb-3 text-lg font-black tracking-tight">{w.instructions(linked.length)}</h2>
         {linked.length ? (
           <div className="space-y-2">
             {linked.map((d) => (
@@ -205,7 +206,7 @@ export default function StationPage() {
             ))}
           </div>
         ) : (
-          <EmptyState icon={<QrCode className="h-7 w-7" />} title="Aucune instruction pour ce poste" description="Dans une instruction, ajoutez ce poste dans sa fiche : elle apparaîtra ici et sur la tablette." action={can('instructions', 'write') ? <Link href="/instructions/nouvelle" className="font-black text-[var(--primary)]">Créer une instruction</Link> : undefined} />
+          <EmptyState icon={<QrCode className="h-7 w-7" />} title={w.noInstructionsTitle} description={w.noInstructionsDescription} action={can('instructions', 'write') ? <Link href="/instructions/nouvelle" className="font-black text-[var(--primary)]">{w.createInstruction}</Link> : undefined} />
         )}
       </section>
     </div>

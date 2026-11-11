@@ -16,14 +16,17 @@ import { PageHeader } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { qk, useInstructions, useStations } from '@/hooks/queries'
 import { useBilling, useLimit } from '@/lib/billing/state'
+import { locale, useMessages } from '@/lib/i18n'
 import { nowIso, T } from '@/lib/model/repo'
 import type { Station, StationKind } from '@/lib/model/types'
 import { normalizeText } from '@/lib/util/cn'
 
-const KIND_LABEL: Record<StationKind, string> = { poste: 'Poste de travail', equipement: 'Équipement', zone: 'Zone' }
+/** Les types de poste, dans l'ordre du choix ; le libellé se lit au rendu. */
+const KINDS: StationKind[] = ['poste', 'equipement', 'zone']
 
 export default function StationsPage() {
   const { data, can } = useSession()
+  const t = useMessages()
   const qc = useQueryClient()
   const toast = useToast()
   const stations = useStations()
@@ -46,14 +49,15 @@ export default function StationsPage() {
     return (stations.data ?? []).filter((s) => !q || normalizeText(`${s.json_data.name} ${s.json_data.code ?? ''} ${s.json_data.area ?? ''}`).includes(q))
   }, [stations.data, query])
 
+  const noArea = t.stations.list.noArea
   const byArea = useMemo(() => {
     const m = new Map<string, typeof list>()
     for (const s of list) {
-      const a = s.json_data.area?.trim() || 'Sans zone'
+      const a = s.json_data.area?.trim() || noArea
       m.set(a, [...(m.get(a) ?? []), s])
     }
-    return [...m.entries()].sort(([a], [b]) => (a === 'Sans zone' ? 1 : b === 'Sans zone' ? -1 : a.localeCompare(b, 'fr')))
-  }, [list])
+    return [...m.entries()].sort(([a], [b]) => (a === noArea ? 1 : b === noArea ? -1 : a.localeCompare(b, locale())))
+  }, [list, noArea])
 
   async function create() {
     if (!form.name.trim()) return
@@ -61,11 +65,11 @@ export default function StationsPage() {
     try {
       await data.insert<Station>(T.station, { name: form.name.trim(), code: form.code.trim() || undefined, kind: form.kind, area: form.area.trim() || undefined, linkMode: 'focus', createdAt: nowIso() }, form.name.trim())
       await qc.invalidateQueries({ queryKey: qk.stations })
-      toast.success('Poste créé', 'Créez son code QR pour la tablette ou l’affichage.')
+      toast.success(t.stations.list.created, t.stations.list.createdHint)
       setOpen(false)
       setForm({ name: '', code: '', kind: 'poste', area: form.area })
     } catch (e) {
-      toast.error('Le poste n’a pas été créé', errorText(e))
+      toast.error(t.stations.list.createFailed, errorText(e))
     } finally {
       setBusy(false)
     }
@@ -77,18 +81,18 @@ export default function StationsPage() {
   return (
     <div>
       <PageHeader
-        title="Postes"
-        subtitle="Chaque poste a son code QR : la tablette ou le téléphone de l’opérateur ouvre ses instructions, sans compte."
+        title={t.stations.list.title}
+        subtitle={t.stations.list.subtitle}
         actions={
           <>
             {!!stations.data?.length && (
               <Link href="/postes/etiquettes" className="btn-press glass-card inline-flex h-12 items-center gap-2 rounded-full px-5 text-sm font-black">
-                <Printer className="h-4 w-4" /> Étiquettes QR
+                <Printer className="h-4 w-4" /> {t.stations.list.labels}
               </Link>
             )}
             {canWrite && (
               <Button variant="primary" icon={<Plus className="h-5 w-5" />} onClick={() => (atLimit ? openPaywall({ feature: 'stations', used: limit?.used, retry: () => setOpen(true) }) : setOpen(true))}>
-                Nouveau poste {atLimit && <LockBadge />}
+                {t.stations.list.newStation} {atLimit && <LockBadge />}
               </Button>
             )}
           </>
@@ -99,8 +103,8 @@ export default function StationsPage() {
       {(stations.data?.length ?? 0) > 8 && (
         <div className="glass-panel mb-5 flex items-center gap-3 rounded-[24px] px-4">
           <Search className="h-5 w-5 text-slate-400" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un poste ou un code" className="h-14 min-w-0 flex-1 bg-transparent text-[15px] font-bold focus:outline-none" aria-label="Chercher un poste" />
-          <MicButton label="Chercher en parlant" onText={(t) => setQuery((q) => (q ? `${q} ${t}` : t))} />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.stations.list.searchPlaceholder} className="h-14 min-w-0 flex-1 bg-transparent text-[15px] font-bold focus:outline-none" aria-label={t.stations.list.searchLabel} />
+          <MicButton label={t.stations.list.searchByVoice} onText={(text) => setQuery((q) => (q ? `${q} ${text}` : text))} />
         </div>
       )}
 
@@ -109,7 +113,7 @@ export default function StationsPage() {
       ) : stations.error ? (
         <ErrorState error={stations.error} onRetry={() => stations.refetch()} />
       ) : !stations.data?.length ? (
-        <EmptyState icon={<MapPin className="h-7 w-7" />} title="Ajoutez votre premier poste" description="Un poste, une machine ou une zone : ses instructions s’ouvrent d’un coup de code QR, ou sur la tablette qui y est installée." action={canWrite ? <Button variant="primary" size="lg" icon={<Plus className="h-5 w-5" />} onClick={() => setOpen(true)}>Nouveau poste</Button> : undefined} />
+        <EmptyState icon={<MapPin className="h-7 w-7" />} title={t.stations.list.emptyTitle} description={t.stations.list.emptyDescription} action={canWrite ? <Button variant="primary" size="lg" icon={<Plus className="h-5 w-5" />} onClick={() => setOpen(true)}>{t.stations.list.newStation}</Button> : undefined} />
       ) : (
         <div className="space-y-8">
           {byArea.map(([area, items]) => (
@@ -126,10 +130,10 @@ export default function StationsPage() {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[15px] font-black">{s.json_data.name}</span>
                         <span className="block truncate text-xs font-bold text-slate-500">
-                          {[s.json_data.code, KIND_LABEL[s.json_data.kind]].filter(Boolean).join(' · ')}
+                          {[s.json_data.code, t.stations.kinds[s.json_data.kind]].filter(Boolean).join(' · ')}
                         </span>
                       </span>
-                      <span className={`rounded-xl px-2.5 py-1 text-xs font-black tabular-nums ${n ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'}`}>{n ? `${n} instr.` : 'À couvrir'}</span>
+                      <span className={`rounded-xl px-2.5 py-1 text-xs font-black tabular-nums ${n ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'}`}>{n ? t.stations.list.instructionCount(n) : t.stations.list.uncovered}</span>
                     </Link>
                   )
                 })}
@@ -142,40 +146,40 @@ export default function StationsPage() {
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Nouveau poste"
+        title={t.stations.create.title}
         footer={
           <>
-            <Button onClick={() => setOpen(false)}>Annuler</Button>
+            <Button onClick={() => setOpen(false)}>{t.common.cancel}</Button>
             <Button variant="primary" loading={busy} disabled={!form.name.trim()} onClick={create}>
-              Créer le poste
+              {t.stations.create.submit}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <div>
-            <Label htmlFor="st-name">Nom</Label>
-            <Input id="st-name" autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Machine 1234, Presse P-12, Ligne 3…" />
+            <Label htmlFor="st-name">{t.stations.create.name}</Label>
+            <Input id="st-name" autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t.stations.create.namePlaceholder} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="st-code" hint="facultatif">Code</Label>
-              <Input id="st-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="M-1234" />
+              <Label htmlFor="st-code" hint={t.stations.create.optional}>{t.stations.create.code}</Label>
+              <Input id="st-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder={t.stations.create.codePlaceholder} />
             </div>
             <div>
-              <Label htmlFor="st-kind">Type</Label>
+              <Label htmlFor="st-kind">{t.stations.create.kind}</Label>
               <Select id="st-kind" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as StationKind })}>
-                {Object.entries(KIND_LABEL).map(([k, v]) => (
+                {KINDS.map((k) => (
                   <option key={k} value={k}>
-                    {v}
+                    {t.stations.kinds[k]}
                   </option>
                 ))}
               </Select>
             </div>
           </div>
           <div>
-            <Label htmlFor="st-area" hint="facultatif">Zone ou ligne</Label>
-            <Input id="st-area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="Usinage, Assemblage, Ligne 2…" />
+            <Label htmlFor="st-area" hint={t.stations.create.optional}>{t.stations.create.area}</Label>
+            <Input id="st-area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder={t.stations.create.areaPlaceholder} />
           </div>
         </div>
       </Modal>

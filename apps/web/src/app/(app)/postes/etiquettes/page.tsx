@@ -8,6 +8,7 @@ import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { EmptyState, SkeletonCards } from '@/components/ui/States'
 import { useStations } from '@/hooks/queries'
+import { useMessages } from '@/lib/i18n'
 import { linkUrl } from '@/lib/share'
 
 /** Planche d'étiquettes QR à imprimer et à coller sur les postes. */
@@ -15,6 +16,7 @@ export default function LabelsPage() {
   const params = useSearchParams()
   const only = params.get('poste')
   const { org } = useSession()
+  const t = useMessages().stations.labels
   const stations = useStations()
   const list = (stations.data ?? []).filter((s) => s.json_data.linkId && (!only || s._id === only))
 
@@ -22,16 +24,16 @@ export default function LabelsPage() {
     <div>
       <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link href="/postes" className="inline-flex items-center gap-1 text-sm font-black text-slate-500">
-          <ArrowLeft className="h-4 w-4" /> Postes
+          <ArrowLeft className="h-4 w-4" /> {t.back}
         </Link>
         <Button variant="primary" icon={<Printer className="h-4 w-4" />} onClick={() => window.print()} disabled={!list.length}>
-          Imprimer les étiquettes
+          {t.print}
         </Button>
       </div>
       {stations.isLoading ? (
         <SkeletonCards count={4} />
       ) : !list.length ? (
-        <EmptyState icon={<Printer className="h-7 w-7" />} title="Aucun code QR à imprimer" description="Créez d’abord le code QR d’un poste depuis sa page." />
+        <EmptyState icon={<Printer className="h-7 w-7" />} title={t.emptyTitle} description={t.emptyDescription} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 print:grid-cols-2 print:gap-3">
           {list.map((s) => (
@@ -41,7 +43,7 @@ export default function LabelsPage() {
                 {org.json_data.logoUrl ? <img src={org.json_data.logoUrl} alt="" className="mb-2 h-8 max-w-28 object-contain" /> : <p className="label-caps text-slate-500">{org.json_data.name}</p>}
                 <p className="text-2xl leading-tight font-black tracking-tight">{s.json_data.name}</p>
                 {s.json_data.code && <p className="text-lg font-black text-slate-500">{s.json_data.code}</p>}
-                <p className="mt-2 text-sm font-bold">📱 Scannez pour voir les instructions du poste</p>
+                <p className="mt-2 text-sm font-bold">📱 {t.scan}</p>
               </div>
             </div>
           ))}

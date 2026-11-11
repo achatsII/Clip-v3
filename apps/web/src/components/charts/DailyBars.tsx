@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { locale, num, useMessages } from '@/lib/i18n'
 import { cn } from '@/lib/util/cn'
 
 /**
@@ -20,11 +21,12 @@ export function niceMax(v: number) {
 }
 
 export function DailyBars({ days, label, unit }: { days: Array<{ date: string; value: number }>; label: string; unit: string }) {
+  const t = useMessages().stats.chart
   const [hover, setHover] = useState<number | null>(null)
   const [table, setTable] = useState(false)
   const max = niceMax(Math.max(0, ...days.map((d) => d.value)))
   const total = days.reduce((s, d) => s + d.value, 0)
-  const fmt = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })
+  const fmt = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(locale(), { day: 'numeric', month: 'short' })
   const ticks = [0, max / 2, max]
 
   return (
@@ -32,12 +34,10 @@ export function DailyBars({ days, label, unit }: { days: Array<{ date: string; v
       <figcaption className="mb-3 flex items-end justify-between gap-3">
         <span>
           <span className="block text-lg font-black tracking-tight">{label}</span>
-          <span className="block text-sm font-bold text-slate-500 tabular-nums">
-            {total.toLocaleString('fr-CA')} {unit} sur {days.length} jours
-          </span>
+          <span className="block text-sm font-bold text-slate-500 tabular-nums">{t.total(total, unit, days.length)}</span>
         </span>
-        <button type="button" onClick={() => setTable((t) => !t)} className="btn-press glass-card h-10 rounded-xl px-3 text-xs font-black">
-          {table ? 'Voir le graphique' : 'Voir le tableau'}
+        <button type="button" onClick={() => setTable((v) => !v)} className="btn-press glass-card h-10 rounded-xl px-3 text-xs font-black">
+          {table ? t.showChart : t.showTable}
         </button>
       </figcaption>
       {table ? (
@@ -45,7 +45,7 @@ export function DailyBars({ days, label, unit }: { days: Array<{ date: string; v
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-slate-500">
-                <th className="py-2 font-black">Jour</th>
+                <th className="py-2 font-black">{t.day}</th>
                 <th className="py-2 text-right font-black">{unit}</th>
               </tr>
             </thead>
@@ -53,7 +53,7 @@ export function DailyBars({ days, label, unit }: { days: Array<{ date: string; v
               {days.map((d) => (
                 <tr key={d.date} className="border-t border-slate-900/5 dark:border-white/5">
                   <td className="py-1.5 font-bold">{fmt(d.date)}</td>
-                  <td className="py-1.5 text-right font-black tabular-nums">{d.value.toLocaleString('fr-CA')}</td>
+                  <td className="py-1.5 text-right font-black tabular-nums">{num(d.value)}</td>
                 </tr>
               ))}
             </tbody>
@@ -62,8 +62,8 @@ export function DailyBars({ days, label, unit }: { days: Array<{ date: string; v
       ) : (
         <div className="relative flex h-56 gap-3">
           <div className="flex flex-col justify-between pb-6 text-right text-[11px] font-bold text-slate-400 tabular-nums" aria-hidden>
-            {[...ticks].reverse().map((t, i) => (
-              <span key={i}>{t.toLocaleString('fr-CA')}</span>
+            {[...ticks].reverse().map((tick, i) => (
+              <span key={i}>{num(tick)}</span>
             ))}
           </div>
           <div className="relative flex-1">
@@ -77,7 +77,7 @@ export function DailyBars({ days, label, unit }: { days: Array<{ date: string; v
                 <div
                   key={d.date}
                   role="listitem"
-                  aria-label={`${fmt(d.date)} : ${d.value} ${unit}`}
+                  aria-label={t.bar(fmt(d.date), d.value, unit)}
                   className="group relative flex h-full flex-1 cursor-default items-end justify-center"
                   onMouseEnter={() => setHover(i)}
                   onMouseLeave={() => setHover(null)}
@@ -86,14 +86,14 @@ export function DailyBars({ days, label, unit }: { days: Array<{ date: string; v
                   <div className={cn('w-full max-w-6 rounded-t-[4px] bg-[#0078FF] transition-opacity dark:bg-[#1a85ff]', hover !== null && hover !== i && 'opacity-50')} style={{ height: d.value ? `${Math.max(2, (d.value / max) * 100)}%` : 0 }} />
                   {hover === i && (
                     <div className="pointer-events-none absolute bottom-full z-10 mb-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold whitespace-nowrap text-white shadow-lg dark:bg-white dark:text-slate-900">
-                      {fmt(d.date)} · <span className="tabular-nums">{d.value.toLocaleString('fr-CA')}</span> {unit}
+                      {fmt(d.date)} · <span className="tabular-nums">{num(d.value)}</span> {unit}
                     </div>
                   )}
                 </div>
               ))}
             </div>
             {total === 0 && (
-              <p className="absolute inset-x-0 top-1/3 text-center text-sm font-bold text-slate-400">Rien encore sur cette période : les barres apparaîtront à la première consultation.</p>
+              <p className="absolute inset-x-0 top-1/3 text-center text-sm font-bold text-slate-400">{t.empty}</p>
             )}
             <div className="absolute inset-x-0 bottom-0 flex justify-between text-[11px] font-bold text-slate-400" aria-hidden>
               <span>{days[0] && fmt(days[0].date)}</span>

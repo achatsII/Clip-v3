@@ -3,8 +3,10 @@
  * a fait gagner à l'usine sur une période — consultations au plancher, réalisations guidées,
  * instructions rédigées, temps gagné et sa valeur selon les hypothèses de l'usine — et, si la
  * personne le veut, le plan à demander. HTML autonome, styles en ligne : le navigateur ou la
- * coquille native (expo-print) l'imprime. Aucun prix n'y entre sans `proposal.price`.
+ * coquille native (expo-print) l'imprime. Aucun prix n'y entre sans `proposal.price`. Il suit la
+ * langue de l'outil : textes, `lang` du document, nombres et montants (les dates arrivent écrites).
  */
+import { locale, messages } from '../i18n'
 import type { Roi } from '../stats/adoption'
 
 export interface ValueReportProposal {
@@ -50,10 +52,6 @@ const esc = (s: unknown) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
 
-/** fr-CA sépare les milliers par une espace fine insécable, que la police serrée efface : une espace insécable ordinaire. */
-const num = (n: number) => Math.round(n).toLocaleString('fr-CA').replace(/\u202f/g, '\u00a0')
-const money = (n: number) => `${num(n)} $`
-const plural = (n: number, one: string, many: string) => (Math.abs(n) > 1 ? many : one)
 /** Une couleur de marque sûre dans du CSS ; sinon le bleu de CLIP. */
 const safeColor = (c?: string | null) => (c && /^#[0-9a-f]{3,8}$/i.test(c) ? c : '#0078FF')
 
@@ -62,34 +60,34 @@ function tile(label: string, value: string, hint: string) {
 }
 
 export function buildValueReportHtml(r: ValueReport): string {
+  // Les textes et les nombres dans la langue de l'outil, lus au moment de bâtir le dossier.
+  const t = messages().stats.pdf
+  const num = t.number
   const color = safeColor(r.color)
   const p = r.proposal
   const tiles = [
-    tile('Consultations au plancher', num(r.views), `${r.completionRate} % vont jusqu’au bout`),
-    tile('Réalisations guidées', num(r.completions), 'tâches faites avec l’instruction sous les yeux'),
-    tile('Instructions rédigées', num(r.created), `${num(r.published)} ${plural(r.published, 'publiée', 'publiées')} au total`),
-    tile('Postes équipés', `${num(r.stations.covered)} / ${num(r.stations.total)}`, 'postes qui ont leurs instructions'),
+    tile(t.views, num(r.views), t.viewsHint(r.completionRate)),
+    tile(t.completions, num(r.completions), t.completionsHint),
+    tile(t.created, num(r.created), t.createdHint(r.published)),
+    tile(t.stations, `${num(r.stations.covered)} / ${num(r.stations.total)}`, t.stationsHint),
   ].join('')
-  const top = r.top.filter((t) => t.views > 0).slice(0, 5)
+  const top = r.top.filter((x) => x.views > 0).slice(0, 5)
   const topBlock = top.length
-    ? `<ol class="top">${top.map((t) => `<li><span>${esc(t.title)}</span><b>${num(t.views)}</b></li>`).join('')}</ol>`
-    : '<p class="muted">Les consultations apparaîtront dès que les opérateurs ouvriront les instructions.</p>'
-  const watch = [
-    `${num(r.feedback.total)} ${plural(r.feedback.total, 'retour signalé', 'retours signalés')} par les opérateurs, ${num(r.feedback.done)} ${plural(r.feedback.done, 'traité', 'traités')}`,
-    r.unseen ? `${num(r.unseen)} ${plural(r.unseen, 'instruction publiée jamais consultée', 'instructions publiées jamais consultées')} : à placer au bon poste` : 'Toutes les instructions publiées ont été consultées',
-  ]
+    ? `<ol class="top">${top.map((x) => `<li><span>${esc(x.title)}</span><b>${num(x.views)}</b></li>`).join('')}</ol>`
+    : `<p class="muted">${esc(t.topEmpty)}</p>`
+  const watch = [t.feedback(r.feedback.total, r.feedback.done), r.unseen ? t.unseen(r.unseen) : t.allSeen]
   const proposal = p
     ? `<section class="proposal">
-  <p class="eyebrow">Pour la suite</p>
-  <h2>Passer au plan ${esc(p.planName)}</h2>
+  <p class="eyebrow">${esc(t.next)}</p>
+  <h2>${esc(t.upgrade(p.planName))}</h2>
   <p class="pitch">${esc(p.pitch)}</p>
-  ${p.usage.length ? `<p class="usage">Aujourd’hui : ${p.usage.map(esc).join(' · ')}.</p>` : ''}
+  ${p.usage.length ? `<p class="usage">${t.today(p.usage.map(esc).join(' · '))}</p>` : ''}
   <ul>${p.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
-  ${p.price ? `<p class="price">${esc(p.price)}${p.yearly ? `<small> ou ${esc(p.yearly)}</small>` : ''}</p>` : ''}
-  ${p.ratio && p.ratio >= 1.5 ? `<p class="ratio">La valeur estimée de ces ${r.days} jours représente ${p.ratio.toLocaleString('fr-CA', { maximumFractionDigits: 1 })} fois le prix mensuel du plan.</p>` : ''}
+  ${p.price ? `<p class="price">${esc(p.price)}${p.yearly ? `<small> ${t.orYearly(esc(p.yearly))}</small>` : ''}</p>` : ''}
+  ${p.ratio && p.ratio >= 1.5 ? `<p class="ratio">${esc(t.ratio(r.days, p.ratio))}</p>` : ''}
 </section>`
     : ''
-  return `<!doctype html><html lang="fr-CA"><head><meta charset="utf-8"><title>${esc(`Bilan CLIP — ${r.orgName}`)}</title>
+  return `<!doctype html><html lang="${locale()}"><head><meta charset="utf-8"><title>${esc(t.docTitle(r.orgName))}</title>
 <style>
 @page{size:letter;margin:12mm}
 *{box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;color:#0f172a;margin:0;padding:24px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -120,20 +118,20 @@ footer{font-size:10.5px;color:#64748b;font-weight:600;border-top:1px solid #e2e8
 </style></head><body>
 <header>
   ${r.logoUrl ? `<img src="${esc(r.logoUrl)}" alt="">` : ''}
-  <div class="who"><p class="eyebrow">Bilan CLIP · ${esc(r.orgName)}</p><h1>Ce que CLIP vous a fait gagner en ${r.days} jours</h1></div>
+  <div class="who"><p class="eyebrow">${esc(t.eyebrow(r.orgName))}</p><h1>${esc(t.headline(r.days))}</h1></div>
   <div class="meta">${esc(r.periodLabel)}</div>
 </header>
 <section class="lead">
-  <p class="eyebrow">Valeur estimée, selon vos hypothèses</p>
-  <p class="big">≈ ${esc(money(r.value))}</p>
-  <p class="sub">${num(r.hours)} ${plural(Math.round(r.hours), 'heure gagnée', 'heures gagnées')} à rédiger et à guider les tâches au poste</p>
+  <p class="eyebrow">${esc(t.leadEyebrow)}</p>
+  <p class="big">≈ ${esc(t.money(r.value))}</p>
+  <p class="sub">${esc(t.hoursSaved(r.hours))}</p>
 </section>
 <div class="tiles">${tiles}</div>
 <div class="cols">
-  <section><h2>Les plus consultées</h2>${topBlock}</section>
-  <section><h2>À surveiller</h2><ul class="watch">${watch.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></section>
+  <section><h2>${esc(t.top)}</h2>${topBlock}</section>
+  <section><h2>${esc(t.watch)}</h2><ul class="watch">${watch.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></section>
 </div>
 ${proposal}
-<footer>Estimation transparente, selon les hypothèses de l’usine : ${esc(r.roi.hoursSavedPerInstruction.toLocaleString('fr-CA'))} h gagnées par instruction rédigée, ${esc(r.roi.minutesSavedPerCompletion.toLocaleString('fr-CA'))} min par réalisation guidée, ${esc(r.roi.hourlyRate.toLocaleString('fr-CA'))} $ de l’heure. Elles se modifient dans CLIP, page Statistiques. Document préparé le ${esc(r.generatedOn)}.</footer>
+<footer>${esc(t.footer(r.roi.hoursSavedPerInstruction, r.roi.minutesSavedPerCompletion, r.roi.hourlyRate, r.generatedOn))}</footer>
 </body></html>`
 }

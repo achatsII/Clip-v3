@@ -15,6 +15,7 @@ import { Card, PageHeader, SectionTitle } from '@/components/ui/Surface'
 import { useFeedback, useInstructions } from '@/hooks/queries'
 import { useAdoption } from '@/hooks/useAdoption'
 import { useEntitlement, useGate } from '@/lib/billing/state'
+import { num, useMessages } from '@/lib/i18n'
 import { periodFacts, valueOf } from '@/lib/stats/adoption'
 import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
@@ -23,6 +24,8 @@ const DAYS = 30
 
 export default function StatsPage() {
   const { org, updateOrg, can } = useSession()
+  const t = useMessages()
+  const w = t.stats.page
   const instructions = useInstructions()
   const feedback = useFeedback()
   const detailed = useEntitlement('adoption_stats')
@@ -42,70 +45,66 @@ export default function StatsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Statistiques"
-        subtitle={`Les ${DAYS} derniers jours : ce qui est consulté au plancher, ce qui est signalé, ce que ça vous fait gagner.`}
+        title={w.title}
+        subtitle={w.subtitle(DAYS)}
         actions={
           reportOn ? (
             <Button variant="primary" icon={<FileText className="h-4 w-4" />} onClick={() => gate(detailed, 'adoption_stats', () => router.push('/statistiques/dossier'))}>
-              Dossier pour la direction {locked && <LockBadge />}
+              {t.stats.report.title} {locked && <LockBadge />}
             </Button>
           ) : undefined
         }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi tile="from-sky-500 to-blue-700" icon={<Eye className="h-6 w-6" />} label="Consultations" value={events.isLoading ? null : stats.views.toLocaleString('fr-CA')} hint={`Tablettes ${stats.bySource.kiosk} · liens ${stats.bySource.link} · app ${stats.bySource.app}`} />
-        <Kpi tile="from-emerald-400 to-teal-600" icon={<CheckCircle2 className="h-6 w-6" />} label="Réalisations" value={events.isLoading ? null : stats.completions.toLocaleString('fr-CA')} hint={`${stats.completionRate} % des consultations vont au bout`} />
-        <Kpi tile="from-amber-400 to-orange-500" icon={<MessageSquareWarning className="h-6 w-6" />} label="Retours" value={feedback.isLoading ? null : facts.feedback.total.toLocaleString('fr-CA')} hint={`${facts.feedback.done} traités`} />
+        <Kpi tile="from-sky-500 to-blue-700" icon={<Eye className="h-6 w-6" />} label={w.views} value={events.isLoading ? null : num(stats.views)} hint={w.viewsHint(stats.bySource.kiosk, stats.bySource.link, stats.bySource.app)} />
+        <Kpi tile="from-emerald-400 to-teal-600" icon={<CheckCircle2 className="h-6 w-6" />} label={w.completions} value={events.isLoading ? null : num(stats.completions)} hint={w.completionsHint(stats.completionRate)} />
+        <Kpi tile="from-amber-400 to-orange-500" icon={<MessageSquareWarning className="h-6 w-6" />} label={w.feedback} value={feedback.isLoading ? null : num(facts.feedback.total)} hint={w.feedbackHint(facts.feedback.done)} />
         <button type="button" onClick={() => gate(detailed, 'adoption_stats', () => setRoiOpen(true))} className="btn-press lift text-left">
-          <Kpi tile="from-violet-500 to-indigo-600" icon={locked ? <Lock className="h-6 w-6" /> : <Coins className="h-6 w-6" />} label="Valeur estimée" value={locked ? '—' : events.isLoading ? null : `${value.toLocaleString('fr-CA')} $`} hint={locked ? 'Retour sur investissement : plan supérieur' : `${Math.round(hoursSaved)} h gagnées · touchez pour vos hypothèses`} />
+          <Kpi tile="from-violet-500 to-indigo-600" icon={locked ? <Lock className="h-6 w-6" /> : <Coins className="h-6 w-6" />} label={w.value} value={locked ? '—' : events.isLoading ? null : w.money(value)} hint={locked ? w.valueLocked : w.valueHint(Math.round(hoursSaved))} />
         </button>
       </div>
 
-      <Card className="p-6">{events.isLoading ? <Skeleton className="h-56" /> : <DailyBars days={stats.days} label="Consultations par jour" unit="consultations" />}</Card>
+      <Card className="p-6">{events.isLoading ? <Skeleton className="h-56" /> : <DailyBars days={stats.days} label={w.chartTitle} unit={w.chartUnit} />}</Card>
 
       <div className={cn('grid gap-5 lg:grid-cols-2', locked && 'relative')}>
         <Card className="p-6">
-          <SectionTitle title="Les plus consultées" />
+          <SectionTitle title={w.top} />
           {facts.top.length && facts.top[0].views > 0 ? (
             <ol className="space-y-2">
-              {facts.top.map((t, i) => (
-                <li key={t.id}>
-                  <Link href={`/instructions/${t.id}`} className="btn-press flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-900/5 dark:hover:bg-white/5">
+              {facts.top.map((item, i) => (
+                <li key={item.id}>
+                  <Link href={`/instructions/${item.id}`} className="btn-press flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-900/5 dark:hover:bg-white/5">
                     <span className="w-6 text-right text-sm font-black text-slate-400 tabular-nums">{i + 1}</span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-black">{t.title}</span>
-                    <span className="text-sm font-black tabular-nums">{t.views}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-black">{item.title}</span>
+                    <span className="text-sm font-black tabular-nums">{item.views}</span>
                   </Link>
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="text-sm font-bold text-slate-500">Les consultations apparaîtront dès que les opérateurs ouvriront les instructions (tablette, code QR, lien).</p>
+            <p className="text-sm font-bold text-slate-500">{w.topEmpty}</p>
           )}
         </Card>
         <Card className="p-6">
-          <SectionTitle title="À regarder de plus près" />
+          <SectionTitle title={w.watch} />
           <ul className="space-y-3 text-sm font-bold">
             <li className="flex items-start gap-3">
               <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-              <span>
-                {facts.unseen ? `${facts.unseen} instruction${facts.unseen > 1 ? 's' : ''} publiée${facts.unseen > 1 ? 's' : ''} jamais consultée${facts.unseen > 1 ? 's' : ''} : est-elle au bon poste ?` : 'Toutes les instructions publiées ont été consultées.'}
-              </span>
+              <span>{facts.unseen ? w.unseen(facts.unseen) : w.allSeen}</span>
             </li>
             <li className="flex items-start gap-3">
               <MessageSquareWarning className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
-              <span>{facts.feedback.open} retour(s) à traiter.</span>
+              <span>{w.openFeedback(facts.feedback.open)}</span>
             </li>
             <li className="flex items-start gap-3">
               <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-[var(--primary)]" />
-              <span>
-                {stats.generations} génération{stats.generations > 1 ? 's' : ''} et {stats.imports} import{stats.imports > 1 ? 's' : ''} par l’IA ce mois-ci.
-              </span>
+              <span>{w.aiUse(stats.generations, stats.imports)}</span>
             </li>
             {stats.medianDuration > 0 && (
               <li className="flex items-start gap-3">
                 <BarChart3 className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
-                <span>Une réalisation prend {Math.round(stats.medianDuration / 60) || 1} min en médiane.</span>
+                <span>{w.medianDuration(Math.round(stats.medianDuration / 60) || 1)}</span>
               </li>
             )}
           </ul>
@@ -115,10 +114,10 @@ export default function StatsPage() {
       <Modal
         open={roiOpen}
         onClose={() => setRoiOpen(false)}
-        title="Comment on calcule la valeur"
-        footer={<Button onClick={() => setRoiOpen(false)}>Fermer</Button>}
+        title={t.stats.roi.title}
+        footer={<Button onClick={() => setRoiOpen(false)}>{t.common.close}</Button>}
       >
-        <p className="mb-4 text-sm font-medium text-slate-600 dark:text-slate-300">Une estimation transparente, selon vos hypothèses : le temps gagné à rédiger chaque instruction créée, et le temps gagné à chaque réalisation guidée (moins de questions, moins d’erreurs).</p>
+        <p className="mb-4 text-sm font-medium text-slate-600 dark:text-slate-300">{t.stats.roi.intro}</p>
         <RoiForm
           roi={roi}
           readOnly={!can('settings', 'write')}
@@ -128,7 +127,7 @@ export default function StatsPage() {
           }}
         />
         <p className="mt-4 rounded-2xl bg-primary-soft p-4 text-sm font-bold">
-          {facts.created} instruction{facts.created > 1 ? 's' : ''} × {roi.hoursSavedPerInstruction} h + {stats.completions} réalisations × {roi.minutesSavedPerCompletion} min = {Math.round(hoursSaved)} h × {roi.hourlyRate} $ = {value.toLocaleString('fr-CA')} $
+          {t.stats.roi.formula({ created: facts.created, hoursPerInstruction: roi.hoursSavedPerInstruction, completions: stats.completions, minutesPerCompletion: roi.minutesSavedPerCompletion, hours: Math.round(hoursSaved), hourlyRate: roi.hourlyRate, value })}
         </p>
       </Modal>
     </div>
@@ -151,20 +150,21 @@ function Kpi({ tile, icon, label, value, hint }: { tile: string; icon: React.Rea
 }
 
 function RoiForm({ roi, onSave, readOnly }: { roi: { hoursSavedPerInstruction: number; hourlyRate: number; minutesSavedPerCompletion: number }; onSave: (r: typeof roi) => Promise<void>; readOnly: boolean }) {
+  const t = useMessages().stats.roi
   const [v, setV] = useState(roi)
   const [busy, setBusy] = useState(false)
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <div>
-        <Label htmlFor="roi-h">Heures gagnées par instruction</Label>
+        <Label htmlFor="roi-h">{t.hoursPerInstruction}</Label>
         <Input id="roi-h" type="number" inputMode="decimal" readOnly={readOnly} value={v.hoursSavedPerInstruction} onChange={(e) => setV({ ...v, hoursSavedPerInstruction: Number(e.target.value) || 0 })} />
       </div>
       <div>
-        <Label htmlFor="roi-m">Minutes par réalisation</Label>
+        <Label htmlFor="roi-m">{t.minutesPerCompletion}</Label>
         <Input id="roi-m" type="number" inputMode="decimal" readOnly={readOnly} value={v.minutesSavedPerCompletion} onChange={(e) => setV({ ...v, minutesSavedPerCompletion: Number(e.target.value) || 0 })} />
       </div>
       <div>
-        <Label htmlFor="roi-r">Taux horaire ($)</Label>
+        <Label htmlFor="roi-r">{t.hourlyRate}</Label>
         <Input id="roi-r" type="number" inputMode="decimal" readOnly={readOnly} value={v.hourlyRate} onChange={(e) => setV({ ...v, hourlyRate: Number(e.target.value) || 0 })} />
       </div>
       {!readOnly && (
@@ -177,7 +177,7 @@ function RoiForm({ roi, onSave, readOnly }: { roi: { hoursSavedPerInstruction: n
             await onSave(v).finally(() => setBusy(false))
           }}
         >
-          Enregistrer mes hypothèses
+          {t.save}
         </Button>
       )}
     </div>

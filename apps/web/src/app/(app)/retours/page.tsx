@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, SkeletonRows, errorText } from '@/components/ui
 import { PageHeader } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { qk, useFeedback, useStations } from '@/hooks/queries'
+import { useMessages } from '@/lib/i18n'
 import { FEEDBACK_KINDS } from '@/lib/model/catalog'
 import { nowIso, T } from '@/lib/model/repo'
 import type { FeedbackKind } from '@/lib/model/types'
@@ -18,6 +19,7 @@ import { cn, timeAgo } from '@/lib/util/cn'
 
 export default function FeedbackPage() {
   const { data, profile, displayName } = useSession()
+  const t = useMessages().feedback.list
   const qc = useQueryClient()
   const toast = useToast()
   const [status, setStatus] = useState<'new' | 'done'>('new')
@@ -39,30 +41,30 @@ export default function FeedbackPage() {
 
   async function resolve(id: string, next: 'done' | 'dismissed') {
     try {
-      await data.patch(T.feedback, id, { status: next, resolvedBy: profile.userId, resolvedAt: nowIso(), resolution: next === 'done' ? `Traité par ${displayName}` : `Écarté par ${displayName}` })
+      await data.patch(T.feedback, id, { status: next, resolvedBy: profile.userId, resolvedAt: nowIso(), resolution: next === 'done' ? t.handledBy(displayName) : t.dismissedBy(displayName) })
       await qc.invalidateQueries({ queryKey: qk.feedback })
       await qc.invalidateQueries({ queryKey: ['feedback-count'] })
-      toast.success(next === 'done' ? 'Retour marqué comme traité' : 'Retour écarté')
+      toast.success(next === 'done' ? t.markedHandled : t.dismissed)
     } catch (e) {
-      toast.error('Le retour n’a pas été mis à jour', errorText(e))
+      toast.error(t.updateFailed, errorText(e))
     }
   }
 
   return (
     <div>
-      <PageHeader title="Retours des opérateurs" subtitle="Ce que le plancher signale : corrigez l’étape en un geste, l’opérateur verra la nouvelle version." />
+      <PageHeader title={t.title} subtitle={t.subtitle} />
       <div className="no-scrollbar mb-5 flex items-center gap-2 overflow-x-auto">
         <Segmented
           value={status}
           onChange={setStatus}
           options={[
-            { value: 'new', label: `À traiter${newCount ? ` (${newCount})` : ''}` },
-            { value: 'done', label: 'Traités' },
+            { value: 'new', label: t.open(newCount) },
+            { value: 'done', label: t.handled },
           ]}
         />
         {(['all', 'danger', 'unclear', 'error', 'idea'] as const).map((k) => (
           <button key={k} type="button" onClick={() => setKind(k)} className={cn('btn-press h-11 shrink-0 rounded-2xl px-4 text-xs font-black', kind === k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card')}>
-            {k === 'all' ? 'Tous' : FEEDBACK_KINDS[k].label}
+            {k === 'all' ? t.all : FEEDBACK_KINDS[k].label}
           </button>
         ))}
       </div>
@@ -73,8 +75,8 @@ export default function FeedbackPage() {
       ) : !list.length ? (
         <EmptyState
           icon={status === 'new' ? <Inbox className="h-7 w-7" /> : <MessageSquareWarning className="h-7 w-7" />}
-          title={status === 'new' ? 'Rien à traiter' : 'Aucun retour traité'}
-          description={status === 'new' ? 'Les opérateurs signalent une étape pas claire depuis le lecteur, en deux touchers. Leurs retours arriveront ici.' : 'Les retours que vous traitez s’affichent ici.'}
+          title={status === 'new' ? t.emptyOpenTitle : t.emptyHandledTitle}
+          description={status === 'new' ? t.emptyOpenDescription : t.emptyHandledDescription}
         />
       ) : (
         <div className="space-y-3">
@@ -87,33 +89,33 @@ export default function FeedbackPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-black">
-                    {FEEDBACK_KINDS[j.kind].label} · {j.instructionTitle ?? 'Instruction'}
-                    {j.stepIndex !== null && j.stepIndex !== undefined && <span className="text-slate-400"> · étape {j.stepIndex + 1}</span>}
+                    {FEEDBACK_KINDS[j.kind].label} · {j.instructionTitle ?? t.untitled}
+                    {j.stepIndex !== null && j.stepIndex !== undefined && <span className="text-slate-400"> · {t.step(j.stepIndex + 1)}</span>}
                   </p>
-                  {j.comment && <p className="mt-0.5 font-medium text-slate-600 dark:text-slate-300">« {j.comment} »</p>}
+                  {j.comment && <p className="mt-0.5 font-medium text-slate-600 dark:text-slate-300">{t.comment(j.comment)}</p>}
                   <p className="mt-1 text-xs font-bold text-slate-400">
-                    {j.authorName ?? 'Opérateur'} · {j.stationId ? `${stationName.get(j.stationId) ?? 'poste'} · ` : ''}
-                    {j.source === 'kiosk' ? 'tablette' : j.source === 'link' ? 'lien' : 'app'} · {timeAgo(j.createdAt)}
+                    {j.authorName ?? t.operator} · {j.stationId ? `${stationName.get(j.stationId) ?? t.station} · ` : ''}
+                    {j.source === 'kiosk' ? t.sources.kiosk : j.source === 'link' ? t.sources.link : t.sources.app} · {timeAgo(j.createdAt)}
                     {j.version ? ` · v${j.version}` : ''}
                   </p>
                   {j.resolution && <p className="mt-1 text-xs font-bold text-emerald-600">{j.resolution}</p>}
                 </div>
                 {j.photoUrl && (
                   <a href={j.photoUrl} target="_blank" rel="noreferrer" className="shrink-0">
-                    <img src={j.photoUrl} alt="Photo jointe" className="h-20 w-28 rounded-2xl object-cover" />
+                    <img src={j.photoUrl} alt={t.photo} className="h-20 w-28 rounded-2xl object-cover" />
                   </a>
                 )}
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Link href={`/instructions/${j.instructionId}?etape=${j.stepId ?? ''}&retour=${f._id}`} className="btn-press bg-gradient-primary shadow-primary inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-black text-white">
-                    <ExternalLink className="h-4 w-4" /> Corriger
+                    <ExternalLink className="h-4 w-4" /> {t.fix}
                   </Link>
                   {j.status === 'new' && (
                     <>
                       <Button size="sm" icon={<Check className="h-4 w-4" />} onClick={() => resolve(f._id, 'done')}>
-                        Traité
+                        {t.markHandled}
                       </Button>
                       <Button size="sm" variant="ghost" icon={<X className="h-4 w-4" />} onClick={() => resolve(f._id, 'dismissed')}>
-                        Écarter
+                        {t.dismiss}
                       </Button>
                     </>
                   )}

@@ -172,14 +172,15 @@ export async function answerQuestion(ai: AiApi, content: InstructionContent, ste
   return { answer: j.answer.trim(), stepNumber: Math.round(j.stepNumber || 0), confident: !!j.confident }
 }
 
-export async function suggestStandard(ai: AiApi, description: string, current: WritingStandard) {
+/** `language` : la langue de l'outil de la personne, celle où le standard proposé s'écrit. */
+export async function suggestStandard(ai: AiApi, description: string, current: WritingStandard, language: string) {
   const res = await ai.ask<Omit<WritingStandard, 'version' | 'updatedAt'> & { explanation: string }>(
     'standard_agent',
     {
       provider: 'google',
       level: 'mid',
       thinking: 'disabled',
-      system_instruction: standardAgentSystem(getLang()),
+      system_instruction: standardAgentSystem(language),
       prompt: `STANDARD ACTUEL : ${JSON.stringify({ rules: current.rules, startWithSafety: current.startWithSafety, maxWordsPerStep: current.maxWordsPerStep, tone: current.tone, glossary: current.glossary })}\n\nCE QUE LA PERSONNE DÉCRIT : ${description}`,
       json_schema: standardSchema,
     },
