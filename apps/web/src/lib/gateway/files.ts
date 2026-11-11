@@ -166,25 +166,29 @@ export function filesApi(client: GatewayClient) {
     /** Captures d'images d'une vidéo à des instants donnés (secondes). */
     async screenshots(videoUrl: string, shots: Array<{ name: string; atSec: number }>): Promise<Record<string, string>> {
       if (!shots.length) return {}
-      const hms = (s: number) => {
-        const t = Math.max(0, Math.round(s))
+      const hms = (s: number, tenths: boolean) => {
+        const t = Math.max(0, tenths ? Math.round(s * 10) / 10 : Math.round(s))
         const h = Math.floor(t / 3600)
         const m = Math.floor((t % 3600) / 60)
-        const sec = t % 60
-        return [h, m, sec].map((n) => String(n).padStart(2, '0')).join(':')
+        const sec = t - h * 3600 - m * 60
+        const secText = tenths && !Number.isInteger(sec) ? sec.toFixed(1).padStart(4, '0') : String(Math.round(sec)).padStart(2, '0')
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${secText}`
       }
-      const res = await client.call<{ results?: Array<{ name?: string; url?: string; uploadSuccess?: boolean }> }>(
-        '/api/v1/files/gifs/generate',
-        {
+      const call = (tenths: boolean) =>
+        client.call<{ results?: Array<{ name?: string; url?: string; uploadSuccess?: boolean }> }>('/api/v1/files/gifs/generate', {
           method: 'POST',
           body: {
             videoUrl,
-            timestamps: shots.map((s) => ({ start: hms(s.atSec), type: 'screenshot', name: s.name })),
+            timestamps: shots.map((s) => ({ start: hms(s.atSec, tenths), type: 'screenshot', name: s.name })),
             options: { uploadPath: folderPath('frames'), resolution: '720p' },
           },
           timeoutMs: 5 * 60_000,
-        },
-      )
+        })
+      const res = await call(true).catch((e) => {
+        // Le format HH:MM:SS.s n'est pas garanti par la spec : on retombe sur la seconde ronde.
+        if (e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 401) return call(false)
+        throw e
+      })
       const out: Record<string, string> = {}
       for (const r of res.results ?? []) if (r.name && r.url) out[r.name] = r.url
       return out

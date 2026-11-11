@@ -4,13 +4,31 @@
  */
 import { CATEGORY_KEYS, ENERGY, PPE } from '../model/catalog'
 import { uid } from '../model/repo'
-import type { CategoryKey, EnergyPoint, InstructionContent, LockoutData, Source, Step, StepMedia, WarningLevel } from '../model/types'
+import type { Annotation, CategoryKey, EnergyPoint, InstructionContent, LockoutData, Source, Step, StepMedia, WarningLevel } from '../model/types'
 
 export interface AiMediaRef {
   source?: string
   start?: number
   end?: number
   page?: number
+  /** Image fixe : l'instant à figer. */
+  at?: number
+  /** Image fixe : [ymin, xmin, ymax, xmax] de 0 à 1000 autour de ce qu'il faut regarder. */
+  focus?: number[]
+  focusLabel?: string
+}
+
+/** Le cercle que l'IA pose sur une image figée, autour de ce qu'il faut regarder (ou rien si la boîte est douteuse). */
+export function focusAnnotation(box: unknown, label: unknown): Annotation[] {
+  if (!Array.isArray(box) || box.length < 4) return []
+  const [ymin, xmin, ymax, xmax] = box.slice(0, 4).map((v) => Math.min(1000, Math.max(0, Number(v) || 0)) / 1000)
+  const r3 = (v: number) => Math.round(v * 1000) / 1000
+  const w = r3(xmax - xmin)
+  const h = r3(ymax - ymin)
+  // Trop petite (bruit) ou presque toute l'image (rien de précis à montrer) : on s'abstient.
+  if (w < 0.02 || h < 0.02 || w * h > 0.6) return []
+  const text = typeof label === 'string' ? label.trim().slice(0, 40) : ''
+  return [{ id: uid('an_'), type: 'circle', x: r3(xmin), y: r3(ymin), w, h, color: 'red', ...(text ? { text } : {}) }]
 }
 
 export interface AiStep {
@@ -68,6 +86,17 @@ export function resolveMedia(ref: AiMediaRef, sourcesById: Map<string, Source>):
   if (src.kind === 'photo') return { kind: 'image', url: src.url, sourceId: src.id }
   if (src.kind === 'video') {
     const dur = src.durationSec && src.durationSec > 0 ? src.durationSec : Number.POSITIVE_INFINITY
+    if (Number.isFinite(ref.at)) {
+      // Image fixe : l'image elle-même se tire de la vidéo après la génération (enrichMedia).
+      const at = Math.max(0, Math.min(Number(ref.at), Number.isFinite(dur) ? Math.max(0, dur - 0.2) : Number(ref.at)))
+      let start = Number.isFinite(ref.start) && Number(ref.start) <= at ? Number(ref.start) : Math.max(0, at - 3)
+      let end = Number.isFinite(ref.end) && Number(ref.end) > at ? Number(ref.end) : at + 3
+      if (Number.isFinite(dur)) end = Math.min(end, dur)
+      if (end - start > 45) start = Math.max(0, end - 45)
+      const annotations = focusAnnotation(ref.focus, ref.focusLabel)
+      const round = (v: number) => Math.round(v * 10) / 10
+      return { kind: 'image', url: '', sourceId: src.id, frame: { videoUrl: src.url, at: round(at), start: round(start), end: round(end) }, ...(annotations.length ? { annotations } : {}) }
+    }
     let start = Number.isFinite(ref.start) ? Math.max(0, Number(ref.start)) : 0
     let end = Number.isFinite(ref.end) ? Number(ref.end) : start + 8
     if (start >= dur) start = Math.max(0, (Number.isFinite(dur) ? dur : 8) - 8)
@@ -84,6 +113,13 @@ export function resolveMedia(ref: AiMediaRef, sourcesById: Map<string, Source>):
   return null
 }
 
+/** Deux médias identiques : même fichier et même extrait, ou même vidéo et même instant figé. */
+function mediaKey(m: StepMedia): string {
+  if (m.kind === 'video') return `v:${m.url}#${m.start}`
+  if (m.kind === 'image' && m.frame) return `f:${m.frame.videoUrl}@${m.frame.at}`
+  return `${m.kind}:${m.url}${m.kind === 'document' ? `#${m.page ?? 1}` : ''}`
+}
+
 export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<string, Source>, keepIds?: Set<string>): Step[] {
   const out: Step[] = []
   for (const s of steps ?? []) {
@@ -94,7 +130,7 @@ export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<str
     const media: StepMedia[] = []
     for (const ref of s.media ?? []) {
       const m = resolveMedia(ref, sourcesById)
-      if (m && !media.some((x) => x.url === m.url && (x.kind !== 'video' || (m.kind === 'video' && x.start === m.start)))) media.push(m)
+      if (m && !media.some((x) => mediaKey(x) === mediaKey(m))) media.push(m)
       if (media.length >= 2) break
     }
     out.push({

@@ -64,8 +64,18 @@ export interface Annotation {
   color: AnnotationColor
 }
 
+/** Image figée d'une vidéo : on sait d'où elle vient, et on revient à l'extrait sans rien perdre. */
+export interface VideoFrame {
+  videoUrl: string
+  /** L'instant figé, en secondes depuis le début de la vidéo. */
+  at: number
+  /** L'extrait vidéo correspondant. */
+  start: number
+  end: number
+}
+
 export type StepMedia =
-  | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean }
+  | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame }
   | { kind: 'video'; url: string; sourceId?: string; start: number; end: number; posterUrl?: string }
   | { kind: 'document'; url: string; sourceId?: string; page?: number; pageImageUrl?: string; name?: string }
 

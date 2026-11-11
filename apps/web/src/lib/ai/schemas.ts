@@ -13,8 +13,11 @@ const mediaRef = {
   type: 'object',
   properties: {
     source: str('Identifiant de la source : S1, S2…'),
-    start: num("Vidéo : début de l'extrait, en secondes depuis le début de la vidéo"),
-    end: num("Vidéo : fin de l'extrait, en secondes"),
+    start: num("Vidéo, extrait : début, en secondes depuis le début de la vidéo"),
+    end: num("Vidéo, extrait : fin, en secondes"),
+    at: num("Vidéo, image fixe : l'instant à figer, en secondes (à la place d'un extrait)"),
+    focus: { type: 'array', items: { type: 'number' }, description: "Image fixe : [ymin, xmin, ymax, xmax] de 0 à 1000 autour de ce qu'il faut regarder ; vide si ce n'est pas clairement visible" },
+    focusLabel: str("Image fixe : ce que montre la marque, 1 à 3 mots (ex. « Bouton vert »)"),
     page: num('Document : numéro de page, 1 = première page'),
   },
   required: ['source'],

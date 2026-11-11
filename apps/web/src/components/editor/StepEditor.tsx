@@ -1,13 +1,14 @@
 'use client'
 
-import { ArrowDown, ArrowUp, Copy, ImagePlus, Pencil, Plus, Sparkles, Trash2, Wand2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Clock, Copy, Film, Image as ImageIcon, ImagePlus, Pencil, Plus, Sparkles, Trash2, Wand2, X } from 'lucide-react'
 import { useState } from 'react'
 import { AiCost } from '@/components/billing/AiCost'
 import { DictateButton } from '@/components/capture/DictateButton'
 import { MediaView } from '@/components/media/MediaView'
 import { useSession } from '@/components/providers/Session'
 import { Button, IconButton } from '@/components/ui/Button'
-import { Input, Label, Select, Textarea } from '@/components/ui/Field'
+import { Input, Label, Segmented, Select, Textarea } from '@/components/ui/Field'
+import { useConfirm } from '@/components/ui/Confirm'
 import { Menu } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
@@ -19,6 +20,7 @@ import { WARNINGS } from '@/lib/model/catalog'
 import type { InstructionContent, Source, Step, StepMedia, WarningLevel } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
 import { Annotator } from './Annotator'
+import { FramePicker } from './FramePicker'
 import { MediaPicker } from './MediaPicker'
 
 export function StepEditor({
@@ -58,6 +60,30 @@ export function StepEditor({
   const [suggestion, setSuggestion] = useState<{ step: Step; explanation: string } | null>(null)
   const [mediaIndex, setMediaIndex] = useState(0)
   const media = step.media[Math.min(mediaIndex, step.media.length - 1)]
+  const confirm = useConfirm()
+  const [framing, setFraming] = useState(false)
+  // Une vidéo, ou une image figée d'une vidéo : on peut passer de l'une à l'autre.
+  const frameSource =
+    media?.kind === 'video'
+      ? { videoUrl: media.url, start: media.start, end: media.end, at: Math.round((media.start + (media.end - media.start) / 2) * 10) / 10 }
+      : media?.kind === 'image' && media.frame
+        ? { videoUrl: media.frame.videoUrl, start: media.frame.start, end: media.frame.end, at: media.frame.at }
+        : null
+
+  function applyFrame(url: string, at: number) {
+    if (!frameSource || !media) return
+    const keep = media.kind === 'image' && media.annotations?.length ? { annotations: media.annotations } : {}
+    const next: StepMedia = { kind: 'image', url, sourceId: media.sourceId, frame: { videoUrl: frameSource.videoUrl, at, start: frameSource.start, end: frameSource.end }, ...keep }
+    set({ media: step.media.map((m, i) => (i === mediaIndex ? next : m)) })
+    toast.success('Image tirée de la vidéo', 'Touchez « Annoter » pour y montrer ce qu’il faut regarder.')
+  }
+
+  async function backToVideo() {
+    if (!(media?.kind === 'image' && media.frame)) return
+    if (media.annotations?.length && !(await confirm({ title: 'Revenir à l’extrait vidéo ?', description: 'Les annotations de l’image seront retirées.', confirmLabel: 'Revenir à la vidéo' }))) return
+    const f = media.frame
+    set({ media: step.media.map((m, i) => (i === mediaIndex ? { kind: 'video', url: f.videoUrl, sourceId: media.sourceId, start: f.start, end: f.end, posterUrl: media.url } : m)) })
+  }
 
   async function runAssist(key: string, request: string) {
     setBusy(key)
@@ -131,7 +157,7 @@ export function StepEditor({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {step.media.map((m, i) => (
             <button key={`${m.url}-${i}`} type="button" onClick={() => setMediaIndex(i)} className={cn('btn-press flex h-11 items-center gap-1.5 rounded-2xl px-3 text-xs font-black', i === mediaIndex ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card')}>
-              {m.kind === 'video' ? 'Extrait' : m.kind === 'document' ? `Page ${m.page ?? 1}` : (m as { generated?: boolean }).generated ? 'Illustration' : 'Photo'} {i + 1}
+              {m.kind === 'video' ? 'Extrait' : m.kind === 'document' ? `Page ${m.page ?? 1}` : m.frame ? 'Image' : m.generated ? 'Illustration' : 'Photo'} {i + 1}
               <span
                 role="button"
                 tabIndex={0}
@@ -147,6 +173,22 @@ export function StepEditor({
               </span>
             </button>
           ))}
+          {frameSource && (
+            <Segmented
+              size="sm"
+              value={media?.kind === 'video' ? 'video' : 'image'}
+              onChange={(v) => (v === 'image' ? setFraming(true) : void backToVideo())}
+              options={[
+                { value: 'video', label: 'Vidéo', icon: <Film className="h-4 w-4" /> },
+                { value: 'image', label: 'Image', icon: <ImageIcon className="h-4 w-4" /> },
+              ]}
+            />
+          )}
+          {media?.kind === 'image' && media.frame && (
+            <Button size="sm" onClick={() => setFraming(true)} icon={<Clock className="h-4 w-4" />}>
+              Autre instant
+            </Button>
+          )}
           <Button size="sm" onClick={() => setPickerOpen(true)} icon={<ImagePlus className="h-4 w-4" />}>
             {step.media.length ? 'Changer ou ajouter' : 'Choisir un média'}
           </Button>
@@ -263,6 +305,9 @@ export function StepEditor({
           setMediaIndex(0)
         }}
       />
+      {frameSource && (
+        <FramePicker open={framing} onClose={() => setFraming(false)} videoUrl={frameSource.videoUrl} start={frameSource.start} end={frameSource.end} initialAt={frameSource.at} onPicked={applyFrame} />
+      )}
       {annotating !== null && step.media[annotating]?.kind === 'image' && (
         <Annotator
           open

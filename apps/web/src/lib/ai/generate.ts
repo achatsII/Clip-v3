@@ -224,6 +224,11 @@ export async function enrichMedia(content: InstructionContent, files: FilesApi, 
         const list = byVideo.get(m.url) ?? []
         list.push({ stepIndex: si, mediaIndex: mi, at: m.start + Math.min(1.5, (m.end - m.start) / 3) })
         byVideo.set(m.url, list)
+      } else if (m.kind === 'image' && m.frame && !m.url) {
+        // Image figée choisie par l'IA : tirée de la vidéo à l'instant dit.
+        const list = byVideo.get(m.frame.videoUrl) ?? []
+        list.push({ stepIndex: si, mediaIndex: mi, at: m.frame.at })
+        byVideo.set(m.frame.videoUrl, list)
       } else if (m.kind === 'document' && !m.pageImageUrl && /ii-file\.tor1\.digitaloceanspaces\.com/.test(m.url)) {
         docs.push({ stepIndex: si, mediaIndex: mi, url: m.url, page: m.page ?? 1 })
       }
@@ -239,11 +244,16 @@ export async function enrichMedia(content: InstructionContent, files: FilesApi, 
         const url = urls[`shot-${i}`]
         const media = next.steps[s.stepIndex].media[s.mediaIndex]
         if (url && media.kind === 'video') media.posterUrl = url
+        if (url && media.kind === 'image' && media.frame) media.url = url
       })
     } catch {
-      /* vignettes facultatives */
+      /* vignettes facultatives ; une image figée manquante redevient l'extrait (plus bas) */
     }
   }
+  // Une image figée qu'on n'a pas pu tirer redevient son extrait vidéo : l'étape garde un média.
+  next.steps.forEach((s) => {
+    s.media = s.media.map((m) => (m.kind === 'image' && m.frame && !m.url ? { kind: 'video', url: m.frame.videoUrl, sourceId: m.sourceId, start: m.frame.start, end: m.frame.end } : m))
+  })
   const pageCache = new Map<string, string>()
   for (const d of docs) {
     const key = `${d.url}#${d.page}`

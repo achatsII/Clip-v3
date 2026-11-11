@@ -49,9 +49,12 @@ RÈGLES D’ÉCRITURE :
 - Langue de sortie : ${opts.language === 'fr' ? 'français québécois clair, avec les termes du métier en usage au Québec (EPI, cadenassage, quart de travail…)' : `la langue « ${opts.language} »`}.
 
 MÉDIAS :
-- Chaque étape porte le média qui montre le mieux le geste : un extrait vidéo précis (start et end en secondes, 3 à 20 s, centré sur le geste), une photo, ou la page d’un document (plan, dessin, schéma).
-- Référence uniquement les identifiants de sources fournis (S1, S2…). Pour une vidéo, start < end et les deux restent dans la durée indiquée.
-- Préfère l’extrait vidéo quand le geste est en mouvement, la photo quand c’est un état, une pièce ou un réglage à voir.
+- Chaque étape porte le média qui montre le mieux l’action :
+  · un extrait vidéo (start et end en secondes, 3 à 20 s, centré sur le geste) quand le mouvement compte : manipuler, tourner, insérer, enchaîner des gestes ;
+  · une image fixe tirée de la vidéo (at = l’instant en secondes, sans start ni end) quand un coup d’œil suffit : un bouton à appuyer, un réglage, une étiquette, une position, un état à vérifier. Choisis l’instant où ce qu’il faut voir est net et bien visible. Ajoute focus = [ymin, xmin, ymax, xmax] (0 à 1000) et focusLabel (1 à 3 mots) autour de ce qu’il faut regarder, seulement si c’est clairement visible à cet instant ;
+  · une photo, ou la page d’un document (plan, dessin, schéma).
+- Référence uniquement les identifiants de sources fournis (S1, S2…). Pour une vidéo, start < end, et start, end et at restent dans la durée indiquée.
+- Le plus souvent, l’extrait vidéo ; l’image fixe seulement quand le mouvement n’apporte rien (un « appuyer sur le bouton » n’a pas besoin de trois secondes de vidéo).
 - Une étape sans média pertinent garde une liste vide plutôt qu’un média hors sujet.
 
 CLASSEMENT :
