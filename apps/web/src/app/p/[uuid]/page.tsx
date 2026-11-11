@@ -13,7 +13,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { aiApi } from '@/lib/gateway/ai'
 import { dataApi } from '@/lib/gateway/data'
 import { filesApi } from '@/lib/gateway/files'
-import { exchangeLink, guestClient, scopedId, type GuestLink } from '@/lib/gateway/guest'
+import { canReadAloud, exchangeLink, guestClient, scopedId, type GuestLink } from '@/lib/gateway/guest'
 import { CATEGORIES } from '@/lib/model/catalog'
 import { listAllPublished, listPublishedForStation, logUsage, T } from '@/lib/model/repo'
 import type { Published, Station } from '@/lib/model/types'
@@ -47,7 +47,8 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
   const ai = useMemo(() => aiApi(client), [client])
   const stationId = scopedId(link, T.station)
   const onlyMine = !!link.scope?.resources.find((r) => r.data_type === T.published && r.filter && 'json_data.stationIds' in r.filter)
-  const voiceAllowed = link.permissions.includes('ai:live')
+  // L'assistant vocal n'est ouvert que sur un poste qui l'a demandé (la voix en direct sert aussi à la lecture).
+  const voiceAllowed = link.permissions.includes('assistant:ask')
   const [query, setQuery] = useState('')
   const [showAll, setShowAll] = useState(false)
   const [open, setOpen] = useState<Doc<Published> | null>(null)
@@ -75,7 +76,7 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
         branding={open.json_data.branding}
         stationId={stationId}
         source="kiosk"
-        deps={{ data, ai: link.permissions.includes('ai:tts') || voiceAllowed ? ai : null, files }}
+        deps={{ data, ai: canReadAloud(link.permissions) || voiceAllowed ? ai : null, files }}
         onExit={() => setOpen(null)}
         exitLabel="Autres instructions"
         allowVoice={voiceAllowed}

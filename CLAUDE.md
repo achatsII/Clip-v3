@@ -113,9 +113,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   facturation dès son écriture (skill `billing`). Restent ouverts sans débit, leur coût compté dans
   les opérations qui les déclenchent : la génération d'image (`ai:generate_image`, dans
   `illustrate`), la transcription des notes (`files:transcribe`) et le traitement des vidéos
-  (`files:process*`, dans les générations), la lecture à voix haute (`ai:tts`) et l'assistant vocal
-  temps réel (`ai:live`, réservé au plan Usine par la feature `voice_assistant`, mais sans débit à la
-  minute).
+  (`files:process*`, dans les générations). Restent aussi ouverts, sans débit à la minute, la
+  lecture à voix haute et l'assistant vocal, tous deux par la voix en direct (`ai:live`). La lecture
+  (`LiveSpeaker`, `src/lib/liveSpeech.ts`) est ouverte à tous, liens publics compris. L'assistant
+  est réservé au plan Usine par la feature `voice_assistant`, et sur un lien public au poste qui l'a
+  demandé (`assistant:ask`).
 - Les libellés des features (clé → texte, en français et en anglais) vivent dans `FEATURE_LABELS` de
   `src/lib/billing/catalog.ts` ; `tests/billing-manifest.test.ts` échoue si une feature ou une
   opération du manifeste n'y est pas, ou si un prix diffère.

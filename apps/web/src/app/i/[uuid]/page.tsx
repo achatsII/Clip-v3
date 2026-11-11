@@ -9,7 +9,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { aiApi } from '@/lib/gateway/ai'
 import { dataApi } from '@/lib/gateway/data'
 import { filesApi } from '@/lib/gateway/files'
-import { exchangeLink, guestClient, scopedId, type GuestLink } from '@/lib/gateway/guest'
+import { canReadAloud, exchangeLink, guestClient, scopedId, type GuestLink } from '@/lib/gateway/guest'
 import { findPublished, T } from '@/lib/model/repo'
 
 export default function SharedInstructionPage() {
@@ -50,7 +50,7 @@ function SharedInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; on
       version={p.json_data.version}
       branding={p.json_data.branding}
       source="link"
-      deps={{ data, ai: link.permissions.includes('ai:tts') ? aiApi(client) : null, files: filesApi(client) }}
+      deps={{ data, ai: canReadAloud(link.permissions) ? aiApi(client) : null, files: filesApi(client) }}
       onExit={() => setClosed(true)}
       exitLabel="Fermer"
     />

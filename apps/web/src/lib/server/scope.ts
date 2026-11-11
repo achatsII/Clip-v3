@@ -22,8 +22,12 @@ export function buildScope(type: LinkType, id: string, opts: { mode?: 'focus' | 
   return { resources }
 }
 
+/**
+ * Tout lien lit à voix haute, par la voix en direct (`ai:live`) ; l'assistant vocal (questions,
+ * navigation à la voix) ne s'ouvre que sur un poste qui l'a demandé (`assistant:ask`).
+ */
 export function permissionsFor(type: LinkType, assistant: boolean): string[] {
-  const permissions = ['data:read', 'data:write', 'ai:tts', 'files:write']
-  if (type === 'station' && assistant) permissions.push('assistant:ask', 'ai:live')
+  const permissions = ['data:read', 'data:write', 'ai:live', 'files:write']
+  if (type === 'station' && assistant) permissions.push('assistant:ask')
   return permissions
 }

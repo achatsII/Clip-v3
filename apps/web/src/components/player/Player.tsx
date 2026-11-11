@@ -34,7 +34,7 @@ import type { FilesApi } from '@/lib/gateway/files'
 import { ENERGY, LANGUAGES, PPE, WARNINGS } from '@/lib/model/catalog'
 import { logUsage } from '@/lib/model/repo'
 import type { Branding, InstructionContent, Step } from '@/lib/model/types'
-import { Speaker, stepSpeech } from '@/lib/tts'
+import { LiveSpeaker, stepSpeech } from '@/lib/liveSpeech'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { FeedbackSheet } from './FeedbackSheet'
 import { strings } from './i18n'
@@ -126,7 +126,8 @@ export function Player(props: PlayerProps) {
   const [voiceOpen, setVoiceOpen] = useState(false)
   const [rated, setRated] = useState<'up' | 'down' | null>(null)
   const startedAt = useRef<number>(Date.now())
-  const speaker = useMemo(() => (deps.ai ? new Speaker(deps.ai) : null), [deps.ai])
+  // La voix en direct : elle s'ouvre au premier « Écouter » et lit chaque étape tout de suite.
+  const speaker = useMemo(() => (deps.ai ? new LiveSpeaker(deps.ai) : null), [deps.ai])
   const touch = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
@@ -144,7 +145,7 @@ export function Player(props: PlayerProps) {
     return () => {
       if (hasCapability('keepAwake')) void callNative('keepAwake', { on: false }).catch(() => undefined)
       void lock?.release().catch(() => undefined)
-      speaker?.stop()
+      speaker?.dispose()
     }
   }, [speaker])
 

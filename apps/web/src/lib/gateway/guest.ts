@@ -44,3 +44,8 @@ export function scopedId(link: GuestLink, dataType: string, field = '_id'): stri
   const v = r?.filter?.[field]
   return typeof v === 'string' ? v : null
 }
+
+/** La page publique peut-elle lire à voix haute ? (`ai:tts` : jetons émis avant la voix en direct.) */
+export function canReadAloud(permissions: string[]): boolean {
+  return permissions.includes('ai:live') || permissions.includes('ai:tts')
+}

@@ -137,26 +137,6 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}
   return {
     ask,
 
-    /** Synthèse vocale (voix québécoise par défaut) ; rend l'URL publique du fichier audio. */
-    async tts(text: string, opts: { pace?: 'slow' | 'normal' | 'medium_fast'; language?: string; gender?: 'female' | 'male' } = {}): Promise<string> {
-      const res = await client.call<{ success?: boolean; audioURL?: string | null }>('/api/v1/ai/tts', {
-        method: 'POST',
-        body: {
-          provider: 'gemini',
-          gender: opts.gender ?? 'female',
-          accent: opts.language && !/^fr|french/i.test(opts.language) ? undefined : 'qc',
-          pace: opts.pace ?? 'normal',
-          tone: 'neutral',
-          responseMode: 'url',
-          language: opts.language ?? 'auto',
-          text,
-        },
-        timeoutMs: 60_000,
-      })
-      if (!res.success || !res.audioURL) throw new ApiError("La lecture à voix haute n'est pas disponible pour le moment", 502, res)
-      return res.audioURL
-    },
-
     /** Jeton éphémère Gemini Live (voix temps réel, ~15 min, usage unique). */
     async liveSession(): Promise<{ sessionId: string; model: string; accessToken: string }> {
       const res = await client.call<{ sessionId?: string; model?: string; accessToken?: string }>('/api/v1/ai/live/session', {

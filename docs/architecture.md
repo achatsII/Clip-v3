@@ -68,6 +68,12 @@ par `POST /api/share` :
   insertion de retours et d'événements ;
 - **instruction** : lecture de cette seule instruction publiée ; insertion de retours et d'événements.
 
+Tout lien lit à voix haute par la voix en direct (`ai:live`, `LiveSpeaker`). La session s'ouvre au
+premier « Écouter » et reste ouverte tant que l'instruction est à l'écran : chaque étape part tout
+de suite, sans fichier audio à générer. L'assistant vocal (`assistant:ask`) n'est ouvert que sur un
+poste qui l'a demandé. Un lien créé avant porte encore `ai:tts` : la voix de l'appareil
+(`speechSynthesis`) lit à la place, jusqu'à ce qu'on régénère le lien.
+
 Régénérer un lien invalide l'ancien dans l'app (la page vérifie que l'uuid est bien le lien courant
 du poste). La Gateway n'a pas de route de révocation : un jeton déjà émis reste valable jusqu'à son
 expiration, ce que l'écran d'administration dit clairement.
