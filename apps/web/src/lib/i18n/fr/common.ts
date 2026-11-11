@@ -17,6 +17,7 @@ export const common = {
   search: 'Rechercher',
   loading: 'Chargement',
   moreActions: 'Plus d’actions',
+  qrCode: 'Code QR',
   dictate: 'Dicter',
   stopDictation: 'Arrêter la dictée',
   justNow: 'à l’instant',

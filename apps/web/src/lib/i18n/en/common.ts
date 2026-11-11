@@ -19,6 +19,7 @@ export const common: typeof Fr = {
   search: 'Search',
   loading: 'Loading',
   moreActions: 'More actions',
+  qrCode: 'QR code',
   dictate: 'Dictate',
   stopDictation: 'Stop dictation',
   justNow: 'just now',

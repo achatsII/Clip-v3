@@ -2,9 +2,11 @@
 
 import QRCode from 'qrcode'
 import { useEffect, useState } from 'react'
+import { useMessages } from '@/lib/i18n'
 import { cn } from '@/lib/util/cn'
 
 export function QrCode({ value, size = 220, className }: { value: string; size?: number; className?: string }) {
+  const t = useMessages()
   const [svg, setSvg] = useState<string>('')
   useEffect(() => {
     let alive = true
@@ -15,5 +17,5 @@ export function QrCode({ value, size = 220, className }: { value: string; size?:
       alive = false
     }
   }, [value])
-  return <div className={cn('overflow-hidden rounded-2xl bg-white p-2 [&>svg]:h-full [&>svg]:w-full', className)} style={{ width: size, height: size }} dangerouslySetInnerHTML={{ __html: svg }} aria-label="Code QR" role="img" />
+  return <div className={cn('overflow-hidden rounded-2xl bg-white p-2 [&>svg]:h-full [&>svg]:w-full', className)} style={{ width: size, height: size }} dangerouslySetInnerHTML={{ __html: svg }} aria-label={t.common.qrCode} role="img" />
 }

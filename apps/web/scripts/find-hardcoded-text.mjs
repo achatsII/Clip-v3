@@ -84,7 +84,7 @@ for (const file of targets.flatMap(files)) {
           return words(text)
         })) ||
       // Une ligne de texte seule entre deux balises (enfant JSX sur plusieurs lignes).
-      (jsx && /^[A-Za-z’!?;%«»\- ][A-Za-z’.,!?;%«»\- ]*$/.test(t) && !t.endsWith(',') && !/^[A-Za-z0-9_$]+$/.test(t) && !/^(else|try|finally|break|continue|return|default|async|await)\b/.test(t) && words(t))
+      (jsx && /^[A-Za-z’!?;%«»\- ][A-Za-z’.,!?;%«»\- ]*$/.test(t) && !t.endsWith(',') && !/^[A-Za-z0-9_$]+$/.test(t) && !/^[?:]\s*[A-Za-z_$][\w$]*(\.[\w$]+)*$/.test(t) && !/^(else|try|finally|break|continue|return|default|async|await)\b/.test(t) && words(t))
     if (hit) found.push(`${relative(process.cwd(), file)}:${i + 1}: ${raw[i].trim().slice(0, 160)}`)
   })
 }
