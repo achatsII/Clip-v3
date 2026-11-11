@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   BookOpen,
+  CreditCard,
   Home,
   LogOut,
   MapPin,
@@ -25,6 +26,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Segmented } from '@/components/ui/Field'
 import { useToast } from '@/components/ui/Toast'
 import { hasCapability } from '@/lib/bridge/native'
+import { BILLING_V2 } from '@/lib/config'
 import { logout } from '@/lib/gateway/client'
 import { canScan, clipPathFromScan, scanNative } from '@/lib/media/scan'
 import { T } from '@/lib/model/repo'
@@ -198,7 +200,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {profile.email} · {ROLES[role].label}
         </p>
         <div className="grid gap-2">
-          {([...nav.slice(3), { href: '/import', label: 'Importer des documents', icon: <Upload className="h-5 w-5" />, show: canCreate }, { href: '/reglages', label: 'Réglages', icon: <Settings className="h-5 w-5" />, show: true }] as NavItem[])
+          {([...nav.slice(3), { href: '/import', label: 'Importer des documents', icon: <Upload className="h-5 w-5" />, show: canCreate }, { href: '/reglages/abonnement', label: 'Abonnement et crédits', icon: <CreditCard className="h-5 w-5" />, show: BILLING_V2 }, { href: '/reglages', label: 'Réglages', icon: <Settings className="h-5 w-5" />, show: true }] as NavItem[])
             .filter((n) => n.show)
             .map((n) => (
               <Link key={n.href} href={n.href} onClick={() => setMoreOpen(false)} className="glass-card btn-press flex h-14 items-center gap-3 rounded-2xl px-4 font-black text-slate-800 dark:text-slate-100">

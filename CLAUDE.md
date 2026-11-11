@@ -110,9 +110,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `src/lib/billing/catalog.ts` ; `tests/billing-manifest.test.ts` échoue si une feature ou une
   opération du manifeste n'y est pas, ou si un prix diffère.
 - Le branchement, app web : le drapeau public `NEXT_PUBLIC_BILLING_V2` (éteint par défaut) ; la page
-  `/reglages/abonnement` (introuvable drapeau éteint), avec le paiement et le portail Stripe ; la
-  fenêtre des refus `Paywall`. Pas de route serveur : le navigateur appelle la passerelle avec le
-  jeton de l'utilisateur.
+  `/reglages/abonnement` (introuvable drapeau éteint ; ouverte par « Abonnement et crédits » du menu
+  Mon compte et par la pastille de crédits), avec le paiement et le portail Stripe ; la fenêtre des
+  refus `Paywall`, qui ne conseille jamais le plan actuel, seulement le moins cher des plans qui
+  donnent vraiment plus (`src/lib/billing/advice.ts`). Pas de route serveur : le navigateur appelle
+  la passerelle avec le jeton de l'utilisateur.
 - La coquille mobile n'offre aucun achat : dans la coquille, le paywall ne montre ni prix ni lien de
   paiement. Avant de soumettre aux magasins, décider de la posture (vente dans le magasin par
   RevenueCat, ou app « miroir » permise seulement aux comptes d'entreprise sous contrat) ; le

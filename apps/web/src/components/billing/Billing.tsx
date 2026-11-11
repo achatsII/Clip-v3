@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
+import { creditsReason, planFor, renewalText } from '@/lib/billing/advice'
 import { FEATURE_LABELS, FEATURE_ORDER, PLAN_PITCH, type FeatureKey } from '@/lib/billing/catalog'
 import { BillingError, creditsOf, type BillingClient, type PublicPlan } from '@/lib/billing/client'
 import { useBilling } from '@/lib/billing/state'
@@ -39,15 +40,6 @@ export function entitlementLines(plan: PublicPlan): string[] {
     if (e.features?.[key]) out.push(label.fr)
   }
   return out
-}
-
-function planFor(plans: PublicPlan[], feature?: FeatureKey, hint?: string | null): PublicPlan | null {
-  const paid = plans.filter((p) => p.kind === 'base' && p.prices.length)
-  if (hint) return paid.find((p) => p.code === hint) ?? null
-  if (!feature) return paid[0] ?? null
-  return (
-    paid.find((p) => p.entitlements.features?.[feature] || (p.entitlements.limits && feature in p.entitlements.limits && (p.entitlements.limits[feature] === null || (p.entitlements.limits[feature] ?? 0) > 0)) || p.entitlements.credits?.some((c) => c.feature_key === feature)) ?? null
-  )
 }
 
 export function usePlans(client: BillingClient) {
@@ -117,29 +109,32 @@ export function LowBalanceBanner() {
   }, [key])
   if (!enabled || !c || !level || !key || hidden === key) return null
   return (
-    <div className="animate-slide-up mb-5 flex items-center gap-3 rounded-[24px] bg-amber-50 p-4 dark:bg-amber-500/10">
+    <div className="animate-slide-up mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[24px] bg-amber-50 p-4 dark:bg-amber-500/10">
       <Coins className="h-5 w-5 shrink-0 text-amber-600" />
-      <p className="flex-1 text-sm font-bold text-amber-900 dark:text-amber-200">
+      <p className="min-w-48 flex-1 text-sm font-bold text-amber-900 dark:text-amber-200">
         Il vous reste {Math.round(c.available).toLocaleString('fr-CA')} crédits{c.period_end ? ` jusqu’au ${formatDate(c.period_end)}` : ''}.
       </p>
-      <Button size="sm" onClick={() => openPaywall({ feature: 'ai_credits' })}>
-        Plus de crédits
-      </Button>
-      <button
-        type="button"
-        aria-label="Fermer"
-        onClick={() => {
-          try {
-            localStorage.setItem(key, '1')
-          } catch {
-            /* facultatif */
-          }
-          setHidden(key)
-        }}
-        className="btn-press flex h-10 w-10 items-center justify-center rounded-xl text-amber-700"
-      >
-        <X className="h-4 w-4" />
-      </button>
+      {/* Sur un téléphone, le bouton passe sous la phrase au lieu de l'écraser. */}
+      <div className="ml-auto flex items-center gap-1">
+        <Button size="sm" onClick={() => openPaywall({ feature: 'ai_credits' })}>
+          Plus de crédits
+        </Button>
+        <button
+          type="button"
+          aria-label="Fermer"
+          onClick={() => {
+            try {
+              localStorage.setItem(key, '1')
+            } catch {
+              /* facultatif */
+            }
+            setHidden(key)
+          }}
+          className="btn-press flex h-11 w-11 items-center justify-center rounded-xl text-amber-700"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   )
 }
@@ -154,8 +149,9 @@ export function Paywall({ client }: { client: BillingClient }) {
   const [busy, setBusy] = useState(false)
   if (!paywall) return null
   const feature = (paywall.feature ?? (paywall.refusal?.featureKey as FeatureKey | undefined)) || undefined
-  const credits = paywall.refusal?.code === 'insufficient_credits' || feature === 'ai_credits'
-  const plan = plans.data ? planFor(plans.data.plans, feature, paywall.refusal?.upgradePlan) : null
+  const refusedCredits = paywall.refusal?.code === 'insufficient_credits'
+  const credits = refusedCredits || feature === 'ai_credits'
+  const plan = plans.data ? planFor(plans.data.plans, state, credits ? 'ai_credits' : feature, paywall.refusal?.upgradePlan) : null
   const inShell = !!nativeEnv()
   const isAdmin = role === 'admin'
   const c = creditsOf(state, 'ai_credits')
@@ -164,9 +160,9 @@ export function Paywall({ client }: { client: BillingClient }) {
   const yearly = plan?.prices.find((p) => p.interval === 'yearly')
   const saving = monthly && yearly ? Math.round(100 - (yearly.amount_cents / (monthly.amount_cents * 12)) * 100) : 0
 
-  const title = credits ? 'Plus de crédits ce mois-ci' : feature && FEATURE_LABELS[feature] ? `${FEATURE_LABELS[feature].fr}` : 'Débloquez plus'
+  const title = credits ? (plan || !plans.data ? 'Plus de crédits ce mois-ci' : 'Crédits IA') : feature && FEATURE_LABELS[feature] ? `${FEATURE_LABELS[feature].fr}` : 'Débloquez plus'
   const why = credits
-    ? `Vos crédits IA sont épuisés${c?.period_end ? ` jusqu’au ${formatDate(c.period_end)}` : ''}. Rien n’a été débité pour l’action refusée.`
+    ? creditsReason(c, refusedCredits)
     : paywall.refusal?.code === 'subscription_suspended'
       ? 'Votre abonnement est suspendu : réglez la facture pour retrouver vos fonctions.'
       : 'Cette fonction n’est pas incluse dans votre plan actuel.'
@@ -220,6 +216,8 @@ export function Paywall({ client }: { client: BillingClient }) {
             )}
           </div>
         </div>
+      ) : credits && plans.data ? (
+        <p className="mt-4 font-bold text-slate-500">{renewalText(c)}</p>
       ) : (
         <p className="mt-4 font-bold text-slate-500">Voyez les plans sur la page Abonnement.</p>
       )}
@@ -233,14 +231,14 @@ export function Paywall({ client }: { client: BillingClient }) {
         </div>
       )}
       <div className="mt-6 flex flex-col gap-2">
-        {inShell ? (
+        {!plan ? null : inShell ? (
           <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">Ce plan se gère par l’administrateur de votre usine.</p>
-        ) : isAdmin && plan ? (
+        ) : isAdmin ? (
           <Button variant="primary" size="lg" block loading={busy} onClick={buy}>
             Passer à {plan.name}
           </Button>
         ) : (
-          <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">Demandez à l’administrateur de votre usine de passer au plan {plan?.name ?? 'supérieur'}.</p>
+          <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">Demandez à l’administrateur de votre usine de passer au plan {plan.name}.</p>
         )}
         <Link href="/reglages/abonnement" onClick={closePaywall} className="btn-press flex h-12 items-center justify-center rounded-full text-sm font-black text-slate-600 dark:text-slate-300">
           Voir tous les plans
