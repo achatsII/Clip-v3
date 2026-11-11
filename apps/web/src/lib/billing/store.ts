@@ -8,6 +8,7 @@
  * l'app, ne mène à un paiement hors du magasin.
  */
 import type { StoreFailure } from '@clip/bridge'
+import { messages } from '@/lib/i18n'
 import { BillingError, type BillingClient, type BillingState, type StorePurchase } from './client'
 
 export type { StoreFailure }
@@ -103,19 +104,20 @@ export async function restoreInStore(client: SyncClient, native: StoreNative, op
 /** Ce qui empêche un achat, dans les mots de l'app (jamais le message du magasin). */
 export function storeFailureText(kind: StoreFailure, platform: DevicePlatform): string {
   const store = storeName(platform)
+  const t = messages().billing.store.failure
   switch (kind) {
     case 'not_ready':
-      return 'Le magasin se prépare : réessayez dans un instant.'
+      return t.notReady
     case 'product_missing':
-      return `Ce plan n’est pas encore offert dans ${platform === 'android' ? 'Google Play' : 'l’App Store'}.`
+      return t.productMissing(store)
     case 'other_account':
-      return `Cet achat ${store} appartient déjà à un autre compte CLIP : connectez-vous avec le compte qui l’a payé.`
+      return t.otherAccount(store)
     case 'network':
-      return 'Pas de connexion : réessayez quand le réseau revient.'
+      return t.network
     case 'not_allowed':
-      return 'Les achats sont bloqués sur cet appareil (contrôle parental ou réglage de l’appareil).'
+      return t.notAllowed
     default:
-      return `${store} n’a pas pu terminer l’achat. Rien n’a été débité.`
+      return t.other(store)
   }
 }
 
@@ -124,25 +126,24 @@ export function storeFailureText(kind: StoreFailure, platform: DevicePlatform): 
  * magasin. `null` : l'achat est permis.
  */
 export function storePurchaseText(sp: StorePurchase | undefined, platform: DevicePlatform): string | null {
-  if (!sp) return 'Votre plan se gère par l’administrateur de votre usine.'
+  const t = messages().billing
+  if (!sp) return t.managedByAdmin
   if (sp.allowed) return null
   switch (sp.reason) {
     case 'team_organization':
-      return 'Dans l’app, l’abonnement est personnel : il se prend depuis un compte à une seule personne. Votre usine gère son plan par son administrateur.'
+      return t.store.blocked.team
     case 'managed_elsewhere':
       return sp.managed_in && sp.managed_in !== 'web' && sp.managed_in !== platform
-        ? `Votre abonnement est déjà en place : il se gère dans ${storeName(sp.managed_in)}.`
-        : 'Votre abonnement est déjà en place : il se gère là où il a été pris.'
+        ? t.store.blocked.elsewhere(storeName(sp.managed_in))
+        : t.store.blocked.elsewhereUnknown
     case 'org_unresolved':
-      return 'L’achat n’est pas possible pour ce compte. Écrivez au soutien de CLIP.'
+      return t.store.blocked.unresolved
     default:
-      return 'Votre plan se gère par l’administrateur de votre usine.'
+      return t.managedByAdmin
   }
 }
 
 /** Les mentions que les magasins exigent avant l'achat. */
 export function storeDisclosure(o: { planName: string; price: string; interval: 'monthly' | 'yearly'; platform: DevicePlatform }): string {
-  const period = o.interval === 'yearly' ? 'an' : 'mois'
-  const store = storeName(o.platform)
-  return `Abonnement ${o.planName} : ${o.price} par ${period}, renouvelé automatiquement jusqu’à l’annulation. Le paiement est débité de votre compte ${store} à la confirmation de l’achat. Annulez au moins 24 heures avant la fin de la période, dans les abonnements de votre compte ${store}.`
+  return messages().billing.store.disclosure(o.planName, o.price, o.interval === 'yearly', storeName(o.platform))
 }

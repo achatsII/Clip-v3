@@ -6,6 +6,7 @@
  * check() ne lève jamais de refus : il répond 200 avec { allowed, reason }. Un refus porte un code
  * stable (402 insufficient_credits, 403 not_entitled…) : on teste le code, jamais le message.
  */
+import { messages } from '@/lib/i18n'
 import { GATEWAY_URL, PRODUCT_SLUG } from '../config'
 import { getAccessToken, refreshSession } from '../gateway/client'
 import { emitRefusal, refusalFrom } from './bus'
@@ -141,7 +142,7 @@ export function createBillingClient(config: BillingClientConfig = {}) {
 
   async function call<T>(method: 'GET' | 'POST', path: string, body?: Record<string, unknown>, retried = false): Promise<T> {
     const token = getToken()
-    if (!token) throw new BillingError(401, 'unauthenticated', null, 'Aucun utilisateur connecté')
+    if (!token) throw new BillingError(401, 'unauthenticated', null, messages().billing.errors.signedOut)
     const res = await doFetch(`${base}${path}`, {
       method,
       headers: { Authorization: `Bearer ${token}`, 'X-Product': product, ...(body ? { 'Content-Type': 'application/json' } : {}) },
@@ -161,7 +162,7 @@ export function createBillingClient(config: BillingClientConfig = {}) {
       const refusal = refusalFrom(res.status, problem)
       if (refusal) emitRefusal(refusal)
       const retry = Number(res.headers.get('retry-after'))
-      throw new BillingError(res.status, code, problem, typeof problem?.detail === 'string' ? problem.detail : `Erreur ${res.status}`, Number.isFinite(retry) && retry > 0 ? retry : null)
+      throw new BillingError(res.status, code, problem, typeof problem?.detail === 'string' ? problem.detail : messages().billing.errors.status(res.status), Number.isFinite(retry) && retry > 0 ? retry : null)
     }
     return parsed as T
   }

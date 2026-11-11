@@ -2,6 +2,7 @@
  * Ce que la fenêtre des refus conseille et dit. Fonctions pures, testées : un plan conseillé qui
  * n'apporte rien, ou un solde annoncé à tort, serait « un message de limite faux ».
  */
+import { messages } from '@/lib/i18n'
 import { formatDate } from '../util/cn'
 import type { BillingState, CreditBucket, PublicPlan } from './client'
 
@@ -46,18 +47,17 @@ export function planFor(plans: PublicPlan[], state: BillingState | null, feature
   return forSale.find((p) => (feature ? amountOf(p, feature) : monthlyCents(p)) > now) ?? null
 }
 
-const creditsText = (n: number) => `${n.toLocaleString('fr-CA')} crédit${n > 1 ? 's' : ''}`
-
 /** Pourquoi la fenêtre des crédits s'ouvre : un refus réel de la plateforme, ou le solde du mois. */
 export function creditsReason(c: CreditBucket | null, refused: boolean): string {
-  if (!c) return refused ? 'Plus assez de crédits IA pour cette action. Rien n’a été débité.' : 'Vos crédits IA de ce mois-ci.'
+  const t = messages().billing.balance
+  if (!c) return refused ? t.refused : t.monthly
   const left = Math.max(0, Math.round(c.available))
-  const until = c.period_end ? ` jusqu’au ${formatDate(c.period_end)}` : ''
-  if (left === 0) return `Vos crédits IA sont épuisés${until}.${refused ? ' Rien n’a été débité pour l’action refusée.' : ''}`
-  return refused ? `Il vous reste ${creditsText(left)} : pas assez pour cette action. Rien n’a été débité.` : `Il vous reste ${creditsText(left)}${until}.`
+  const until = c.period_end ? formatDate(c.period_end) : null
+  if (left === 0) return t.exhausted(until, refused)
+  return refused ? t.notEnough(left) : t.left(left, until)
 }
 
 /** Aucun plan ne donne plus de crédits : on dit quand ils reviennent. */
 export function renewalText(c: CreditBucket | null): string {
-  return `Aucun plan n’en donne davantage.${c?.period_end ? ` Vos crédits se renouvellent le ${formatDate(c.period_end)}.` : ''}`
+  return messages().billing.balance.renewal(c?.period_end ? formatDate(c.period_end) : null)
 }

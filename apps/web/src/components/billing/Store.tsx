@@ -10,6 +10,7 @@ import { callNative, hasCapability, nativeEnv } from '@/lib/bridge/native'
 import { BillingError, type BillingClient, type BillingState, type PublicPlan, type StorePurchase } from '@/lib/billing/client'
 import { useBilling } from '@/lib/billing/state'
 import { APPLE_TERMS_URL, buyInStore, PRIVACY_URL, restoreInStore, storeDisclosure, storeFailureText, storeName, storePurchaseText, StorePurchaseError, storeSubscriptionsUrl, type DevicePlatform, type StoreNative } from '@/lib/billing/store'
+import { useMessages } from '@/lib/i18n'
 import { cn } from '@/lib/util/cn'
 
 /** La plateforme de l'appareil, dans la coquille ; `null` sur le web. */
@@ -45,16 +46,17 @@ export function useStoreOffers(productIds: string[], when = true) {
 
 /** Les liens que les magasins exigent avant l'achat. */
 function StoreLegal({ platform, className }: { platform: DevicePlatform; className?: string }) {
+  const t = useMessages()
   return (
     <p className={cn('text-xs font-bold', className)}>
       <button type="button" onClick={() => openLink(PRIVACY_URL)} className="underline underline-offset-2">
-        Politique de confidentialité
+        {t.billing.store.privacy}
       </button>
       {platform === 'ios' && (
         <>
           {' · '}
           <button type="button" onClick={() => openLink(APPLE_TERMS_URL)} className="underline underline-offset-2">
-            Conditions d’utilisation (Apple)
+            {t.billing.store.appleTerms}
           </button>
         </>
       )}
@@ -68,19 +70,21 @@ function StoreLegal({ platform, className }: { platform: DevicePlatform; classNa
  * d'un paiement hors du magasin. Sans produit dans le magasin : le plan « arrive ».
  */
 export function StoreBuy({ client, plan, interval, storePurchase, platform, onActive, tone = 'light' }: { client: BillingClient; plan: PublicPlan; interval: 'monthly' | 'yearly'; storePurchase: StorePurchase | undefined; platform: DevicePlatform; onActive?: () => void; tone?: 'light' | 'onColor' }) {
+  const t = useMessages()
+  const w = t.billing.store
   const { refresh } = useBilling()
   const toast = useToast()
   const [busy, setBusy] = useState(false)
   const price = plan.prices.find((p) => p.interval === interval) ?? plan.prices[0]
   const productId = price?.store_product_id ?? ''
-  const blocked = canBuyInStore() ? storePurchaseText(storePurchase, platform) : 'L’abonnement dans l’app arrive bientôt.'
+  const blocked = canBuyInStore() ? storePurchaseText(storePurchase, platform) : w.comingSoon
   // Les prix ne se demandent au magasin que si l'achat est permis.
   const offers = useStoreOffers([productId], !blocked)
   const offer = offers.data?.[productId]
   const muted = tone === 'onColor' ? 'text-white/85' : 'text-slate-500'
   if (blocked) return <p className={cn('rounded-2xl p-3 text-sm font-bold', tone === 'onColor' ? 'bg-white/15' : 'bg-slate-900/5 text-slate-600 dark:bg-white/10 dark:text-slate-300')}>{blocked}</p>
   if (offers.isLoading) return <Skeleton className="h-24 rounded-2xl" />
-  if (!offer) return <p className={cn('text-sm font-bold', muted)}>Ce plan arrive bientôt dans {platform === 'android' ? 'Google Play' : 'l’App Store'}.</p>
+  if (!offer) return <p className={cn('text-sm font-bold', muted)}>{w.planComingSoon(storeName(platform))}</p>
 
   async function buy() {
     setBusy(true)
@@ -88,13 +92,13 @@ export function StoreBuy({ client, plan, interval, storePurchase, platform, onAc
       const r = await buyInStore(client, native, productId, { platform, planCode: plan.code })
       if (r === 'active') {
         await refresh()
-        toast.success(`Bienvenue dans ${plan.name}`, 'Votre plan est ouvert.')
+        toast.success(w.welcome(plan.name), w.planOpen)
         onActive?.()
-      } else if (r === 'pending') toast.info('Achat en cours de validation', `Le plan s’ouvrira dès que ${storeName(platform)} l’aura confirmé.`)
+      } else if (r === 'pending') toast.info(w.pending, w.pendingBody(storeName(platform)))
     } catch (e) {
-      if (e instanceof StorePurchaseError) toast.error('L’achat n’a pas abouti', storeFailureText(e.kind, platform))
-      else if (e instanceof BillingError && e.code === 'org_unresolved') toast.error('L’achat n’a pas pu être rattaché à votre usine', 'Écrivez au soutien de CLIP : nous réglerons le compte.')
-      else toast.error('L’achat n’a pas abouti', 'Réessayez dans un instant.')
+      if (e instanceof StorePurchaseError) toast.error(w.failed, storeFailureText(e.kind, platform))
+      else if (e instanceof BillingError && e.code === 'org_unresolved') toast.error(w.unresolved, w.unresolvedBody)
+      else toast.error(w.failed, t.billing.retrySoon)
     } finally {
       setBusy(false)
     }
@@ -104,15 +108,15 @@ export function StoreBuy({ client, plan, interval, storePurchase, platform, onAc
     <div className="space-y-3">
       <p className="text-2xl font-black tabular-nums">
         {offer.priceString}
-        <span className={cn('text-sm font-bold', muted)}> / {interval === 'yearly' ? 'an' : 'mois'}</span>
+        <span className={cn('text-sm font-bold', muted)}> {interval === 'yearly' ? t.billing.perYear : t.billing.perMonth}</span>
       </p>
       {offer.intro && offer.introEligible !== false && (
         <p className={cn('text-sm font-black', tone === 'onColor' ? 'text-white' : 'text-emerald-700 dark:text-emerald-300')}>
-          Offre de bienvenue : {offer.intro.priceString} pour {offer.intro.periodNumberOfUnits} {offer.intro.periodUnit === 'DAY' ? 'jour(s)' : offer.intro.periodUnit === 'WEEK' ? 'semaine(s)' : offer.intro.periodUnit === 'YEAR' ? 'an(s)' : 'mois'}
+          {w.intro(offer.intro.priceString, offer.intro.periodNumberOfUnits, offer.intro.periodUnit)}
         </p>
       )}
       <Button variant={tone === 'onColor' ? 'dark' : 'primary'} size="lg" block loading={busy} onClick={buy}>
-        S’abonner à {plan.name}
+        {w.subscribeTo(plan.name)}
       </Button>
       <p className={cn('text-xs font-medium', muted)}>{storeDisclosure({ planName: plan.name, price: offer.priceString, interval, platform })}</p>
       <StoreLegal platform={platform} className={muted} />
@@ -125,6 +129,8 @@ export function StoreBuy({ client, plan, interval, storePurchase, platform, onAc
  * abonnements ; ailleurs, une phrase, sans lien ni prix.
  */
 export function StoreAccount({ client, state, platform }: { client: BillingClient; state: BillingState; platform: DevicePlatform }) {
+  const t = useMessages()
+  const w = t.billing.store
   const { refresh } = useBilling()
   const toast = useToast()
   const [busy, setBusy] = useState(false)
@@ -134,12 +140,12 @@ export function StoreAccount({ client, state, platform }: { client: BillingClien
     <div className="mt-4 flex flex-col gap-2">
       {state.channel === platform && (
         <Button icon={<ExternalLink className="h-4 w-4" />} onClick={() => openLink(storeSubscriptionsUrl(platform))}>
-          Gérer mon abonnement dans {storeName(platform)}
+          {w.manageIn(storeName(platform))}
         </Button>
       )}
       {paidElsewhere && state.plan_code && (
         <p className="text-sm font-bold text-slate-500">
-          {state.channel === 'web' ? 'Votre abonnement se gère là où il a été pris.' : `Votre abonnement se gère dans ${storeName(state.channel as DevicePlatform)}.`}
+          {state.channel === 'web' ? w.managedWhereBought : w.managedIn(storeName(state.channel as DevicePlatform))}
         </p>
       )}
       <Button
@@ -151,16 +157,16 @@ export function StoreAccount({ client, state, platform }: { client: BillingClien
           try {
             const fresh = await restoreInStore(client, native)
             await refresh()
-            if (fresh && fresh.channel === platform && fresh.plan_code) toast.success('Achats restaurés', 'Votre plan est ouvert.')
-            else toast.info('Aucun achat à restaurer', `Aucun abonnement de ce compte ${storeName(platform)} n’appartient à cette usine.`)
+            if (fresh && fresh.channel === platform && fresh.plan_code) toast.success(w.restored, w.planOpen)
+            else toast.info(w.nothingToRestore, w.nothingToRestoreBody(storeName(platform)))
           } catch (e) {
-            toast.error('La restauration n’a pas abouti', e instanceof StorePurchaseError ? storeFailureText(e.kind, platform) : 'Réessayez dans un instant.')
+            toast.error(w.restoreFailed, e instanceof StorePurchaseError ? storeFailureText(e.kind, platform) : t.billing.retrySoon)
           } finally {
             setBusy(false)
           }
         }}
       >
-        Restaurer mes achats
+        {w.restore}
       </Button>
     </div>
   )

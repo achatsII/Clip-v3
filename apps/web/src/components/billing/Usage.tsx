@@ -9,6 +9,7 @@ import type { LimitFeature } from '@/lib/billing/catalog'
 import type { LimitStatus } from '@/lib/billing/client'
 import { useBilling, useLimit } from '@/lib/billing/state'
 import { countEditors, offerText, usageLevel, usageText } from '@/lib/billing/usage'
+import { useMessages } from '@/lib/i18n'
 import { cn } from '@/lib/util/cn'
 import { usePlans } from './Billing'
 import { billingClient } from './BillingRoot'
@@ -30,6 +31,7 @@ export function useUsage(): Record<LimitFeature, LimitStatus | null> {
  * non plus tant qu'on est loin de la limite (sur un écran déjà chargé).
  */
 export function UsageMeter({ feature, limit, quiet, className }: { feature: LimitFeature; limit: LimitStatus | null; quiet?: boolean; className?: string }) {
+  const t = useMessages()
   const { state, openPaywall } = useBilling()
   const level = usageLevel(limit)
   const warn = level !== 'ok'
@@ -41,10 +43,10 @@ export function UsageMeter({ feature, limit, quiet, className }: { feature: Limi
   return (
     <div className={cn(warn && 'rounded-[20px] bg-amber-50 p-3 dark:bg-amber-500/10', className)}>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <p className="text-sm font-bold text-slate-600 tabular-nums dark:text-slate-300">{text} dans votre plan</p>
+        <p className="text-sm font-bold text-slate-600 tabular-nums dark:text-slate-300">{t.billing.usage.inPlan(text)}</p>
         {warn && (
           <span className="inline-flex items-center gap-1 text-xs font-black tracking-wide text-amber-800 uppercase dark:text-amber-200">
-            <Gauge className="h-3.5 w-3.5" /> {level === 'full' ? 'Limite atteinte' : 'Bientôt plein'}
+            <Gauge className="h-3.5 w-3.5" /> {level === 'full' ? t.billing.usage.full : t.billing.usage.near}
           </span>
         )}
       </div>
@@ -55,7 +57,7 @@ export function UsageMeter({ feature, limit, quiet, className }: { feature: Limi
         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-bold text-amber-900 dark:text-amber-100">{offerText(next, feature)}.</p>
           <Button size="sm" onClick={() => openPaywall({ feature, used: limit.used })}>
-            Voir {next.name}
+            {t.billing.usage.view(next.name)}
           </Button>
         </div>
       )}
