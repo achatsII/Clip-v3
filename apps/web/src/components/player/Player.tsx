@@ -300,12 +300,15 @@ export function Player(props: PlayerProps) {
             preview={preview}
           />
         ) : step ? (
-          <div key={step.id} className="animate-fade-in flex h-full min-h-full flex-col lg:flex-row">
-            <div className="relative h-[46dvh] shrink-0 bg-slate-900 sm:h-[52dvh] lg:h-auto lg:flex-[1.5]">
-              {step.media[0] ? <MediaView media={step.media[0]} big /> : <NoMedia index={index} />}
-              {step.media.length > 1 && <MediaSwitcher step={step} />}
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-8 lg:max-w-[560px] lg:overflow-y-auto">
+          <div key={step.id} className={cn('animate-fade-in flex h-full min-h-full flex-col', step.media[0] && 'lg:flex-row')}>
+            {/* Sans photo ni vidéo, pas de panneau : le texte prend la place, en haut de l'écran. */}
+            {step.media[0] && (
+              <div className="relative h-[46dvh] shrink-0 bg-slate-900 sm:h-[52dvh] lg:h-auto lg:flex-[1.5]">
+                <MediaView media={step.media[0]} big />
+                {step.media.length > 1 && <MediaSwitcher step={step} />}
+              </div>
+            )}
+            <div className={cn('flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-8', step.media[0] ? 'lg:max-w-[560px] lg:overflow-y-auto' : 'mx-auto w-full max-w-3xl pt-8 sm:pt-12')}>
               <div className="flex items-start gap-4">
                 <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
                 <h2 className="pt-1 text-3xl leading-[1.05] font-black tracking-tighter text-slate-900 sm:text-4xl dark:text-white">{step.title}</h2>
@@ -443,14 +446,6 @@ export function Player(props: PlayerProps) {
           onReport={() => setFeedbackOpen(true)}
         />
       )}
-    </div>
-  )
-}
-
-function NoMedia({ index }: { index: number }) {
-  return (
-    <div className="bg-gradient-primary flex h-full w-full items-center justify-center">
-      <span className="text-[30vh] leading-none font-black text-white/25 tabular-nums">{index + 1}</span>
     </div>
   )
 }

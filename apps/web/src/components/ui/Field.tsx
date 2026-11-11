@@ -8,6 +8,9 @@ import { cn } from '@/lib/util/cn'
 const base =
   'glass-input w-full rounded-2xl px-4 text-[15px] font-bold text-slate-900 placeholder:font-medium placeholder:text-slate-400 transition focus:bg-white/70 focus:outline-none focus:ring-4 focus:ring-[rgba(var(--primary-rgb),0.18)] dark:text-white dark:focus:bg-slate-900/70'
 
+/** L'apparence d'un champ, pour un `AutoTextarea` qui doit ressembler aux autres (une règle, une définition). */
+export const fieldLook = cn(base, 'min-h-12 py-3.5 leading-snug')
+
 export function Label({ children, htmlFor, hint }: { children: ReactNode; htmlFor?: string; hint?: ReactNode }) {
   return (
     <label htmlFor={htmlFor} className="mb-1.5 flex items-baseline justify-between gap-2">

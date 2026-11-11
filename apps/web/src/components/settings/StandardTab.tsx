@@ -6,7 +6,7 @@ import { AiCost } from '@/components/billing/AiCost'
 import { DictateButton } from '@/components/capture/DictateButton'
 import { useSession } from '@/components/providers/Session'
 import { Button, IconButton } from '@/components/ui/Button'
-import { Input, Label, Segmented, Switch, Textarea } from '@/components/ui/Field'
+import { AutoTextarea, fieldLook, Input, Label, Segmented, Switch, Textarea } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { Panel } from '@/components/ui/Surface'
@@ -91,9 +91,12 @@ export function StandardTab() {
             <Label>Règles</Label>
             <div className="space-y-2">
               {draft.rules.map((r, i) => (
-                <div key={i} className="flex gap-2">
+                <div key={i} className="flex items-start gap-2">
                   <span className="flex h-12 w-8 shrink-0 items-center justify-center text-sm font-black text-slate-400 tabular-nums">{i + 1}</span>
-                  <Input value={r} readOnly={readOnly} onChange={(e) => setDraft({ ...draft, rules: draft.rules.map((x, j) => (j === i ? e.target.value : x)) })} />
+                  {/* La règle se lit en entier : le champ passe à la ligne et grandit au lieu de couper. */}
+                  <div className="min-w-0 flex-1">
+                    <AutoTextarea singleLine aria-label={`Règle ${i + 1}`} value={r} readOnly={readOnly} className={fieldLook} onChange={(e) => setDraft({ ...draft, rules: draft.rules.map((x, j) => (j === i ? e.target.value : x)) })} />
+                  </div>
                   {!readOnly && (
                     <IconButton label="Retirer la règle" onClick={() => setDraft({ ...draft, rules: draft.rules.filter((_, j) => j !== i) })}>
                       <X className="h-4 w-4" />
@@ -112,11 +115,14 @@ export function StandardTab() {
             <Label hint="Les mots de votre usine">Vocabulaire</Label>
             <div className="space-y-2">
               {draft.glossary.map((g, i) => (
-                <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-2">
-                  <Input value={g.term} readOnly={readOnly} placeholder="Terme" onChange={(e) => setDraft({ ...draft, glossary: draft.glossary.map((x, j) => (j === i ? { ...x, term: e.target.value } : x)) })} />
-                  <Input value={g.meaning} readOnly={readOnly} placeholder="Ce que ça veut dire chez vous" onChange={(e) => setDraft({ ...draft, glossary: draft.glossary.map((x, j) => (j === i ? { ...x, meaning: e.target.value } : x)) })} />
+                // Au téléphone, la définition passe sous le terme, sur toute la largeur.
+                <div key={i} className="grid grid-cols-[1fr_auto] items-start gap-2 sm:grid-cols-[1fr_2fr_auto]">
+                  <Input value={g.term} readOnly={readOnly} placeholder="Terme" aria-label={`Terme ${i + 1}`} onChange={(e) => setDraft({ ...draft, glossary: draft.glossary.map((x, j) => (j === i ? { ...x, term: e.target.value } : x)) })} />
+                  <div className="min-w-0 max-sm:col-span-2 max-sm:row-start-2">
+                    <AutoTextarea singleLine value={g.meaning} readOnly={readOnly} placeholder="Ce que ça veut dire chez vous" aria-label={`Sens du terme ${i + 1}`} className={fieldLook} onChange={(e) => setDraft({ ...draft, glossary: draft.glossary.map((x, j) => (j === i ? { ...x, meaning: e.target.value } : x)) })} />
+                  </div>
                   {!readOnly && (
-                    <IconButton label="Retirer" onClick={() => setDraft({ ...draft, glossary: draft.glossary.filter((_, j) => j !== i) })}>
+                    <IconButton label="Retirer" className="max-sm:col-start-2 max-sm:row-start-1" onClick={() => setDraft({ ...draft, glossary: draft.glossary.filter((_, j) => j !== i) })}>
                       <X className="h-4 w-4" />
                     </IconButton>
                   )}
