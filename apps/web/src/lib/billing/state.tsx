@@ -14,6 +14,8 @@ import type { FeatureKey } from './catalog'
 export interface PaywallRequest {
   feature?: FeatureKey
   refusal?: Refusal
+  /** Pour une limite comptée par l'app : où l'on en est (la plateforme ne le sait pas). */
+  used?: number
   /** L'action à relancer après l'achat (la saisie est gardée par l'écran). */
   retry?: () => void
 }

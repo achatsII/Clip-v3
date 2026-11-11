@@ -34,6 +34,11 @@ export type FeatureKey =
   | 'brand_kit'
   | 'full_export'
 
+/** Les features qui plafonnent une quantité détenue (`kind: limit` au manifeste) : l'app les compte. */
+export const LIMIT_FEATURES = ['published_instructions', 'stations', 'editors'] as const satisfies readonly FeatureKey[]
+export type LimitFeature = (typeof LIMIT_FEATURES)[number]
+export const isLimitFeature = (key: string | null | undefined): key is LimitFeature => (LIMIT_FEATURES as readonly string[]).includes(key ?? '')
+
 export interface FeatureLabel {
   fr: string
   en: string

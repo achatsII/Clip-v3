@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Check, Coins, Lock, Sparkles, X } from 'lucide-react'
+import { Check, Coins, FileText, Lock, Sparkles, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useSession } from '@/components/providers/Session'
@@ -10,9 +10,11 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
 import { creditsReason, planFor, renewalText } from '@/lib/billing/advice'
-import { FEATURE_LABELS, FEATURE_ORDER, PLAN_PITCH, type FeatureKey } from '@/lib/billing/catalog'
-import { BillingError, creditsOf, type BillingClient, type PublicPlan } from '@/lib/billing/client'
-import { useBilling } from '@/lib/billing/state'
+import { FEATURE_LABELS, FEATURE_ORDER, PLAN_PITCH, isLimitFeature, type FeatureKey } from '@/lib/billing/catalog'
+import { BillingError, creditsOf, limitOf, type BillingClient, type PublicPlan } from '@/lib/billing/client'
+import { LIMIT_TITLE, limitReason } from '@/lib/billing/usage'
+import { useBilling, useEntitlement } from '@/lib/billing/state'
+import { useToggle } from '@/lib/toggles'
 import { cn, formatDate } from '@/lib/util/cn'
 
 export function formatPrice(cents: number, currency: string) {
@@ -42,9 +44,10 @@ export function entitlementLines(plan: PublicPlan): string[] {
   return out
 }
 
-export function usePlans(client: BillingClient) {
+/** Les plans en vente ; `when` faux : rien n'est lu (une jauge loin de sa limite). */
+export function usePlans(client: BillingClient, when = true) {
   const { enabled } = useBilling()
-  return useQuery({ queryKey: ['billing-plans'], queryFn: () => client.plans(), enabled, staleTime: 10 * 60_000 })
+  return useQuery({ queryKey: ['billing-plans'], queryFn: () => client.plans(), enabled: enabled && when, staleTime: 10 * 60_000 })
 }
 
 /** Pastille de solde dans l'en-tête des écrans qui consomment des crédits. */
@@ -142,7 +145,10 @@ export function LowBalanceBanner() {
 /** La feuille par-dessus la tâche : pourquoi, ce que le plan conseillé donne, l'achat. */
 export function Paywall({ client }: { client: BillingClient }) {
   const { paywall, closePaywall, state, refresh } = useBilling()
-  const { role } = useSession()
+  const { role, can } = useSession()
+  // Qui n'achète pas peut quand même plaider : le dossier pour la direction, avec ce plan proposé.
+  const reportOn = useToggle('valueReport')
+  const stats = useEntitlement('adoption_stats')
   const toast = useToast()
   const plans = usePlans(client)
   const [interval, setInterval] = useState<'monthly' | 'yearly'>('yearly')
@@ -155,17 +161,30 @@ export function Paywall({ client }: { client: BillingClient }) {
   const inShell = !!nativeEnv()
   const isAdmin = role === 'admin'
   const c = creditsOf(state, 'ai_credits')
+  // Une limite comptée par l'app : on dit ce que le plan permet et où l'on en est.
+  const limitKey = !credits && isLimitFeature(feature) ? feature : null
+  const limit = limitKey ? limitOf(state, limitKey, paywall.used) : null
   const price = plan?.prices.find((p) => p.interval === interval) ?? plan?.prices[0]
   const monthly = plan?.prices.find((p) => p.interval === 'monthly')
   const yearly = plan?.prices.find((p) => p.interval === 'yearly')
   const saving = monthly && yearly ? Math.round(100 - (yearly.amount_cents / (monthly.amount_cents * 12)) * 100) : 0
 
-  const title = credits ? (plan || !plans.data ? 'Plus de crédits ce mois-ci' : 'Crédits IA') : feature && FEATURE_LABELS[feature] ? `${FEATURE_LABELS[feature].fr}` : 'Débloquez plus'
+  const title = credits
+    ? plan || !plans.data
+      ? 'Plus de crédits ce mois-ci'
+      : 'Crédits IA'
+    : limitKey
+      ? LIMIT_TITLE[limitKey]
+      : feature && FEATURE_LABELS[feature]
+        ? `${FEATURE_LABELS[feature].fr}`
+        : 'Débloquez plus'
   const why = credits
     ? creditsReason(c, refusedCredits)
     : paywall.refusal?.code === 'subscription_suspended'
       ? 'Votre abonnement est suspendu : réglez la facture pour retrouver vos fonctions.'
-      : 'Cette fonction n’est pas incluse dans votre plan actuel.'
+      : limitKey && limit
+        ? limitReason(limitKey, limit.limit, paywall.used)
+        : 'Cette fonction n’est pas incluse dans votre plan actuel.'
 
   async function buy() {
     if (!plan || !price || price.interval === 'one_time') return
@@ -204,7 +223,7 @@ export function Paywall({ client }: { client: BillingClient }) {
             <ul className="mt-4 space-y-1.5">
               {entitlementLines(plan).slice(0, 6).map((l) => (
                 <li key={l} className="flex items-center gap-2 text-sm font-bold">
-                  <Check className="h-4 w-4" /> {l}
+                  <Check className="h-4 w-4 shrink-0" /> {l}
                 </li>
               ))}
             </ul>
@@ -238,7 +257,14 @@ export function Paywall({ client }: { client: BillingClient }) {
             Passer à {plan.name}
           </Button>
         ) : (
-          <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">Demandez à l’administrateur de votre usine de passer au plan {plan.name}.</p>
+          <>
+            <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">Demandez à l’administrateur de votre usine de passer au plan {plan.name}.</p>
+            {reportOn && can('stats') && stats !== 'locked' && (
+              <Link href={`/statistiques/dossier?plan=${encodeURIComponent(plan.code)}`} onClick={closePaywall} className="btn-press glass-card flex h-12 items-center justify-center gap-2 rounded-full text-sm font-black">
+                <FileText className="h-4 w-4" /> Préparer le dossier pour la direction
+              </Link>
+            )}
+          </>
         )}
         <Link href="/reglages/abonnement" onClick={closePaywall} className="btn-press flex h-12 items-center justify-center rounded-full text-sm font-black text-slate-600 dark:text-slate-300">
           Voir tous les plans

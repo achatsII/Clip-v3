@@ -1,9 +1,10 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import { BarChart3, CheckCircle2, Coins, Eye, Lock, MessageSquareWarning, Sparkles, TriangleAlert } from 'lucide-react'
+import { BarChart3, CheckCircle2, Coins, Eye, FileText, Lock, MessageSquareWarning, Sparkles, TriangleAlert } from 'lucide-react'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { LockBadge } from '@/components/billing/Billing'
 import { DailyBars } from '@/components/charts/DailyBars'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -12,88 +13,50 @@ import { Modal } from '@/components/ui/Modal'
 import { ErrorState, Skeleton } from '@/components/ui/States'
 import { Card, PageHeader, SectionTitle } from '@/components/ui/Surface'
 import { useFeedback, useInstructions } from '@/hooks/queries'
+import { useAdoption } from '@/hooks/useAdoption'
 import { useEntitlement, useGate } from '@/lib/billing/state'
-import { T } from '@/lib/model/repo'
-import type { UsageEvent } from '@/lib/model/types'
+import { periodFacts, valueOf } from '@/lib/stats/adoption'
+import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
 
 const DAYS = 30
 
 export default function StatsPage() {
-  const { data, org, updateOrg, can } = useSession()
+  const { org, updateOrg, can } = useSession()
   const instructions = useInstructions()
   const feedback = useFeedback()
   const detailed = useEntitlement('adoption_stats')
   const gate = useGate()
+  const router = useRouter()
+  const reportOn = useToggle('valueReport')
   const [roiOpen, setRoiOpen] = useState(false)
-  const since = useMemo(() => new Date(Date.now() - DAYS * 86400_000).toISOString(), [])
+  const { events, stats, since } = useAdoption(DAYS)
 
-  const events = useQuery({
-    queryKey: ['events', DAYS],
-    queryFn: () =>
-      data.filter<UsageEvent>(T.event, {
-        filter: { 'json_data.at': { $gte: since } },
-        projection: { 'json_data.type': 1, 'json_data.instructionId': 1, 'json_data.stationId': 1, 'json_data.at': 1, 'json_data.durationSec': 1, 'json_data.source': 1, 'json_data.operation': 1 },
-        sort: { _id: -1 },
-        limit: 10000,
-      }),
-  })
-
-  const stats = useMemo(() => {
-    const ev = (events.data ?? []).map((d) => d.json_data)
-    const byDay = new Map<string, number>()
-    for (let i = DAYS - 1; i >= 0; i--) byDay.set(new Date(Date.now() - i * 86400_000).toISOString().slice(0, 10), 0)
-    const views = ev.filter((e) => e.type === 'view')
-    const completions = ev.filter((e) => e.type === 'complete')
-    const generations = ev.filter((e) => e.type === 'ai' && e.operation?.startsWith('generate'))
-    const imports = ev.filter((e) => e.type === 'ai' && e.operation?.startsWith('import'))
-    for (const v of views) {
-      const k = v.at.slice(0, 10)
-      if (byDay.has(k)) byDay.set(k, (byDay.get(k) ?? 0) + 1)
-    }
-    const perInstruction = new Map<string, number>()
-    for (const v of views) if (v.instructionId) perInstruction.set(v.instructionId, (perInstruction.get(v.instructionId) ?? 0) + 1)
-    const bySource = { kiosk: 0, link: 0, app: 0 }
-    for (const v of views) bySource[v.source] = (bySource[v.source] ?? 0) + 1
-    const durations = completions.map((c) => c.durationSec ?? 0).filter((d) => d > 0).sort((a, b) => a - b)
-    return {
-      days: [...byDay.entries()].map(([date, value]) => ({ date, value })),
-      views: views.length,
-      completions: completions.length,
-      completionRate: views.length ? Math.round((completions.length / views.length) * 100) : 0,
-      generations: generations.length,
-      imports: imports.length,
-      perInstruction,
-      bySource,
-      medianDuration: durations.length ? durations[Math.floor(durations.length / 2)] : 0,
-    }
-  }, [events.data])
-
-  const published = (instructions.data ?? []).filter((d) => d.json_data.publishedVersion)
-  const top = published
-    .map((d) => ({ d, n: stats.perInstruction.get(d._id) ?? 0 }))
-    .sort((a, b) => b.n - a.n)
-    .slice(0, 8)
-  const unseen = published.filter((d) => !stats.perInstruction.get(d._id) && Date.now() - Date.parse(d.json_data.publishedAt ?? d.json_data.updatedAt) > 7 * 86400_000)
-  const fb = feedback.data ?? []
-  const fbRecent = fb.filter((f) => f.json_data.createdAt >= since)
-  const fbDone = fbRecent.filter((f) => f.json_data.status !== 'new').length
+  const facts = periodFacts({ instructions: instructions.data ?? [], feedback: feedback.data ?? [], perInstruction: stats.perInstruction, since })
   const roi = org.json_data.roi
-  const created = (instructions.data ?? []).filter((d) => d.json_data.createdAt >= since && (d.json_data.stepCount ?? 0) > 0).length
-  const hoursSaved = created * roi.hoursSavedPerInstruction + (stats.completions * roi.minutesSavedPerCompletion) / 60
-  const value = Math.round(hoursSaved * roi.hourlyRate)
+  const { hours: hoursSaved, value } = valueOf(facts.created, stats.completions, roi)
   const locked = detailed === 'locked'
 
   if (events.error) return <ErrorState error={events.error} onRetry={() => events.refetch()} />
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Statistiques" subtitle={`Les ${DAYS} derniers jours : ce qui est consulté au plancher, ce qui est signalé, ce que ça vous fait gagner.`} />
+      <PageHeader
+        title="Statistiques"
+        subtitle={`Les ${DAYS} derniers jours : ce qui est consulté au plancher, ce qui est signalé, ce que ça vous fait gagner.`}
+        actions={
+          reportOn ? (
+            <Button variant="primary" icon={<FileText className="h-4 w-4" />} onClick={() => gate(detailed, 'adoption_stats', () => router.push('/statistiques/dossier'))}>
+              Dossier pour la direction {locked && <LockBadge />}
+            </Button>
+          ) : undefined
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi tile="from-sky-500 to-blue-700" icon={<Eye className="h-6 w-6" />} label="Consultations" value={events.isLoading ? null : stats.views.toLocaleString('fr-CA')} hint={`Tablettes ${stats.bySource.kiosk} · liens ${stats.bySource.link} · app ${stats.bySource.app}`} />
         <Kpi tile="from-emerald-400 to-teal-600" icon={<CheckCircle2 className="h-6 w-6" />} label="Réalisations" value={events.isLoading ? null : stats.completions.toLocaleString('fr-CA')} hint={`${stats.completionRate} % des consultations vont au bout`} />
-        <Kpi tile="from-amber-400 to-orange-500" icon={<MessageSquareWarning className="h-6 w-6" />} label="Retours" value={feedback.isLoading ? null : fbRecent.length.toLocaleString('fr-CA')} hint={`${fbDone} traités`} />
+        <Kpi tile="from-amber-400 to-orange-500" icon={<MessageSquareWarning className="h-6 w-6" />} label="Retours" value={feedback.isLoading ? null : facts.feedback.total.toLocaleString('fr-CA')} hint={`${facts.feedback.done} traités`} />
         <button type="button" onClick={() => gate(detailed, 'adoption_stats', () => setRoiOpen(true))} className="btn-press lift text-left">
           <Kpi tile="from-violet-500 to-indigo-600" icon={locked ? <Lock className="h-6 w-6" /> : <Coins className="h-6 w-6" />} label="Valeur estimée" value={locked ? '—' : events.isLoading ? null : `${value.toLocaleString('fr-CA')} $`} hint={locked ? 'Retour sur investissement : plan supérieur' : `${Math.round(hoursSaved)} h gagnées · touchez pour vos hypothèses`} />
         </button>
@@ -104,14 +67,14 @@ export default function StatsPage() {
       <div className={cn('grid gap-5 lg:grid-cols-2', locked && 'relative')}>
         <Card className="p-6">
           <SectionTitle title="Les plus consultées" />
-          {top.length && top[0].n > 0 ? (
+          {facts.top.length && facts.top[0].views > 0 ? (
             <ol className="space-y-2">
-              {top.map(({ d, n }, i) => (
-                <li key={d._id}>
-                  <Link href={`/instructions/${d._id}`} className="btn-press flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-900/5 dark:hover:bg-white/5">
+              {facts.top.map((t, i) => (
+                <li key={t.id}>
+                  <Link href={`/instructions/${t.id}`} className="btn-press flex items-center gap-3 rounded-2xl p-2 hover:bg-slate-900/5 dark:hover:bg-white/5">
                     <span className="w-6 text-right text-sm font-black text-slate-400 tabular-nums">{i + 1}</span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-black">{d.json_data.title}</span>
-                    <span className="text-sm font-black tabular-nums">{n}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-black">{t.title}</span>
+                    <span className="text-sm font-black tabular-nums">{t.views}</span>
                   </Link>
                 </li>
               ))}
@@ -126,12 +89,12 @@ export default function StatsPage() {
             <li className="flex items-start gap-3">
               <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
               <span>
-                {unseen.length ? `${unseen.length} instruction${unseen.length > 1 ? 's' : ''} publiée${unseen.length > 1 ? 's' : ''} jamais consultée${unseen.length > 1 ? 's' : ''} : est-elle au bon poste ?` : 'Toutes les instructions publiées ont été consultées.'}
+                {facts.unseen ? `${facts.unseen} instruction${facts.unseen > 1 ? 's' : ''} publiée${facts.unseen > 1 ? 's' : ''} jamais consultée${facts.unseen > 1 ? 's' : ''} : est-elle au bon poste ?` : 'Toutes les instructions publiées ont été consultées.'}
               </span>
             </li>
             <li className="flex items-start gap-3">
               <MessageSquareWarning className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
-              <span>{fb.filter((f) => f.json_data.status === 'new').length} retour(s) à traiter.</span>
+              <span>{facts.feedback.open} retour(s) à traiter.</span>
             </li>
             <li className="flex items-start gap-3">
               <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-[var(--primary)]" />
@@ -165,7 +128,7 @@ export default function StatsPage() {
           }}
         />
         <p className="mt-4 rounded-2xl bg-primary-soft p-4 text-sm font-bold">
-          {created} instruction{created > 1 ? 's' : ''} × {roi.hoursSavedPerInstruction} h + {stats.completions} réalisations × {roi.minutesSavedPerCompletion} min = {Math.round(hoursSaved)} h × {roi.hourlyRate} $ = {value.toLocaleString('fr-CA')} $
+          {facts.created} instruction{facts.created > 1 ? 's' : ''} × {roi.hoursSavedPerInstruction} h + {stats.completions} réalisations × {roi.minutesSavedPerCompletion} min = {Math.round(hoursSaved)} h × {roi.hourlyRate} $ = {value.toLocaleString('fr-CA')} $
         </p>
       </Modal>
     </div>

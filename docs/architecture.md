@@ -154,3 +154,17 @@ Branchée derrière `NEXT_PUBLIC_BILLING_V2=1`, éteinte par défaut tant que le
 `/api/v2/billing/*` et `/api/v2/ai/ask` répondent `404`. Drapeau éteint : aucun écran de
 facturation, chaque appel d'IA part sur `/api/v4/assistant/ask`. Allumé : chaque appel passe par
 `/api/v2/ai/ask` avec la clé de son opération, et la plateforme débite.
+
+**Les leviers de vente.** La plateforme ne reçoit pas les limites `reported`. L'app compte donc
+les postes, les rédacteurs (tous les membres sauf les lecteurs, invitations comprises) et les
+instructions publiées, et les compare au plafond lu dans l'état.
+
+- **La jauge** (`UsageMeter`) reste une ligne discrète sous 80 %. Au-delà, elle s'allume et nomme
+  le plan qui en donne plus, choisi par `planFor`. Sur la liste des instructions, elle n'apparaît
+  qu'à partir de 80 %.
+- **La fenêtre des refus** d'une limite dit ce que le plan permet et où l'on en est (`used`).
+- **Le dossier pour la direction** est une page imprimable (`buildValueReportHtml`), imprimée par
+  le navigateur ou par la capacité native `print`. Il dit la valeur estimée selon les hypothèses
+  de l'usine, puis les consultations, les réalisations et les postes couverts. La personne choisit
+  le plan à proposer, ou aucun ; le prix vient de `/api/v2/billing/plans`. Une personne qui n'est
+  pas administratrice y arrive aussi depuis la fenêtre des refus, avec le plan conseillé déjà choisi.

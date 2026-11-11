@@ -4,6 +4,7 @@ import { BookOpen, LayoutGrid, List, Plus, Search, SearchX, Upload, X } from 'lu
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { CreditPill, LowBalanceBanner } from '@/components/billing/Billing'
+import { UsageMeter } from '@/components/billing/Usage'
 import { InstructionRow, InstructionTile } from '@/components/InstructionCard'
 import { useSession } from '@/components/providers/Session'
 import { LinkButton } from '@/components/ui/Button'
@@ -12,6 +13,7 @@ import { EmptyState, ErrorState, SkeletonCards } from '@/components/ui/States'
 import { PageHeader } from '@/components/ui/Surface'
 import { MicButton } from '@/components/ui/MicButton'
 import { useInstructions, useStations } from '@/hooks/queries'
+import { useLimit } from '@/lib/billing/state'
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/model/catalog'
 import type { CategoryKey } from '@/lib/model/types'
 import { cn, normalizeText } from '@/lib/util/cn'
@@ -32,6 +34,8 @@ export default function InstructionsPage() {
   const { me, can, profile } = useSession()
   const instructions = useInstructions()
   const stations = useStations()
+  // Rien tant qu'on est loin de la limite : la jauge ne s'allume qu'à 80 % des instructions publiées.
+  const publishLimit = useLimit('published_instructions', instructions.data?.filter((d) => d.json_data.publishedVersion).length)
   const [query, setQuery] = useState(params.get('q') ?? '')
   const hasFocus = me.categories.length > 0 || me.stationIds.length > 0
   const [scope, setScope] = useState<'mine' | 'all'>(hasFocus ? 'mine' : 'all')
@@ -101,6 +105,7 @@ export default function InstructionsPage() {
         }
       />
       <LowBalanceBanner />
+      {can('publish', 'write') && <UsageMeter feature="published_instructions" limit={publishLimit} quiet className="mb-5" />}
 
       <div className="glass-panel mb-4 flex items-center gap-3 rounded-[24px] px-4">
         <Search className="h-5 w-5 shrink-0 text-slate-400" />

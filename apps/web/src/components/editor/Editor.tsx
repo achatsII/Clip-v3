@@ -353,11 +353,11 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       Voir au poste
     </LinkButton>
   ) : approval ? (
-    <Button variant="primary" size="lg" disabled={!!problems.length} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', retry: () => setDialog('review') }) : setDialog('review'))} icon={<Send className="h-5 w-5" />}>
+    <Button variant="primary" size="lg" disabled={!!problems.length} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog('review') }) : setDialog('review'))} icon={<Send className="h-5 w-5" />}>
       Demander l’approbation {blockedByLimit && <LockBadge />}
     </Button>
   ) : (
-    <Button variant="primary" size="lg" disabled={!!problems.length} loading={publishing} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', retry: () => setDialog('checks') }) : setDialog('checks'))} icon={<Send className="h-5 w-5" />}>
+    <Button variant="primary" size="lg" disabled={!!problems.length} loading={publishing} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog('checks') }) : setDialog('checks'))} icon={<Send className="h-5 w-5" />}>
       {instr.publishedVersion ? `Publier la version ${instr.publishedVersion + 1}` : 'Publier'} {blockedByLimit && <LockBadge />}
     </Button>
   )

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Eye, Mail, UserPlus, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { LockBadge } from '@/components/billing/Billing'
+import { UsageMeter } from '@/components/billing/Usage'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Input, Label, Select } from '@/components/ui/Field'
@@ -13,6 +14,7 @@ import { Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { useStations } from '@/hooks/queries'
 import { useBilling, useLimit } from '@/lib/billing/state'
+import { countEditors, countText } from '@/lib/billing/usage'
 import { gateway } from '@/lib/gateway/client'
 import { currentGrantId, isNotAdmin, orgApi, type Member } from '@/lib/gateway/org'
 import { CATEGORIES, CATEGORY_KEYS, ROLES } from '@/lib/model/catalog'
@@ -40,8 +42,9 @@ export function MembersTab() {
   const [busy, setBusy] = useState(false)
   const [viewAs, setViewAs] = useState<{ name: string; value: MemberSettings } | null>(null)
   const stationNames = useMemo(() => new Map((stations.data ?? []).map((s) => [s._id, s.json_data.name])), [stations.data])
-  const writers = Object.values(org.json_data.members).filter((m) => m.role !== 'reader').length
-  const editorLimit = useLimit('editors', Math.max(1, writers))
+  const editorLimit = useLimit('editors', countEditors(org.json_data.members))
+  // Inviter un rédacteur de plus que le plan n'en compte : on le dit avant l'envoi, avec la voie gratuite.
+  const inviteBlocked = invite.role !== 'reader' && !!editorLimit?.reached
   const canWrite = can('members', 'write')
   const grantId = currentGrantId()
   const pending = Object.entries(org.json_data.members).filter(([k]) => k.startsWith('email:') && !(members.data ?? []).some((m) => `email:${m.email.toLowerCase()}` === k))
@@ -51,7 +54,7 @@ export function MembersTab() {
   async function saveMember(key: string, value: MemberSettings) {
     const becomesWriter = value.role !== 'reader' && org.json_data.members[key]?.role === 'reader'
     if (becomesWriter && editorLimit?.reached) {
-      openPaywall({ feature: 'editors' })
+      openPaywall({ feature: 'editors', used: editorLimit.used })
       return
     }
     await updateOrg({ [`members.${key}`]: value })
@@ -61,8 +64,8 @@ export function MembersTab() {
 
   async function sendInvite() {
     if (!/^\S+@\S+\.\S+$/.test(invite.email)) return
-    if (invite.role !== 'reader' && editorLimit?.reached) {
-      openPaywall({ feature: 'editors', retry: () => setInviteOpen(true) })
+    if (inviteBlocked) {
+      openPaywall({ feature: 'editors', used: editorLimit?.used, retry: () => setInviteOpen(true) })
       return
     }
     setBusy(true)
@@ -87,7 +90,6 @@ export function MembersTab() {
           <div>
             <h2 className="text-xl font-black tracking-tight">Membres et responsabilités</h2>
             <p className="text-sm font-medium text-slate-500">Un rôle, quelques responsabilités : c’est fini. Les opérateurs au poste n’ont pas besoin de compte.</p>
-            {editorLimit && editorLimit.limit !== null && <p className="mt-1 text-sm font-bold text-slate-500 tabular-nums">{editorLimit.used} rédacteur{editorLimit.used > 1 ? 's' : ''} sur {editorLimit.limit}</p>}
           </div>
           {canWrite && (
             <Button variant="primary" icon={<UserPlus className="h-4 w-4" />} onClick={() => setInviteOpen(true)}>
@@ -95,6 +97,7 @@ export function MembersTab() {
             </Button>
           )}
         </div>
+        <UsageMeter feature="editors" limit={editorLimit} className="mb-5" />
         {members.isLoading ? (
           <SkeletonRows count={3} />
         ) : members.error ? (
@@ -220,7 +223,7 @@ export function MembersTab() {
           <>
             <Button onClick={() => setInviteOpen(false)}>Annuler</Button>
             <Button variant="primary" loading={busy} disabled={!/^\S+@\S+\.\S+$/.test(invite.email)} onClick={sendInvite}>
-              Envoyer l’invitation
+              Envoyer l’invitation {inviteBlocked && <LockBadge />}
             </Button>
           </>
         }
@@ -240,6 +243,16 @@ export function MembersTab() {
               ))}
             </Select>
           </div>
+          {inviteBlocked && editorLimit?.limit != null && (
+            <div className="rounded-[20px] bg-amber-50 p-4 dark:bg-amber-500/10">
+              <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                Votre plan compte {countText('editors', editorLimit.limit)}, et {editorLimit.limit > 1 ? 'les places sont prises' : 'la place est prise'} : pour l’inviter comme {ROLES[invite.role].label.toLowerCase()}, il faut un plan qui en compte plus. Comme lecteur, c’est gratuit et sans limite.
+              </p>
+              <Button size="sm" className="mt-3" onClick={() => setInvite({ ...invite, role: 'reader' })}>
+                Inviter plutôt comme lecteur
+              </Button>
+            </div>
+          )}
           <p className="text-xs font-medium text-slate-400">Les opérateurs n’ont pas besoin d’être invités : ils ouvrent les instructions par le code QR de leur poste.</p>
         </div>
       </Modal>

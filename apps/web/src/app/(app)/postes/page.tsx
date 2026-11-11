@@ -5,6 +5,7 @@ import { MapPin, Plus, Printer, QrCode, Search } from 'lucide-react'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { LockBadge } from '@/components/billing/Billing'
+import { UsageMeter } from '@/components/billing/Usage'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Input, Label, Select } from '@/components/ui/Field'
@@ -86,18 +87,14 @@ export default function StationsPage() {
               </Link>
             )}
             {canWrite && (
-              <Button variant="primary" icon={<Plus className="h-5 w-5" />} onClick={() => (atLimit ? openPaywall({ feature: 'stations', retry: () => setOpen(true) }) : setOpen(true))}>
+              <Button variant="primary" icon={<Plus className="h-5 w-5" />} onClick={() => (atLimit ? openPaywall({ feature: 'stations', used: limit?.used, retry: () => setOpen(true) }) : setOpen(true))}>
                 Nouveau poste {atLimit && <LockBadge />}
               </Button>
             )}
           </>
         }
       />
-      {limit && limit.limit !== null && (
-        <p className="mb-4 text-sm font-bold text-slate-500 tabular-nums">
-          {limit.used} poste{limit.used > 1 ? 's' : ''} sur {limit.limit} dans votre plan
-        </p>
-      )}
+      <UsageMeter feature="stations" limit={limit} className="mb-5" />
 
       {(stations.data?.length ?? 0) > 8 && (
         <div className="glass-panel mb-5 flex items-center gap-3 rounded-[24px] px-4">

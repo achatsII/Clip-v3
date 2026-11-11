@@ -119,6 +119,15 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   refus `Paywall`, qui ne conseille jamais le plan actuel, seulement le moins cher des plans qui
   donnent vraiment plus (`src/lib/billing/advice.ts`). Pas de route serveur : le navigateur appelle
   la passerelle avec le jeton de l'utilisateur.
+- Les leviers de vente, drapeau allumé. Une limite comptée par l'app (postes, rédacteurs, instructions
+  publiées) a sa jauge `UsageMeter` (`src/components/billing/Usage.tsx`). La jauge s'allume à 80 %
+  (`NEAR_RATIO`, `src/lib/billing/usage.ts`) et nomme le plan qui en donne plus. La fenêtre d'une
+  limite dit ce que le plan permet et, si l'écran le sait (`PaywallRequest.used`), où l'on en est.
+  Inviter un rédacteur au-delà de la limite propose d'abord la voie gratuite (lecteur) ; le deuxième
+  rédacteur mène à Équipe. Le dossier pour la direction (`/statistiques/dossier`) reprend les
+  chiffres de la page Statistiques (`src/lib/stats/adoption.ts`) et propose, au choix, un plan avec
+  son prix, jamais dans la coquille. Il passe par le feature toggle `valueReport` et la feature
+  `adoption_stats`.
 - La coquille mobile n'offre aucun achat : dans la coquille, le paywall ne montre ni prix ni lien de
   paiement. Avant de soumettre aux magasins, décider de la posture (vente dans le magasin par
   RevenueCat, ou app « miroir » permise seulement aux comptes d'entreprise sous contrat) ; le

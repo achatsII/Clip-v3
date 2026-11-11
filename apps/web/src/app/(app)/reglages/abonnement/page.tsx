@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { useState } from 'react'
 import { billingClient } from '@/components/billing/BillingRoot'
 import { entitlementLines, formatPrice, usePlans } from '@/components/billing/Billing'
+import { UsageMeter, useUsage } from '@/components/billing/Usage'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Segmented } from '@/components/ui/Field'
@@ -13,7 +14,7 @@ import { ErrorState, Skeleton } from '@/components/ui/States'
 import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
-import { FEATURED_PLAN, PLAN_PITCH } from '@/lib/billing/catalog'
+import { FEATURED_PLAN, LIMIT_FEATURES, PLAN_PITCH } from '@/lib/billing/catalog'
 import { BillingError, creditsOf } from '@/lib/billing/client'
 import { useBilling } from '@/lib/billing/state'
 import { BILLING_V2 } from '@/lib/config'
@@ -44,6 +45,8 @@ function Subscription() {
   const inShell = !!nativeEnv()
   const isAdmin = role === 'admin'
   const c = creditsOf(state, 'ai_credits')
+  const usage = useUsage()
+  const limited = LIMIT_FEATURES.filter((k) => usage[k] && usage[k].limit !== null)
 
   async function buy(code: string) {
     setBusy(code)
@@ -110,6 +113,17 @@ function Subscription() {
         </div>
       ) : (
         <ErrorState title="L’état de l’abonnement n’a pas pu être lu" onRetry={() => void refresh()} />
+      )}
+
+      {state && limited.length > 0 && (
+        <Panel>
+          <p className="label-caps mb-3 text-slate-500">Ce que vous utilisez</p>
+          <div className="grid gap-4 md:grid-cols-3">
+            {limited.map((k) => (
+              <UsageMeter key={k} feature={k} limit={usage[k]} />
+            ))}
+          </div>
+        </Panel>
       )}
 
       <section>
