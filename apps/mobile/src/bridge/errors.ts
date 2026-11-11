@@ -1,4 +1,5 @@
 import type { BridgeErrorCode } from './protocol'
+import { strings } from '../i18n'
 
 /** Une erreur rendue à la page avec un code du contrat et un message lisible. */
 export class BridgeError extends Error {
@@ -11,4 +12,4 @@ export class BridgeError extends Error {
   }
 }
 
-export const cancelled = () => new BridgeError('cancelled', 'Annulé.')
+export const cancelled = () => new BridgeError('cancelled', strings().errors.cancelled)

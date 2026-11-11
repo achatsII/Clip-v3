@@ -36,6 +36,8 @@ export type Capability =
   | 'print'
   | 'openExternal'
   | 'context.set'
+  /** La langue de l'outil, que la page dit à la coquille pour ses écrans natifs (caméra, note vocale, scan). */
+  | 'ui.language'
   /** L'achat d'un abonnement dans le magasin (App Store, Google Play), par RevenueCat : annoncés ensemble. */
   | 'store.connect'
   | 'store.offers'
@@ -129,6 +131,12 @@ export interface BridgeRequestMap {
     payload: { organizationId: string | null; userId: string | null }
     result: Record<string, never>
   }
+  /**
+   * La langue choisie dans l'outil (`fr`, `en`, et celles qui viendront) : au chargement de la page
+   * et à chaque changement. La coquille la garde pour ses écrans natifs ; une langue qu'elle ne
+   * connaît pas encore prend l'anglais.
+   */
+  'ui.language': { payload: { lang: string }; result: Record<string, never> }
   /**
    * Le magasin connaît l'acheteur par son organisation (en minuscules), jamais par la personne :
    * à la connexion et à chaque changement d'organisation ; `null` à la déconnexion.

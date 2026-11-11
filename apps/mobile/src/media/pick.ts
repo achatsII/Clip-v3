@@ -4,6 +4,7 @@ import { BridgeError, cancelled } from '../bridge/errors'
 import type { CapturedMedia } from '../bridge/protocol'
 import { discardMedia } from './mediaStore'
 import { finalizePhoto, finalizeVideo } from './pipeline'
+import { strings } from '../i18n'
 
 /** Au-delà, un fichier choisi n'est pas envoyé : la page doit proposer autre chose. */
 export const MAX_PICK_BYTES = 1024 * 1024 * 1024
@@ -12,8 +13,8 @@ export function tooLarge(name: string, video = false): BridgeError {
   return new BridgeError(
     'too_large',
     video
-      ? `« ${name} » dépasse 1 Go. Raccourcissez-la dans Photos (Modifier), ou filmez avec CLIP : la vidéo y est bien plus légère.`
-      : `« ${name} » dépasse 1 Go. Choisissez un fichier plus court ou plus léger.`,
+      ? strings().errors.tooLargeVideo(name)
+      : strings().errors.tooLargeFile(name),
   )
 }
 
@@ -38,7 +39,7 @@ export async function pickFromLibrary(kinds: Array<'photo' | 'video'>, multiple 
   if (result.canceled) throw cancelled()
   const items: CapturedMedia[] = []
   for (const asset of result.assets) {
-    if ((asset.fileSize ?? 0) > MAX_PICK_BYTES) throw tooLarge(asset.fileName ?? 'Cette vidéo', asset.type === 'video')
+    if ((asset.fileSize ?? 0) > MAX_PICK_BYTES) throw tooLarge(asset.fileName ?? strings().errors.thisVideo, asset.type === 'video')
     if (asset.type === 'video' || asset.type === 'pairedVideo') {
       const media = await finalizeVideo(asset.uri, asset.duration ? asset.duration / 1000 : undefined, asset.fileName ?? undefined, 'library')
       if (media.sizeBytes > MAX_PICK_BYTES) {

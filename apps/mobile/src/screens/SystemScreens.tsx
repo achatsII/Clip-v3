@@ -2,17 +2,19 @@ import { Linking } from 'react-native'
 
 import { PrimaryButton } from '../ui/components'
 import { MessageScreen } from './MessageScreen'
+import { useStrings } from '../i18n'
 
 /** L'adresse de l'app web n'a pas été fournie à la build : rien à charger. */
 export function SetupScreen() {
+  const t = useStrings()
   return (
     <MessageScreen
       icon="tool"
-      title="Adresse de l’app web manquante"
+      title={t.system.setupTitle}
       message={
         __DEV__
-          ? 'Définissez EXPO_PUBLIC_CLIP_WEB_URL dans apps/mobile/.env (l’adresse de l’app web CLIP, ex. l’adresse IP de votre poste en développement), puis relancez Metro.'
-          : 'Cette version de CLIP a été construite sans l’adresse de son service. Installez la version publiée par votre organisation.'
+          ? t.system.setupDev
+          : t.system.setupProd
       }
     />
   )
@@ -20,15 +22,16 @@ export function SetupScreen() {
 
 /** Le serveur dit que cette version de la coquille est trop vieille : seul geste, mettre à jour. */
 export function ForceUpdateScreen({ storeUrl }: { storeUrl: string | null }) {
+  const t = useStrings()
   return (
     <MessageScreen
       icon="download-cloud"
-      title="Une mise à jour de CLIP est requise"
-      message="Cette version n’est plus prise en charge. Mettez l’app à jour pour continuer à capturer et consulter vos instructions."
-      footnote={storeUrl ? undefined : 'Ouvrez le magasin d’applications de votre appareil pour mettre CLIP à jour.'}
+      title={t.system.updateTitle}
+      message={t.system.updateMessage}
+      footnote={storeUrl ? undefined : t.system.updateFootnote}
     >
       {storeUrl ? (
-        <PrimaryButton label="Mettre à jour" icon="arrow-up-circle" onPress={() => void Linking.openURL(storeUrl)} />
+        <PrimaryButton label={t.system.updateButton} icon="arrow-up-circle" onPress={() => void Linking.openURL(storeUrl)} />
       ) : null}
     </MessageScreen>
   )
@@ -36,15 +39,16 @@ export function ForceUpdateScreen({ storeUrl }: { storeUrl: string | null }) {
 
 /** La page n'a pas pu être chargée (réseau, serveur). */
 export function OfflineScreen({ onRetry, detail }: { onRetry: () => void; detail?: string }) {
+  const t = useStrings()
   return (
     <MessageScreen
       icon="wifi-off"
       tone="danger"
-      title="Pas de connexion"
-      message="CLIP n’arrive pas à joindre son service. Vérifiez le Wi-Fi ou les données cellulaires, puis réessayez."
+      title={t.system.offlineTitle}
+      message={t.system.offlineMessage}
       footnote={detail}
     >
-      <PrimaryButton label="Réessayer" icon="refresh-cw" onPress={onRetry} />
+      <PrimaryButton label={t.common.retry} icon="refresh-cw" onPress={onRetry} />
     </MessageScreen>
   )
 }

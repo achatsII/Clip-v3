@@ -4,6 +4,7 @@ import { BridgeError } from '../bridge/errors'
 import { logEvent } from '../logging/log'
 import { localStore } from '../storage/localStore'
 import { mediaFile } from './mediaStore'
+import { strings } from '../i18n'
 
 export type ProgressSink = (sentBytes: number, totalBytes: number) => void
 
@@ -21,7 +22,7 @@ function throttled(sink: ProgressSink): (p: { bytesSent: number; totalBytes: num
 
 function requireMedia(localId: string) {
   const found = mediaFile(localId)
-  if (!found) throw new BridgeError('failed', 'Ce média n’est plus sur l’appareil. Reprenez la capture.')
+  if (!found) throw new BridgeError('failed', strings().errors.mediaGone)
   return found
 }
 
@@ -36,7 +37,7 @@ async function withOneRetry(run: () => Promise<UploadResult>, action: string): P
     } catch (second) {
       throw new BridgeError(
         'network',
-        'L’envoi n’a pas abouti. Vérifiez la connexion et réessayez.' +
+        strings().errors.uploadFailed +
           (second instanceof Error && second.message ? ` (${second.message})` : ''),
       )
     }

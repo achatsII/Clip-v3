@@ -23,6 +23,7 @@ chargement de la page). La page n'appelle que ce qui est annoncé ; sinon, elle 
 | `haptics`, `keepAwake` | Vibration, écran allumé pendant la lecture | expo-haptics, expo-keep-awake |
 | `share`, `print`, `openExternal` | Feuille de partage, impression (PDF), navigateur du système | expo-sharing, expo-print, expo-web-browser |
 | `context.set` | Organisation et utilisateur connectés, pour les journaux | — |
+| `ui.language` | La langue de l'outil, dite par la page au chargement et à chaque changement : les écrans natifs (caméra, note vocale, scan, mise à jour, hors ligne) la suivent et la gardent pour le prochain démarrage ; sans elle, la langue de l'appareil. Une langue que la coquille ne parle pas encore prend l'anglais | — |
 | `store.connect`, `store.offers`, `store.purchase`, `store.restore` | Achat d'un abonnement dans l'App Store ou Google Play : l'organisation comme acheteur, les prix du magasin, l'achat, « Restaurer mes achats ». Annoncée seulement avec une clé RevenueCat, hors Expo Go, toggle `storePurchases` allumé | react-native-purchases |
 
 Un achat ou une restauration qui n'aboutit pas répond normalement, avec sa raison

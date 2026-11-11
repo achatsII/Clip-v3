@@ -20,6 +20,7 @@ import { ForceUpdateScreen, SetupScreen } from './src/screens/SystemScreens'
 import { ShellScreen } from './src/screens/ShellScreen'
 import { localStore } from './src/storage/localStore'
 import { colors } from './src/ui/theme'
+import { loadShellLang } from './src/i18n/persist'
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined)
 
@@ -72,7 +73,7 @@ export default function App() {
     let alive = true
     ;(async () => {
       try {
-        await localStore.load()
+        await Promise.all([localStore.load(), loadShellLang()])
       } catch (e) {
         logError(e, { action: 'boot.localStore' })
       }

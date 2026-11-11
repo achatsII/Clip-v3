@@ -1,14 +1,16 @@
 import { Pressable, StyleSheet, Text } from 'react-native'
 
 import { colors, touch } from '../ui/theme'
+import { useStrings } from '../i18n'
 
 /** Visible seulement quand la caméra est zoomée : un toucher revient au cadrage normal. */
 export function ZoomReset({ zoom, onReset }: { zoom: number; onReset: () => void }) {
+  const t = useStrings()
   if (zoom < 0.01) return null
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Revenir au cadrage normal"
+      accessibilityLabel={t.common.zoomReset}
       onPress={onReset}
       hitSlop={8}
       style={({ pressed }) => [styles.chip, pressed && styles.pressed]}

@@ -18,6 +18,7 @@ export const SHELL_CAPABILITIES: readonly Capability[] = [
   'print',
   'openExternal',
   'context.set',
+  'ui.language',
 ]
 
 /**

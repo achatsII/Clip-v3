@@ -1,5 +1,6 @@
 import { BridgeError } from '../bridge/errors'
 import type { BridgeRequestMap } from '../bridge/protocol'
+import { strings } from '../i18n'
 
 /**
  * Les écrans de capture natifs, ouverts par le pont et rendus par-dessus la WebView.
@@ -35,7 +36,7 @@ class CaptureController {
 
   open<K extends CaptureKind>(kind: K, payload: CaptureMap[K]['payload']): Promise<CaptureMap[K]['result']> {
     if (this.pending) {
-      return Promise.reject(new BridgeError('failed', 'Une capture est déjà ouverte.'))
+      return Promise.reject(new BridgeError('failed', strings().errors.captureOpen))
     }
     return new Promise((resolve, reject) => {
       const capture: ActiveCapture = { id: this.nextId++, kind, payload }

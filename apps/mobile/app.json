@@ -15,7 +15,8 @@
         "NSCameraUsageDescription": "CLIP utilise la caméra pour photographier et filmer les étapes de vos instructions de travail, et pour lire les codes QR des postes.",
         "NSMicrophoneUsageDescription": "CLIP utilise le micro pour enregistrer vos notes vocales, le son de vos vidéos et parler à l'assistant vocal.",
         "NSPhotoLibraryUsageDescription": "CLIP accède à vos photos et vidéos pour ajouter des médias déjà pris à une instruction de travail.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleAllowMixedLocalizations": true
       }
     },
     "android": {
@@ -76,6 +77,10 @@
       ],
       "expo-font",
       "expo-asset"
-    ]
+    ],
+    "locales": {
+      "fr": "./locales/fr.json",
+      "en": "./locales/en.json"
+    }
   }
 }

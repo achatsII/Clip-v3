@@ -20,6 +20,7 @@ import { PermissionPanel } from './PermissionPanel'
 import { ShutterButton } from './ShutterButton'
 import { usePinchZoom } from './usePinchZoom'
 import { ZoomReset } from './ZoomReset'
+import { useStrings } from '../i18n'
 
 const KEEP_AWAKE_TAG = 'clip-video'
 
@@ -28,6 +29,7 @@ const KEEP_AWAKE_TAG = 'clip-video'
  * caméra du téléphone. Sur iOS, le débit ne s'applique que si le codec est imposé (avc1).
  */
 export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'> }) {
+  const t = useStrings()
   const insets = useSafeAreaInsets()
   const { width, height } = useWindowDimensions()
   const [cameraPermission, requestCamera] = useCameraPermissions()
@@ -65,8 +67,8 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
     return (
       <PermissionPanel
         icon="video"
-        title="La caméra est nécessaire"
-        message="CLIP filme la tâche pendant qu'on l'explique. Autorisez la caméra pour continuer."
+        title={t.video.permissionTitle}
+        message={t.video.permissionMessage}
         canAskAgain={cameraPermission.canAskAgain}
         onRequest={() => void requestCamera()}
         onCancel={() => captureController.fail(capture.id, cancelled())}
@@ -77,8 +79,8 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
     return (
       <PermissionPanel
         icon="mic"
-        title="Le micro rend la vidéo utile"
-        message="L'IA écoute les explications pour rédiger les étapes. Autorisez le micro, ou filmez sans le son."
+        title={t.video.micTitle}
+        message={t.video.micMessage}
         canAskAgain={micPermission.canAskAgain}
         onRequest={() => void requestMic()}
         onCancel={() => captureController.fail(capture.id, cancelled())}
@@ -100,7 +102,7 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
         maxDuration,
         ...(Platform.OS === 'ios' ? { codec: 'avc1' as const } : {}),
       })
-      if (!result?.uri) throw new Error('Aucune vidéo rendue par la caméra')
+      if (!result?.uri) throw new Error(t.video.noVideo)
       setPhase('finishing')
       const durationSec = (Date.now() - startedAt.current) / 1000
       const media = await finalizeVideo(result.uri, Math.min(durationSec, maxDuration))
@@ -109,7 +111,7 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
     } catch (e) {
       logError(e, { screen: 'camera.video', action: 'record' })
       setPhase('idle')
-      Alert.alert('La vidéo n’a pas pu être enregistrée', 'Réessayez. Si le problème revient, redémarrez l’app.')
+      Alert.alert(t.video.recordFailedTitle, t.video.recordFailedMessage)
     } finally {
       void deactivateKeepAwake(KEEP_AWAKE_TAG)
     }
@@ -134,7 +136,7 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
       setFromLibrary(false)
       if (e instanceof BridgeError && e.code === 'cancelled') return
       logError(e, { screen: 'camera.video', action: 'pick' })
-      Alert.alert('La vidéo n’a pas pu être ajoutée', e instanceof BridgeError ? e.message : 'Réessayez avec une autre vidéo.')
+      Alert.alert(t.video.addFailed, e instanceof BridgeError ? e.message : t.video.addFailedMessage)
     }
   }
 
@@ -163,7 +165,7 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
           {phase === 'idle' ? (
             <IconButton
               icon="x"
-              label="Fermer"
+              label={t.common.close}
               onPress={() => captureController.fail(capture.id, cancelled())}
               size={touch.min + 8}
             />
@@ -174,17 +176,17 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
             <Pill tone={nearEnd ? 'danger' : 'glass'}>
               <View style={styles.recDot} />
               <Text style={styles.timer}>
-                {nearEnd ? `${formatClock(remaining)} restantes` : formatClock(elapsed)}
-                {sizeBytes > 0 ? `  ·  ${(sizeBytes / 1_000_000).toFixed(0)} Mo` : ''}
+                {nearEnd ? t.video.remaining(formatClock(remaining)) : formatClock(elapsed)}
+                {sizeBytes > 0 ? `  ·  ${t.video.megabytes(sizeBytes / 1_000_000)}` : ''}
               </Text>
             </Pill>
           ) : (
-            <Pill>{`720p · max ${formatClock(maxDuration)}`}</Pill>
+            <Pill>{t.video.preset(formatClock(maxDuration))}</Pill>
           )}
           <View style={styles.row}>
             <IconButton
               icon="zap"
-              label={torch ? 'Éteindre la lampe' : 'Allumer la lampe'}
+              label={torch ? t.common.torchOff : t.common.torchOn}
               active={torch}
               onPress={() => setTorch((t) => !t)}
               size={touch.min + 8}
@@ -192,7 +194,7 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
             {phase === 'idle' ? (
               <IconButton
                 icon="refresh-ccw"
-                label="Changer de caméra"
+                label={t.common.switchCamera}
                 onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
                 size={touch.min + 8}
               />
@@ -204,8 +206,8 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
           {phase === 'idle' ? (
             <Text style={styles.hint}>
               {portrait
-                ? 'Astuce : tenez le téléphone à l’horizontale et filmez la personne qui explique. Pincez pour zoomer.'
-                : 'Filmez la personne qui explique, au plus près des gestes. Pincez pour zoomer.'}
+                ? t.video.hintPortrait
+                : t.video.hintLandscape}
             </Text>
           ) : null}
           {phase === 'finishing' ? (
@@ -213,8 +215,8 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
               <ActivityIndicator color={colors.white} size="large" />
               <Text style={styles.hint}>
                 {fromLibrary
-                  ? 'Préparation de la vidéo… Si elle est sur iCloud, l’iPhone la télécharge d’abord, puis la réduit en 720p.'
-                  : 'Préparation de la vidéo…'}
+                  ? t.video.preparingLibrary
+                  : t.video.preparing}
               </Text>
             </View>
           ) : null}
@@ -222,12 +224,12 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
           <View style={styles.controls}>
             <View style={[styles.side, styles.sideLeft]}>
               {phase === 'idle' ? (
-                <IconButton icon="image" label="Choisir une vidéo du téléphone" onPress={() => void pickExisting()} size={touch.large} />
+                <IconButton icon="image" label={t.video.pick} onPress={() => void pickExisting()} size={touch.large} />
               ) : null}
             </View>
             <ShutterButton
               variant={phase === 'recording' ? 'stop' : 'record'}
-              label={phase === 'recording' ? 'Arrêter l’enregistrement' : 'Commencer à filmer'}
+              label={phase === 'recording' ? t.video.stop : t.video.start}
               onPress={phase === 'recording' ? stop : () => void start()}
               disabled={!ready || phase === 'finishing'}
             />

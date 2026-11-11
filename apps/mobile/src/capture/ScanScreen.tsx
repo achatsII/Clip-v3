@@ -11,12 +11,14 @@ import { colors, radii, touch, type } from '../ui/theme'
 import { useBackAction } from './backAction'
 import { captureController, type ActiveCapture } from './controller'
 import { PermissionPanel } from './PermissionPanel'
+import { useStrings } from '../i18n'
 
 const ALL_FORMATS: ScanFormat[] = ['qr', 'code128', 'code39', 'ean13', 'ean8', 'upc_a', 'datamatrix']
 const FRAME = 260
 
 /** Viseur plein écran : le premier code lu est rendu à la page, avec une vibration. */
 export function ScanScreen({ capture }: { capture: ActiveCapture<'scan'> }) {
+  const t = useStrings()
   const insets = useSafeAreaInsets()
   const [permission, requestPermission] = useCameraPermissions()
   const [torch, setTorch] = useState(false)
@@ -31,8 +33,8 @@ export function ScanScreen({ capture }: { capture: ActiveCapture<'scan'> }) {
     return (
       <PermissionPanel
         icon="maximize"
-        title="La caméra lit les codes"
-        message="Autorisez la caméra pour scanner le code QR d'un poste ou d'un équipement."
+        title={t.scan.permissionTitle}
+        message={t.scan.permissionMessage}
         canAskAgain={permission.canAskAgain}
         onRequest={() => void requestPermission()}
         onCancel={() => captureController.fail(capture.id, cancelled())}
@@ -70,20 +72,20 @@ export function ScanScreen({ capture }: { capture: ActiveCapture<'scan'> }) {
         </View>
         <View style={[styles.shade, styles.below]}>
           <Text style={styles.prompt}>
-            {capture.payload.prompt || 'Visez le code QR du poste ou le code-barres de l’équipement.'}
+            {capture.payload.prompt || t.scan.aim}
           </Text>
         </View>
       </View>
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
         <IconButton
           icon="x"
-          label="Fermer"
+          label={t.common.close}
           onPress={() => captureController.fail(capture.id, cancelled())}
           size={touch.min + 8}
         />
         <IconButton
           icon="zap"
-          label={torch ? 'Éteindre la lampe' : 'Allumer la lampe'}
+          label={torch ? t.common.torchOff : t.common.torchOn}
           active={torch}
           onPress={() => setTorch((t) => !t)}
           size={touch.min + 8}

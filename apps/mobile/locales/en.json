@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "CLIP uses the camera to photograph and film the steps of your work instructions, and to read station QR codes.",
+    "NSMicrophoneUsageDescription": "CLIP uses the microphone to record your voice notes and the sound of your videos, and to talk to the voice assistant.",
+    "NSPhotoLibraryUsageDescription": "CLIP accesses your photos and videos to add media you already took to a work instruction."
+  }
+}

@@ -24,6 +24,7 @@ import { colors, touch, type } from '../ui/theme'
 import { useBackAction } from './backAction'
 import { captureController, type ActiveCapture } from './controller'
 import { PermissionPanel } from './PermissionPanel'
+import { useStrings } from '../i18n'
 
 /** AAC mono 64 kb/s dans un .m4a : ~0,5 Mo la minute, assez pour la transcription. */
 export const AUDIO_OPTIONS: RecordingOptions = {
@@ -42,6 +43,7 @@ const BARS = 28
 type Permission = { granted: boolean; canAskAgain: boolean } | null
 
 export function AudioCaptureScreen({ capture }: { capture: ActiveCapture<'audio'> }) {
+  const t = useStrings()
   const insets = useSafeAreaInsets()
   const recorder = useAudioRecorder(AUDIO_OPTIONS)
   const state = useAudioRecorderState(recorder, 120)
@@ -97,7 +99,7 @@ export function AudioCaptureScreen({ capture }: { capture: ActiveCapture<'audio'
       setPhase('recording')
     } catch (e) {
       logError(e, { screen: 'audio.record', action: 'start' })
-      Alert.alert('Le micro n’a pas démarré', 'Fermez les autres apps qui utilisent le micro, puis réessayez.')
+      Alert.alert(t.audio.micFailedTitle, t.audio.micFailedMessage)
     }
   }
 
@@ -117,15 +119,15 @@ export function AudioCaptureScreen({ capture }: { capture: ActiveCapture<'audio'
       logError(e, { screen: 'audio.record', action: 'stop' })
       stopping.current = false
       setPhase('idle')
-      Alert.alert('La note vocale n’a pas pu être gardée', 'Réessayez l’enregistrement.')
+      Alert.alert(t.audio.saveFailedTitle, t.audio.saveFailedMessage)
     }
   }
 
   function confirmDiscard() {
-    Alert.alert('Supprimer cette note vocale ?', undefined, [
-      { text: 'Continuer', style: 'cancel' },
+    Alert.alert(t.audio.discardTitle, undefined, [
+      { text: t.common.continue, style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: t.common.delete,
         style: 'destructive',
         onPress: async () => {
           await recorder.stop().catch(() => undefined)
@@ -140,8 +142,8 @@ export function AudioCaptureScreen({ capture }: { capture: ActiveCapture<'audio'
     return (
       <PermissionPanel
         icon="mic"
-        title="Le micro est nécessaire"
-        message="CLIP enregistre vos explications pour que l'IA les transforme en étapes."
+        title={t.audio.permissionTitle}
+        message={t.audio.permissionMessage}
         canAskAgain={permission.canAskAgain}
         onRequest={() => void ask()}
         onCancel={() => captureController.fail(capture.id, cancelled())}
@@ -156,7 +158,7 @@ export function AudioCaptureScreen({ capture }: { capture: ActiveCapture<'audio'
       <View style={styles.topBar}>
         <IconButton
           icon="x"
-          label={recording ? 'Supprimer la note' : 'Fermer'}
+          label={recording ? t.audio.discardNote : t.common.close}
           onPress={recording ? confirmDiscard : () => captureController.fail(capture.id, cancelled())}
           size={touch.min + 8}
           disabled={phase === 'finishing'}
@@ -164,10 +166,10 @@ export function AudioCaptureScreen({ capture }: { capture: ActiveCapture<'audio'
       </View>
 
       <View style={styles.center}>
-        <Text style={styles.label}>{recording ? 'Enregistrement' : 'Note vocale'}</Text>
+        <Text style={styles.label}>{recording ? t.audio.recording : t.audio.voiceNote}</Text>
         <Text style={styles.clock}>{formatClock(elapsed)}</Text>
         <Text style={styles.sub}>
-          {recording ? `Parlez normalement · max ${formatClock(maxDuration)}` : 'Expliquez la tâche comme à un collègue.'}
+          {recording ? t.audio.speakNormally(formatClock(maxDuration)) : t.audio.explain}
         </Text>
         <View style={styles.wave} accessibilityElementsHidden>
           {levels.map((l, i) => (
@@ -179,7 +181,7 @@ export function AudioCaptureScreen({ capture }: { capture: ActiveCapture<'audio'
       <View style={styles.actions}>
         {recording || phase === 'finishing' ? (
           <PrimaryButton
-            label="Terminer la note"
+            label={t.audio.finish}
             icon="check"
             onPress={() => void finish()}
             loading={phase === 'finishing'}
@@ -187,14 +189,14 @@ export function AudioCaptureScreen({ capture }: { capture: ActiveCapture<'audio'
         ) : (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Commencer l’enregistrement"
+            accessibilityLabel={t.audio.start}
             onPress={() => void start()}
             style={({ pressed }) => [styles.micButton, pressed && { transform: [{ scale: 0.95 }] }]}
           >
             <Feather name="mic" size={44} color={colors.white} />
           </Pressable>
         )}
-        {recording ? <GlassButton label="Supprimer" icon="trash-2" onPress={confirmDiscard} /> : null}
+        {recording ? <GlassButton label={t.common.delete} icon="trash-2" onPress={confirmDiscard} /> : null}
       </View>
     </View>
   )

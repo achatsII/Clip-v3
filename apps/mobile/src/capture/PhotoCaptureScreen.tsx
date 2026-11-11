@@ -19,12 +19,14 @@ import { PermissionPanel } from './PermissionPanel'
 import { ShutterButton } from './ShutterButton'
 import { usePinchZoom } from './usePinchZoom'
 import { ZoomReset } from './ZoomReset'
+import { useStrings } from '../i18n'
 
 /**
  * Plusieurs photos d'affilée. Chaque photo est réduite (1920 px, JPEG) pendant qu'on prend la
  * suivante ; « Terminé » rend la série dans l'ordre de prise.
  */
 export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'> }) {
+  const t = useStrings()
   const insets = useSafeAreaInsets()
   const [permission, requestPermission] = useCameraPermissions()
   const cameraRef = useRef<CameraView>(null)
@@ -54,8 +56,8 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
     return (
       <PermissionPanel
         icon="camera"
-        title="La caméra est nécessaire"
-        message="CLIP photographie les étapes de vos instructions. Autorisez la caméra pour continuer."
+        title={t.photo.permissionTitle}
+        message={t.photo.permissionMessage}
         canAskAgain={permission.canAskAgain}
         onRequest={() => void requestPermission()}
         onCancel={() => captureController.fail(capture.id, cancelled())}
@@ -103,7 +105,7 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
     } catch (e) {
       if (!(e instanceof BridgeError && e.code === 'cancelled')) {
         logError(e, { screen: 'camera.photo', action: 'pick' })
-        Alert.alert('Les photos n’ont pas pu être ajoutées', e instanceof BridgeError ? e.message : 'Réessayez.')
+        Alert.alert(t.photo.addFailed, e instanceof BridgeError ? e.message : t.common.tryAgain)
       }
     } finally {
       setPicking(false)
@@ -123,10 +125,10 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
       captureController.fail(capture.id, cancelled())
       return
     }
-    Alert.alert(`Garder ${count > 1 ? `les ${count} photos` : 'la photo'} ?`, undefined, [
-      { text: 'Garder', style: 'default', onPress: () => void finish() },
+    Alert.alert(t.photo.keepTitle(count), undefined, [
+      { text: t.common.keep, style: 'default', onPress: () => void finish() },
       {
-        text: 'Supprimer',
+        text: t.common.delete,
         style: 'destructive',
         onPress: async () => {
           const results = await Promise.all(pending.current)
@@ -153,19 +155,19 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
         />
 
         <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
-          <IconButton icon="x" label="Fermer" onPress={close} size={touch.min + 8} />
-          <Pill>{full ? `Maximum atteint · ${count}` : `${count} photo${count > 1 ? 's' : ''}`}</Pill>
+          <IconButton icon="x" label={t.common.close} onPress={close} size={touch.min + 8} />
+          <Pill>{full ? t.photo.full(count) : t.photo.count(count)}</Pill>
           <View style={styles.row}>
             <IconButton
               icon="zap"
-              label={torch ? 'Éteindre la lampe' : 'Allumer la lampe'}
+              label={torch ? t.common.torchOff : t.common.torchOn}
               active={torch}
               onPress={() => setTorch((t) => !t)}
               size={touch.min + 8}
             />
             <IconButton
               icon="refresh-ccw"
-              label="Changer de caméra"
+              label={t.common.switchCamera}
               onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
               size={touch.min + 8}
             />
@@ -176,7 +178,7 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
           {picking ? (
             <View style={styles.preparing}>
               <ActivityIndicator color={colors.white} />
-              <Text style={styles.hint}>Préparation des photos… (téléchargement d’iCloud au besoin)</Text>
+              <Text style={styles.hint}>{t.photo.preparing}</Text>
             </View>
           ) : null}
           {count > 0 ? (
@@ -190,7 +192,7 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
               )}
             </ScrollView>
           ) : (
-            <Text style={styles.hint}>Prenez autant de photos que nécessaire, une par étape. Pincez pour zoomer.</Text>
+            <Text style={styles.hint}>{t.photo.hint}</Text>
           )}
           <View style={styles.zoomRow}>
             <ZoomReset zoom={zoom} onReset={resetZoom} />
@@ -198,13 +200,13 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
           <View style={styles.controls}>
             <View style={[styles.side, styles.sideLeft]}>
               {!full ? (
-                <IconButton icon="image" label="Choisir des photos du téléphone" onPress={() => void pickExisting()} disabled={picking || finishing} size={touch.large} />
+                <IconButton icon="image" label={t.photo.pick} onPress={() => void pickExisting()} disabled={picking || finishing} size={touch.large} />
               ) : null}
             </View>
-            <ShutterButton onPress={shoot} disabled={!ready || full || finishing} label="Prendre la photo" />
+            <ShutterButton onPress={shoot} disabled={!ready || full || finishing} label={t.photo.shoot} />
             <View style={styles.side}>
               {count > 0 ? (
-                <PrimaryButton label={`Terminé (${count})`} onPress={() => void finish()} loading={finishing} />
+                <PrimaryButton label={t.photo.done(count)} onPress={() => void finish()} loading={finishing} />
               ) : null}
             </View>
           </View>

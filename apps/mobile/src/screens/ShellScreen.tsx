@@ -22,6 +22,7 @@ import { shouldLoadInApp } from '../config/navigation'
 import { logError, logEvent } from '../logging/log'
 import { colors } from '../ui/theme'
 import { OfflineScreen } from './SystemScreens'
+import { strings } from '../i18n'
 
 export function ShellScreen({
   target,
@@ -153,7 +154,7 @@ export function ShellScreen({
           if (statusCode >= 500 && isSameOrigin(url, target.origin)) {
             logError(new Error(`HTTP ${statusCode}`), { screen: 'shell', action: 'load', url })
             hideSplash()
-            setFailure(`Le service a répondu ${statusCode}.`)
+            setFailure(strings().system.serviceStatus(statusCode))
           }
         }}
         onContentProcessDidTerminate={() => webRef.current?.reload()}

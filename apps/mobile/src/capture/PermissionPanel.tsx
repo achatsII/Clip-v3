@@ -3,6 +3,7 @@ import { Linking, StyleSheet, Text, View } from 'react-native'
 
 import { GlassButton, PrimaryButton, type IconName } from '../ui/components'
 import { colors, radii, type } from '../ui/theme'
+import { useStrings } from '../i18n'
 
 /**
  * Ce que voit la personne quand une permission manque : pourquoi, et le seul geste utile
@@ -26,6 +27,7 @@ export function PermissionPanel({
   /** Un autre chemin possible sans la permission (ex. filmer sans le son). */
   alternative?: { label: string; icon: IconName; onPress: () => void }
 }) {
+  const t = useStrings()
   return (
     <View style={styles.wrap}>
       <View style={styles.iconBox}>
@@ -35,14 +37,14 @@ export function PermissionPanel({
       <Text style={styles.message}>{message}</Text>
       <View style={styles.actions}>
         {canAskAgain ? (
-          <PrimaryButton label="Autoriser" icon="check" onPress={onRequest} />
+          <PrimaryButton label={t.common.allow} icon="check" onPress={onRequest} />
         ) : (
-          <PrimaryButton label="Ouvrir les réglages" icon="settings" onPress={() => Linking.openSettings()} />
+          <PrimaryButton label={t.common.openSettings} icon="settings" onPress={() => Linking.openSettings()} />
         )}
         {alternative ? (
           <GlassButton label={alternative.label} icon={alternative.icon} onPress={alternative.onPress} />
         ) : null}
-        <GlassButton label="Annuler" onPress={onCancel} />
+        <GlassButton label={t.common.cancel} onPress={onCancel} />
       </View>
     </View>
   )

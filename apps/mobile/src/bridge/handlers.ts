@@ -18,6 +18,7 @@ import { connectStore, purchaseInStore, restoreInStore, storeEnabled, storeOffer
 import { BridgeError, cancelled } from './errors'
 import type { BridgeEvent, CapturedMedia } from './protocol'
 import type { BridgeHandlers } from './router'
+import { applyPageLanguage, strings } from '../i18n'
 
 const KEEP_AWAKE_TAG = 'clip-page'
 
@@ -104,7 +105,7 @@ export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandle
     share: async ({ url, text, fileName, mimeType, base64 }) => {
       if (base64 && fileName) {
         if (!(await Sharing.isAvailableAsync())) {
-          throw new BridgeError('unsupported', 'Le partage de fichiers n’est pas disponible sur cet appareil.')
+          throw new BridgeError('unsupported', strings().errors.shareUnavailable)
         }
         const dir = new Directory(Paths.cache, 'clip-share')
         if (!dir.exists) dir.create({ intermediates: true, idempotent: true })
@@ -130,7 +131,7 @@ export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandle
         await Print.printAsync({ html })
       } catch (e) {
         logError(e, { action: 'print' })
-        throw new BridgeError('failed', 'L’impression n’a pas pu s’ouvrir.')
+        throw new BridgeError('failed', strings().errors.printFailed)
       }
       return {}
     },
@@ -147,29 +148,34 @@ export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandle
       return {}
     },
 
+    'ui.language': async ({ lang }) => {
+      applyPageLanguage(lang)
+      return {}
+    },
+
     // L'achat dans le magasin : la capacité n'est annoncée que si le module est utilisable.
     'store.connect': async ({ orgId }) => {
-      if (!storeEnabled()) throw new BridgeError('unsupported', 'L’achat dans le magasin n’est pas offert dans cette version.')
+      if (!storeEnabled()) throw new BridgeError('unsupported', strings().errors.storeUnavailable)
       await connectStore(orgId)
       return {}
     },
     'store.offers': async ({ productIds }) => {
-      if (!storeEnabled()) throw new BridgeError('unsupported', 'L’achat dans le magasin n’est pas offert dans cette version.')
+      if (!storeEnabled()) throw new BridgeError('unsupported', strings().errors.storeUnavailable)
       try {
         return { offers: await storeOffers(productIds) }
       } catch (e) {
         logError(e, { action: 'store.offers' })
-        throw new BridgeError('network', 'Le magasin ne répond pas.')
+        throw new BridgeError('network', strings().errors.storeNoAnswer)
       }
     },
     'store.purchase': async ({ productId }) => {
-      if (!storeEnabled()) throw new BridgeError('unsupported', 'L’achat dans le magasin n’est pas offert dans cette version.')
+      if (!storeEnabled()) throw new BridgeError('unsupported', strings().errors.storeUnavailable)
       const result = await purchaseInStore(productId)
       if (result.outcome === 'failed') logError(new Error(`store_${result.failure}`), { action: 'store.purchase' })
       return result
     },
     'store.restore': async () => {
-      if (!storeEnabled()) throw new BridgeError('unsupported', 'L’achat dans le magasin n’est pas offert dans cette version.')
+      if (!storeEnabled()) throw new BridgeError('unsupported', strings().errors.storeUnavailable)
       return restoreInStore()
     },
   }

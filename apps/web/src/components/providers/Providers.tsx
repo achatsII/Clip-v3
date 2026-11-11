@@ -2,8 +2,9 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
-import { nativeEnv } from '@/lib/bridge/native'
+import { callNative, hasCapability, nativeEnv } from '@/lib/bridge/native'
 import { ApiError } from '@/lib/gateway/client'
+import { useLang } from '@/lib/i18n'
 import { applyTheme, readTheme } from '@/lib/theme'
 import { installKeyboardInset } from '@/lib/ui/keyboard'
 import { ConfirmProvider } from '../ui/Confirm'
@@ -44,6 +45,16 @@ export function Providers({ children }: { children: ReactNode }) {
       <ToastProvider>
         <ConfirmProvider>{children}</ConfirmProvider>
       </ToastProvider>
+      <ShellLanguage />
     </QueryClientProvider>
   )
+}
+
+/** Dans la coquille : ses écrans natifs (caméra, note vocale, scan) parlent la langue de l'outil. */
+function ShellLanguage() {
+  const lang = useLang()
+  useEffect(() => {
+    if (hasCapability('ui.language')) void callNative('ui.language', { lang }).catch(() => undefined)
+  }, [lang])
+  return null
 }
