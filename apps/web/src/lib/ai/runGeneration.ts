@@ -52,6 +52,8 @@ export function startGeneration(input: {
         title: instr.title,
         stationNames: stations.map((s) => [s.json_data.name, s.json_data.code].filter(Boolean).join(' — ')),
         forceKind: input.forceKind,
+        // Une régénération garde la langue de l'instruction déjà écrite.
+        language: instr.draft?.language,
         onStage: stage,
       })
       // Les URI Gemini sont gardées : une régénération dans les 48 h ne retéléverse rien.

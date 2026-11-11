@@ -127,6 +127,8 @@ export interface GenerateInput {
   title?: string
   stationNames: string[]
   forceKind?: 'procedure' | 'lockout'
+  /** La langue d'écriture : celle de l'instruction qu'on régénère, sinon celle de l'outil de l'auteur. */
+  language?: string
   onStage?: (stage: Stage, detail?: string) => void
   signal?: AbortSignal
 }
@@ -141,6 +143,7 @@ export interface GenerateOutput {
 }
 
 export async function generateInstruction(input: GenerateInput): Promise<GenerateOutput> {
+  const language = input.language ?? contentLanguage()
   const t = messages().capture.generate
   const usable = input.sources.filter((s) => s.url || s.text)
   if (!usable.length) throw new ApiError(t.noSources, 400)
@@ -162,7 +165,7 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
       effort: 'low',
       mediaResolution: m.videoSec > 300 ? 'low' : 'medium',
       maxOutputTokens: 24000,
-      system_instruction: generationSystem(input.org, { language: contentLanguage(), forceKind: input.forceKind }),
+      system_instruction: generationSystem(input.org, { language, forceKind: input.forceKind }),
       prompt: generationPrompt({ intent: input.intent, title: input.title, stations: input.stationNames, sources: prepared.lines }),
       files: prepared.askFiles,
       json_schema: instructionSchema,
@@ -173,7 +176,7 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
 
   input.onStage?.('finish')
   // Les sources gardent leur ordre : S1 = première source utilisable.
-  const { content, stationGuess, questions } = normalizeInstruction(result.json, prepared.sources, contentLanguage())
+  const { content, stationGuess, questions } = normalizeInstruction(result.json, prepared.sources, language)
   if (!content.steps.length) throw new ApiError(messages().capture.generate.noSteps, 422)
   return { content, sources: mergeSources(input.sources, prepared.sources), stationGuess, questions, model: result.model, operation: tier.op }
 }
