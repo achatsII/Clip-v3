@@ -9,13 +9,12 @@ import { Input } from '@/components/ui/Field'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { annotateImage } from '@/lib/ai/assist'
-import { ANNOTATION_ICONS, ANNOTATION_ICON_KEYS, type AnnotationIconKey } from '@/lib/annotations/icons'
+import { ANNOTATION_ICON_KEYS, type AnnotationIconKey } from '@/lib/annotations/icons'
 import { iconSvg } from '@/lib/annotations/markup'
 import {
   ANNOTATION_COLORS,
   COLOR_ORDER,
   SIZES,
-  SIZE_LABEL,
   bbox,
   clamp01,
   clampScale,
@@ -35,6 +34,7 @@ import {
 } from '@/lib/annotations/model'
 import { AI_COSTS } from '@/lib/billing/catalog'
 import { BILLING_V2 } from '@/lib/config'
+import { useMessages } from '@/lib/i18n'
 import { uid } from '@/lib/model/repo'
 import type { Annotation, AnnotationColor, AnnotationSize, AnnotationType, Step } from '@/lib/model/types'
 import { IDENTITY, clampView, isZoomed, pinchView, zoomAround, type View } from '@/lib/ui/zoom'
@@ -42,17 +42,18 @@ import { cn } from '@/lib/util/cn'
 
 type Tool = 'select' | AnnotationType
 
-const DRAW_TOOLS: Array<{ value: AnnotationType; label: string; key: string; icon: ReactNode }> = [
-  { value: 'pen', label: 'Crayon', key: 'p', icon: <Pencil className="h-5 w-5" /> },
-  { value: 'highlight', label: 'Surligneur', key: 'h', icon: <Highlighter className="h-5 w-5" /> },
-  { value: 'arrow', label: 'Flèche', key: 'a', icon: <ArrowUpRight className="h-5 w-5" /> },
-  { value: 'line', label: 'Ligne', key: 'l', icon: <Minus className="h-5 w-5" /> },
-  { value: 'circle', label: 'Cercle', key: 'o', icon: <Circle className="h-5 w-5" /> },
-  { value: 'rect', label: 'Cadre', key: 'r', icon: <Square className="h-5 w-5" /> },
-  { value: 'text', label: 'Texte', key: 't', icon: <Type className="h-5 w-5" /> },
-  { value: 'number', label: 'Numéro', key: 'n', icon: <Hash className="h-5 w-5" /> },
-  { value: 'icon', label: 'Icônes', key: 'i', icon: <Sticker className="h-5 w-5" /> },
-  { value: 'blur', label: 'Flouter', key: 'b', icon: <EyeOff className="h-5 w-5" /> },
+/** Les outils de dessin et leur touche ; le nom de chacun se lit au rendu (`editorTools.annotator.tools`). */
+const DRAW_TOOLS: Array<{ value: AnnotationType; key: string; icon: ReactNode }> = [
+  { value: 'pen', key: 'p', icon: <Pencil className="h-5 w-5" /> },
+  { value: 'highlight', key: 'h', icon: <Highlighter className="h-5 w-5" /> },
+  { value: 'arrow', key: 'a', icon: <ArrowUpRight className="h-5 w-5" /> },
+  { value: 'line', key: 'l', icon: <Minus className="h-5 w-5" /> },
+  { value: 'circle', key: 'o', icon: <Circle className="h-5 w-5" /> },
+  { value: 'rect', key: 'r', icon: <Square className="h-5 w-5" /> },
+  { value: 'text', key: 't', icon: <Type className="h-5 w-5" /> },
+  { value: 'number', key: 'n', icon: <Hash className="h-5 w-5" /> },
+  { value: 'icon', key: 'i', icon: <Sticker className="h-5 w-5" /> },
+  { value: 'blur', key: 'b', icon: <EyeOff className="h-5 w-5" /> },
 ]
 const TOOL_KEYS: Record<string, Tool> = { v: 'select', ...Object.fromEntries(DRAW_TOOLS.map((t) => [t.key, t.value])) }
 
@@ -111,6 +112,7 @@ export function Annotator({ open, onClose, src, step, value, onSave }: { open: b
 function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () => void; src: string; step: Step; value: Annotation[]; onSave: (a: Annotation[]) => void }) {
   const { ai } = useSession()
   const toast = useToast()
+  const t = useMessages()
   const initial = useMemo(() => value.map(sanitizeAnnotation).filter((a): a is Annotation => !!a), [value])
   const [history, setHistory] = useState<{ stack: Annotation[][]; index: number }>({ stack: [initial], index: 0 })
   const items = history.stack[history.index]
@@ -214,9 +216,9 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
     if (el) setView((v) => zoomAround(v, f, el.clientWidth / 2, el.clientHeight / 2, el.clientWidth, el.clientHeight))
   }
 
-  function chooseTool(t: Tool) {
-    setTool(t)
-    if (t !== 'select') setSelected(null)
+  function chooseTool(next: Tool) {
+    setTool(next)
+    if (next !== 'select') setSelected(null)
   }
 
   function applyStyle(patch: { color?: AnnotationColor; size?: AnnotationSize }) {
@@ -263,9 +265,9 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
       const marks = await annotateImage(ai, src, step)
       commit([...items, ...marks.map((m) => ({ ...m, size }))])
       chooseTool('select')
-      toast.success('Marques ajoutées par l’IA', 'Touchez une marque pour la déplacer, l’agrandir ou la retirer.')
+      toast.success(t.editorTools.annotator.ai.added, t.editorTools.annotator.ai.addedHint)
     } catch (e) {
-      toast.error('L’IA n’a pas pu annoter', errorText(e))
+      toast.error(t.editorTools.annotator.ai.failed, errorText(e))
     } finally {
       setBusy(false)
     }
@@ -541,11 +543,11 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
   const iconButton = 'btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white/85 hover:bg-white/10 disabled:opacity-30'
 
   const sizes = (
-    <div className="flex shrink-0 items-center gap-0.5 rounded-2xl bg-white/5 p-1" role="radiogroup" aria-label="Taille">
+    <div className="flex shrink-0 items-center gap-0.5 rounded-2xl bg-white/5 p-1" role="radiogroup" aria-label={t.editorTools.annotator.size}>
       {SIZES.map((s) => {
         const active = (selectedItem ? sizeOf(selectedItem) : size) === s
         return (
-          <button key={s} type="button" role="radio" aria-checked={active} aria-label={`Taille : ${SIZE_LABEL[s]}`} title={`${SIZE_LABEL[s]} (touches [ et ])`} onClick={() => applyStyle({ size: s })} className={cn('btn-press flex h-10 w-9 items-center justify-center rounded-xl', active ? 'bg-white/25' : 'hover:bg-white/10')}>
+          <button key={s} type="button" role="radio" aria-checked={active} aria-label={t.editorTools.annotator.sizeOption(t.editorTools.annotator.sizes[s])} title={t.editorTools.annotator.sizeHint(t.editorTools.annotator.sizes[s])} onClick={() => applyStyle({ size: s })} className={cn('btn-press flex h-10 w-9 items-center justify-center rounded-xl', active ? 'bg-white/25' : 'hover:bg-white/10')}>
             <span className="rounded-full bg-white" style={{ width: DOT[s], height: DOT[s] }} />
           </button>
         )
@@ -554,7 +556,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
   )
 
   const swatches = (
-    <div className="flex shrink-0 items-center gap-1.5" role="radiogroup" aria-label="Couleur">
+    <div className="flex shrink-0 items-center gap-1.5" role="radiogroup" aria-label={t.editorTools.annotator.color}>
       {COLOR_ORDER.map((c) => {
         const active = (selectedItem?.color ?? color) === c
         return (
@@ -563,7 +565,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
             type="button"
             role="radio"
             aria-checked={active}
-            aria-label={`Couleur ${ANNOTATION_COLORS[c].label}`}
+            aria-label={t.editorTools.annotator.colorOption(t.editorTools.annotator.colors[c])}
             onClick={() => applyStyle({ color: c })}
             className={cn('btn-press h-9 w-9 shrink-0 rounded-full border-2', active ? 'border-white ring-2 ring-white/40' : 'border-white/25')}
             style={{ background: ANNOTATION_COLORS[c].fill }}
@@ -578,7 +580,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
       key={value}
       type="button"
       aria-pressed={tool === value}
-      title={`${label} (${key.toUpperCase()})`}
+      title={t.editorTools.annotator.toolHint(label, key.toUpperCase())}
       onClick={() => chooseTool(value)}
       className={cn('btn-press flex h-14 w-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-black', tool === value ? 'bg-gradient-primary shadow-primary text-white' : 'text-white/75 hover:bg-white/10')}
     >
@@ -588,16 +590,16 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
   )
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col bg-slate-950 text-white select-none" role="dialog" aria-modal="true" aria-label="Annoter l’image">
+    <div className="fixed inset-0 z-[80] flex flex-col bg-slate-950 text-white select-none" role="dialog" aria-modal="true" aria-label={t.editorTools.annotator.title}>
       <header className="pt-safe flex shrink-0 items-center gap-1 px-2 py-2">
-        <button type="button" onClick={cancel} aria-label="Fermer sans enregistrer" title="Fermer (Échap)" className={iconButton}>
+        <button type="button" onClick={cancel} aria-label={t.editorTools.annotator.closeWithoutSaving} title={t.editorTools.annotator.closeHint} className={iconButton}>
           <X className="h-6 w-6" />
         </button>
         <span className="mx-1 h-6 w-px shrink-0 bg-white/15" />
-        <button type="button" onClick={undo} disabled={!canUndo} aria-label="Annuler la dernière action" title="Annuler (Ctrl+Z)" className={iconButton}>
+        <button type="button" onClick={undo} disabled={!canUndo} aria-label={t.editorTools.annotator.undo} title={t.editorTools.annotator.undoHint} className={iconButton}>
           <Undo2 className="h-5 w-5" />
         </button>
-        <button type="button" onClick={redo} disabled={!canRedo} aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)" className={iconButton}>
+        <button type="button" onClick={redo} disabled={!canRedo} aria-label={t.editorTools.annotator.redo} title={t.editorTools.annotator.redoHint} className={iconButton}>
           <Redo2 className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1" />
@@ -609,7 +611,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
           }}
           className="btn-press bg-gradient-primary shadow-primary h-11 shrink-0 rounded-2xl px-4 text-sm font-black text-white"
         >
-          Enregistrer
+          {t.common.save}
         </button>
       </header>
 
@@ -630,20 +632,20 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
           </AnnotatedImage>
         </div>
         {isZoomed(view) && (
-          <button type="button" onClick={() => setView(IDENTITY)} aria-label="Revenir à l’image entière" title="Image entière (Ctrl+0)" className="btn-press absolute top-3 right-3 flex h-10 items-center gap-1.5 rounded-full bg-slate-900/85 px-3 text-xs font-black text-white shadow-lg ring-1 ring-white/15 tabular-nums">
-            <ZoomOut className="h-4 w-4" /> {Math.round(view.k * 100)} %
+          <button type="button" onClick={() => setView(IDENTITY)} aria-label={t.editorTools.annotator.wholeImage} title={t.editorTools.annotator.wholeImageHint} className="btn-press absolute top-3 right-3 flex h-10 items-center gap-1.5 rounded-full bg-slate-900/85 px-3 text-xs font-black text-white shadow-lg ring-1 ring-white/15 tabular-nums">
+            <ZoomOut className="h-4 w-4" /> {t.editorTools.annotator.zoom(Math.round(view.k * 100))}
           </button>
         )}
       </div>
 
       {confirmQuit && (
-        <div className="animate-slide-up absolute inset-x-0 bottom-0 z-20 flex flex-wrap items-center gap-2 border-t border-white/10 bg-slate-900 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" role="alertdialog" aria-label="Quitter sans enregistrer ?">
-          <p className="min-w-0 flex-1 text-sm font-black">Quitter sans enregistrer les annotations ?</p>
+        <div className="animate-slide-up absolute inset-x-0 bottom-0 z-20 flex flex-wrap items-center gap-2 border-t border-white/10 bg-slate-900 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" role="alertdialog" aria-label={t.editorTools.annotator.leaveTitle}>
+          <p className="min-w-0 flex-1 text-sm font-black">{t.editorTools.annotator.leaveQuestion}</p>
           <button type="button" onClick={() => setConfirmQuit(false)} className="btn-press h-11 rounded-2xl px-3 text-sm font-black text-white/80 hover:bg-white/10">
-            Rester
+            {t.editorTools.annotator.stay}
           </button>
           <button type="button" onClick={onClose} className="btn-press h-11 rounded-2xl bg-rose-500 px-4 text-sm font-black text-white">
-            Quitter
+            {t.editorTools.annotator.leave}
           </button>
         </div>
       )}
@@ -656,12 +658,12 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
             confirmText()
           }}
         >
-          <Input autoFocus value={textEdit.value} onChange={(e) => setTextEdit({ ...textEdit, value: e.target.value })} placeholder="Texte à afficher (ex. Vis A, 25 N·m)" aria-label="Texte de l’annotation" className="h-12" wrapperClassName="flex-1" />
+          <Input autoFocus value={textEdit.value} onChange={(e) => setTextEdit({ ...textEdit, value: e.target.value })} placeholder={t.editorTools.annotator.textPlaceholder} aria-label={t.editorTools.annotator.textLabel} className="h-12" wrapperClassName="flex-1" />
           <button type="submit" className="btn-press bg-gradient-primary h-12 shrink-0 rounded-2xl px-4 text-sm font-black text-white">
-            OK
+            {t.editorTools.annotator.textOk}
           </button>
           <button type="button" onClick={() => setTextEdit(null)} className="btn-press h-12 shrink-0 rounded-2xl px-3 text-sm font-black text-white/80 hover:bg-white/10">
-            Annuler
+            {t.common.cancel}
           </button>
         </form>
       )}
@@ -670,15 +672,15 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
         {selectedItem ? (
           <>
             <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-1">
-              <button type="button" onClick={() => remove(selectedItem.id)} title="Supprimer (Suppr)" className="btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-rose-500 px-3 text-sm font-black">
-                <Trash2 className="h-4 w-4" /> Supprimer
+              <button type="button" onClick={() => remove(selectedItem.id)} title={t.editorTools.annotator.deleteHint} className="btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-rose-500 px-3 text-sm font-black">
+                <Trash2 className="h-4 w-4" /> {t.common.delete}
               </button>
-              <button type="button" onClick={() => duplicate(selectedItem)} title="Dupliquer (Ctrl+D)" className="btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-white/10 px-3 text-sm font-black">
-                <Copy className="h-4 w-4" /> Dupliquer
+              <button type="button" onClick={() => duplicate(selectedItem)} title={t.editorTools.annotator.duplicateHint} className="btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-white/10 px-3 text-sm font-black">
+                <Copy className="h-4 w-4" /> {t.editorTools.annotator.duplicate}
               </button>
               {hasLabel(selectedItem) && (
-                <button type="button" onClick={() => editText(selectedItem)} title="Modifier le texte (Entrée)" className="btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-white/10 px-3 text-sm font-black">
-                  <Type className="h-4 w-4" /> {selectedItem.type === 'text' || selectedItem.type === 'number' ? 'Texte' : 'Légende'}
+                <button type="button" onClick={() => editText(selectedItem)} title={t.editorTools.annotator.editTextHint} className="btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-white/10 px-3 text-sm font-black">
+                  <Type className="h-4 w-4" /> {selectedItem.type === 'text' || selectedItem.type === 'number' ? t.editorTools.annotator.editText : t.editorTools.annotator.editCaption}
                 </button>
               )}
             </div>
@@ -690,19 +692,19 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
             )}
           </>
         ) : tool === 'select' ? (
-          <p className="px-2 py-2.5 text-xs font-bold text-white/65">Touchez une marque pour la déplacer, l’agrandir ou la modifier. Pincez l’image pour zoomer.</p>
+          <p className="px-2 py-2.5 text-xs font-bold text-white/65">{t.editorTools.annotator.selectHint}</p>
         ) : (
           <>
             {tool === 'icon' && (
-              <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto px-1" role="radiogroup" aria-label="Icône à poser">
+              <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto px-1" role="radiogroup" aria-label={t.editorTools.annotator.iconPicker}>
                 {ANNOTATION_ICON_KEYS.map((k) => (
                   <button
                     key={k}
                     type="button"
                     role="radio"
                     aria-checked={icon === k}
-                    aria-label={ANNOTATION_ICONS[k].label}
-                    title={ANNOTATION_ICONS[k].label}
+                    aria-label={t.editorTools.annotator.icons[k]}
+                    title={t.editorTools.annotator.icons[k]}
                     onClick={() => setIcon(k)}
                     className={cn('btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2', icon === k ? 'border-white' : 'border-transparent')}
                     style={{ background: ANNOTATION_COLORS[color].fill }}
@@ -713,7 +715,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
               </div>
             )}
             {tool === 'blur' ? (
-              <p className="px-2 py-2.5 text-xs font-bold text-white/65">Glissez sur ce qu’il faut cacher : un visage, un nom, un écran.</p>
+              <p className="px-2 py-2.5 text-xs font-bold text-white/65">{t.editorTools.annotator.blurHint}</p>
             ) : (
               <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-1">
                 {sizes}
@@ -724,20 +726,20 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
         )}
         {/* La sélection et l'IA restent visibles ; les outils de dessin défilent à côté. */}
         <div className="flex items-center gap-1 pb-1">
-          {toolTile('select', 'Sélection', <MousePointer2 className="h-5 w-5" />, 'v')}
+          {toolTile('select', t.editorTools.annotator.tools.select, <MousePointer2 className="h-5 w-5" />, 'v')}
           <button
             type="button"
             onClick={() => void aiAnnotate()}
             disabled={busy}
-            title="L’IA place les flèches et les cercles sur ce qu’il faut voir"
+            title={t.editorTools.annotator.ai.hint}
             className="btn-press bg-gradient-accent shadow-accent flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-3 text-[10px] font-black whitespace-nowrap text-white disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-            <span>{BILLING_V2 ? `IA · ${AI_COSTS.annotate} crédits` : 'Annoter par IA'}</span>
+            <span>{BILLING_V2 ? t.editorTools.annotator.ai.cost(AI_COSTS.annotate) : t.editorTools.annotator.ai.button}</span>
           </button>
           <span className="mx-0.5 h-8 w-px shrink-0 bg-white/15" />
-          <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" role="toolbar" aria-label="Outils de dessin">
-            {DRAW_TOOLS.map((t) => toolTile(t.value, t.label, t.icon, t.key))}
+          <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" role="toolbar" aria-label={t.editorTools.annotator.drawingTools}>
+            {DRAW_TOOLS.map((d) => toolTile(d.value, t.editorTools.annotator.tools[d.value], d.icon, d.key))}
           </div>
         </div>
       </footer>

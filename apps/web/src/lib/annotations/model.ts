@@ -6,14 +6,15 @@
 import type { Annotation, AnnotationColor, AnnotationSize, AnnotationType } from '../model/types'
 import { ANNOTATION_ICONS } from './icons'
 
-export const ANNOTATION_COLORS: Record<AnnotationColor, { fill: string; label: string }> = {
-  red: { fill: '#FF2B5E', label: 'Rouge' },
-  orange: { fill: '#FF7A00', label: 'Orange' },
-  yellow: { fill: '#FFC800', label: 'Jaune' },
-  green: { fill: '#18c480', label: 'Vert' },
-  blue: { fill: '#0078FF', label: 'Bleu' },
-  white: { fill: '#ffffff', label: 'Blanc' },
-  black: { fill: '#0f172a', label: 'Noir' },
+/** Les couleurs des marques ; leur nom, dans la langue de l'outil, est dans le dictionnaire (`editorTools.annotator.colors`). */
+export const ANNOTATION_COLORS: Record<AnnotationColor, { fill: string }> = {
+  red: { fill: '#FF2B5E' },
+  orange: { fill: '#FF7A00' },
+  yellow: { fill: '#FFC800' },
+  green: { fill: '#18c480' },
+  blue: { fill: '#0078FF' },
+  white: { fill: '#ffffff' },
+  black: { fill: '#0f172a' },
 }
 export const COLOR_ORDER: AnnotationColor[] = ['red', 'orange', 'yellow', 'green', 'blue', 'white', 'black']
 
@@ -26,8 +27,8 @@ export function inkOn(c: string | undefined): string {
   return c === 'yellow' || c === 'white' ? '#0f172a' : '#ffffff'
 }
 
+/** Les tailles, de la plus petite à la plus grande ; leur nom est dans le dictionnaire (`editorTools.annotator.sizes`). */
 export const SIZES: AnnotationSize[] = ['s', 'm', 'l', 'xl', 'xxl']
-export const SIZE_LABEL: Record<AnnotationSize, string> = { s: 'Petit', m: 'Moyen', l: 'Grand', xl: 'Très grand', xxl: 'Énorme' }
 
 /** Épaisseur d'un trait, en millièmes de la largeur de l'image. */
 export const STROKE: Record<AnnotationSize, number> = { s: 5, m: 9, l: 15, xl: 24, xxl: 36 }

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { ApiError } from '@/lib/gateway/client'
+import { locale, useMessages } from '@/lib/i18n'
 import { useToast } from '@/components/ui/Toast'
 
 /**
@@ -33,6 +34,7 @@ export function FramePicker({
 }) {
   const { files } = useSession()
   const toast = useToast()
+  const t = useMessages()
   const video = useRef<HTMLVideoElement>(null)
   const [duration, setDuration] = useState<number | null>(null)
   const [at, setAt] = useState(initialAt)
@@ -59,14 +61,14 @@ export function FramePicker({
 
   async function capture(): Promise<string> {
     const v = video.current
-    if (preview !== 'ready' || !v || !v.videoWidth) throw new Error('aperçu indisponible')
+    if (preview !== 'ready' || !v || !v.videoWidth) throw new Error(t.editorTools.framePicker.noPreview)
     if (v.seeking) await new Promise((r) => v.addEventListener('seeked', r, { once: true }))
     const canvas = document.createElement('canvas')
     canvas.width = v.videoWidth
     canvas.height = v.videoHeight
     canvas.getContext('2d')!.drawImage(v, 0, 0)
     const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', 0.86))
-    if (!blob) throw new Error('capture impossible')
+    if (!blob) throw new Error(t.editorTools.framePicker.captureFailed)
     const up = await files.upload(blob, `image-${Math.round(at * 10)}.jpg`, 'frames')
     return up.url
   }
@@ -80,13 +82,13 @@ export function FramePicker({
       } catch {
         // Lecture croisée refusée, vidéo pas encore décodée… : la Gateway tire l'image.
         const shots = await files.screenshots(videoUrl, [{ name: 'frame', atSec: at }])
-        if (!shots.frame) throw new ApiError('Le serveur n’a pas pu tirer cette image de la vidéo. Réessayez à un autre instant.', 422)
+        if (!shots.frame) throw new ApiError(t.editorTools.framePicker.serverFailed, 422)
         url = shots.frame
       }
       onPicked(url, Math.round(at * 10) / 10)
       onClose()
     } catch (e) {
-      toast.error('L’image n’a pas pu être tirée de la vidéo', errorText(e))
+      toast.error(t.editorTools.framePicker.failed, errorText(e))
     } finally {
       setBusy(false)
     }
@@ -99,17 +101,17 @@ export function FramePicker({
       open={open}
       onClose={onClose}
       size="lg"
-      title="Choisir l’image"
+      title={t.editorTools.framePicker.title}
       footer={
         <>
-          <Button onClick={onClose}>Annuler</Button>
+          <Button onClick={onClose}>{t.common.cancel}</Button>
           <Button variant="primary" loading={busy} onClick={() => void confirm()}>
-            Utiliser cette image
+            {t.editorTools.framePicker.use}
           </Button>
         </>
       }
     >
-      <p className="-mt-1 mb-3 text-sm font-medium text-slate-500">Glissez jusqu’au moment où ce qu’il faut voir est net. L’image pourra être annotée.</p>
+      <p className="-mt-1 mb-3 text-sm font-medium text-slate-500">{t.editorTools.framePicker.hint}</p>
       <div className="relative overflow-hidden rounded-2xl bg-black">
         <video
           ref={video}
@@ -134,12 +136,12 @@ export function FramePicker({
         )}
         {preview === 'failed' && (
           <p className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm font-bold text-white/85">
-            Aperçu indisponible ici : l’image sera tirée de la vidéo par le serveur, à l’instant choisi.
+            {t.editorTools.framePicker.previewUnavailable}
           </p>
         )}
       </div>
       <div className="mt-4 flex items-center gap-2">
-        <button type="button" onClick={() => nudge(-0.2)} aria-label="Reculer d’un instant" className="btn-press glass-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
+        <button type="button" onClick={() => nudge(-0.2)} aria-label={t.editorTools.framePicker.back} className="btn-press glass-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
           <ChevronLeft className="h-5 w-5" />
         </button>
         <input
@@ -149,14 +151,14 @@ export function FramePicker({
           step={0.1}
           value={at}
           onChange={(e) => setAt(Number(e.target.value))}
-          aria-label="Instant de l’image"
+          aria-label={t.editorTools.framePicker.position}
           className="h-11 min-w-0 flex-1 accent-[var(--primary)]"
         />
-        <button type="button" onClick={() => nudge(0.2)} aria-label="Avancer d’un instant" className="btn-press glass-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
+        <button type="button" onClick={() => nudge(0.2)} aria-label={t.editorTools.framePicker.forward} className="btn-press glass-card flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
-      <p className="mt-1 text-center text-sm font-black text-slate-500 tabular-nums">{`${Math.floor(at / 60)}:${(at % 60).toFixed(1).padStart(4, '0').replace('.', ',')}`}</p>
+      <p className="mt-1 text-center text-sm font-black text-slate-500 tabular-nums">{`${Math.floor(at / 60)}:${(at % 60).toLocaleString(locale(), { minimumIntegerDigits: 2, minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false })}`}</p>
     </Modal>
   )
 }

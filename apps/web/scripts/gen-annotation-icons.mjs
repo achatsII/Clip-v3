@@ -9,45 +9,46 @@ import { pathToFileURL } from 'node:url'
 const require = createRequire(import.meta.url)
 const dir = join(dirname(require.resolve('lucide-react/package.json')), 'dist/esm/icons')
 
-// [clé, icône Lucide, libellé]
+// [clé, icône Lucide]. Le nom de chaque icône, dans chaque langue de l'outil, est dans les
+// dictionnaires (src/lib/i18n/<langue>/editorTools.ts, annotator.icons), sous la même clé.
 const ICONS = [
-  ['danger', 'triangle-alert', 'Danger'],
-  ['interdit', 'ban', 'Interdit'],
-  ['arret', 'octagon-x', 'Arrêt'],
-  ['bon', 'circle-check', 'Bon'],
-  ['mauvais', 'circle-x', 'Mauvais'],
-  ['gants', 'hand', 'Gants'],
-  ['lunettes', 'glasses', 'Lunettes'],
-  ['casque', 'hard-hat', 'Casque'],
-  ['bouchons', 'ear', 'Protection auditive'],
-  ['bottes', 'footprints', 'Chaussures de sécurité'],
-  ['protection', 'shield', 'Protection'],
-  ['cadenas', 'lock', 'Cadenas'],
-  ['electrique', 'zap', 'Électricité'],
-  ['chaud', 'flame', 'Chaud'],
-  ['froid', 'snowflake', 'Froid'],
-  ['toxique', 'skull', 'Toxique'],
-  ['coupure', 'scissors', 'Coupure'],
-  ['horaire', 'rotate-cw', 'Sens horaire'],
-  ['antihoraire', 'rotate-ccw', 'Sens antihoraire'],
-  ['verifier', 'eye', 'Vérifier'],
-  ['appuyer', 'pointer', 'Appuyer'],
-  ['outil', 'wrench', 'Outil'],
-  ['marteau', 'hammer', 'Frapper'],
-  ['mecanisme', 'cog', 'Mécanisme'],
-  ['lubrifier', 'droplet', 'Lubrifier'],
-  ['nettoyer', 'spray-can', 'Nettoyer'],
-  ['mesurer', 'ruler', 'Mesurer'],
-  ['pression', 'gauge', 'Pression'],
-  ['temperature', 'thermometer', 'Température'],
-  ['attendre', 'timer', 'Attendre'],
-  ['aimant', 'magnet', 'Aimant'],
-  ['jeter', 'trash-2', 'Jeter'],
-  ['recycler', 'recycle', 'Recycler'],
-  ['astuce', 'lightbulb', 'Astuce'],
-  ['point-cle', 'star', 'Point clé'],
-  ['info', 'info', 'Info'],
-  ['question', 'circle-question-mark', 'Question'],
+  ['danger', 'triangle-alert'],
+  ['interdit', 'ban'],
+  ['arret', 'octagon-x'],
+  ['bon', 'circle-check'],
+  ['mauvais', 'circle-x'],
+  ['gants', 'hand'],
+  ['lunettes', 'glasses'],
+  ['casque', 'hard-hat'],
+  ['bouchons', 'ear'],
+  ['bottes', 'footprints'],
+  ['protection', 'shield'],
+  ['cadenas', 'lock'],
+  ['electrique', 'zap'],
+  ['chaud', 'flame'],
+  ['froid', 'snowflake'],
+  ['toxique', 'skull'],
+  ['coupure', 'scissors'],
+  ['horaire', 'rotate-cw'],
+  ['antihoraire', 'rotate-ccw'],
+  ['verifier', 'eye'],
+  ['appuyer', 'pointer'],
+  ['outil', 'wrench'],
+  ['marteau', 'hammer'],
+  ['mecanisme', 'cog'],
+  ['lubrifier', 'droplet'],
+  ['nettoyer', 'spray-can'],
+  ['mesurer', 'ruler'],
+  ['pression', 'gauge'],
+  ['temperature', 'thermometer'],
+  ['attendre', 'timer'],
+  ['aimant', 'magnet'],
+  ['jeter', 'trash-2'],
+  ['recycler', 'recycle'],
+  ['astuce', 'lightbulb'],
+  ['point-cle', 'star'],
+  ['info', 'info'],
+  ['question', 'circle-question-mark'],
 ]
 
 async function iconData(name, seen = new Set()) {
@@ -62,23 +63,24 @@ async function iconData(name, seen = new Set()) {
 }
 
 const entries = []
-for (const [key, name, label] of ICONS) {
+for (const [key, name] of ICONS) {
   const data = await iconData(name)
   const node = data.node.map(([tag, attrs]) => {
     const { key: _k, ...rest } = attrs
     return [tag, Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, String(v)]))]
   })
-  entries.push(`  ${JSON.stringify(key)}: { label: ${JSON.stringify(label)}, node: ${JSON.stringify(node)} },`)
+  entries.push(`  ${JSON.stringify(key)}: { node: ${JSON.stringify(node)} },`)
 }
 
 const out = `// Généré par scripts/gen-annotation-icons.mjs depuis Lucide (https://lucide.dev, licence ISC).
 // Ne pas modifier à la main : changer la liste dans le script, puis le relancer.
+// Le nom de chaque icône est dans les dictionnaires (i18n/<langue>/editorTools.ts, annotator.icons).
 
 export type IconElement = [tag: string, attrs: Record<string, string>]
 
 export const ANNOTATION_ICONS = {
 ${entries.join('\n')}
-} satisfies Record<string, { label: string; node: IconElement[] }>
+} satisfies Record<string, { node: IconElement[] }>
 
 export type AnnotationIconKey = keyof typeof ANNOTATION_ICONS
 

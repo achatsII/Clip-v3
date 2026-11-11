@@ -3,12 +3,14 @@
 import { Flag, Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { useMessages } from '@/lib/i18n'
 import { formatClock } from '@/lib/util/cn'
 
 /** Choisir le début et la fin d'un extrait : on lit la vidéo et on touche « Début ici », « Fin ici ». */
 export function VideoTrimmer({ url, start, end, duration, onChange }: { url: string; start: number; end: number; duration?: number; onChange: (start: number, end: number) => void }) {
+  const t = useMessages()
   const ref = useRef<HTMLVideoElement>(null)
-  const [t, setT] = useState(start)
+  const [at, setAt] = useState(start)
   const [dur, setDur] = useState(duration ?? Math.max(end, 10))
   const [playing, setPlaying] = useState(false)
 
@@ -19,7 +21,7 @@ export function VideoTrimmer({ url, start, end, duration, onChange }: { url: str
       if (Number.isFinite(v.duration)) setDur(v.duration)
       v.currentTime = start
     }
-    const time = () => setT(v.currentTime)
+    const time = () => setAt(v.currentTime)
     v.addEventListener('loadedmetadata', meta)
     v.addEventListener('timeupdate', time)
     return () => {
@@ -56,21 +58,21 @@ export function VideoTrimmer({ url, start, end, duration, onChange }: { url: str
         }}
       >
         <div className="bg-gradient-primary absolute inset-y-0 rounded-2xl opacity-70" style={{ left: pct(start), width: `calc(${pct(end)} - ${pct(start)})` }} />
-        <div className="absolute inset-y-0 w-1 rounded bg-slate-900 dark:bg-white" style={{ left: pct(t) }} />
+        <div className="absolute inset-y-0 w-1 rounded bg-slate-900 dark:bg-white" style={{ left: pct(at) }} />
       </div>
       <div className="mt-2 flex justify-between text-xs font-black text-slate-500 tabular-nums">
-        <span>Extrait : {formatClock(start)} → {formatClock(end)} ({Math.round(end - start)} s)</span>
-        <span>{formatClock(t)} / {formatClock(dur)}</span>
+        <span>{t.editorTools.trimmer.clip(formatClock(start), formatClock(end), Math.round(end - start))}</span>
+        <span>{formatClock(at)} / {formatClock(dur)}</span>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <Button onClick={() => onChange(Math.min(t, end - 1), end)} icon={<Flag className="h-4 w-4" />}>
-          Début ici
+        <Button onClick={() => onChange(Math.min(at, end - 1), end)} icon={<Flag className="h-4 w-4" />}>
+          {t.editorTools.trimmer.start}
         </Button>
         <Button variant="primary" onClick={toggle} icon={playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}>
-          {playing ? 'Pause' : 'Lire'}
+          {playing ? t.editorTools.trimmer.pause : t.editorTools.trimmer.play}
         </Button>
-        <Button onClick={() => onChange(start, Math.max(t, start + 1))} icon={<Flag className="h-4 w-4" />}>
-          Fin ici
+        <Button onClick={() => onChange(start, Math.max(at, start + 1))} icon={<Flag className="h-4 w-4" />}>
+          {t.editorTools.trimmer.end}
         </Button>
       </div>
     </div>

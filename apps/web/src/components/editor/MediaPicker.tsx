@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { ACCEPTED_FILES, ingestFile } from '@/lib/media/ingest'
+import { useMessages } from '@/lib/i18n'
 import type { Source, StepMedia } from '@/lib/model/types'
 import { formatDuration } from '@/lib/util/cn'
 import { VideoTrimmer } from './VideoTrimmer'
@@ -17,6 +18,7 @@ import { VideoTrimmer } from './VideoTrimmer'
 export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, current }: { open: boolean; onClose: () => void; sources: Source[]; onPick: (m: StepMedia) => void; onSourceAdded: (s: Source) => void; current?: StepMedia }) {
   const { files } = useSession()
   const toast = useToast()
+  const t = useMessages()
   const [video, setVideo] = useState<{ source: Source; start: number; end: number } | null>(null)
   const [doc, setDoc] = useState<{ source: Source; page: number } | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -42,20 +44,20 @@ export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, cur
         close()
       } else if (s.kind === 'video') setVideo({ source: s, start: 0, end: Math.min(10, s.durationSec ?? 10) })
       else if (s.kind === 'document') setDoc({ source: s, page: 1 })
-      else toast.info('Ajouté aux notes', 'Ce type de fichier sert à la génération, pas comme média d’étape.')
+      else toast.info(t.editorTools.mediaPicker.addedToNotes, t.editorTools.mediaPicker.addedToNotesHint)
     } catch (e) {
-      toast.error('Envoi impossible', errorText(e))
+      toast.error(t.editorTools.mediaPicker.uploadFailed, errorText(e))
     } finally {
       setUploading(false)
     }
   }
 
   return (
-    <Modal open={open} onClose={close} size="lg" title={video ? 'Choisir l’extrait' : doc ? 'Choisir la page' : 'Média de l’étape'}>
+    <Modal open={open} onClose={close} size="lg" title={video ? t.editorTools.mediaPicker.chooseClip : doc ? t.editorTools.mediaPicker.choosePage : t.editorTools.mediaPicker.title}>
       {video ? (
         <div>
           <button type="button" className="mb-3 inline-flex items-center gap-1 text-sm font-black text-slate-500" onClick={() => setVideo(null)}>
-            <ArrowLeft className="h-4 w-4" /> Autres médias
+            <ArrowLeft className="h-4 w-4" /> {t.editorTools.mediaPicker.otherMedia}
           </button>
           <VideoTrimmer url={video.source.url!} start={video.start} end={video.end} duration={video.source.durationSec} onChange={(start, end) => setVideo({ ...video, start, end })} />
           <Button
@@ -67,17 +69,17 @@ export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, cur
               close()
             }}
           >
-            Utiliser cet extrait
+            {t.editorTools.mediaPicker.useClip}
           </Button>
         </div>
       ) : doc ? (
         <div>
           <button type="button" className="mb-3 inline-flex items-center gap-1 text-sm font-black text-slate-500" onClick={() => setDoc(null)}>
-            <ArrowLeft className="h-4 w-4" /> Autres médias
+            <ArrowLeft className="h-4 w-4" /> {t.editorTools.mediaPicker.otherMedia}
           </button>
           <p className="font-black">{doc.source.originalName ?? doc.source.name}</p>
           <div className="mt-3 max-w-40">
-            <Label htmlFor="page">Page</Label>
+            <Label htmlFor="page">{t.editorTools.mediaPicker.page}</Label>
             <Input id="page" type="number" inputMode="numeric" min={1} max={doc.source.pageCount ?? 999} value={doc.page} onChange={(e) => setDoc({ ...doc, page: Math.max(1, Number(e.target.value) || 1) })} />
           </div>
           <Button
@@ -89,14 +91,14 @@ export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, cur
               close()
             }}
           >
-            Utiliser la page {doc.page}
+            {t.editorTools.mediaPicker.usePage(doc.page)}
           </Button>
         </div>
       ) : (
         <div className="space-y-6">
           {photos.length > 0 && (
             <section>
-              <p className="label-caps mb-2 text-slate-500">Photos</p>
+              <p className="label-caps mb-2 text-slate-500">{t.editorTools.mediaPicker.photos}</p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {photos.map((p) => (
                   <button
@@ -116,7 +118,7 @@ export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, cur
           )}
           {videos.length > 0 && (
             <section>
-              <p className="label-caps mb-2 text-slate-500">Vidéos</p>
+              <p className="label-caps mb-2 text-slate-500">{t.editorTools.mediaPicker.videos}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {videos.map((v) => (
                   <button
@@ -140,14 +142,14 @@ export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, cur
           )}
           {docs.length > 0 && (
             <section>
-              <p className="label-caps mb-2 text-slate-500">Documents</p>
+              <p className="label-caps mb-2 text-slate-500">{t.editorTools.mediaPicker.documents}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {docs.map((d) => (
                   <button key={d.id} type="button" onClick={() => setDoc({ source: d, page: 1 })} className="glass-card btn-press flex items-center gap-3 rounded-2xl p-3 text-left">
                     <FileText className="h-6 w-6 text-slate-500" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-black">{d.originalName ?? d.name}</span>
-                      {d.pageCount && <span className="text-xs font-bold text-slate-500">{d.pageCount} pages</span>}
+                      {d.pageCount && <span className="text-xs font-bold text-slate-500">{t.editorTools.mediaPicker.pages(d.pageCount)}</span>}
                     </span>
                   </button>
                 ))}
@@ -156,7 +158,7 @@ export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, cur
           )}
           <section>
             <Button block onClick={() => input.current?.click()} icon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} disabled={uploading}>
-              {uploading ? 'Envoi…' : 'Ajouter un nouveau média (photo, vidéo, plan PDF)'}
+              {uploading ? t.editorTools.mediaPicker.uploading : t.editorTools.mediaPicker.addNew}
             </Button>
             <input
               ref={input}

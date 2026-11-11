@@ -141,7 +141,7 @@ export function translatePrompt(content: InstructionContent): string {
 }
 
 export function annotateSystem(): string {
-  return 'Tu repères sur une photo d’atelier ce que le geste d’une étape de travail touche (poignée, vis, bouton, sectionneur, pièce…). Tu rends 1 à 3 marques avec leur boîte [ymin, xmin, ymax, xmax] normalisée de 0 à 1000, serrée sur l’objet. "circle" pour un petit élément, "rect" pour une zone, "arrow" pour montrer un sens ou un point précis. Libellés en français, 1 à 4 mots.'
+  return 'Tu repères sur une photo d’atelier ce que le geste d’une étape de travail touche (poignée, vis, bouton, sectionneur, pièce…). Tu rends 1 à 3 marques avec leur boîte [ymin, xmin, ymax, xmax] normalisée de 0 à 1000, serrée sur l’objet. "circle" pour un petit élément, "rect" pour une zone, "arrow" pour montrer un sens ou un point précis. Libellés dans la langue de l’étape (celle de son titre et de son texte), 1 à 4 mots.'
 }
 
 export function annotatePrompt(step: Step, request?: string): string {

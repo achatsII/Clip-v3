@@ -6,9 +6,14 @@
  *
  * Les étapes se désignent par leur identifiant, jamais par leur numéro : une étape ajoutée,
  * retirée ou déplacée plus haut dans la liste ne fait pas viser la mauvaise.
+ *
+ * Les langues : l'assistant répond à la personne dans la langue de l'outil (`getLang()`) et écrit
+ * le contenu dans celle de l'instruction (`content.language`). Les consignes données au modèle
+ * restent en français ; ce que l'app montre (actions, erreurs) se lit dans le dictionnaire.
  */
 import type { AiApi } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
+import { getLang, messages } from '../i18n'
 import { PPE } from '../model/catalog'
 import { layoutOf, mediaLabel } from '../model/media'
 import { uid } from '../model/repo'
@@ -16,6 +21,7 @@ import type { Annotation, InstructionContent, OrgSettings, Step, StepLayout, Ste
 import { annotateImage, createVisual, illustrationPrompt } from './assist'
 import { warningFrom } from './normalize'
 import { standardBlock } from './prompts'
+import type { LiveTool } from './useLiveVoice'
 
 export const AGENT_OPS = ['set_instruction', 'add_step', 'update_step', 'delete_step', 'move_step', 'annotate', 'clear_annotations', 'illustrate', 'visual', 'set_layout', 'set_media', 'remove_media'] as const
 export type AgentOpName = (typeof AGENT_OPS)[number]
@@ -55,10 +61,24 @@ export interface AgentTurn {
 const str = (description: string) => ({ type: 'string', description })
 const strList = (description: string) => ({ type: 'array', items: { type: 'string' }, description })
 
-export const agentSchema = {
+/** Une langue nommée pour le modèle : « français du Québec », « anglais nord-américain (English) », ou son code. */
+function languageName(lang: string): string {
+  if (lang === 'fr') return 'français du Québec'
+  if (lang === 'en') return 'anglais nord-américain (English)'
+  return `la langue « ${lang} »`
+}
+
+/** « en français du Québec », « en anglais nord-américain (English) », « dans la langue « es » ». */
+const inLanguage = (lang: string) => (lang === 'fr' || lang === 'en' ? `en ${languageName(lang)}` : `dans ${languageName(lang)}`)
+
+/** La langue de l'instruction (une instruction ancienne peut ne pas l'avoir). */
+const contentLang = (content: InstructionContent) => content.language || 'fr'
+
+/** La forme de la réponse ; `ui` : la langue de la personne, celle de l'outil. */
+export const agentSchema = (ui: string) => ({
   type: 'object',
   properties: {
-    reply: str('Ta réponse à la personne : 1 à 3 phrases simples, en français du Québec'),
+    reply: str(`Ta réponse à la personne : 1 à 3 phrases simples, ${inLanguage(ui)}`),
     operations: {
       type: 'array',
       description: 'Les modifications, dans l’ordre où l’app doit les appliquer',
@@ -87,12 +107,13 @@ export const agentSchema = {
         required: ['op'],
       },
     },
-    suggestions: strList('2 à 4 prochaines demandes utiles pour CETTE instruction, courtes (8 mots au plus), à l’impératif'),
+    suggestions: strList(`2 à 4 prochaines demandes utiles pour CETTE instruction, courtes (8 mots au plus), à l’impératif, ${inLanguage(ui)}`),
   },
   required: ['reply', 'operations', 'suggestions'],
-}
+})
 
-export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>): string {
+/** `lang.ui` : la langue de la personne (l'outil) ; `lang.content` : celle de l'instruction. */
+export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, lang: { ui: string; content: string }): string {
   return `Tu es l’assistant d’édition de CLIP. Tu modifies une instruction de travail d’usine à la demande de la personne qui la rédige. Tu rends une liste d’opérations que l’app applique une à une, sous ses yeux.
 - Fais exactement ce qui est demandé ; ne touche à rien d’autre et garde le texte existant qu’on ne te demande pas de changer.
 - Une étape = une action. Respecte le standard de l’usine ci-dessous (ton, nombre de mots).
@@ -104,6 +125,7 @@ export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>): s
 - N’invente aucune valeur (couple, pression, cote, référence) : si elle manque, demande-la dans reply, sans opération.
 - Demande floue : UNE question courte dans reply, sans opération.
 - reply dit ce que tu as fait ; ne prétends jamais avoir fait une chose absente des opérations.
+- Langues : tu parles à la personne ${inLanguage(lang.ui)} (reply et suggestions). Tout ce que tu écris dans l’instruction (titres, textes, points clés, mises en garde, légendes, résumé, outils, texte à écrire sur une photo) est ${inLanguage(lang.content)}, la langue de l’instruction, même si la demande est faite dans une autre langue.
 
 ${standardBlock(org)}`
 }
@@ -143,6 +165,7 @@ export async function askAgent(
   request: string,
   history: Array<{ role: 'user' | 'assistant'; content: string }> = [],
 ): Promise<AgentTurn> {
+  const ui = getLang()
   const res = await ai.ask<AgentTurn>(
     'edit_agent',
     {
@@ -150,16 +173,16 @@ export async function askAgent(
       level: 'mid',
       thinking: 'enabled',
       effort: 'low',
-      system_instruction: agentSystem(org),
+      system_instruction: agentSystem(org, { ui, content: contentLang(content) }),
       prompt: agentPrompt(content, focusStepId, request),
-      json_schema: agentSchema,
+      json_schema: agentSchema(ui),
       history: history.slice(-8),
       maxOutputTokens: 16000,
     },
     { scope: 'agent', timeoutMs: 120_000 },
   )
   const j = res.json
-  if (!j || typeof j.reply !== 'string') throw new ApiError('L’assistant n’a pas pu répondre. Réessayez.', 502)
+  if (!j || typeof j.reply !== 'string') throw new ApiError(messages().editorTools.agent.errors.noAnswer, 502)
   return {
     reply: j.reply.trim(),
     operations: (Array.isArray(j.operations) ? j.operations : []).filter((o) => o && (AGENT_OPS as readonly string[]).includes(o.op)).slice(0, 40),
@@ -183,7 +206,7 @@ export type IdMap = Map<string, string>
 export function stepOf(content: InstructionContent, ids: IdMap, ref?: string): { step: Step; index: number } {
   const id = ref ? (ids.get(ref) ?? ref) : ''
   const index = content.steps.findIndex((s) => s.id === id)
-  if (index < 0) throw new AgentOpError(`Étape introuvable (${ref ?? '?'})`)
+  if (index < 0) throw new AgentOpError(messages().editorTools.agent.errors.stepNotFound(ref ?? '?'))
   return { step: content.steps[index], index }
 }
 
@@ -195,7 +218,7 @@ function mediaIndexOf(step: Step, n: number | undefined, wantImage = false): num
     const i = step.media.findIndex((m) => m.kind === 'image')
     if (i >= 0) return i
   }
-  if (!step.media.length) throw new AgentOpError('Cette étape n’a pas de média')
+  if (!step.media.length) throw new AgentOpError(messages().editorTools.agent.errors.noMedia)
   return 0
 }
 
@@ -203,19 +226,21 @@ const cleanList = (l: string[] | undefined) => (l ?? []).map((x) => String(x).tr
 
 /** Les opérations qui ne demandent pas d'IA : pures, testées. */
 export function applyOp(content: InstructionContent, op: AgentOp, ids: IdMap): OpResult {
+  const t = messages().editorTools.agent
+  const part = t.parts
   switch (op.op) {
     case 'set_instruction': {
       const next: InstructionContent = { ...content }
       const changed: string[] = []
-      if (op.title?.trim()) (next.title = op.title.trim()), changed.push('titre')
-      if (op.summary !== undefined) (next.summary = op.summary.trim()), changed.push('résumé')
-      if (op.ppe) (next.ppe = cleanList(op.ppe).filter((p) => p in PPE)), changed.push('EPI')
-      if (op.tools) (next.tools = cleanList(op.tools)), changed.push('outils')
-      if (op.safety) (next.safety = cleanList(op.safety)), changed.push('mises en garde')
-      return { content: next, label: `Instruction : ${changed.join(', ') || 'rien à changer'}`, stepId: null }
+      if (op.title?.trim()) (next.title = op.title.trim()), changed.push(part.title)
+      if (op.summary !== undefined) (next.summary = op.summary.trim()), changed.push(part.summary)
+      if (op.ppe) (next.ppe = cleanList(op.ppe).filter((p) => p in PPE)), changed.push(part.ppe)
+      if (op.tools) (next.tools = cleanList(op.tools)), changed.push(part.tools)
+      if (op.safety) (next.safety = cleanList(op.safety)), changed.push(part.safety)
+      return { content: next, label: t.done.instruction(changed), stepId: null }
     }
     case 'add_step': {
-      if (!op.title?.trim()) throw new AgentOpError('Nouvelle étape sans titre')
+      if (!op.title?.trim()) throw new AgentOpError(t.errors.newStepNoTitle)
       const step: Step = { id: uid('st_'), title: op.title.trim(), text: (op.text ?? '').trim(), keyPoints: cleanList(op.keyPoints).slice(0, 3), warning: warningFrom(op.warningLevel, op.warningText), media: [] }
       if (op.id) ids.set(op.id, step.id)
       let at = content.steps.length
@@ -225,26 +250,26 @@ export function applyOp(content: InstructionContent, op: AgentOp, ids: IdMap): O
         if (i >= 0) at = i + 1
       }
       const steps = [...content.steps.slice(0, at), step, ...content.steps.slice(at)]
-      return { content: { ...content, steps }, label: `Nouvelle étape ${at + 1} : « ${step.title} »`, stepId: step.id }
+      return { content: { ...content, steps }, label: t.done.stepAdded(at + 1, step.title), stepId: step.id }
     }
     case 'update_step': {
       const { step, index } = stepOf(content, ids, op.step)
       const next: Step = { ...step }
       const changed: string[] = []
-      if (op.title?.trim()) (next.title = op.title.trim()), changed.push('titre')
-      if (op.text !== undefined) (next.text = op.text.trim()), changed.push('texte')
-      if (op.keyPoints) (next.keyPoints = cleanList(op.keyPoints).slice(0, 3)), changed.push('points clés')
-      if (op.warningLevel === 'none') (next.warning = null), changed.push('mise en garde retirée')
+      if (op.title?.trim()) (next.title = op.title.trim()), changed.push(part.title)
+      if (op.text !== undefined) (next.text = op.text.trim()), changed.push(part.text)
+      if (op.keyPoints) (next.keyPoints = cleanList(op.keyPoints).slice(0, 3)), changed.push(part.keyPoints)
+      if (op.warningLevel === 'none') (next.warning = null), changed.push(part.warningRemoved)
       else if (op.warningLevel || op.warningText) {
         const w = warningFrom(op.warningLevel ?? step.warning?.level ?? 'caution', op.warningText ?? step.warning?.text)
         next.warning = w
-        changed.push('mise en garde')
+        changed.push(part.warning)
       }
-      return { content: withStep(content, index, next), label: `Étape ${index + 1} : ${changed.join(', ') || 'rien à changer'}`, stepId: step.id }
+      return { content: withStep(content, index, next), label: t.done.step(index + 1, changed), stepId: step.id }
     }
     case 'delete_step': {
       const { step, index } = stepOf(content, ids, op.step)
-      return { content: { ...content, steps: content.steps.filter((s) => s.id !== step.id) }, label: `Étape ${index + 1} retirée : « ${step.title} »`, stepId: content.steps[index + 1]?.id ?? content.steps[index - 1]?.id ?? null }
+      return { content: { ...content, steps: content.steps.filter((s) => s.id !== step.id) }, label: t.done.stepRemoved(index + 1, step.title), stepId: content.steps[index + 1]?.id ?? content.steps[index - 1]?.id ?? null }
     }
     case 'move_step': {
       const { step, index } = stepOf(content, ids, op.step)
@@ -256,13 +281,13 @@ export function applyOp(content: InstructionContent, op: AgentOp, ids: IdMap): O
         if (i >= 0) at = i + 1
       }
       const steps = [...rest.slice(0, at), step, ...rest.slice(at)]
-      return { content: { ...content, steps }, label: `Étape « ${step.title} » déplacée en ${at + 1} (était ${index + 1})`, stepId: step.id }
+      return { content: { ...content, steps }, label: t.done.stepMoved(step.title, at + 1, index + 1), stepId: step.id }
     }
     case 'set_layout': {
       const { step, index } = stepOf(content, ids, op.step)
       const layout = op.layout === 'compare' || op.layout === 'grid' ? op.layout : undefined
-      if (layout && step.media.length < 2) throw new AgentOpError('Il faut au moins deux médias pour comparer ou faire une grille')
-      return { content: withStep(content, index, { ...step, layout }), label: `Étape ${index + 1} : ${layout === 'compare' ? 'à faire / à éviter côte à côte' : layout === 'grid' ? 'médias en grille' : 'un média à la fois'}`, stepId: step.id }
+      if (layout && step.media.length < 2) throw new AgentOpError(t.errors.needTwoMedia)
+      return { content: withStep(content, index, { ...step, layout }), label: layout === 'compare' ? t.done.layoutCompare(index + 1) : layout === 'grid' ? t.done.layoutGrid(index + 1) : t.done.layoutFocus(index + 1), stepId: step.id }
     }
     case 'set_media': {
       const { step, index } = stepOf(content, ids, op.step)
@@ -271,52 +296,53 @@ export function applyOp(content: InstructionContent, op: AgentOp, ids: IdMap): O
       if (op.caption !== undefined) patch.caption = op.caption.trim() || undefined
       if (op.verdict) patch.verdict = op.verdict === 'none' ? undefined : op.verdict
       const media = step.media.map((m, j) => (j === i ? ({ ...m, ...patch } as StepMedia) : m))
-      const what = [op.verdict && op.verdict !== 'none' ? (op.verdict === 'do' ? '« à faire »' : '« à éviter »') : '', op.caption ? `légende « ${op.caption.trim()} »` : ''].filter(Boolean).join(', ')
-      return { content: withStep(content, index, { ...step, media }), label: `Étape ${index + 1}, média ${i + 1} : ${what || 'mis à jour'}`, stepId: step.id }
+      const what = [op.verdict && op.verdict !== 'none' ? (op.verdict === 'do' ? part.verdictDo : part.verdictDont) : '', op.caption ? part.caption(op.caption.trim()) : ''].filter(Boolean)
+      return { content: withStep(content, index, { ...step, media }), label: t.done.media(index + 1, i + 1, what), stepId: step.id }
     }
     case 'remove_media': {
       const { step, index } = stepOf(content, ids, op.step)
       const i = mediaIndexOf(step, op.media)
       const media = step.media.filter((_, j) => j !== i)
-      return { content: withStep(content, index, { ...step, media, layout: media.length < 2 ? undefined : step.layout }), label: `Étape ${index + 1} : média ${i + 1} retiré`, stepId: step.id }
+      return { content: withStep(content, index, { ...step, media, layout: media.length < 2 ? undefined : step.layout }), label: t.done.mediaRemoved(index + 1, i + 1), stepId: step.id }
     }
     case 'clear_annotations': {
       const { step, index } = stepOf(content, ids, op.step)
       const i = mediaIndexOf(step, op.media, true)
       const media = step.media.map((m, j) => (j === i && m.kind === 'image' ? { ...m, annotations: [] } : m))
-      return { content: withStep(content, index, { ...step, media }), label: `Étape ${index + 1} : marques retirées de la photo`, stepId: step.id }
+      return { content: withStep(content, index, { ...step, media }), label: t.done.marksCleared(index + 1), stepId: step.id }
     }
     default:
-      throw new AgentOpError('Cette opération demande l’IA')
+      throw new AgentOpError(t.errors.needsAi)
   }
 }
 
 /** Ce que l'app annonce pendant qu'elle travaille sur une opération. */
 export function describeOp(content: InstructionContent, op: AgentOp, ids: IdMap): { label: string; stepId: string | null } {
+  const w = messages().editorTools.agent.working
   let n = ''
   let stepId: string | null = null
   try {
     if (op.step) {
       const r = stepOf(content, ids, op.step)
-      n = `Étape ${r.index + 1}`
+      n = w.step(r.index + 1)
       stepId = r.step.id
     }
   } catch {
     /* étape ajoutée plus loin ou introuvable */
   }
   const text: Record<AgentOpName, string> = {
-    set_instruction: 'Instruction : mise à jour…',
-    add_step: `Nouvelle étape : « ${op.title ?? ''} »…`,
-    update_step: `${n} : je réécris…`,
-    delete_step: `${n} : je retire…`,
-    move_step: `${n} : je déplace…`,
-    annotate: `${n} : je place les marques sur la photo…`,
-    clear_annotations: `${n} : je retire les marques…`,
-    illustrate: `${n} : je crée une illustration…`,
-    visual: `${n} : je dessine un schéma…`,
-    set_layout: `${n} : je change la disposition…`,
-    set_media: `${n} : je qualifie le média…`,
-    remove_media: `${n} : je retire un média…`,
+    set_instruction: w.instruction,
+    add_step: w.addStep(op.title ?? ''),
+    update_step: w.updateStep(n),
+    delete_step: w.deleteStep(n),
+    move_step: w.moveStep(n),
+    annotate: w.annotate(n),
+    clear_annotations: w.clearAnnotations(n),
+    illustrate: w.illustrate(n),
+    visual: w.visual(n),
+    set_layout: w.setLayout(n),
+    set_media: w.setMedia(n),
+    remove_media: w.removeMedia(n),
   }
   return { label: text[op.op], stepId }
 }
@@ -348,28 +374,28 @@ async function applyAiOp(ctx: AgentRunContext, op: AgentOp, ids: IdMap): Promise
   if (op.op === 'annotate') {
     const i = mediaIndexOf(step, op.media, true)
     const m = step.media[i]
-    if (m.kind !== 'image') throw new AgentOpError('Les marques se posent sur une photo ou une image')
+    if (m.kind !== 'image') throw new AgentOpError(messages().editorTools.agent.errors.marksOnImage)
     const marks: Annotation[] = await annotateImage(ctx.ai, m.url, step, op.request || undefined)
     const latest = ctx.get()
     const at = stepOf(latest, ids, op.step)
     const media = at.step.media.map((x, j) => (j === i && x.kind === 'image' ? { ...x, annotations: [...(x.annotations ?? []), ...marks] } : x))
-    return { content: withStep(latest, at.index, { ...at.step, media }), label: `Étape ${at.index + 1} : ${marks.length} marque${marks.length > 1 ? 's' : ''} sur la photo`, stepId: step.id }
+    return { content: withStep(latest, at.index, { ...at.step, media }), label: messages().editorTools.agent.done.marksAdded(at.index + 1, marks.length), stepId: step.id }
   }
   if (op.op === 'visual') {
     const v = await createVisual(ctx.ai, content, step, op.request ?? '')
     const latest = ctx.get()
     const at = stepOf(latest, ids, op.step)
-    return { content: withStep(latest, at.index, { ...at.step, media: [...at.step.media, v].slice(-MAX_MEDIA) }), label: `Étape ${at.index + 1} : schéma « ${v.title} » ajouté`, stepId: step.id }
+    return { content: withStep(latest, at.index, { ...at.step, media: [...at.step.media, v].slice(-MAX_MEDIA) }), label: messages().editorTools.agent.done.visualAdded(at.index + 1, v.title ?? ''), stepId: step.id }
   }
   // illustrate
   const i = mediaIndexOf(step, op.media, true)
   const ref = step.media[i]
-  if (ref.kind !== 'image') throw new AgentOpError('Pas de photo de référence : demandez plutôt un schéma')
+  if (ref.kind !== 'image') throw new AgentOpError(messages().editorTools.agent.errors.noReferencePhoto)
   const prompt = await illustrationPrompt(ctx.ai, ref.url, step)
   const url = await ctx.ai.generateImage(op.request ? `${prompt} ${op.request}` : prompt, [ref.url])
   const latest = ctx.get()
   const at = stepOf(latest, ids, op.step)
-  return { content: withStep(latest, at.index, { ...at.step, media: [...at.step.media, { kind: 'image' as const, url, generated: true }].slice(-MAX_MEDIA) }), label: `Étape ${at.index + 1} : illustration ajoutée`, stepId: step.id }
+  return { content: withStep(latest, at.index, { ...at.step, media: [...at.step.media, { kind: 'image' as const, url, generated: true }].slice(-MAX_MEDIA) }), label: messages().editorTools.agent.done.illustrationAdded(at.index + 1), stepId: step.id }
 }
 
 const AI_OPS = new Set<AgentOpName>(['annotate', 'visual', 'illustrate'])
@@ -392,11 +418,96 @@ export async function runAgentOps(ops: AgentOp[], ctx: AgentRunContext): Promise
       ctx.log({ key, label: r.label, stepId: r.stepId, state: 'done' })
       done++
     } catch (e) {
-      const why = e instanceof Error && e.message ? e.message : 'échec'
-      ctx.log({ key, label: `${before.label.replace(/…$/, '')} — ${why}`, stepId: before.stepId, state: 'error' })
+      const t = messages().editorTools.agent
+      const why = e instanceof Error && e.message ? e.message : t.errors.unknown
+      ctx.log({ key, label: t.opFailed(before.label.replace(/…$/, ''), why), stepId: before.stepId, state: 'error' })
       failed++
     }
     await pause(350)
   }
   return { done, failed }
+}
+
+// ——— À la voix, en direct (`LiveEditVoice`) ———
+// Les consignes et les réponses données au modèle restent en français. Il parle à la personne dans
+// la langue de l'outil, et chaque changement passe par le même moteur que le clavardage (`modifier`).
+
+/** Ce qu'un tour de modification rend à la voix : la réponse de l'assistant, ce qui est fait, ce qui a échoué. */
+export interface VoiceTurnResult {
+  reply: string
+  done: string[]
+  failed: string[]
+}
+
+/** Les fonctions offertes au modèle (déclarations à la manière de Gemini). */
+export const LIVE_EDIT_TOOLS: LiveTool[] = [
+  {
+    name: 'modifier',
+    description:
+      "Fait un changement dans l'instruction : textes, étapes (ajouter, retirer, déplacer), mises en garde, marques précises sur une photo, schéma, illustration, à faire / à éviter. Rend ce qui a été fait. La demande doit être complète : l'étape visée (numéro ET titre), ce qu'il faut faire, les textes exacts.",
+    parameters: { type: 'OBJECT', properties: { demande: { type: 'STRING', description: 'La demande complète, comme on l’écrirait à un rédacteur' } }, required: ['demande'] },
+  },
+  {
+    name: 'aller_a_etape',
+    description: "Montre l'étape demandée à l'écran (1 = première).",
+    parameters: { type: 'OBJECT', properties: { numero: { type: 'NUMBER', description: "Numéro de l'étape, 1 = première" } }, required: ['numero'] },
+  },
+  { name: 'lire_instruction', description: "Rend l'instruction telle qu'elle est maintenant : titre et étapes numérotées.", parameters: { type: 'OBJECT', properties: {} } },
+  { name: 'annuler_dernier_changement', description: 'Annule le dernier changement fait par l’assistant.', parameters: { type: 'OBJECT', properties: {} } },
+]
+
+/** L'instruction telle que le modèle la lit. */
+export function liveEditOutline(content: InstructionContent) {
+  return { titre: content.title, etapes: content.steps.map((s, i) => ({ numero: i + 1, titre: s.title, texte: s.text, medias: s.media.length, mise_en_garde: s.warning?.text ?? null })) }
+}
+
+/** La consigne de la voix ; `ui` : la langue de la personne, celle de l'outil. */
+export function liveEditSystem(content: InstructionContent, ui: string = getLang()): string {
+  const steps = content.steps.map((s, i) => `${i + 1}. ${s.title} — ${s.text}`).join('\n')
+  return `Tu es l’assistant vocal d’édition de CLIP. La personne modifie une instruction de travail d’usine en te parlant, souvent les mains occupées. Parle ${languageName(ui)}, phrases très courtes, ton calme.
+- Pour TOUT changement, appelle VRAIMENT la fonction modifier, avec une demande complète et précise (étape visée par son numéro et son titre, ce qu’il faut faire, les textes exacts). Ne dis jamais qu’un changement est fait avant la réponse de modifier ; ensuite, résume en une phrase ce qui a été fait.
+- Tu ne vois pas les photos : décris précisément ce qu’il faut marquer (objet, forme, couleur, texte) ; l’outil s’en charge.
+- Pour montrer une étape, appelle aller_a_etape. Après plusieurs changements, appelle lire_instruction avant de citer un numéro d’étape.
+- « Annule », « reviens en arrière » : appelle annuler_dernier_changement.
+- Demande floue : pose UNE question courte. N’invente aucune valeur (couple, pression, cote).
+- L’instruction est écrite ${inLanguage(contentLang(content))} : les textes exacts que tu passes à modifier sont dans cette langue.
+
+INSTRUCTION « ${content.title} » :
+${steps}`
+}
+
+/** Ce qu'on demande au modèle de dire en premier. */
+export const liveEditGreeting = (ui: string = getLang()) => `Bonjour. Dis en une phrase, ${inLanguage(ui)}, que tu peux modifier l’instruction à la voix, et demande ce qu’il faut changer.`
+
+/** La réponse au modèle quand une modification est déjà en cours. */
+export const agentBusy = (): VoiceTurnResult => ({ reply: 'Une modification est déjà en cours. Réessayez dans un instant.', done: [], failed: ['occupé'] })
+
+export interface LiveEditHandlers {
+  /** L'instruction telle qu'elle est maintenant. */
+  content: () => InstructionContent
+  /** Un tour de modification, visible dans la conversation et annulable. */
+  modify: (request: string) => Promise<VoiceTurnResult>
+  goTo: (stepId: string) => void
+  /** Annule le dernier tour qui a changé quelque chose ; faux s'il n'y en a pas. */
+  undo: () => boolean
+}
+
+/** Répond à une fonction appelée par le modèle. */
+export async function answerLiveEditTool(name: string, args: Record<string, unknown>, h: LiveEditHandlers): Promise<Record<string, unknown>> {
+  if (name === 'modifier') {
+    const demande = String(args.demande ?? '').trim()
+    if (!demande) return { ok: false, motif: 'Demande vide' }
+    const r = await h.modify(demande)
+    return { ok: r.failed.length === 0, reponse: r.reply, fait: r.done, echecs: r.failed, instruction: liveEditOutline(h.content()) }
+  }
+  if (name === 'aller_a_etape') {
+    const k = Math.round(Number(args.numero))
+    const step = h.content().steps[k - 1]
+    if (!step) return { ok: false, motif: `Il y a ${h.content().steps.length} étapes.` }
+    h.goTo(step.id)
+    return { ok: true, etape: k, titre: step.title }
+  }
+  if (name === 'lire_instruction') return liveEditOutline(h.content())
+  if (name === 'annuler_dernier_changement') return { ok: true, message: h.undo() ? 'Le dernier changement est annulé.' : 'Il n’y a rien à annuler.' }
+  return { ok: false, motif: 'Fonction inconnue' }
 }

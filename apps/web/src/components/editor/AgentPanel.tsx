@@ -7,13 +7,14 @@ import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
 import { Input } from '@/components/ui/Field'
 import { errorText } from '@/components/ui/States'
-import { askAgent, runAgentOps, type AgentLogEntry } from '@/lib/ai/agent'
+import { agentBusy, askAgent, runAgentOps, type AgentLogEntry, type VoiceTurnResult } from '@/lib/ai/agent'
 import { suggestEdits } from '@/lib/ai/suggest'
 import { useEntitlement, useGate } from '@/lib/billing/state'
+import { useMessages } from '@/lib/i18n'
 import type { InstructionContent } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
-import { LiveEditVoice, type VoiceTurnResult } from './LiveEditVoice'
+import { LiveEditVoice } from './LiveEditVoice'
 
 interface Message {
   id: number
@@ -52,6 +53,7 @@ export function AgentPanel({
   onOpenChange?: (open: boolean) => void
 }) {
   const { ai, org } = useSession()
+  const t = useMessages()
   const [open, setOpen] = useState(false)
   const [minimized, setMinimized] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -86,7 +88,8 @@ export function AgentPanel({
   async function runTurn(request: string, via: 'text' | 'voice'): Promise<VoiceTurnResult> {
     const ask = request.trim()
     if (!ask) return { reply: '', done: [], failed: [] }
-    if (busyRef.current) return { reply: 'Une modification est déjà en cours. Réessayez dans un instant.', done: [], failed: ['occupé'] }
+    // Seule la voix peut demander pendant un tour : la réponse est pour le modèle.
+    if (busyRef.current) return agentBusy()
     busyRef.current = true
     setBusy(true)
     const userId = nextId.current++
@@ -125,7 +128,7 @@ export function AgentPanel({
       patch(agentId, { working: false })
       return { reply: turn.reply, done, failed }
     } catch (e) {
-      const why = `Je n’ai pas pu faire ce changement. ${errorText(e)}`
+      const why = t.editorTools.agent.turnFailed(errorText(e))
       patch(agentId, { working: false, error: true, text: why })
       return { reply: why, done, failed: [...failed, why] }
     } finally {
@@ -142,12 +145,12 @@ export function AgentPanel({
     await runTurn(request, 'text')
   }
 
-  /** Pour la voix : annule le dernier tour qui a changé quelque chose. */
-  function undoLast(): string {
+  /** Pour la voix : annule le dernier tour qui a changé quelque chose ; faux s'il n'y en a pas. */
+  function undoLast(): boolean {
     const last = [...messagesRef.current].reverse().find((m) => m.before && !m.undone && !m.working)
-    if (!last) return 'Il n’y a rien à annuler.'
+    if (!last) return false
     undo(last)
-    return 'Le dernier changement est annulé.'
+    return true
   }
 
   function undo(m: Message) {
@@ -164,7 +167,7 @@ export function AgentPanel({
         onClick={() => setOpen(true)}
         className="glass-float btn-press kb-hide fixed right-4 bottom-24 z-40 flex h-12 items-center gap-2 rounded-full px-4 text-sm font-black text-[var(--primary-strong)] lg:right-6 lg:bottom-28 dark:text-sky-300"
       >
-        <Sparkles className="h-5 w-5" /> Assistant
+        <Sparkles className="h-5 w-5" /> {t.editorTools.agent.title}
       </button>
     )
   }
@@ -174,7 +177,7 @@ export function AgentPanel({
       <div className="kb-bottom pb-safe fixed inset-x-0 bottom-0 z-50 px-3 pb-3 lg:hidden">
         <button type="button" onClick={() => setMinimized(false)} className="glass-float flex h-14 w-full items-center gap-3 rounded-full px-4 text-left">
           <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[var(--primary)]" />
-          <span className="min-w-0 flex-1 truncate text-sm font-black">{current?.label ?? 'L’assistant travaille…'}</span>
+          <span className="min-w-0 flex-1 truncate text-sm font-black">{current?.label ?? t.editorTools.agent.busy}</span>
           <ChevronUp className="h-5 w-5 shrink-0 text-slate-400" />
         </button>
       </div>
@@ -183,7 +186,7 @@ export function AgentPanel({
 
   return (
     <section
-      aria-label="Assistant d’édition"
+      aria-label={t.editorTools.agent.label}
       className="kb-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:top-24 lg:right-6 lg:bottom-6 lg:max-h-none lg:w-[400px] lg:rounded-[32px] dark:border-white/10 dark:bg-slate-900"
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-slate-900/5 px-4 py-3 dark:border-white/5">
@@ -191,14 +194,14 @@ export function AgentPanel({
           <Sparkles className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-black">Assistant</p>
-          <p className="truncate text-xs font-bold text-slate-500">Il modifie l’instruction sous vos yeux</p>
+          <p className="font-black">{t.editorTools.agent.title}</p>
+          <p className="truncate text-xs font-bold text-slate-500">{t.editorTools.agent.subtitle}</p>
         </div>
         {voiceToggle && !liveOn && <LiveButton locked={voiceRight === 'locked'} onClick={() => gate(voiceRight, 'voice_assistant', () => setLiveOn(true))} />}
-        <button type="button" onClick={() => setMinimized(true)} aria-label="Réduire" className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 lg:hidden">
+        <button type="button" onClick={() => setMinimized(true)} aria-label={t.editorTools.agent.minimize} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 lg:hidden">
           <ChevronDown className="h-5 w-5" />
         </button>
-        <button type="button" onClick={() => { setLiveOn(false); setOpen(false) }} disabled={busy} aria-label="Fermer l’assistant" className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 disabled:opacity-40">
+        <button type="button" onClick={() => { setLiveOn(false); setOpen(false) }} disabled={busy} aria-label={t.editorTools.agent.close} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 disabled:opacity-40">
           <X className="h-5 w-5" />
         </button>
       </header>
@@ -206,7 +209,7 @@ export function AgentPanel({
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {!messages.length && (
           <div className="rounded-2xl bg-primary-soft p-4 text-sm font-bold text-slate-700 dark:text-slate-200">
-            Demandez n’importe quel changement : réécrire ou ajouter une étape, « encercle le bouton vert sur la photo de l’étape 3 », dessiner un schéma, montrer à faire / à éviter… Vous pouvez aussi dicter au micro.
+            {t.editorTools.agent.intro}
           </div>
         )}
         {messages.map((m) =>
@@ -216,7 +219,7 @@ export function AgentPanel({
             </p>
           ) : (
             <div key={m.id} className={cn('mr-6 rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm', m.error ? 'bg-rose-50 text-rose-900 dark:bg-rose-500/10 dark:text-rose-200' : 'bg-slate-900/[0.04] dark:bg-white/5')}>
-              {m.text ? <p className="font-bold">{m.text}</p> : <p className="flex items-center gap-2 font-bold text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Je lis l’instruction…</p>}
+              {m.text ? <p className="font-bold">{m.text}</p> : <p className="flex items-center gap-2 font-bold text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> {t.editorTools.agent.reading}</p>}
               {!!m.actions?.length && (
                 <ul className="mt-2 space-y-1">
                   {m.actions.map((a) => (
@@ -231,10 +234,10 @@ export function AgentPanel({
               )}
               {m.before && !m.working && !m.undone && (
                 <button type="button" onClick={() => undo(m)} className="btn-press mt-2 flex h-10 items-center gap-1.5 rounded-xl px-2 text-xs font-black text-slate-600 hover:bg-slate-900/5 dark:text-slate-300">
-                  <RotateCcw className="h-4 w-4" /> Annuler ces changements
+                  <RotateCcw className="h-4 w-4" /> {t.editorTools.agent.undoTurn}
                 </button>
               )}
-              {m.undone && <p className="mt-2 text-xs font-black text-slate-500">Changements annulés.</p>}
+              {m.undone && <p className="mt-2 text-xs font-black text-slate-500">{t.editorTools.agent.undone}</p>}
             </div>
           ),
         )}
@@ -259,8 +262,8 @@ export function AgentPanel({
           void send()
         }}
       >
-        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Demandez un changement…" aria-label="Demande à l’assistant" className="h-12" wrapperClassName="flex-1" disabled={busy} />
-        <button type="submit" disabled={busy || !text.trim()} aria-label="Envoyer" className="btn-press bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white disabled:opacity-40">
+        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={t.editorTools.agent.placeholder} aria-label={t.editorTools.agent.inputLabel} className="h-12" wrapperClassName="flex-1" disabled={busy} />
+        <button type="submit" disabled={busy || !text.trim()} aria-label={t.editorTools.agent.send} className="btn-press bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white disabled:opacity-40">
           {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowUp className="h-5 w-5" />}
         </button>
       </form>
@@ -273,9 +276,10 @@ export function AgentPanel({
 
 /** Le bouton qui ouvre l'assistant vocal en direct, dans l'en-tête du panneau. */
 export function LiveButton({ onClick, locked }: { onClick: () => void; locked?: boolean }) {
+  const t = useMessages()
   return (
-    <button type="button" onClick={onClick} aria-label="Parler à l’assistant en direct" title={locked ? 'Assistant vocal : plan Usine' : 'Parler en direct'} className="btn-press bg-gradient-accent flex h-11 items-center gap-1.5 rounded-2xl px-3 text-xs font-black text-white">
-      <Mic className="h-4 w-4" /> Direct {locked && <LockBadge className="ml-0.5" />}
+    <button type="button" onClick={onClick} aria-label={t.editorTools.agent.live.label} title={locked ? t.editorTools.agent.live.locked : t.editorTools.agent.live.hint} className="btn-press bg-gradient-accent flex h-11 items-center gap-1.5 rounded-2xl px-3 text-xs font-black text-white">
+      <Mic className="h-4 w-4" /> {t.editorTools.agent.live.button} {locked && <LockBadge className="ml-0.5" />}
     </button>
   )
 }
