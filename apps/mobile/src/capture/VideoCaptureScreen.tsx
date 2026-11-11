@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { GestureDetector } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BridgeError, cancelled } from '../bridge/errors'
@@ -40,7 +41,7 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
   const [facing, setFacing] = useState<CameraType>('back')
   const [torch, setTorch] = useState(false)
   const [withoutSound, setWithoutSound] = useState(false)
-  const { zoom, reset: resetZoom, handlers: pinch } = usePinchZoom()
+  const { zoom, reset: resetZoom, gesture: pinch } = usePinchZoom()
   const [fromLibrary, setFromLibrary] = useState(false)
 
   const maxDuration = capture.payload.maxDurationSec ?? CAPTURE_PRESETS.video.maxDurationSec
@@ -141,100 +142,100 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
   const nearEnd = phase === 'recording' && remaining <= 30
 
   return (
-    <View style={styles.black}>
-      <CameraView
-        ref={cameraRef}
-        style={StyleSheet.absoluteFill}
-        mode="video"
-        facing={facing}
-        enableTorch={torch}
-        mute={withoutSound}
-        videoQuality={CAPTURE_PRESETS.video.quality}
-        videoBitrate={CAPTURE_PRESETS.video.bitrate}
-        zoom={zoom}
-        onCameraReady={() => setReady(true)}
-        onRecordingProgress={(p) => setSizeBytes(p.fileSize)}
-        onMountError={(e) => logError(new Error(e.message), { screen: 'camera.video', action: 'mount' })}
-      />
-      {/* Calque du pincement : sous les boutons, au-dessus de l'aperçu. */}
-      <View style={StyleSheet.absoluteFill} {...pinch} />
+    <GestureDetector gesture={pinch}>
+      <View style={styles.black}>
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          mode="video"
+          facing={facing}
+          enableTorch={torch}
+          mute={withoutSound}
+          videoQuality={CAPTURE_PRESETS.video.quality}
+          videoBitrate={CAPTURE_PRESETS.video.bitrate}
+          zoom={zoom}
+          onCameraReady={() => setReady(true)}
+          onRecordingProgress={(p) => setSizeBytes(p.fileSize)}
+          onMountError={(e) => logError(new Error(e.message), { screen: 'camera.video', action: 'mount' })}
+        />
 
-      <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
-        {phase === 'idle' ? (
-          <IconButton
-            icon="x"
-            label="Fermer"
-            onPress={() => captureController.fail(capture.id, cancelled())}
-            size={touch.min + 8}
-          />
-        ) : (
-          <View style={{ width: touch.min + 8 }} />
-        )}
-        {phase === 'recording' ? (
-          <Pill tone={nearEnd ? 'danger' : 'glass'}>
-            <View style={styles.recDot} />
-            <Text style={styles.timer}>
-              {nearEnd ? `${formatClock(remaining)} restantes` : formatClock(elapsed)}
-              {sizeBytes > 0 ? `  ·  ${(sizeBytes / 1_000_000).toFixed(0)} Mo` : ''}
-            </Text>
-          </Pill>
-        ) : (
-          <Pill>{`720p · max ${formatClock(maxDuration)}`}</Pill>
-        )}
-        <View style={styles.row}>
-          <IconButton
-            icon="zap"
-            label={torch ? 'Éteindre la lampe' : 'Allumer la lampe'}
-            active={torch}
-            onPress={() => setTorch((t) => !t)}
-            size={touch.min + 8}
-          />
+        <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
           {phase === 'idle' ? (
             <IconButton
-              icon="refresh-ccw"
-              label="Changer de caméra"
-              onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+              icon="x"
+              label="Fermer"
+              onPress={() => captureController.fail(capture.id, cancelled())}
               size={touch.min + 8}
             />
-          ) : null}
-        </View>
-      </View>
-
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + 20 }]}>
-        {phase === 'idle' ? (
-          <Text style={styles.hint}>
-            {portrait
-              ? 'Astuce : tenez le téléphone à l’horizontale et filmez la personne qui explique. Pincez pour zoomer.'
-              : 'Filmez la personne qui explique, au plus près des gestes. Pincez pour zoomer.'}
-          </Text>
-        ) : null}
-        {phase === 'finishing' ? (
-          <View style={styles.preparing}>
-            <ActivityIndicator color={colors.white} size="large" />
-            <Text style={styles.hint}>
-              {fromLibrary
-                ? 'Préparation de la vidéo… Si elle est sur iCloud, l’iPhone la télécharge d’abord, puis la réduit en 720p.'
-                : 'Préparation de la vidéo…'}
-            </Text>
-          </View>
-        ) : null}
-        <ZoomReset zoom={zoom} onReset={resetZoom} />
-        <View style={styles.controls}>
-          <View style={[styles.side, styles.sideLeft]}>
+          ) : (
+            <View style={{ width: touch.min + 8 }} />
+          )}
+          {phase === 'recording' ? (
+            <Pill tone={nearEnd ? 'danger' : 'glass'}>
+              <View style={styles.recDot} />
+              <Text style={styles.timer}>
+                {nearEnd ? `${formatClock(remaining)} restantes` : formatClock(elapsed)}
+                {sizeBytes > 0 ? `  ·  ${(sizeBytes / 1_000_000).toFixed(0)} Mo` : ''}
+              </Text>
+            </Pill>
+          ) : (
+            <Pill>{`720p · max ${formatClock(maxDuration)}`}</Pill>
+          )}
+          <View style={styles.row}>
+            <IconButton
+              icon="zap"
+              label={torch ? 'Éteindre la lampe' : 'Allumer la lampe'}
+              active={torch}
+              onPress={() => setTorch((t) => !t)}
+              size={touch.min + 8}
+            />
             {phase === 'idle' ? (
-              <IconButton icon="image" label="Choisir une vidéo du téléphone" onPress={() => void pickExisting()} size={touch.large} />
+              <IconButton
+                icon="refresh-ccw"
+                label="Changer de caméra"
+                onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+                size={touch.min + 8}
+              />
             ) : null}
           </View>
-          <ShutterButton
-            variant={phase === 'recording' ? 'stop' : 'record'}
-            label={phase === 'recording' ? 'Arrêter l’enregistrement' : 'Commencer à filmer'}
-            onPress={phase === 'recording' ? stop : () => void start()}
-            disabled={!ready || phase === 'finishing'}
-          />
-          <View style={styles.side} />
+        </View>
+
+        <View style={[styles.bottom, { paddingBottom: insets.bottom + 20 }]}>
+          {phase === 'idle' ? (
+            <Text style={styles.hint}>
+              {portrait
+                ? 'Astuce : tenez le téléphone à l’horizontale et filmez la personne qui explique. Pincez pour zoomer.'
+                : 'Filmez la personne qui explique, au plus près des gestes. Pincez pour zoomer.'}
+            </Text>
+          ) : null}
+          {phase === 'finishing' ? (
+            <View style={styles.preparing}>
+              <ActivityIndicator color={colors.white} size="large" />
+              <Text style={styles.hint}>
+                {fromLibrary
+                  ? 'Préparation de la vidéo… Si elle est sur iCloud, l’iPhone la télécharge d’abord, puis la réduit en 720p.'
+                  : 'Préparation de la vidéo…'}
+              </Text>
+            </View>
+          ) : null}
+          <ZoomReset zoom={zoom} onReset={resetZoom} />
+          <View style={styles.controls}>
+            <View style={[styles.side, styles.sideLeft]}>
+              {phase === 'idle' ? (
+                <IconButton icon="image" label="Choisir une vidéo du téléphone" onPress={() => void pickExisting()} size={touch.large} />
+              ) : null}
+            </View>
+            <ShutterButton
+              variant={phase === 'recording' ? 'stop' : 'record'}
+              label={phase === 'recording' ? 'Arrêter l’enregistrement' : 'Commencer à filmer'}
+              onPress={phase === 'recording' ? stop : () => void start()}
+              disabled={!ready || phase === 'finishing'}
+            />
+            <View style={styles.side} />
+          </View>
         </View>
       </View>
-    </View>
+    </GestureDetector>
   )
 }
 

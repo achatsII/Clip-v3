@@ -2,6 +2,7 @@ import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera'
 import * as Haptics from 'expo-haptics'
 import { useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { GestureDetector } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BridgeError, cancelled } from '../bridge/errors'
@@ -36,7 +37,7 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
   const nextKey = useRef(1)
   const [taken, setTaken] = useState<Array<{ key: number; media?: CapturedMedia }>>([])
   const [picking, setPicking] = useState(false)
-  const { zoom, reset: resetZoom, handlers: pinch } = usePinchZoom()
+  const { zoom, reset: resetZoom, gesture: pinch } = usePinchZoom()
 
   const maxCount = capture.payload.maxCount ?? 30
   const count = taken.length
@@ -137,79 +138,79 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
   }
 
   return (
-    <View style={styles.black}>
-      <CameraView
-        ref={cameraRef}
-        style={StyleSheet.absoluteFill}
-        mode="picture"
-        facing={facing}
-        enableTorch={torch}
-        animateShutter
-        zoom={zoom}
-        onCameraReady={() => setReady(true)}
-        onMountError={(e) => logError(new Error(e.message), { screen: 'camera.photo', action: 'mount' })}
-      />
-      {/* Calque du pincement : sous les boutons, au-dessus de l'aperçu. */}
-      <View style={StyleSheet.absoluteFill} {...pinch} />
+    <GestureDetector gesture={pinch}>
+      <View style={styles.black}>
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          mode="picture"
+          facing={facing}
+          enableTorch={torch}
+          animateShutter
+          zoom={zoom}
+          onCameraReady={() => setReady(true)}
+          onMountError={(e) => logError(new Error(e.message), { screen: 'camera.photo', action: 'mount' })}
+        />
 
-      <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
-        <IconButton icon="x" label="Fermer" onPress={close} size={touch.min + 8} />
-        <Pill>{full ? `Maximum atteint · ${count}` : `${count} photo${count > 1 ? 's' : ''}`}</Pill>
-        <View style={styles.row}>
-          <IconButton
-            icon="zap"
-            label={torch ? 'Éteindre la lampe' : 'Allumer la lampe'}
-            active={torch}
-            onPress={() => setTorch((t) => !t)}
-            size={touch.min + 8}
-          />
-          <IconButton
-            icon="refresh-ccw"
-            label="Changer de caméra"
-            onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
-            size={touch.min + 8}
-          />
+        <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+          <IconButton icon="x" label="Fermer" onPress={close} size={touch.min + 8} />
+          <Pill>{full ? `Maximum atteint · ${count}` : `${count} photo${count > 1 ? 's' : ''}`}</Pill>
+          <View style={styles.row}>
+            <IconButton
+              icon="zap"
+              label={torch ? 'Éteindre la lampe' : 'Allumer la lampe'}
+              active={torch}
+              onPress={() => setTorch((t) => !t)}
+              size={touch.min + 8}
+            />
+            <IconButton
+              icon="refresh-ccw"
+              label="Changer de caméra"
+              onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+              size={touch.min + 8}
+            />
+          </View>
+        </View>
+
+        <View style={[styles.bottom, { paddingBottom: insets.bottom + 16 }]}>
+          {picking ? (
+            <View style={styles.preparing}>
+              <ActivityIndicator color={colors.white} />
+              <Text style={styles.hint}>Préparation des photos… (téléchargement d’iCloud au besoin)</Text>
+            </View>
+          ) : null}
+          {count > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
+              {taken.map((t) =>
+                t.media?.thumbnailDataUrl ? (
+                  <Image key={t.key} source={{ uri: t.media.thumbnailDataUrl }} style={styles.thumb} />
+                ) : (
+                  <View key={t.key} style={[styles.thumb, styles.thumbPending]} />
+                ),
+              )}
+            </ScrollView>
+          ) : (
+            <Text style={styles.hint}>Prenez autant de photos que nécessaire, une par étape. Pincez pour zoomer.</Text>
+          )}
+          <View style={styles.zoomRow}>
+            <ZoomReset zoom={zoom} onReset={resetZoom} />
+          </View>
+          <View style={styles.controls}>
+            <View style={[styles.side, styles.sideLeft]}>
+              {!full ? (
+                <IconButton icon="image" label="Choisir des photos du téléphone" onPress={() => void pickExisting()} disabled={picking || finishing} size={touch.large} />
+              ) : null}
+            </View>
+            <ShutterButton onPress={shoot} disabled={!ready || full || finishing} label="Prendre la photo" />
+            <View style={styles.side}>
+              {count > 0 ? (
+                <PrimaryButton label={`Terminé (${count})`} onPress={() => void finish()} loading={finishing} />
+              ) : null}
+            </View>
+          </View>
         </View>
       </View>
-
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + 16 }]}>
-        {picking ? (
-          <View style={styles.preparing}>
-            <ActivityIndicator color={colors.white} />
-            <Text style={styles.hint}>Préparation des photos… (téléchargement d’iCloud au besoin)</Text>
-          </View>
-        ) : null}
-        {count > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
-            {taken.map((t) =>
-              t.media?.thumbnailDataUrl ? (
-                <Image key={t.key} source={{ uri: t.media.thumbnailDataUrl }} style={styles.thumb} />
-              ) : (
-                <View key={t.key} style={[styles.thumb, styles.thumbPending]} />
-              ),
-            )}
-          </ScrollView>
-        ) : (
-          <Text style={styles.hint}>Prenez autant de photos que nécessaire, une par étape. Pincez pour zoomer.</Text>
-        )}
-        <View style={styles.zoomRow}>
-          <ZoomReset zoom={zoom} onReset={resetZoom} />
-        </View>
-        <View style={styles.controls}>
-          <View style={[styles.side, styles.sideLeft]}>
-            {!full ? (
-              <IconButton icon="image" label="Choisir des photos du téléphone" onPress={() => void pickExisting()} disabled={picking || finishing} size={touch.large} />
-            ) : null}
-          </View>
-          <ShutterButton onPress={shoot} disabled={!ready || full || finishing} label="Prendre la photo" />
-          <View style={styles.side}>
-            {count > 0 ? (
-              <PrimaryButton label={`Terminé (${count})`} onPress={() => void finish()} loading={finishing} />
-            ) : null}
-          </View>
-        </View>
-      </View>
-    </View>
+    </GestureDetector>
   )
 }
 
