@@ -1,66 +1,20 @@
 'use client'
 
 import { FileText, Maximize2, Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { annotationsMarkup } from '@/lib/annotations/markup'
 import type { Annotation, StepMedia } from '@/lib/model/types'
 import { cn, formatClock } from '@/lib/util/cn'
 
-const COLORS: Record<Annotation['color'], string> = { red: '#FF2B5E', yellow: '#FFC800', green: '#18c480', blue: '#0078FF', white: '#ffffff' }
-
-/** Les annotations par-dessus une image, en coordonnées relatives (0 à 1). */
-export function AnnotationLayer({ annotations, className, interactive, onSelect, selectedId }: { annotations: Annotation[]; className?: string; interactive?: boolean; onSelect?: (id: string) => void; selectedId?: string | null }) {
+/**
+ * Les annotations par-dessus une image (coordonnées relatives, de 0 à 1). Le dessin est celui du
+ * PDF (src/lib/annotations/markup.ts) ; les tailles suivent la largeur de l'image (`cqw`).
+ */
+export function AnnotationLayer({ annotations, className, ratio }: { annotations: Annotation[]; className?: string; ratio?: number | null }) {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  const html = useMemo(() => annotationsMarkup(annotations, { ratio: ratio ?? 1, idPrefix: `an${id}` }), [annotations, ratio, id])
   if (!annotations.length) return null
-  return (
-    <div className={cn('pointer-events-none absolute inset-0', className)}>
-      <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
-        <defs>
-          {Object.entries(COLORS).map(([k, c]) => (
-            <marker key={k} id={`arrow-${k}`} viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill={c} />
-            </marker>
-          ))}
-        </defs>
-        {annotations.map((a) => {
-          const c = COLORS[a.color] ?? COLORS.red
-          const sel = a.id === selectedId
-          const common = {
-            stroke: c,
-            strokeWidth: sel ? 7 : 5,
-            fill: 'none',
-            vectorEffect: 'non-scaling-stroke' as const,
-            style: { filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.45))', pointerEvents: interactive ? ('stroke' as const) : ('none' as const), cursor: interactive ? 'pointer' : undefined },
-            onClick: interactive ? () => onSelect?.(a.id) : undefined,
-          }
-          if (a.type === 'arrow') return <line key={a.id} x1={a.x * 1000} y1={a.y * 1000} x2={(a.x2 ?? a.x) * 1000} y2={(a.y2 ?? a.y) * 1000} markerEnd={`url(#arrow-${a.color})`} {...common} />
-          if (a.type === 'circle') return <ellipse key={a.id} cx={(a.x + (a.w ?? 0) / 2) * 1000} cy={(a.y + (a.h ?? 0) / 2) * 1000} rx={((a.w ?? 0.1) / 2) * 1000 + 8} ry={((a.h ?? 0.1) / 2) * 1000 + 8} {...common} />
-          if (a.type === 'rect') return <rect key={a.id} x={a.x * 1000} y={a.y * 1000} width={(a.w ?? 0.1) * 1000} height={(a.h ?? 0.1) * 1000} rx={14} {...common} />
-          return null
-        })}
-      </svg>
-      {annotations.map((a, i) => {
-        const c = COLORS[a.color] ?? COLORS.red
-        if (a.type === 'number') {
-          return (
-            <span key={a.id} className="absolute flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-base font-black shadow-lg" style={{ left: `${a.x * 100}%`, top: `${a.y * 100}%`, background: c, color: a.color === 'yellow' || a.color === 'white' ? '#0f172a' : '#fff' }}>
-              {a.text || i + 1}
-            </span>
-          )
-        }
-        if (!a.text) return null
-        const lx = a.type === 'arrow' ? a.x : a.x + (a.w ?? 0) / 2
-        const ly = a.type === 'arrow' ? a.y : a.y + (a.h ?? 0) + 0.01
-        return (
-          <span
-            key={`${a.id}-l`}
-            className={cn('absolute max-w-[45%] -translate-x-1/2 rounded-xl px-2.5 py-1 text-xs font-black shadow-lg sm:text-sm', a.type === 'arrow' && '-translate-y-full')}
-            style={{ left: `${Math.min(95, Math.max(5, lx * 100))}%`, top: `${Math.min(96, ly * 100)}%`, background: c, color: a.color === 'yellow' || a.color === 'white' ? '#0f172a' : '#fff' }}
-          >
-            {a.text}
-          </span>
-        )
-      })}
-    </div>
-  )
+  return <div className={cn('pointer-events-none absolute inset-0 [container-type:inline-size]', className)} dangerouslySetInnerHTML={{ __html: html }} />
 }
 
 /** Image aux proportions réelles, avec ses annotations, contenue dans la boîte parente. */
@@ -84,7 +38,7 @@ export function AnnotatedImage({ src, annotations = [], alt = '', className, fit
           onLoad={(e) => setRatio(e.currentTarget.naturalWidth / Math.max(1, e.currentTarget.naturalHeight))}
           className="block h-full max-h-full w-full max-w-full rounded-[inherit] object-contain select-none"
         />
-        <AnnotationLayer annotations={annotations} />
+        <AnnotationLayer annotations={annotations} ratio={ratio} />
         {children}
       </div>
     </div>

@@ -175,18 +175,20 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}
     },
 
     /** Génère une image (illustration) à partir d'un texte et d'images de référence. */
-    async generateImage(prompt: string, referenceImages: string[], size = { width: 1024, height: 768 }): Promise<string> {
-      const res = await client.call<Array<{ success?: boolean; results?: Array<{ imageURL?: string }> }> | { success?: boolean; results?: Array<{ imageURL?: string }> }>(
-        '/api/v2/ai/generate/image',
-        {
-          method: 'POST',
-          body: { prompt, provider: 'google', level: 'mid', width: size.width, height: size.height, quantity: 1, referenceImages },
-          timeoutMs: 180_000,
-        },
-      )
+    /** Une image générée (spec §2.7.1 : réponse en liste, `results[0].imageURL`). */
+    async generateImage(prompt: string, referenceImages: string[], size = { width: 1024, height: 1024 }): Promise<string> {
+      type Out = { success?: boolean; error?: unknown; message?: string; results?: Array<{ imageURL?: string; url?: string }> }
+      const res = await client.call<Out[] | Out>('/api/v2/ai/generate/image', {
+        method: 'POST',
+        body: { prompt, provider: 'google', level: 'mid', width: size.width, height: size.height, quantity: 1, ...(referenceImages.length ? { referenceImages } : {}) },
+        timeoutMs: 180_000,
+      })
       const first = Array.isArray(res) ? res[0] : res
-      const url = first?.results?.[0]?.imageURL
-      if (!url) throw new ApiError("L'illustration n'a pas pu être créée", 502, res)
+      const url = first?.results?.[0]?.imageURL ?? first?.results?.[0]?.url
+      if (!url) {
+        const why = typeof first?.error === 'string' ? first.error : (first?.error as { message?: string } | undefined)?.message ?? first?.message
+        throw new ApiError(why ? `Le service d'images a refusé : ${why}` : "Le service d'images n'a rendu aucune image", 422, res, 'no_image')
+      }
       return url
     },
   }

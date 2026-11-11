@@ -40,6 +40,32 @@ export default function PrintPage() {
     void QRCode.toString(live, { type: 'svg', margin: 0 }).then(setQr).catch(() => setQr(null))
   }, [live])
 
+  // Les proportions des images, lues avant de composer le PDF : chaque image garde sa forme et
+  // ses annotations tombent juste dessus.
+  const [ratios, setRatios] = useState<Record<string, number>>({})
+  const contentForRatios = doc ? (published.data && !doc.json_data.dirty ? published.data.json_data.content : doc.json_data.draft) : null
+  const imageUrls = useMemo(
+    () =>
+      (contentForRatios?.steps ?? [])
+        .map((st) => st.media[0])
+        .map((m) => (m?.kind === 'image' ? m.url : m?.kind === 'video' ? m.posterUrl : m?.pageImageUrl))
+        .filter((u): u is string => !!u),
+    [contentForRatios],
+  )
+  useEffect(() => {
+    let alive = true
+    for (const url of imageUrls) {
+      if (ratios[url]) continue
+      const img = new Image()
+      img.onload = () => alive && img.naturalHeight && setRatios((r) => ({ ...r, [url]: img.naturalWidth / img.naturalHeight }))
+      img.src = url
+    }
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageUrls])
+
   const html = useMemo(() => {
     if (!doc) return ''
     // La version publiée si elle existe et que le brouillon ne diffère pas ; sinon le brouillon, marqué comme tel.
@@ -57,8 +83,9 @@ export default function PrintPage() {
       qrSvg: qr,
       showClipMention: BILLING_V2 && brandKit === 'locked',
       draft: !usePublished,
+      ratios,
     })
-  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit])
+  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios])
 
   async function print() {
     if (hasCapability('print')) {

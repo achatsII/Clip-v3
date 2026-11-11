@@ -13,6 +13,7 @@ import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { assistStep, illustrationPrompt } from '@/lib/ai/assist'
+import { ApiError } from '@/lib/gateway/client'
 import { STEP_ACTIONS } from '@/lib/ai/prompts'
 import { WARNINGS } from '@/lib/model/catalog'
 import type { InstructionContent, Source, Step, StepMedia, WarningLevel } from '@/lib/model/types'
@@ -79,7 +80,9 @@ export function StepEditor({
       setMediaIndex(step.media.length)
       toast.success('Illustration créée', 'Elle s’ajoute aux médias de l’étape. Gardez celle que vous préférez.')
     } catch (e) {
-      toast.error('L’illustration n’a pas pu être créée', errorText(e))
+      // Le code aide à trouver la cause (droits, service d'images, image de référence).
+      const code = e instanceof ApiError && e.status ? ` (code ${e.status}${e.code ? ` · ${e.code}` : ''})` : ''
+      toast.error('L’illustration n’a pas pu être créée', `${errorText(e)}${code}`)
     } finally {
       setBusy(null)
     }

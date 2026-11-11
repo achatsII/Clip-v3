@@ -4,6 +4,7 @@
  * Un code QR mène à la version à jour : le papier renvoie toujours vers l'instruction vivante.
  */
 import { CATEGORIES, ENERGY, KINDS, PPE, WARNINGS } from '../model/catalog'
+import { annotationsMarkup } from '../annotations/markup'
 import type { Branding, InstructionContent, StepMedia } from '../model/types'
 
 const esc = (s: unknown) =>
@@ -20,20 +21,13 @@ function mediaImage(m: StepMedia | undefined): string | null {
   return m.pageImageUrl ?? null
 }
 
-function annotationsSvg(m: StepMedia | undefined): string {
-  if (!m || m.kind !== 'image' || !m.annotations?.length) return ''
-  const colors: Record<string, string> = { red: '#FF2B5E', yellow: '#FFC800', green: '#18c480', blue: '#0078FF', white: '#ffffff' }
-  const shapes = m.annotations
-    .map((a) => {
-      const c = colors[a.color] ?? '#FF2B5E'
-      if (a.type === 'arrow') return `<line x1="${a.x * 1000}" y1="${a.y * 1000}" x2="${(a.x2 ?? a.x) * 1000}" y2="${(a.y2 ?? a.y) * 1000}" stroke="${c}" stroke-width="10" marker-end="url(#h)"/>`
-      if (a.type === 'circle') return `<ellipse cx="${(a.x + (a.w ?? 0) / 2) * 1000}" cy="${(a.y + (a.h ?? 0) / 2) * 1000}" rx="${((a.w ?? 0.1) / 2) * 1000 + 8}" ry="${((a.h ?? 0.1) / 2) * 1000 + 8}" stroke="${c}" stroke-width="10" fill="none"/>`
-      if (a.type === 'rect') return `<rect x="${a.x * 1000}" y="${a.y * 1000}" width="${(a.w ?? 0.1) * 1000}" height="${(a.h ?? 0.1) * 1000}" rx="14" stroke="${c}" stroke-width="10" fill="none"/>`
-      if (a.type === 'number') return `<circle cx="${a.x * 1000}" cy="${a.y * 1000}" r="34" fill="${c}"/><text x="${a.x * 1000}" y="${a.y * 1000 + 14}" font-size="40" font-weight="900" text-anchor="middle" fill="#fff">${esc(a.text ?? '')}</text>`
-      return ''
-    })
-    .join('')
-  return `<svg class="ann" viewBox="0 0 1000 1000" preserveAspectRatio="none"><defs><marker id="h" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#FF2B5E"/></marker></defs>${shapes}</svg>`
+/** L'image d'une étape et ses annotations, cadrées ensemble : la boîte prend les proportions de l'image. */
+function mediaBlock(m: StepMedia | undefined, img: string, ratio: number | undefined, key: string): string {
+  const r = ratio && ratio > 0 ? ratio : null
+  const marks = m?.kind === 'image' && m.annotations?.length ? annotationsMarkup(m.annotations, { ratio: r ?? 16 / 10, idPrefix: `p${key}`, print: true }) : ''
+  const frame = r ? `aspect-ratio:${r};width:min(100%, calc(62mm * ${r}))` : 'aspect-ratio:16/10;width:100%'
+  const vid = m?.kind === 'video' ? '<span class="vid">▶ extrait vidéo dans l’app</span>' : ''
+  return `<div class="media"><div class="frame" style="${frame}"><img src="${esc(img)}" alt="" style="object-fit:${r ? 'fill' : 'contain'}"><div class="ann">${marks}</div></div>${vid}</div>`
 }
 
 export interface PrintMeta {
@@ -46,6 +40,8 @@ export interface PrintMeta {
   qrSvg?: string | null
   showClipMention: boolean
   draft: boolean
+  /** Largeur / hauteur de chaque image (par URL), lue avant l'impression : les annotations tombent juste. */
+  ratios?: Record<string, number>
 }
 
 export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): string {
@@ -57,7 +53,7 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
       const img = mediaImage(s.media[0])
       const w = s.warning
       return `<article class="step">
-        ${img ? `<div class="media"><img src="${esc(img)}" alt="">${annotationsSvg(s.media[0])}${s.media[0]?.kind === 'video' ? '<span class="vid">▶ extrait vidéo dans l’app</span>' : ''}</div>` : ''}
+        ${img ? mediaBlock(s.media[0], img, meta.ratios?.[img], String(i)) : ''}
         <div class="body">
           <h3><span class="n">${i + 1}</span>${esc(s.title)}</h3>
           ${w ? `<p class="warn ${w.level}"><b>${esc(WARNINGS[w.level].label)} :</b> ${esc(w.text)}</p>` : ''}
@@ -100,8 +96,8 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .safety{background:#fff1f2;border-color:#fecdd3}.safety li{font-weight:700}
 .steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .step{border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
-.media{position:relative;background:#0f172a;aspect-ratio:16/10}.media img{width:100%;height:100%;object-fit:contain;display:block}
-.ann{position:absolute;inset:0;width:100%;height:100%}
+.media{position:relative;background:#0f172a;display:flex;justify-content:center}.frame{position:relative}.frame img{width:100%;height:100%;display:block}
+.ann{position:absolute;inset:0;container-type:inline-size}
 .vid{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:800;padding:3px 6px;border-radius:6px}
 .body{padding:10px 12px}.step h3{font-size:15px;margin:0 0 6px;font-weight:900;display:flex;gap:8px;align-items:flex-start}
 .n{display:inline-flex;min-width:24px;height:24px;border-radius:8px;background:${esc(color)};color:#fff;align-items:center;justify-content:center;font-size:13px}

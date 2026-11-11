@@ -37,18 +37,31 @@ export interface Source {
   capturedOn?: 'web' | 'ios' | 'android'
 }
 
+export type AnnotationType = 'pen' | 'highlight' | 'arrow' | 'line' | 'circle' | 'rect' | 'text' | 'number' | 'icon' | 'blur'
+export type AnnotationColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'white' | 'black'
+export type AnnotationSize = 's' | 'm' | 'l'
+
 export interface Annotation {
   id: string
-  type: 'arrow' | 'circle' | 'rect' | 'number' | 'text'
-  /** Coordonnées relatives (0 à 1) à l'image. */
+  type: AnnotationType
+  /** Coordonnées relatives (0 à 1) à l'image : point d'ancrage, début d'un trait, coin d'un cadre. */
   x: number
   y: number
+  /** Fin d'une flèche ou d'une ligne. */
   x2?: number
   y2?: number
+  /** Largeur et hauteur d'un cercle, d'un cadre ou d'une zone floutée. */
   w?: number
   h?: number
+  /** Crayon et surligneur : le tracé, en coordonnées relatives. */
+  points?: Array<[number, number]>
+  /** Texte d'une étiquette, d'un numéro, ou légende d'une forme. */
   text?: string
-  color: 'red' | 'yellow' | 'green' | 'blue' | 'white'
+  /** Icône (clé de src/lib/annotations/icons.ts). */
+  icon?: string
+  /** Épaisseur du trait ou taille de l'étiquette ; moyenne par défaut. */
+  size?: AnnotationSize
+  color: AnnotationColor
 }
 
 export type StepMedia =
