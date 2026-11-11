@@ -17,7 +17,7 @@ langue et signale ce qui cloche.
 |---|---|
 | `apps/web` | **Toute l'interface** : Next.js 16 (App Router), React 19, Tailwind 4. Bureau, tablette de poste, téléphone, écran TV. Parle directement à la Gateway Octopus. |
 | `apps/mobile` | La **coquille** Expo (SDK 58) : affiche l'app web et lui prête la caméra, le micro, le scan, l'envoi des gros fichiers et l'impression, à poids contrôlé. Hors des workspaces npm. |
-| `packages/bridge` | Le contrat du pont (`@clip/bridge`), partagé par les deux. |
+| `packages/bridge` | Le contrat du pont (`@clip/bridge`), partagé par les deux ; la coquille en garde une copie synchronisée (`npm run sync-bridge` dans `apps/mobile`). |
 
 ## Démarrer l'app web
 

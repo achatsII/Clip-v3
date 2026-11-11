@@ -10,7 +10,8 @@
     "ios": "expo start --ios",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "icons": "node scripts/generate-icons.js"
+    "icons": "node scripts/generate-icons.js",
+    "sync-bridge": "node scripts/sync-bridge.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

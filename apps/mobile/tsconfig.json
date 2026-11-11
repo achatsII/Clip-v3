@@ -6,5 +6,5 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["jest"]
   },
-  "include": ["index.ts", "App.tsx", "src/**/*.ts", "src/**/*.tsx", "../../packages/bridge/src/**/*.ts"]
+  "include": ["index.ts", "App.tsx", "src/**/*.ts", "src/**/*.tsx"]
 }

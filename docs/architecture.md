@@ -13,7 +13,9 @@
 - **`apps/mobile`** — coquille Expo : une WebView qui charge l'app web, plus un **pont** (§3) pour la
   capture à poids contrôlé (caméra, micro), le scan de codes, l'envoi des gros fichiers, l'impression,
   le partage et, plus tard, les achats des magasins. Elle porte aussi l'écran de mise à jour forcée.
-- **`packages/bridge`** — le contrat du pont, partagé par les deux.
+- **`packages/bridge`** — le contrat du pont, partagé par les deux. Le web l'importe ; la coquille en
+  garde une copie synchronisée (`apps/mobile/src/bridge/contract.ts`, `npm run sync-bridge`) pour
+  rester publiable seule, et un test échoue si la copie diffère de la source.
 
 Conséquence voulue : une coquille installée ne fige presque rien. L'interface, les règles et les
 prompts vivent dans l'app web et changent pour tout le monde au déploiement suivant. Seule la liste

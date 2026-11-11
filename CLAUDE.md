@@ -39,6 +39,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   version préfixée et Chrome perd tout le flou.
 - Un `id` dans un SVG (dégradé) doit être unique par instance (`useId`) : celui d'un élément masqué ne
   se prête pas.
+- La coquille doit rester autonome : la publication Expo Go ne copie que `apps/mobile`. Aucun import
+  hors de ce dossier ; après un changement de `packages/bridge`, `cd apps/mobile && npm run sync-bridge`
+  (un test de la coquille échoue sinon).
 - Les enveloppes des routes Data ne sont pas uniformes (`result` sur `/one`, `count` sur `/count`) :
   passer par `dataApi`.
 - La valeur interne d'un crédit d'IA, en argent, ne s'écrit nulle part dans le dépôt (code, docs,
