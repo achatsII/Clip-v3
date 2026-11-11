@@ -7,6 +7,7 @@
  */
 import { APP_DATA_IDENTIFIER, SHARED_APP } from '../config'
 import { ApiError, GatewayClient } from './client'
+import { messages } from '@/lib/i18n'
 
 export interface Doc<T> {
   _id: string
@@ -61,7 +62,7 @@ export function dataApi(client: GatewayClient) {
         body: { description: description ?? dataType, json_data: stamp(json) },
       })
       const first = res.results?.[0]
-      if (!first?.inserted_id) throw new ApiError("L'enregistrement n'a pas été confirmé", 500, res)
+      if (!first?.inserted_id) throw new ApiError(messages().common.errors.saveUnconfirmed, 500, res)
       return { _id: first.inserted_id, json_data: stamp(json) }
     },
 

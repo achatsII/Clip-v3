@@ -3,6 +3,7 @@
 import { MoreHorizontal } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/util/cn'
+import { useMessages } from '@/lib/i18n'
 
 export interface MenuItem {
   label: string
@@ -15,7 +16,9 @@ export interface MenuItem {
 }
 
 /** `bare` : le déclencheur fourni porte déjà son allure ; le bouton ne lui ajoute rien. */
-export function Menu({ items, label = 'Plus d’actions', trigger, align = 'right', bare = false }: { items: MenuItem[]; label?: string; trigger?: ReactNode; align?: 'left' | 'right'; bare?: boolean }) {
+export function Menu({ items, label: givenLabel, trigger, align = 'right', bare = false }: { items: MenuItem[]; label?: string; trigger?: ReactNode; align?: 'left' | 'right'; bare?: boolean }) {
+  const t = useMessages()
+  const label = givenLabel ?? t.common.moreActions
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {

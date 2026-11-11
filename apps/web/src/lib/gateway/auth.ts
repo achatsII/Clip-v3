@@ -1,5 +1,6 @@
 import { APP_IDENTIFIER } from '../config'
 import { ApiError, gateway, publicCall, storeTokens } from './client'
+import { messages } from '@/lib/i18n'
 
 export interface Profile {
   userId: string
@@ -25,7 +26,7 @@ export async function login(email: string, password: string): Promise<void> {
     body: { email: email.trim(), password },
   }).catch((e: ApiError) => {
     if (e.status === 400 || e.status === 401) throw new ApiError('Courriel ou mot de passe incorrect', e.status)
-    if (e.status === 404) throw new ApiError("Ce compte n'a pas encore accès à CLIP. Demandez une invitation à votre administrateur.", 404)
+    if (e.status === 404) throw new ApiError(messages().common.errors.noAccess, 404)
     throw e
   })
   if (!data.access_token) throw new ApiError('Connexion impossible', 500)

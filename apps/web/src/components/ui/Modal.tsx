@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/util/cn'
+import { useMessages } from '@/lib/i18n'
 
 /** Panneau centré sur grand écran, feuille du bas sur téléphone (5.17). */
 export function Modal({
@@ -25,6 +26,7 @@ export function Modal({
   dismissable?: boolean
   bare?: boolean
 }) {
+  const t = useMessages()
   const panelRef = useRef<HTMLDivElement>(null)
   // `onClose` change à chaque rendu du parent (fonction écrite sur place) : on le lit dans une
   // référence, sinon l'effet repartait à chaque lettre tapée et volait le focus (le clavier du
@@ -81,7 +83,7 @@ export function Modal({
           <div className="flex shrink-0 items-start justify-between gap-3 px-6 pt-4 pb-2 sm:pt-6">
             <div className="min-w-0 text-xl font-black tracking-tight text-slate-900 dark:text-white">{title}</div>
             {dismissable && (
-              <button type="button" onClick={onClose} aria-label="Fermer" className="btn-press -mt-1 -mr-2 flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10">
+              <button type="button" onClick={onClose} aria-label={t.common.close} className="btn-press -mt-1 -mr-2 flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10">
                 <X className="h-5 w-5" />
               </button>
             )}

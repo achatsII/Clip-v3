@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Les mots du métier : catégories, types de fiche, EPI, énergies, mises en garde, retours, rôles, statuts, thèmes. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Production', short: 'Prod.' },
+    maintenance: { label: 'Maintenance', short: 'Maint.' },
+    qualite: { label: 'Quality', short: 'Quality' },
+    sst: { label: 'Health and safety', short: 'H&S' },
+    nettoyage: { label: 'Cleaning', short: 'Cleaning' },
+    changement: { label: 'Changeover', short: 'Changeover' },
+    demarrage: { label: 'Startup and shutdown', short: 'Startup' },
+    autre: { label: 'Other', short: 'Other' },
+  },
+  kinds: {
+    procedure: { label: 'Work instruction', description: 'Step by step, with photos and videos.' },
+    lockout: { label: 'Lockout sheet', description: 'Energy sources, isolation points, verification.' },
+  },
+  ppe: {
+    casque: 'Hard hat',
+    lunettes: 'Safety glasses',
+    gants: 'Gloves',
+    'gants-coupure': 'Cut-resistant gloves',
+    'protection-auditive': 'Hearing protection',
+    bottes: 'Safety boots',
+    visiere: 'Face shield',
+    masque: 'Mask',
+    harnais: 'Harness',
+    'vetements-ignifuges': 'Flame-resistant clothing',
+    dossard: 'High-visibility vest',
+    tablier: 'Apron',
+  },
+  energy: {
+    electrique: 'Electrical',
+    pneumatique: 'Pneumatic',
+    hydraulique: 'Hydraulic',
+    mecanique: 'Mechanical',
+    gravite: 'Gravity',
+    thermique: 'Thermal',
+    chimique: 'Chemical',
+    vapeur: 'Steam',
+    eau: 'Water',
+    autre: 'Other',
+  },
+  warnings: { danger: 'Danger', caution: 'Caution', info: 'Good to know' },
+  feedbackKinds: {
+    unclear: { label: 'Unclear', question: 'It’s not clear' },
+    error: { label: 'Mistake', question: 'There’s a mistake' },
+    danger: { label: 'Danger', question: 'It’s dangerous' },
+    idea: { label: 'Idea', question: 'I have a better way' },
+    praise: { label: 'Thanks', question: 'It helped me' },
+  },
+  roles: {
+    admin: { label: 'Administrator', summary: 'Sets up the plant, stations and members; creates, approves and publishes.' },
+    approver: { label: 'Approver', summary: 'Creates and edits; approves what others publish.' },
+    author: { label: 'Editor', summary: 'Creates and edits instructions; publishes them, or asks for approval if the plant requires it.' },
+    reader: { label: 'Reader', summary: 'Views published instructions and flags what isn’t clear.' },
+  },
+  status: { draft: 'Draft', review: 'Awaiting approval', published: 'Published', archived: 'Archived' },
+  themes: { ocean: 'Ocean', nature: 'Nature', crepuscule: 'Dusk', royal: 'Royal', monochrome: 'Monochrome' },
+}

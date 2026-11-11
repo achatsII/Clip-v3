@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/util/cn'
+import { useMessages } from '@/lib/i18n'
 
 type Tone = 'success' | 'error' | 'info'
 interface ToastItem {
@@ -22,6 +23,7 @@ interface ToastApi {
 const Ctx = createContext<ToastApi | null>(null)
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const words = useMessages()
   const [items, setItems] = useState<ToastItem[]>([])
   const seq = useRef(0)
   const remove = useCallback((id: number) => setItems((l) => l.filter((t) => t.id !== id)), [])
@@ -73,7 +75,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 </button>
               )}
             </div>
-            <button type="button" aria-label="Fermer" onClick={() => remove(t.id)} className="-mt-1 -mr-1 flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-900/5">
+            <button type="button" aria-label={words.common.close} onClick={() => remove(t.id)} className="-mt-1 -mr-1 flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-900/5">
               <X className="h-4 w-4" />
             </button>
           </div>

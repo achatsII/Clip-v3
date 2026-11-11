@@ -222,3 +222,38 @@ instructions publiées, et les compare au plafond lu dans l'état.
   de l'usine, puis les consultations, les réalisations et les postes couverts. La personne choisit
   le plan à proposer, ou aucun ; le prix vient de `/api/v2/billing/plans`. Une personne qui n'est
   pas administratrice y arrive aussi depuis la fenêtre des refus, avec le plan conseillé déjà choisi.
+
+## 7. Les langues de l'outil (`src/lib/i18n`)
+
+L'outil parle français et anglais ; une autre langue s'ajoute sans toucher aux écrans.
+
+- **Un dictionnaire par domaine** (`i18n/fr/<domaine>.ts` : `common`, `catalog`, `shell`, `auth`,
+  `home`, `instructions`, `capture`, `editor`, `editorTools`, `stations`, `feedback`, `stats`,
+  `settings`, `billing`, `importer`, `publicLinks`). Le français est la source ; chaque autre langue
+  (`i18n/en/<domaine>.ts`) est typée `typeof` le français : une clé manquante, en trop ou d'une autre
+  forme fait échouer `tsc`, donc la construction. `tests/i18n.test.ts` refuse en plus un texte vide,
+  une phrase anglaise copiée du français et un accent français dans l'anglais.
+- **Une valeur** est un texte, ou une fonction pour un nombre, un pluriel ou un nom à insérer :
+  `steps: (n: number) => \`${num(n)} étape${n > 1 ? 's' : ''}\`` (en français 0 et 1 sont au
+  singulier ; en anglais seul 1 l'est). Pas de phrase coupée en morceaux recollés dans l'écran.
+- **Dans un composant** : `const t = useMessages()`, puis `t.editor.save`. Le composant se redessine
+  quand la langue change. **Ailleurs** (fonction d'une bibliothèque, gestionnaire d'événement) :
+  `messages()`, lu au moment de l'appel, jamais au chargement du module. Une liste de libellés
+  écrite en constante devient une liste de clés, et le libellé se lit au rendu.
+- **Les mots du métier** (catégories, EPI, énergies, mises en garde, rôles, statuts, thèmes) restent
+  dans `model/catalog.ts` avec leurs couleurs : leurs libellés sont des accesseurs qui lisent le
+  dictionnaire `catalog`. Le nom des langues des opérateurs vient du navigateur
+  (`Intl.DisplayNames`) dans une langue de l'outil autre que le français.
+- **Dates et nombres** : `formatDate`, `timeAgo`, `plural`, `formatBytes` (`util/cn.ts`), `num()` et
+  `locale()` (`fr-CA` ou `en-CA`) suivent la langue. Jamais `'fr-CA'` écrit dans un écran.
+- **Le choix** : Réglages → Apparence, et le menu Mon compte du téléphone (`AppearanceControls`).
+  Sans choix, la langue du navigateur. Il se garde dans `clip_pref_ui_lang`, qui survit à la
+  déconnexion, et met `lang` sur la page. Un changement redessine la page en entier (`AppShell`).
+- **Ce qui ne suit pas la langue de l'outil** : le contenu d'une instruction garde sa langue
+  (`content.language`) ; une instruction neuve prend celle de l'outil de son auteur
+  (`contentLanguage()`), et l'IA qui la retouche écrit dans la langue de l'instruction. Les consignes
+  données au modèle (`ai/prompts.ts`) restent en français : elles ne s'affichent pas. Le lecteur des
+  opérateurs garde ses propres langues (`components/player/i18n.ts`), choisies au poste ; le PDF d'une
+  instruction suit la langue de l'instruction.
+- **Les tests** lisent l'outil en français (`vitest.setup.ts`) ; un test qui veut l'anglais appelle
+  `setLang('en')`.

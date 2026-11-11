@@ -4,6 +4,7 @@
  */
 import type { AiApi, AiOperation, AskFile } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
+import { contentLanguage } from '../i18n'
 import type { FilesApi } from '../gateway/files'
 import type { InstructionContent, OrgSettings, Source, StepMedia } from '../model/types'
 import { AiInstruction, normalizeInstruction } from './normalize'
@@ -157,7 +158,7 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
       effort: 'low',
       mediaResolution: m.videoSec > 300 ? 'low' : 'medium',
       maxOutputTokens: 24000,
-      system_instruction: generationSystem(input.org, { language: 'fr', forceKind: input.forceKind }),
+      system_instruction: generationSystem(input.org, { language: contentLanguage(), forceKind: input.forceKind }),
       prompt: generationPrompt({ intent: input.intent, title: input.title, stations: input.stationNames, sources: prepared.lines }),
       files: prepared.askFiles,
       json_schema: instructionSchema,
@@ -168,7 +169,7 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
 
   input.onStage?.('finish')
   // Les sources gardent leur ordre : S1 = première source utilisable.
-  const { content, stationGuess, questions } = normalizeInstruction(result.json, prepared.sources)
+  const { content, stationGuess, questions } = normalizeInstruction(result.json, prepared.sources, contentLanguage())
   if (!content.steps.length) throw new ApiError("L'IA n'a trouvé aucune étape dans ces sources. Ajoutez une vidéo ou une note qui décrit les gestes.", 422)
   return { content, sources: mergeSources(input.sources, prepared.sources), stationGuess, questions, model: result.model, operation: tier.op }
 }
@@ -195,7 +196,7 @@ export async function importDocument(input: {
       thinking: 'enabled',
       effort: 'low',
       maxOutputTokens: 24000,
-      system_instruction: importSystem(input.org),
+      system_instruction: importSystem(input.org, contentLanguage()),
       prompt: generationPrompt({
         stations: input.stationNames,
         sources: [{ id: 'S1', line: `S1 — ancienne instruction PDF « ${input.source.originalName ?? input.source.name ?? 'document'} »${input.source.pageCount ? `, ${input.source.pageCount} pages` : ''} (fichier joint n° 1)` }],
@@ -206,7 +207,7 @@ export async function importDocument(input: {
     { scope: 'import', timeoutMs: 300_000 },
   )
   if (!result.json) throw new ApiError("L'IA n'a pas pu lire ce document.", 502)
-  const n = normalizeInstruction(result.json, [input.source])
+  const n = normalizeInstruction(result.json, [input.source], contentLanguage())
   return { ...n, model: result.model, operation }
 }
 

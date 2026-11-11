@@ -2,11 +2,14 @@
 
 import { Camera, ScanLine } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useMessages } from '@/lib/i18n'
 import { createDetector } from '@/lib/media/scan'
 import { Modal } from './ui/Modal'
 
 /** Lecteur de code dans le navigateur (la coquille native a le sien). */
-export function ScanSheet({ open, onClose, onResult, title = 'Scanner un code' }: { open: boolean; onClose: () => void; onResult: (value: string) => void; title?: string }) {
+export function ScanSheet({ open, onClose, onResult, title }: { open: boolean; onClose: () => void; onResult: (value: string) => void; title?: string }) {
+  const t = useMessages().shell.scan
+  const noCamera = t.noCamera
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +39,7 @@ export function ScanSheet({ open, onClose, onResult, title = 'Scanner un code' }
         }
         loop()
       } catch {
-        setError('La caméra n’est pas accessible. Autorisez-la dans votre navigateur, ou tapez le code dans la recherche.')
+        setError(noCamera)
       }
     })()
     return () => {
@@ -44,10 +47,10 @@ export function ScanSheet({ open, onClose, onResult, title = 'Scanner un code' }
       clearTimeout(raf)
       stream?.getTracks().forEach((t) => t.stop())
     }
-  }, [open, onResult])
+  }, [open, onResult, noCamera])
 
   return (
-    <Modal open={open} onClose={onClose} title={title} size="md">
+    <Modal open={open} onClose={onClose} title={title ?? t.title} size="md">
       {error ? (
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <Camera className="h-10 w-10 text-slate-400" />
@@ -61,7 +64,7 @@ export function ScanSheet({ open, onClose, onResult, title = 'Scanner un code' }
               <ScanLine className="animate-pulse-glow absolute inset-x-0 top-1/2 mx-auto h-10 w-10 -translate-y-1/2 text-white" />
             </div>
           </div>
-          <p className="absolute inset-x-0 bottom-3 text-center text-sm font-black text-white">Visez le code QR ou le code-barres</p>
+          <p className="absolute inset-x-0 bottom-3 text-center text-sm font-black text-white">{t.aim}</p>
         </div>
       )}
       <canvas ref={canvasRef} className="hidden" />

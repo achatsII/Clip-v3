@@ -48,7 +48,7 @@ RÈGLES D’ÉCRITURE :
 - Mise en garde (warningLevel) seulement si un risque réel existe à cette étape : "danger" = blessure grave possible ; "caution" = blessure légère ou dommage ; "info" = astuce importante ; sinon "none".
 - N’invente JAMAIS une valeur (couple, pression, température, quantité, numéro de pièce, réglage) : si elle n’est ni dite ni visible, ne l’écris pas et pose une question.
 - Respecte l’ordre réel des gestes, tel qu’on le voit et l’entend dans les sources.
-- Langue de sortie : ${opts.language === 'fr' ? 'français québécois clair, avec les termes du métier en usage au Québec (EPI, cadenassage, quart de travail…)' : `la langue « ${opts.language} »`}.
+- Langue de sortie : ${opts.language === 'fr' ? 'français québécois clair, avec les termes du métier en usage au Québec (EPI, cadenassage, quart de travail…)' : opts.language === 'en' ? 'anglais nord-américain clair (English), avec les termes du métier en usage dans les usines (PPE, lockout/tagout, shift…)' : `la langue « ${opts.language} »`}.
 
 MÉDIAS :
 - Chaque étape porte le média qui montre le mieux l’action :
@@ -89,8 +89,8 @@ export function generationPrompt(input: { intent?: string; stations: string[]; s
   return parts.join('\n')
 }
 
-export function importSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>): string {
-  return `${generationSystem(org, { language: 'fr' })}
+export function importSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, language = 'fr'): string {
+  return `${generationSystem(org, { language })}
 
 CONTEXTE PARTICULIER : la source est une ANCIENNE instruction (PDF). Restructure-la fidèlement selon les règles ci-dessus, sans rien perdre d’important et sans rien inventer : chaque consigne, valeur, mise en garde et EPI du document doit se retrouver dans le résultat. Quand une figure, un plan ou une photo d’une page illustre une étape, mets en média {source: "S1", page: n}.`
 }

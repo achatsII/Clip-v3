@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
+import { AppearanceControls } from '@/components/settings/Appearance'
 import { MembersTab } from '@/components/settings/MembersTab'
 import { StandardTab } from '@/components/settings/StandardTab'
 import { Button } from '@/components/ui/Button'
@@ -14,10 +15,11 @@ import { errorText } from '@/components/ui/States'
 import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { BILLING_V2, APP_IDENTIFIER, GATEWAY_URL } from '@/lib/config'
+import { useMessages } from '@/lib/i18n'
 import { compressImage } from '@/lib/media/image'
 import { listInstructions, listVersions } from '@/lib/model/repo'
+import { applyBrandColor } from '@/lib/theme'
 import { useEntitlement, useGate } from '@/lib/billing/state'
-import { readTheme, saveTheme, applyBrandColor, THEME_PRESETS, type UiTheme } from '@/lib/theme'
 import { cn } from '@/lib/util/cn'
 
 type Tab = 'usine' | 'standard' | 'approbation' | 'membres' | 'apparence' | 'donnees'
@@ -172,31 +174,14 @@ function ApprovalTab() {
 
 function AppearanceTab() {
   const { org } = useSession()
-  const [theme, setTheme] = useState<UiTheme>(() => readTheme())
-  const update = (t: UiTheme) => {
-    setTheme(t)
-    saveTheme(t)
-    applyBrandColor(org.json_data.color)
-  }
+  const t = useMessages().settings.appearance
   return (
     <Panel className="max-w-2xl">
-      <h2 className="mb-4 text-xl font-black tracking-tight">Apparence</h2>
-      <Label>Affichage</Label>
-      <Segmented value={theme.mode} onChange={(mode) => update({ ...theme, mode })} options={[{ value: 'light', label: 'Clair' }, { value: 'dark', label: 'Sombre' }, { value: 'system', label: 'Système' }]} />
-      <div className="mt-6">
-        <Label>Couleur de l’interface</Label>
-        <div className="flex flex-wrap gap-3">
-          {THEME_PRESETS.map((p) => (
-            <button key={p.value} type="button" onClick={() => update({ ...theme, preset: p.value })} className={cn('btn-press flex flex-col items-center gap-1.5 rounded-2xl p-2', theme.preset === p.value && 'bg-slate-900/5 dark:bg-white/10')}>
-              <span className="h-12 w-12 rounded-2xl shadow-inner" style={{ backgroundImage: p.swatch }} />
-              <span className="text-xs font-black">{p.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <h2 className="mb-4 text-xl font-black tracking-tight">{t.title}</h2>
+      <AppearanceControls brandColor={org.json_data.color} />
       <div className="mt-8 flex items-start gap-3 rounded-[24px] bg-primary-soft p-4">
         <Smartphone className="mt-0.5 h-6 w-6 shrink-0 text-[var(--primary)]" />
-        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Sur le plancher, l’app mobile CLIP filme en 720p et réduit les photos : des médias légers, envoyés même si le réseau coupe un instant.</p>
+        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t.mobileNote}</p>
       </div>
     </Panel>
   )

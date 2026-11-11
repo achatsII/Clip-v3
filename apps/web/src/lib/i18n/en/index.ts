@@ -1,0 +1,20 @@
+import type { Messages } from '../fr'
+import { common } from './common'
+import { catalog } from './catalog'
+import { shell } from './shell'
+import { auth } from './auth'
+import { home } from './home'
+import { instructions } from './instructions'
+import { capture } from './capture'
+import { editor } from './editor'
+import { editorTools } from './editorTools'
+import { stations } from './stations'
+import { feedback } from './feedback'
+import { stats } from './stats'
+import { settings } from './settings'
+import { billing } from './billing'
+import { importer } from './importer'
+import { publicLinks } from './publicLinks'
+
+/** L'anglais : les mêmes clés que le français (le contrôle de types y veille). */
+export const en: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks }

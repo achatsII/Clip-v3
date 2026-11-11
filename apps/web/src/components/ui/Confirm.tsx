@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
 import { Button } from './Button'
 import { Modal } from './Modal'
+import { useMessages } from '@/lib/i18n'
 
 interface ConfirmOptions {
   title: string
@@ -14,6 +15,7 @@ interface ConfirmOptions {
 const Ctx = createContext<((o: ConfirmOptions) => Promise<boolean>) | null>(null)
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const t = useMessages()
   const [state, setState] = useState<ConfirmOptions | null>(null)
   const resolver = useRef<((v: boolean) => void) | null>(null)
   const confirm = useCallback((o: ConfirmOptions) => {
@@ -37,7 +39,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         size="sm"
         footer={
           <>
-            <Button onClick={() => close(false)}>Annuler</Button>
+            <Button onClick={() => close(false)}>{t.common.cancel}</Button>
             <Button variant={state?.danger ? 'danger' : 'primary'} onClick={() => close(true)} data-autofocus>
               {state?.confirmLabel}
             </Button>

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { ApiError } from '@/lib/gateway/client'
 import { cn } from '@/lib/util/cn'
 import { Button } from './Button'
+import { messages, useMessages } from '@/lib/i18n'
 
 export function Skeleton({ className }: { className?: string }) {
   return <div className={cn('skeleton rounded-2xl', className)} aria-hidden />
@@ -12,7 +13,7 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function SkeletonCards({ count = 6, className }: { count?: number; className?: string }) {
   return (
-    <div className={cn('grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3', className)} aria-busy="true" aria-label="Chargement">
+    <div className={cn('grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3', className)} aria-busy="true" aria-label={useMessages().common.loading}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="glass-card overflow-hidden rounded-[28px]">
           <Skeleton className="h-40 rounded-none" />
@@ -28,7 +29,7 @@ export function SkeletonCards({ count = 6, className }: { count?: number; classN
 
 export function SkeletonRows({ count = 5 }: { count?: number }) {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Chargement">
+    <div className="space-y-3" aria-busy="true" aria-label={useMessages().common.loading}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="glass-card flex items-center gap-4 rounded-[24px] p-4">
           <Skeleton className="h-12 w-12 shrink-0" />
@@ -54,28 +55,30 @@ export function EmptyState({ icon, title, description, action, className }: { ic
 }
 
 export function errorText(error: unknown): string {
+  const t = messages().common.errors
   if (error instanceof ApiError) {
-    if (error.code === 'network') return 'Impossible de joindre le serveur. Vérifiez votre connexion.'
-    if (error.code === 'timeout') return 'Le serveur a mis trop de temps à répondre.'
-    if (error.status === 403) return 'Vous n’avez pas accès à cette action.'
-    if (error.status === 402) return 'Plus de crédits pour cette action.'
-    if (error.status >= 500) return 'Le serveur a rencontré un problème. Réessayez dans un instant.'
+    if (error.code === 'network') return t.network
+    if (error.code === 'timeout') return t.timeout
+    if (error.status === 403) return t.forbidden
+    if (error.status === 402) return t.noCredits
+    if (error.status >= 500) return t.server
     return error.message
   }
-  return 'Une erreur inattendue est survenue.'
+  return t.unexpected
 }
 
-export function ErrorState({ error, onRetry, title = 'Impossible de charger', className }: { error?: unknown; onRetry?: () => void; title?: string; className?: string }) {
+export function ErrorState({ error, onRetry, title, className }: { error?: unknown; onRetry?: () => void; title?: string; className?: string }) {
+  const t = useMessages()
   return (
     <div className={cn('glass-card flex flex-col items-center rounded-[32px] px-6 py-10 text-center', className)} role="alert">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
         <WifiOff className="h-6 w-6" />
       </div>
-      <h3 className="text-lg font-black text-slate-900 dark:text-white">{title}</h3>
+      <h3 className="text-lg font-black text-slate-900 dark:text-white">{title ?? t.common.loadFailed}</h3>
       <p className="mt-1 max-w-md text-sm font-medium text-slate-500 dark:text-slate-400">{errorText(error)}</p>
       {onRetry && (
         <Button className="mt-5" icon={<RefreshCw className="h-4 w-4" />} onClick={onRetry}>
-          Réessayer
+          {t.common.retry}
         </Button>
       )}
     </div>

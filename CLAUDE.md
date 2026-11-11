@@ -35,9 +35,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   générées passent par OpenAI, niveau mid (`IMAGE_MODEL`, repli Google si la passerelle refuse).
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
-- **Interface** : français du Québec ; design system « verre » de `src/app/globals.css` (tokens,
-  `glass-*`), une seule action principale par écran, trois états pour toute donnée asynchrone,
-  cibles d'au moins 44 px, mode sombre.
+- **Interface** : français du Québec et anglais, par les dictionnaires typés de `src/lib/i18n`
+  (`useMessages()` dans un composant, `messages()` ailleurs ; aucun texte écrit dans un écran, aucun
+  `'fr-CA'` en dur ; règles dans `docs/architecture.md` §7). Design system « verre » de
+  `src/app/globals.css` (tokens, `glass-*`), une seule action principale par écran, trois états pour
+  toute donnée asynchrone, cibles d'au moins 44 px, mode sombre.
 
 ## Pièges déjà rencontrés
 

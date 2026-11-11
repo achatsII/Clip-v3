@@ -3,6 +3,7 @@
  * connecté, ou celui d'un lien public (jeton guest à portée limitée).
  */
 import type { DataApi, Doc } from '../gateway/data'
+import { contentLanguage } from '../i18n'
 import type {
   Feedback,
   Instruction,
@@ -133,7 +134,7 @@ export function emptyContent(partial: Partial<InstructionContent> = {}): Instruc
     safety: [],
     steps: [],
     lockout: null,
-    language: 'fr',
+    language: contentLanguage(),
     ...partial,
   }
 }

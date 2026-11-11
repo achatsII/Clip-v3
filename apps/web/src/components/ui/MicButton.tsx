@@ -4,12 +4,15 @@ import { Loader2, Mic, Square } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { useDictation, useDictationAvailable } from '@/lib/media/dictation'
 import { cn } from '@/lib/util/cn'
+import { useMessages } from '@/lib/i18n'
 
 /**
  * Le micro de dictée : un toucher pour parler, un autre pour arrêter ; le texte reconnu va à
  * `onText`. Rien n'est affiché là où la dictée n'est pas possible.
  */
-export function MicButton({ onText, className, label = 'Dicter', tone = 'field', size = 'md' }: { onText: (text: string) => void; className?: string; label?: string; tone?: 'field' | 'solid'; size?: 'md' | 'lg' }) {
+export function MicButton({ onText, className, label: givenLabel, tone = 'field', size = 'md' }: { onText: (text: string) => void; className?: string; label?: string; tone?: 'field' | 'solid'; size?: 'md' | 'lg' }) {
+  const t = useMessages()
+  const label = givenLabel ?? t.common.dictate
   const toast = useToast()
   const available = useDictationAvailable()
   const { state, toggle } = useDictation(onText, (title, detail) => toast.error(title, detail))
@@ -21,9 +24,9 @@ export function MicButton({ onText, className, label = 'Dicter', tone = 'field',
       onMouseDown={(e) => e.preventDefault()}
       onClick={toggle}
       disabled={state === 'busy'}
-      aria-label={recording ? 'Arrêter la dictée' : label}
+      aria-label={recording ? t.common.stopDictation : label}
       aria-pressed={recording}
-      title={recording ? 'Arrêter la dictée' : label}
+      title={recording ? t.common.stopDictation : label}
       className={cn(
         'btn-press inline-flex shrink-0 items-center justify-center rounded-xl transition-colors',
         size === 'lg' ? 'h-14 w-14 rounded-2xl' : 'h-11 w-11',

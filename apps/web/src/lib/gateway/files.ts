@@ -5,6 +5,7 @@
  */
 import { APP_DATA_IDENTIFIER, GATEWAY_URL } from '../config'
 import { ApiError, GatewayClient } from './client'
+import { messages } from '@/lib/i18n'
 
 export interface UploadedFile {
   url: string
@@ -61,7 +62,7 @@ function xhrSend(
     Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v))
     if (onProgress) xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded, e.total)
     xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText })
-    xhr.onerror = () => reject(new ApiError("L'envoi a échoué (réseau)", 0, null, 'network'))
+    xhr.onerror = () => reject(new ApiError(messages().common.errors.uploadNetwork, 0, null, 'network'))
     xhr.ontimeout = () => reject(new ApiError("L'envoi a pris trop de temps", 0, null, 'timeout'))
     xhr.send(body)
   })
@@ -76,7 +77,7 @@ export function parseDirectUpload(text: string): { url: string; path: string; si
     json = null
   }
   const f = json?.files?.[0]
-  if (!f?.url) throw new ApiError("L'envoi du fichier n'a pas été confirmé", 500, json ?? text)
+  if (!f?.url) throw new ApiError(messages().common.errors.uploadUnconfirmed, 500, json ?? text)
   return { url: f.url, path: f.path ?? '', size: f.size, type: f.type }
 }
 
@@ -96,7 +97,7 @@ export function filesApi(client: GatewayClient) {
         body: { fileName: safeName(fileName), contentType, path: folderPath(folder), expiresIn: 3600 },
       },
     )
-    if (!res.url || !res.publicUrl) throw new ApiError("Impossible de préparer l'envoi", 500, res)
+    if (!res.url || !res.publicUrl) throw new ApiError(messages().common.errors.uploadPrepare, 500, res)
     return { uploadUrl: res.url, publicUrl: res.publicUrl, path: res.filePath ?? '', contentType }
   }
 
@@ -106,7 +107,7 @@ export function filesApi(client: GatewayClient) {
     form.append('path', folderPath(folder))
     const token = client.source.getToken()
     const { status, text } = await xhrSend('POST', DIRECT_UPLOAD_URL, form, token ? { Authorization: `Bearer ${token}` } : {}, onProgress)
-    if (status < 200 || status >= 300) throw new ApiError("L'envoi du fichier a échoué", status, text)
+    if (status < 200 || status >= 300) throw new ApiError(messages().common.errors.uploadFailed, status, text)
     const f = parseDirectUpload(text)
     return { url: f.url, path: f.path, sizeBytes: f.size ?? file.size, mimeType: f.type || file.type, name }
   }
@@ -123,7 +124,7 @@ export function filesApi(client: GatewayClient) {
         if (status >= 200 && status < 300) {
           return { url: target.publicUrl, path: target.path, sizeBytes: file.size, mimeType: type, name }
         }
-        throw new ApiError("L'envoi a été refusé", status)
+        throw new ApiError(messages().common.errors.uploadRefused, status)
       } catch (e) {
         if (e instanceof ApiError && e.status === 401) throw e
         // CORS du stockage ou URL refusée : on repasse par la Gateway.
@@ -149,7 +150,7 @@ export function filesApi(client: GatewayClient) {
         { method: 'POST', body: { url, mimeType, fileSize: sizeBytes, filename: safeName(filename) }, timeoutMs: 180_000 },
       )
       const r = res.results?.[0]
-      if (!r?.geminiFileUri) throw new ApiError("La vidéo n'a pas pu être préparée pour l'IA", 500, res)
+      if (!r?.geminiFileUri) throw new ApiError(messages().common.errors.videoForAi, 500, res)
       return { uri: r.geminiFileUri, expiresAt: r.expirationTime ?? null }
     },
 
@@ -159,7 +160,7 @@ export function filesApi(client: GatewayClient) {
         '/api/v1/files/video/process',
         { method: 'POST', body: { url, resolution, preset: 'veryfast', normalize: true }, timeoutMs: 30 * 60_000 },
       )
-      if (!res.url) throw new ApiError("La vidéo n'a pas pu être optimisée", 500, res)
+      if (!res.url) throw new ApiError(messages().common.errors.videoOptimize, 500, res)
       return { url: res.url, sizeBytes: res.metadata?.processedSize ?? null, durationSec: res.metadata?.duration ?? null }
     },
 

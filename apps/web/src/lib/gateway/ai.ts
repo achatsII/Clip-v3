@@ -8,6 +8,7 @@
 import { emitRefusal, emitSettled, refusalFrom } from '../billing/bus'
 import { BILLING_V2, PRODUCT_SLUG } from '../config'
 import { ApiError, GatewayClient } from './client'
+import { messages } from '@/lib/i18n'
 
 /** Les opérations d'IA de CLIP, une par usage (copie de `ai_operations` du manifeste). */
 export const AI_OPERATIONS = [
@@ -105,11 +106,11 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}
         if (refusal) {
           emitRefusal(refusal)
           emitSettled()
-          throw new ApiError(refusal.code === 'insufficient_credits' ? 'Plus de crédits pour cette action. Rien n’a été débité.' : 'Cette fonction n’est pas incluse dans votre plan.', e.status, e.detail, refusal.code)
+          throw new ApiError(refusal.code === 'insufficient_credits' ? messages().common.errors.aiNoCredits : messages().common.errors.aiNotInPlan, e.status, e.detail, refusal.code)
         }
         if (e.status === 502) {
           emitSettled()
-          throw new ApiError("L'IA n'a pas répondu. Rien n'a été débité : réessayez.", 502, e.detail, 'ai_unavailable')
+          throw new ApiError(messages().common.errors.aiUnavailable, 502, e.detail, 'ai_unavailable')
         }
       }
       throw e
@@ -119,7 +120,7 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}
     if (env.success === false || r.error) {
       usageListeners.forEach((fn) => fn({ operation, model: r.model ?? null, usage: null, ok: false }))
       const code = typeof r.error === 'string' ? r.error : 'ai_error'
-      throw new ApiError(code === 'JSON_PARSE_ERROR' ? "L'IA a rendu une réponse illisible. Réessayez." : "L'IA n'a pas pu répondre. Réessayez.", 502, env, code)
+      throw new ApiError(code === 'JSON_PARSE_ERROR' ? messages().common.errors.aiUnreadable : messages().common.errors.aiFailed, 502, env, code)
     }
     const usage = (r.usage_normalized ?? env.usage_normalized ?? null) as Record<string, unknown> | null
     usageListeners.forEach((fn) => fn({ operation, model: r.model ?? null, usage, ok: true }))
@@ -173,7 +174,7 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}
         const url = first?.results?.[0]?.imageURL ?? first?.results?.[0]?.url
         if (!url) {
           const why = typeof first?.error === 'string' ? first.error : (first?.error as { message?: string } | undefined)?.message ?? first?.message
-          throw new ApiError(why ? `Le service d'images a refusé : ${why}` : "Le service d'images n'a rendu aucune image", 422, res, 'no_image')
+          throw new ApiError(why ? messages().common.errors.imageRefused(why) : messages().common.errors.imageNone, 422, res, 'no_image')
         }
         return url
       }

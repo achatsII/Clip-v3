@@ -6,6 +6,7 @@
  * déconnexion qui garde les préférences d'affichage (`ui_theme`).
  */
 import { APP_IDENTIFIER, GATEWAY_URL } from '../config'
+import { messages } from '@/lib/i18n'
 
 export class ApiError extends Error {
   status: number
@@ -68,7 +69,7 @@ export function createGatewayClient(source: TokenSource): GatewayClient {
     const token = source.getToken()
     if (!token) {
       source.onAuthFailure()
-      throw new ApiError('Session expirée', 401)
+      throw new ApiError(messages().common.errors.sessionExpired, 401)
     }
     const h: Record<string, string> = { Authorization: `Bearer ${token}`, ...headers }
     if (!form && body !== undefined) h['Content-Type'] = 'application/json'
@@ -90,7 +91,7 @@ export function createGatewayClient(source: TokenSource): GatewayClient {
       })
     } catch (e) {
       if (controller.signal.aborted) {
-        throw new ApiError(signal?.aborted ? 'Annulé' : 'Le serveur a mis trop de temps à répondre', 0, null, 'timeout')
+        throw new ApiError(signal?.aborted ? messages().common.errors.cancelled : messages().common.errors.tooSlow, 0, null, 'timeout')
       }
       throw new ApiError('Pas de connexion au serveur', 0, String(e), 'network')
     } finally {
@@ -100,12 +101,12 @@ export function createGatewayClient(source: TokenSource): GatewayClient {
     if (res.status === 401) {
       if (retried) {
         source.onAuthFailure()
-        throw new ApiError('Session expirée', 401)
+        throw new ApiError(messages().common.errors.sessionExpired, 401)
       }
       const ok = await source.refresh()
       if (!ok) {
         source.onAuthFailure()
-        throw new ApiError('Session expirée', 401)
+        throw new ApiError(messages().common.errors.sessionExpired, 401)
       }
       return call<T>(endpoint, options, true)
     }
