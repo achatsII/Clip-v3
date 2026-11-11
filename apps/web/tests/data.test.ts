@@ -42,3 +42,18 @@ describe('dataApi (application partagée « html »)', () => {
     expect(gw.calls[1]).toMatchObject({ endpoint: '/api/v1/data/clip_instruction/i1', options: { method: 'DELETE' } })
   })
 })
+
+describe('projection d’une lecture filtrée', () => {
+  it('une projection « seulement ces champs » garde app_identifier, sinon toutes les réponses tomberaient', async () => {
+    const gw = fakeGateway(() => ({ results: [{ _id: '1', json_data: { app_identifier: 'clip-v3', title: 'A' } }] }))
+    const docs = await dataApi(gw).filter('clip_instruction', { projection: { 'json_data.title': 1, 'json_data.generating': 1 } })
+    expect((gw.calls[0].options.body as { projection: unknown }).projection).toEqual({ 'json_data.title': 1, 'json_data.generating': 1, 'json_data.app_identifier': 1 })
+    expect(docs).toHaveLength(1)
+  })
+
+  it('une projection qui retire des champs reste telle quelle', async () => {
+    const gw = fakeGateway(() => ({ results: [] }))
+    await dataApi(gw).filter('clip_instruction', { projection: { 'json_data.draft': 0 } })
+    expect((gw.calls[0].options.body as { projection: unknown }).projection).toEqual({ 'json_data.draft': 0 })
+  })
+})

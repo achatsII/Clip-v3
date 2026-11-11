@@ -30,7 +30,7 @@ export function CreationList() {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{d.json_data.title}</span>
                 <span className="block truncate text-xs font-bold text-slate-500">
-                  {c.kind === 'running' ? `${STAGE_LABELS[c.info.stage] ?? 'En cours'} · ${launchedFrom(c.info.device, c.info.byName).toLowerCase()} ${timeAgo(c.info.startedAt)}` : 'Interrompue : l’appareil qui la créait ne répond plus'}
+                  {c.kind === 'running' ? `${STAGE_LABELS[c.info.stage] ?? 'En cours'} · ${launchedFrom(c.info.device, c.info.byName, true)} ${timeAgo(c.info.startedAt)}` : 'Interrompue : l’appareil qui la créait ne répond plus'}
                 </span>
               </span>
               <span className={cn('shrink-0 rounded-xl px-2.5 py-1 text-[10px] font-black tracking-widest text-white uppercase', c.kind === 'running' ? 'bg-violet-500' : 'bg-amber-500')}>{c.kind === 'running' ? 'En création' : 'Interrompue'}</span>

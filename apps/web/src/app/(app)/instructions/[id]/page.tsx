@@ -192,7 +192,7 @@ export default function InstructionPage() {
       {creation.kind === 'running' && (
         <p className="mb-4 flex items-center gap-3 rounded-[20px] bg-violet-50 p-4 text-sm font-bold text-violet-900 dark:bg-violet-500/10 dark:text-violet-100" role="status">
           <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
-          Une nouvelle version est en création ({launchedFrom(creation.info.device, creation.info.byName).toLowerCase()}) : elle remplacera ce brouillon dès qu’elle sera prête.
+          Une nouvelle version est en création ({launchedFrom(creation.info.device, creation.info.byName, true)}) : elle remplacera ce brouillon dès qu’elle sera prête.
         </p>
       )}
       <Editor key={`${doc._id}-${doc.json_data.generation?.at ?? ''}`} doc={doc} stations={stations.data ?? []} onRegenerate={() => void generate('auto')} />

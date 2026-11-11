@@ -14,9 +14,9 @@ const STAGES = [
   { key: 'finish', label: STAGE_LABELS.finish, icon: <Wand2 className="h-5 w-5" /> },
 ]
 
-/** D'où vient une création suivie à distance : « depuis l'app mobile, par Mélanie ». */
-export function launchedFrom(device: 'app' | 'web', byName?: string | null): string {
-  return `Lancée depuis ${device === 'app' ? 'l’app mobile' : 'un navigateur'}${byName ? ` par ${byName}` : ''}`
+/** D'où vient une création suivie à distance : « Lancée depuis l'app mobile par Mélanie ». `inline` : en minuscule, au fil d'une phrase. */
+export function launchedFrom(device: 'app' | 'web', byName?: string | null, inline = false): string {
+  return `${inline ? 'lancée' : 'Lancée'} depuis ${device === 'app' ? 'l’app mobile' : 'un navigateur'}${byName ? ` par ${byName}` : ''}`
 }
 
 const TIPS = [

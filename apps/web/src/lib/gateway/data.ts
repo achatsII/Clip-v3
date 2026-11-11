@@ -37,6 +37,15 @@ function stamp<T extends object>(json: T): T {
   return SHARED_APP ? ({ ...json, app_identifier: APP_DATA_IDENTIFIER } as T) : json
 }
 
+/**
+ * Une projection qui ne garde que certains champs retirerait `app_identifier`, et `belongs`
+ * écarterait alors toutes les réponses : on le garde toujours.
+ */
+function scopedProjection(p?: Record<string, 0 | 1>): Record<string, 0 | 1> | undefined {
+  if (!p || !SHARED_APP || !Object.values(p).some((v) => v === 1)) return p
+  return { ...p, 'json_data.app_identifier': 1 }
+}
+
 function belongs(json: unknown): boolean {
   if (!SHARED_APP) return true
   return !!json && typeof json === 'object' && (json as Json).app_identifier === APP_DATA_IDENTIFIER
@@ -69,7 +78,7 @@ export function dataApi(client: GatewayClient) {
       const body: Json = {}
       const f = scoped(options.filter)
       if (f) body.mongo_filter = f
-      if (options.projection) body.projection = options.projection
+      if (options.projection) body.projection = scopedProjection(options.projection)
       body.sort = options.sort ?? { _id: -1 }
       if (options.limit !== undefined) body.limit = options.limit
       if (options.skip !== undefined) body.skip = options.skip
