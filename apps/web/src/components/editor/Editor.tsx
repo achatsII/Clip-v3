@@ -545,7 +545,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       </div>
 
       {!readOnly && (
-        <div className="pb-safe pointer-events-none fixed inset-x-0 bottom-24 z-30 px-4 lg:bottom-6 lg:left-72 lg:px-10">
+        <div className="pb-safe kb-lift pointer-events-none fixed inset-x-0 bottom-24 z-30 px-4 lg:bottom-6 lg:left-72 lg:px-10">
           <div className="mx-auto max-w-3xl">
             <AiCommandBar content={content} onApply={update} />
           </div>

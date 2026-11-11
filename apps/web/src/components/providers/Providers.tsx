@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { nativeEnv } from '@/lib/bridge/native'
 import { ApiError } from '@/lib/gateway/client'
 import { applyTheme, readTheme } from '@/lib/theme'
+import { installKeyboardInset } from '@/lib/ui/keyboard'
 import { ConfirmProvider } from '../ui/Confirm'
 import { ToastProvider } from '../ui/Toast'
 
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Installe tout de suite le récepteur du pont natif : un événement de la coquille arrivé tôt n'est pas perdu.
     nativeEnv()
+    installKeyboardInset()
     const media = window.matchMedia('(prefers-color-scheme: dark)')
     const onChange = () => {
       if (readTheme().mode === 'system') applyTheme(readTheme())

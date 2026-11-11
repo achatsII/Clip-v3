@@ -170,7 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="mx-auto w-full max-w-7xl px-4 pt-6 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">{children}</main>
 
       {/* Navigation du bas (téléphone) */}
-      <nav className="glass-nav pb-safe fixed inset-x-0 bottom-0 z-40 border-t lg:hidden" aria-label="Navigation principale">
+      <nav className="glass-nav pb-safe kb-hide fixed inset-x-0 bottom-0 z-40 border-t lg:hidden" aria-label="Navigation principale">
         <div className="mx-auto grid max-w-lg grid-cols-5 items-end px-2 pt-2">
           {[nav[0], nav[1]].filter(Boolean).map((n) => (
             <BottomLink key={n.href} item={n} active={isActive(n.href)} />

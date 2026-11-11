@@ -57,7 +57,8 @@ export function AiCommandBar({ content, onApply }: { content: InstructionContent
         </div>
       )}
       <div
-        className={cn('pointer-events-auto', !expanded && 'max-lg:hidden')}
+        // Au téléphone, la barre ouverte a son propre fond : le texte de l'instruction ne se mêle pas aux suggestions.
+        className={cn('pointer-events-auto', !expanded && 'max-lg:hidden', expanded && 'max-lg:rounded-[32px] max-lg:bg-white/90 max-lg:p-2 max-lg:shadow-[0_12px_40px_rgba(15,23,42,0.18)] dark:max-lg:bg-slate-900/90')}
         onFocus={() => setFocused(true)}
         onBlur={(e) => {
           if (e.currentTarget.contains(e.relatedTarget as Node | null)) return

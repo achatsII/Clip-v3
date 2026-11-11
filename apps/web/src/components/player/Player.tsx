@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EnergyIcon, PpeIcon } from '@/components/icons'
 import { MediaView } from '@/components/media/MediaView'
 import { ZoomViewer } from '@/components/media/ZoomViewer'
+import { useVideoMode } from '@/lib/media/videoMode'
 import { Confetti } from '@/components/ui/Celebrate'
 import { Modal } from '@/components/ui/Modal'
 import { callNative, hasCapability, haptic } from '@/lib/bridge/native'
@@ -458,15 +459,11 @@ export function Player(props: PlayerProps) {
 function StepMediaPanel({ step, zoomLabel }: { step: Step; zoomLabel: string }) {
   const [i, setI] = useState(0)
   const [zoomed, setZoomed] = useState(false)
+  const videoMode = useVideoMode()
   const media = step.media[i] ?? step.media[0]
   return (
     <>
-      <MediaView media={step.media[0]} big />
-      {i > 0 && (
-        <div className="absolute inset-0">
-          <MediaView media={media} big />
-        </div>
-      )}
+      <MediaView key={i} media={media} big videoMode={videoMode} modeControl />
       {step.media.length > 1 && (
         <div className="absolute top-3 left-3 flex gap-1.5">
           {step.media.map((m, j) => (
@@ -480,7 +477,7 @@ function StepMediaPanel({ step, zoomLabel }: { step: Step; zoomLabel: string }) 
         <Maximize2 className="h-5 w-5" />
       </button>
       <ZoomViewer open={zoomed} onClose={() => setZoomed(false)} label={zoomLabel}>
-        <MediaView media={media} big />
+        <MediaView media={media} big videoMode={videoMode} />
       </ZoomViewer>
     </>
   )

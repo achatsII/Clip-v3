@@ -1,8 +1,9 @@
 'use client'
 
-import { FileText, Maximize2, Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react'
+import { Check, FileText, Hand, Maximize2, Pause, Play, Repeat, Repeat1, RotateCcw, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { annotationsMarkup } from '@/lib/annotations/markup'
+import { VIDEO_MODES, setVideoMode, type VideoMode } from '@/lib/media/videoMode'
 import type { Annotation, StepMedia } from '@/lib/model/types'
 import { cn, formatClock } from '@/lib/util/cn'
 
@@ -45,53 +46,144 @@ export function AnnotatedImage({ src, annotations = [], alt = '', className, fit
   )
 }
 
-/** Un extrait de vidéo joué en boucle entre `start` et `end`, muet par défaut. */
-export function VideoSegment({ url, start, end, poster, autoPlay = true, className, big }: { url: string; start: number; end: number; poster?: string; autoPlay?: boolean; className?: string; big?: boolean }) {
+/**
+ * Un extrait de vidéo, entre `start` et `end`, muet par défaut. Trois façons de le jouer
+ * (src/lib/media/videoMode.ts) : en boucle dès l'affichage, une seule fois, ou au toucher.
+ * Sur iPhone, rien ne se charge avant `play()` (l'attribut `preload` y est ignoré) : la lecture
+ * automatique appelle donc `play()` tout de suite, sans attendre les métadonnées.
+ */
+export function VideoSegment({
+  url,
+  start,
+  end,
+  poster,
+  autoPlay = true,
+  mode,
+  modeControl,
+  className,
+  big,
+}: {
+  url: string
+  start: number
+  end: number
+  poster?: string
+  autoPlay?: boolean
+  /** Prend le pas sur `autoPlay`. */
+  mode?: VideoMode
+  /** Montre le choix du mode dans la barre de la vidéo (lecteur). */
+  modeControl?: boolean
+  className?: string
+  big?: boolean
+}) {
   const ref = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
+  const [ended, setEnded] = useState(false)
   const [muted, setMuted] = useState(true)
   const [t, setT] = useState(start)
+  const [menu, setMenu] = useState(false)
+  const effective: VideoMode = mode ?? (autoPlay ? 'loop' : 'tap')
+  const auto = effective !== 'tap'
+  const modeRef = useRef(effective)
+  modeRef.current = effective
+  // La vidéo s'ouvre au bon instant, même avant que le script la positionne.
+  const src = url.includes('#') ? url : `${url}#t=${Math.max(0, start)}`
 
   useEffect(() => {
     const v = ref.current
     if (!v) return
+    v.muted = true
+    setEnded(false)
+    // « En lecture » suit les événements de la vidéo, pas la promesse de play() : une fin d'extrait
+    // arrivée avant la promesse ne doit pas relancer l'affichage « en lecture ».
+    const play = () => {
+      v.play()?.catch(() => setPlaying(false))
+    }
     const onMeta = () => {
-      v.currentTime = start
-      if (autoPlay) v.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
+      if (v.currentTime < start - 0.3 || v.currentTime > end) v.currentTime = start
+      if (auto && v.paused) play()
     }
     const onTime = () => {
-      if (v.currentTime >= end - 0.05 || v.currentTime < start - 0.5) v.currentTime = start
+      if (v.currentTime < start - 0.5) v.currentTime = start
+      if (v.currentTime >= end - 0.05) {
+        if (modeRef.current === 'loop') v.currentTime = start
+        else {
+          v.pause()
+          setPlaying(false)
+          setEnded(true)
+        }
+      }
       setT(v.currentTime)
     }
+    const onPause = () => setPlaying(false)
+    const onPlay = () => setPlaying(true)
     v.addEventListener('loadedmetadata', onMeta)
     v.addEventListener('timeupdate', onTime)
+    v.addEventListener('pause', onPause)
+    v.addEventListener('play', onPlay)
     if (v.readyState >= 1) onMeta()
+    else if (auto) play()
     return () => {
       v.removeEventListener('loadedmetadata', onMeta)
       v.removeEventListener('timeupdate', onTime)
+      v.removeEventListener('pause', onPause)
+      v.removeEventListener('play', onPlay)
     }
-  }, [url, start, end, autoPlay])
+  }, [url, start, end, auto])
 
   const toggle = () => {
     const v = ref.current
     if (!v) return
-    if (v.paused) v.play().then(() => setPlaying(true)).catch(() => undefined)
-    else {
+    if (v.paused) {
+      if (ended || v.currentTime >= end - 0.1) v.currentTime = start
+      setEnded(false)
+      v.play()?.catch(() => undefined)
+    } else {
       v.pause()
       setPlaying(false)
     }
   }
+
+  function choose(next: VideoMode) {
+    setVideoMode(next)
+    setMenu(false)
+    const v = ref.current
+    if (v && next !== 'tap' && v.paused) {
+      if (ended) v.currentTime = start
+      setEnded(false)
+      void v.play()?.catch(() => undefined)
+    }
+  }
+
   const len = Math.max(0.1, end - start)
   const pct = Math.min(100, Math.max(0, ((t - start) / len) * 100))
   const btn = big ? 'h-14 w-14' : 'h-11 w-11'
 
   return (
     <div className={cn('group relative h-full w-full overflow-hidden bg-black', className)}>
-      <video ref={ref} src={url} poster={poster} muted={muted} playsInline preload="metadata" className="h-full w-full object-contain" onClick={toggle} />
+      <video ref={ref} src={src} poster={poster} muted={muted} playsInline preload={auto ? 'auto' : 'metadata'} className="h-full w-full object-contain" onClick={toggle} />
       {!playing && (
-        <button type="button" onClick={toggle} aria-label="Lire l’extrait" className="absolute inset-0 m-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-md">
-          <Play className="ml-1 h-10 w-10 fill-current" />
+        <button type="button" onClick={toggle} aria-label={ended ? 'Revoir l’extrait' : 'Lire l’extrait'} className="absolute inset-0 m-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-md">
+          {ended ? <RotateCcw className="h-9 w-9" /> : <Play className="ml-1 h-10 w-10 fill-current" />}
         </button>
+      )}
+      {menu && (
+        <>
+          <button type="button" aria-label="Fermer" className="absolute inset-0 cursor-default" onClick={() => setMenu(false)} />
+          <div className="absolute right-3 bottom-20 z-10 w-64 rounded-2xl bg-slate-900/95 p-1.5 text-white shadow-xl ring-1 ring-white/10" role="menu" aria-label="Lecture des vidéos">
+            <p className="px-3 pt-1.5 pb-1 text-[10px] font-black tracking-widest text-white/55 uppercase">Lecture des vidéos</p>
+            {VIDEO_MODES.map((m) => (
+              <button key={m.value} type="button" role="menuitemradio" aria-checked={effective === m.value} onClick={() => choose(m.value)} className={cn('flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left', effective === m.value ? 'bg-white/15' : 'hover:bg-white/10')}>
+                <ModeIcon mode={m.value} className="h-5 w-5 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-black">{m.label}</span>
+                  <span className="block text-xs font-medium text-white/65">{m.hint}</span>
+                </span>
+                {effective === m.value && <Check className="h-4 w-4 shrink-0" />}
+              </button>
+            ))}
+            <p className="px-3 pt-1 pb-1.5 text-[11px] font-medium text-white/50">Retenu sur cet appareil.</p>
+          </div>
+        </>
       )}
       <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/70 to-transparent p-3">
         <button type="button" onClick={toggle} aria-label={playing ? 'Pause' : 'Lire'} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
@@ -100,7 +192,10 @@ export function VideoSegment({ url, start, end, poster, autoPlay = true, classNa
         <button
           type="button"
           onClick={() => {
-            if (ref.current) ref.current.currentTime = start
+            const v = ref.current
+            if (!v) return
+            v.currentTime = start
+            if (v.paused && (ended || auto)) toggle()
           }}
           aria-label="Reprendre l’extrait"
           className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}
@@ -110,13 +205,24 @@ export function VideoSegment({ url, start, end, poster, autoPlay = true, classNa
         <div className="mx-1 h-1.5 flex-1 overflow-hidden rounded-full bg-white/30">
           <div className="h-full rounded-full bg-white" style={{ width: `${pct}%` }} />
         </div>
-        <span className="text-xs font-black text-white tabular-nums">{formatClock(Math.max(0, t - start))} / {formatClock(len)}</span>
+        <span className={cn('text-xs font-black text-white tabular-nums', modeControl && 'max-sm:hidden')}>{formatClock(Math.max(0, t - start))} / {formatClock(len)}</span>
+        {modeControl && (
+          <button type="button" onClick={() => setMenu((o) => !o)} aria-label={`Lecture : ${VIDEO_MODES.find((m) => m.value === effective)?.label}`} aria-expanded={menu} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
+            <ModeIcon mode={effective} className="h-5 w-5" />
+          </button>
+        )}
         <button type="button" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Activer le son' : 'Couper le son'} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
           {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
         </button>
       </div>
     </div>
   )
+}
+
+function ModeIcon({ mode, className }: { mode: VideoMode; className?: string }) {
+  if (mode === 'loop') return <Repeat className={className} />
+  if (mode === 'once') return <Repeat1 className={className} />
+  return <Hand className={className} />
 }
 
 export function DocumentPage({ media, className }: { media: Extract<StepMedia, { kind: 'document' }>; className?: string }) {
@@ -142,9 +248,9 @@ export function DocumentPage({ media, className }: { media: Extract<StepMedia, {
   )
 }
 
-export function MediaView({ media, className, big, autoPlay }: { media: StepMedia; className?: string; big?: boolean; autoPlay?: boolean }) {
+export function MediaView({ media, className, big, autoPlay, videoMode, modeControl }: { media: StepMedia; className?: string; big?: boolean; autoPlay?: boolean; videoMode?: VideoMode; modeControl?: boolean }) {
   if (media.kind === 'image') return <AnnotatedImage src={media.url} annotations={media.annotations} alt={media.alt} className={className} />
-  if (media.kind === 'video') return <VideoSegment url={media.url} start={media.start} end={media.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} />
+  if (media.kind === 'video') return <VideoSegment url={media.url} start={media.start} end={media.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} mode={videoMode} modeControl={modeControl} />
   return <DocumentPage media={media} className={className} />
 }
 

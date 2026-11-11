@@ -65,13 +65,13 @@ export function Modal({
   const widths = { sm: 'sm:max-w-md', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' }
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true">
+    <div className="kb-frame fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true">
       <div className="animate-fade-in absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => dismissable && onClose()} />
       <div
         ref={panelRef}
         tabIndex={-1}
         className={cn(
-          'glass-panel animate-slide-up relative flex max-h-[92dvh] w-full flex-col rounded-t-[32px] outline-none sm:animate-pop-in sm:rounded-[32px]',
+          'glass-panel animate-slide-up kb-fit relative flex max-h-[92dvh] w-full flex-col rounded-t-[32px] outline-none sm:animate-pop-in sm:rounded-[32px]',
           'bg-white/90 dark:bg-slate-850/95',
           widths[size],
         )}

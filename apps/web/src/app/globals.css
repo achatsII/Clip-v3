@@ -171,6 +171,27 @@ body {
   }
 }
 
+/* ───────────────────────── Clavier du téléphone ─────────────────────────
+   src/lib/ui/keyboard.ts pose data-kb="open" et --kb (ce que le clavier cache) sur <html> :
+   la navigation du bas se cache pendant la saisie ; les barres et les fenêtres montent au-dessus. */
+html[data-kb='open'] .kb-hide {
+  display: none !important;
+}
+html[data-kb='open'] .kb-lift {
+  bottom: calc(var(--kb, 0px) + 0.5rem) !important;
+  padding-bottom: 0 !important;
+}
+html[data-kb='open'] .kb-bottom {
+  bottom: var(--kb, 0px) !important;
+}
+html[data-kb='open'] .kb-frame {
+  top: var(--kb-top, 0px) !important;
+  bottom: var(--kb, 0px) !important;
+}
+html[data-kb='open'] .kb-fit {
+  max-height: calc(100% - 0.75rem) !important;
+}
+
 /* ───────────────────────── Verre (5.5) ─────────────────────────
    Écrire seulement « backdrop-filter » : Lightning CSS ajoute le préfixe -webkit- pour Safari.
    Avec les deux écrits, il ne garde que la version préfixée, et Chrome perd tout le flou. */

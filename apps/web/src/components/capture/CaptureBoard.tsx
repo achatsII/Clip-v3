@@ -292,7 +292,7 @@ export function CaptureBoard({
         </div>
       )}
 
-      <div className="pb-safe sticky bottom-24 z-20 mt-8 lg:bottom-6">
+      <div className="pb-safe kb-hide sticky bottom-24 z-20 mt-8 lg:bottom-6">
         <div className="glass-float flex flex-col items-center gap-3 rounded-[32px] p-3 sm:flex-row sm:p-4">
           <p className="flex-1 px-2 text-center text-sm font-bold text-slate-500 sm:text-left dark:text-slate-400">
             {!hasContent
