@@ -195,6 +195,22 @@ export interface ReviewRequest {
   changesRequested?: { by: string; byName: string; at: string; comment: string } | null
 }
 
+/**
+ * Une génération en cours, écrite par l'appareil qui la fait (elle tourne là où on l'a lancée) :
+ * les autres appareils la voient, et savent qu'elle s'est interrompue quand le signe de vie cesse.
+ */
+export interface GeneratingInfo {
+  startedAt: string
+  /** Dernier signe de vie de l'appareil qui génère (toutes les 30 s). */
+  heartbeatAt: string
+  /** L'étape en cours : prepare, analyze ou finish. */
+  stage: string
+  detail?: string | null
+  byName?: string | null
+  /** La coquille (téléphone, tablette) ou le navigateur. */
+  device: 'app' | 'web'
+}
+
 export interface Instruction {
   title: string
   kind: InstructionKind
@@ -214,6 +230,10 @@ export interface Instruction {
   publishedAt?: string | null
   review?: ReviewRequest | null
   generation?: GenerationInfo | null
+  /** Une génération en cours sur un appareil ; `null` une fois finie (réussie ou non). */
+  generating?: GeneratingInfo | null
+  /** La dernière génération qui n'a pas abouti, pour l'annoncer aux autres appareils. */
+  generationError?: { at: string; message: string } | null
   origin?: 'capture' | 'import' | 'duplicate' | 'feedback'
   authorId: string
   authorName: string

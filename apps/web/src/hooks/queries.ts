@@ -13,6 +13,7 @@ export const qk = {
   feedback: ['feedback'] as const,
   feedbackFor: (id: string) => ['feedback', id] as const,
   members: ['members'] as const,
+  creations: ['creations'] as const,
 }
 
 export function useInstructions() {

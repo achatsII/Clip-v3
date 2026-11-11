@@ -9,6 +9,12 @@ export type JobState =
 
 const jobs = new Map<string, JobState>()
 const listeners = new Set<() => void>()
+/** Les instructions générées dans cet onglet : leur fin ne s'annonce pas comme venue d'ailleurs. */
+const here = new Set<string>()
+
+export function ranHere(id: string): boolean {
+  return here.has(id)
+}
 
 function emit() {
   listeners.forEach((fn) => fn())
@@ -29,6 +35,7 @@ export function runJob(id: string, fn: (setStage: (stage: string, detail?: strin
   const current = jobs.get(id)
   if (current?.status === 'running') return Promise.resolve()
   const startedAt = Date.now()
+  here.add(id)
   jobs.set(id, { status: 'running', stage: 'prepare', startedAt })
   emit()
   return fn((stage, detail) => {

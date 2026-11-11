@@ -128,6 +128,28 @@ l'éditeur. Les captures servent de vignettes et d'images pour le PDF.
   moteur que le clavardage (un tour `edit_agent`, visible et annulable), `aller_a_etape`,
   `lire_instruction` et `annuler_dernier_changement`.
 
+### Une génération suivie sur tous les appareils (`src/lib/ai/creation.ts`)
+
+La génération tourne dans l'appareil qui la lance : l'app mobile ou le navigateur. Pour que les
+autres la voient, cet appareil écrit son état dans l'instruction (`generating`) : au départ, à
+chaque nouvelle étape, et un signe de vie toutes les 30 secondes. Les écritures partent dans
+l'ordre, et une écriture ratée ne gêne pas la génération. La fin efface l'état, dans la même
+écriture que le brouillon. Un échec le remplace par `generationError`.
+
+Ailleurs, une seule petite requête (`useCreations` : les instructions dont `generating` n'est pas
+nul, titre et état seulement) est relue toutes les 10 secondes pendant une création. Sinon, elle
+est relue toutes les 60 secondes, seulement sur l'accueil et la liste, jamais onglet caché. Quand
+une création commence ou finit, les listes et l'instruction se relisent ; la fin s'annonce par un
+toast avec « Ouvrir ».
+
+- **Accueil** : section « En création ».
+- **Cartes** : « En création ».
+- **Page de l'instruction** : elle suit l'étape, puis montre l'instruction dès qu'elle est prête.
+
+Sans signe de vie depuis deux minutes (app fermée, téléphone en veille), la création est
+« interrompue » : on la relance ici, ou on revoit les médias. Dans l'app mobile, l'écran reste
+allumé pendant la génération.
+
 ### Les médias d'une étape
 
 Une étape porte jusqu'à six médias et une disposition (`layout`) : un à la fois, **à faire / à éviter**

@@ -1,22 +1,24 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, SearchX } from 'lucide-react'
+import { ArrowLeft, Loader2, PauseCircle, SearchX, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { CaptureBoard, type ForceKind } from '@/components/capture/CaptureBoard'
-import { GenerationProgress } from '@/components/capture/GenerationProgress'
+import { GenerationProgress, launchedFrom } from '@/components/capture/GenerationProgress'
 import { Editor } from '@/components/editor/Editor'
 import { useSession } from '@/components/providers/Session'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
 import { PageHeader } from '@/components/ui/Surface'
 import { qk, useInstruction, useStations } from '@/hooks/queries'
+import { useCreations } from '@/hooks/useCreations'
+import { creationOf } from '@/lib/ai/creation'
 import { clearJob, jobOf, subscribeJobs } from '@/lib/ai/jobs'
 import { startGeneration } from '@/lib/ai/runGeneration'
-import { LinkButton } from '@/components/ui/Button'
+import { Button, LinkButton } from '@/components/ui/Button'
 import { T } from '@/lib/model/repo'
-import type { Instruction } from '@/lib/model/types'
+import type { GeneratingInfo, Instruction } from '@/lib/model/types'
 
 export default function InstructionPage() {
   const { id } = useParams<{ id: string }>()
@@ -28,6 +30,19 @@ export default function InstructionPage() {
   const stations = useStations()
   const job = useSyncExternalStore(subscribeJobs, () => jobOf(id), () => undefined)
   const started = useRef(false)
+  // Une création lancée sur un autre appareil : on la suit, et la page se met à jour à la fin.
+  const creations = useCreations()
+  const [showMedia, setShowMedia] = useState(false)
+  const listed = creations.data?.find((d) => d._id === id)
+  const docRunning = creationOf(instruction.data?.json_data).kind === 'running'
+  // L'état le plus frais l'emporte : la petite lecture des créations, ou l'instruction si elle est plus récente.
+  const creation = creationOf(creations.isFetched && creations.dataUpdatedAt >= instruction.dataUpdatedAt ? (listed?.json_data ?? null) : instruction.data?.json_data)
+  useEffect(() => {
+    if (!docRunning || !creations.isFetched || listed) return
+    void qc.invalidateQueries({ queryKey: qk.creations })
+    void qc.invalidateQueries({ queryKey: qk.instruction(id) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docRunning, creations.isFetched, !!listed])
 
   const refresh = useCallback(() => {
     void qc.invalidateQueries({ queryKey: qk.instruction(id) })
@@ -108,6 +123,53 @@ export default function InstructionPage() {
     )
   }
 
+  const instr = doc.json_data
+  const canWrite = session.can('instructions', 'write')
+
+  if (creation.kind === 'running' && !instr.draft) {
+    return (
+      <div className="py-6">
+        <GenerationProgress
+          job={{ status: 'running', stage: creation.info.stage, detail: creation.info.detail ?? undefined, startedAt: Date.parse(creation.info.startedAt) }}
+          remote={{ device: creation.info.device, byName: creation.info.byName }}
+          onRetry={() => undefined}
+        />
+      </div>
+    )
+  }
+
+  if (creation.kind === 'stale' && !instr.draft && !showMedia) {
+    return (
+      <div className="py-6">
+        <Interrupted
+          info={creation.info}
+          canWrite={canWrite}
+          onRelaunch={() => void generate('auto')}
+          onMedia={() => {
+            // La création est abandonnée : elle ne s'affiche plus comme interrompue ailleurs.
+            void session.data.patch(T.instruction, id, { generating: null }).then(refresh, () => undefined)
+            setShowMedia(true)
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (instr.generationError && !instr.draft && !showMedia) {
+    return (
+      <div className="py-6">
+        <GenerationProgress
+          job={{ status: 'error', message: instr.generationError.message }}
+          onRetry={() => void generate('auto')}
+          onCancel={() => {
+            void session.data.patch(T.instruction, id, { generationError: null }).then(refresh, () => undefined)
+            setShowMedia(true)
+          }}
+        />
+      </div>
+    )
+  }
+
   if (!doc.json_data.draft) {
     return (
       <div className="mx-auto max-w-4xl">
@@ -125,5 +187,37 @@ export default function InstructionPage() {
     )
   }
 
-  return <Editor key={`${doc._id}-${doc.json_data.generation?.at ?? ''}`} doc={doc} stations={stations.data ?? []} onRegenerate={() => void generate('auto')} />
+  return (
+    <>
+      {creation.kind === 'running' && (
+        <p className="mb-4 flex items-center gap-3 rounded-[20px] bg-violet-50 p-4 text-sm font-bold text-violet-900 dark:bg-violet-500/10 dark:text-violet-100" role="status">
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+          Une nouvelle version est en création ({launchedFrom(creation.info.device, creation.info.byName).toLowerCase()}) : elle remplacera ce brouillon dès qu’elle sera prête.
+        </p>
+      )}
+      <Editor key={`${doc._id}-${doc.json_data.generation?.at ?? ''}`} doc={doc} stations={stations.data ?? []} onRegenerate={() => void generate('auto')} />
+    </>
+  )
+}
+
+/** Une création dont l'appareil ne donne plus signe de vie : on le dit, et on peut la relancer ici. */
+function Interrupted({ info, canWrite, onRelaunch, onMedia }: { info: GeneratingInfo; canWrite: boolean; onRelaunch: () => void; onMedia: () => void }) {
+  return (
+    <div className="glass-panel animate-pop-in mx-auto max-w-xl rounded-[40px] p-8 text-center" role="status">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-100 text-amber-600 dark:bg-amber-500/15">
+        <PauseCircle className="h-7 w-7" />
+      </div>
+      <h2 className="text-2xl font-black tracking-tight">La création s’est interrompue</h2>
+      <p className="mt-2 font-medium text-slate-500">{launchedFrom(info.device, info.byName)}, mais l’appareil ne répond plus : l’app a sans doute été fermée, ou le téléphone s’est mis en veille.</p>
+      <p className="mt-1 text-sm font-medium text-slate-400">Vos médias sont gardés : rien n’est perdu.</p>
+      {canWrite && (
+        <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
+          <Button onClick={onMedia}>Revoir les médias</Button>
+          <Button variant="primary" onClick={onRelaunch} icon={<Sparkles className="h-5 w-5" />}>
+            Relancer la création ici
+          </Button>
+        </div>
+      )}
+    </div>
+  )
 }

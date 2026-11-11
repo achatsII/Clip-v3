@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo } from 'react'
 import { CreditPill, LowBalanceBanner } from '@/components/billing/Billing'
+import { CreationList } from '@/components/CreationList'
 import { InstructionRow } from '@/components/InstructionCard'
 import { useSession } from '@/components/providers/Session'
 import { LinkButton } from '@/components/ui/Button'
@@ -122,6 +123,8 @@ export default function HomePage() {
           </LinkButton>
         </div>
       )}
+
+      {canCreate && <CreationList />}
 
       {role === 'admin' && setupDone < setup.length && (
         <Card className="p-6">

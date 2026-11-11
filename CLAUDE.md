@@ -25,6 +25,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   réécriture complète garde les champs qu'on ne connaît pas.
 - **Liens publics** (poste, instruction) : la portée se bâtit côté serveur dans
   `src/lib/server/scope.ts`, jamais à partir du navigateur. Un lien ne lit que `clip_published`.
+- **Génération suivie partout** : elle tourne dans l'appareil qui la lance (`startGeneration`). Il
+  écrit son état dans l'instruction (`generating` : étape, signe de vie toutes les 30 s ;
+  `src/lib/ai/creation.ts`). Les autres appareils le lisent par une petite requête partagée
+  (`useCreations` : 10 s pendant une création, 60 s sur l'accueil et la liste, jamais onglet caché).
+  Sans signe de vie depuis 2 min, elle est « interrompue » et se relance d'un geste. Les images
+  générées passent par OpenAI, niveau mid (`IMAGE_MODEL`, repli Google si la passerelle refuse).
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Interface** : français du Québec ; design system « verre » de `src/app/globals.css` (tokens,

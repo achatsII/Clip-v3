@@ -59,6 +59,11 @@ function install() {
   }
 }
 
+/** La page tourne-t-elle dans la coquille ? Sans effet de bord (ne pose pas l'écoute du pont). */
+export function inNativeShell(): boolean {
+  return typeof window !== 'undefined' && !!window.__CLIP_NATIVE__ && !!window.ReactNativeWebView
+}
+
 export function nativeEnv(): NativeEnvironment | null {
   if (typeof window === 'undefined') return null
   const env = window.__CLIP_NATIVE__

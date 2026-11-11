@@ -3,14 +3,21 @@
 import { Check, Eye, Loader2, Sparkles, Wand2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { STAGE_LABELS } from '@/lib/ai/creation'
 import type { JobState } from '@/lib/ai/jobs'
+import { inNativeShell } from '@/lib/bridge/native'
 import { cn, formatClock } from '@/lib/util/cn'
 
 const STAGES = [
-  { key: 'prepare', label: 'Préparation des médias', icon: <Loader2 className="h-5 w-5" /> },
-  { key: 'analyze', label: 'L’IA regarde et écoute vos notes', icon: <Eye className="h-5 w-5" /> },
-  { key: 'finish', label: 'Mise en forme des étapes', icon: <Wand2 className="h-5 w-5" /> },
+  { key: 'prepare', label: STAGE_LABELS.prepare, icon: <Loader2 className="h-5 w-5" /> },
+  { key: 'analyze', label: STAGE_LABELS.analyze, icon: <Eye className="h-5 w-5" /> },
+  { key: 'finish', label: STAGE_LABELS.finish, icon: <Wand2 className="h-5 w-5" /> },
 ]
+
+/** D'où vient une création suivie à distance : « depuis l'app mobile, par Mélanie ». */
+export function launchedFrom(device: 'app' | 'web', byName?: string | null): string {
+  return `Lancée depuis ${device === 'app' ? 'l’app mobile' : 'un navigateur'}${byName ? ` par ${byName}` : ''}`
+}
 
 const TIPS = [
   'Vous pourrez corriger chaque étape d’un mot : « simplifie », « ajoute les gants »…',
@@ -20,7 +27,11 @@ const TIPS = [
   'Votre standard de rédaction (réglages) guide chaque génération.',
 ]
 
-export function GenerationProgress({ job, onRetry, onCancel }: { job: JobState | undefined; onRetry: () => void; onCancel?: () => void }) {
+/**
+ * La génération en cours. `remote` : elle tourne sur un autre appareil ; cet écran la suit (étape
+ * et durée relues toutes les 10 s) et s'efface tout seul quand l'instruction est prête.
+ */
+export function GenerationProgress({ job, onRetry, onCancel, remote }: { job: JobState | undefined; onRetry: () => void; onCancel?: () => void; remote?: { device: 'app' | 'web'; byName?: string | null } }) {
   const [now, setNow] = useState(() => Date.now())
   const [tip, setTip] = useState(0)
   useEffect(() => {
@@ -79,7 +90,13 @@ export function GenerationProgress({ job, onRetry, onCancel }: { job: JobState |
         ))}
       </ol>
       <p className="relative mt-8 min-h-12 text-center text-sm font-medium text-slate-500 transition-opacity">💡 {TIPS[tip]}</p>
-      <p className="relative mt-2 text-center text-xs font-medium text-slate-400">Vous pouvez quitter cet écran : l’instruction s’enregistre toute seule tant que l’onglet reste ouvert.</p>
+      <p className="relative mt-2 text-center text-xs font-medium text-slate-400">
+        {remote
+          ? `${launchedFrom(remote.device, remote.byName)}. Elle s’affichera ici dès qu’elle sera prête.`
+          : inNativeShell()
+            ? 'Laissez l’app ouverte jusqu’à la fin : l’écran reste allumé. Vous pouvez suivre sur l’ordinateur, elle s’y affichera dès qu’elle sera prête.'
+            : 'Vous pouvez quitter cet écran : l’instruction s’enregistre toute seule tant que l’onglet reste ouvert, et se voit sur vos autres appareils.'}
+      </p>
     </div>
   )
 }

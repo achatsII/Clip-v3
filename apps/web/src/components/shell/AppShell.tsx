@@ -34,6 +34,7 @@ import { ROLES } from '@/lib/model/catalog'
 import { readTheme, saveTheme, THEME_PRESETS, type UiTheme } from '@/lib/theme'
 import { cn, initials } from '@/lib/util/cn'
 import { applyBrandColor } from '@/lib/theme'
+import { CreationWatcher } from '@/hooks/useCreations'
 
 interface NavItem {
   href: string
@@ -168,6 +169,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="mx-auto w-full max-w-7xl px-4 pt-6 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">{children}</main>
+      {/* Les créations en cours sur les autres appareils : seulement pour qui crée des instructions. */}
+      {canCreate && <CreationWatcher />}
 
       {/* Navigation du bas (téléphone) */}
       <nav className="glass-nav pb-safe kb-hide fixed inset-x-0 bottom-0 z-40 border-t lg:hidden" aria-label="Navigation principale">
