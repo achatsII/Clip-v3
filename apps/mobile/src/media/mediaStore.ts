@@ -72,6 +72,7 @@ export interface RegisterMeta {
   width?: number
   height?: number
   durationSec?: number
+  origin?: 'camera' | 'library' | 'files'
 }
 
 /** Déplace un fichier capturé dans le dossier des médias et l'inscrit à l'index. */
@@ -97,6 +98,7 @@ export async function registerMedia(sourceUri: string, meta: RegisterMeta): Prom
     ...(meta.width ? { width: meta.width } : {}),
     ...(meta.height ? { height: meta.height } : {}),
     ...(meta.durationSec ? { durationSec: Math.round(meta.durationSec * 10) / 10 } : {}),
+    ...(meta.origin ? { origin: meta.origin } : {}),
   }
   await localStore.putMedia(record)
   return record
@@ -113,7 +115,23 @@ export function toCapturedMedia(record: MediaRecord, thumbnailDataUrl?: string):
     ...(record.height ? { height: record.height } : {}),
     ...(record.durationSec ? { durationSec: record.durationSec } : {}),
     ...(thumbnailDataUrl ? { thumbnailDataUrl } : {}),
+    ...(record.origin ? { origin: record.origin } : {}),
   }
+}
+
+/** Les médias ni envoyés ni libérés depuis `sinceMs`, les plus récents d'abord (fichier présent). */
+export function pendingMedia(now = Date.now(), sinceMs = 24 * 60 * 60 * 1000): MediaRecord[] {
+  return localStore
+    .listMedia()
+    .filter((r) => !r.uploadedAt && now - r.createdAt < sinceMs)
+    .filter((r) => {
+      try {
+        return new File(r.uri).exists
+      } catch {
+        return false
+      }
+    })
+    .sort((a, b) => b.createdAt - a.createdAt)
 }
 
 /** Le fichier d'un média inscrit, ou `null` s'il a disparu. */

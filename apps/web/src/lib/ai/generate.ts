@@ -82,7 +82,10 @@ export async function prepareForAi(
       const fresh = s.geminiFileUri && s.geminiExpiresAt && Date.parse(s.geminiExpiresAt) > soon
       if (!fresh) {
         if (s.kind === 'video' && (s.sizeBytes ?? 0) > GEMINI_MAX_BYTES) {
-          const processed = await files.processVideo(s.url)
+          // Une longue vidéo peut rester au-dessus de la limite en 720p : on refait en 480p pour l'IA
+          // (la vidéo de l'instruction, elle, garde sa qualité).
+          let processed = await files.processVideo(s.url)
+          if ((processed.sizeBytes ?? 0) > GEMINI_MAX_BYTES) processed = await files.processVideo(s.url, '480p')
           s = { ...s, url: processed.url, sizeBytes: processed.sizeBytes ?? s.sizeBytes, durationSec: s.durationSec ?? processed.durationSec ?? undefined }
         }
         const g = await files.geminiUpload(s.url!, geminiMime(s), s.sizeBytes ?? 0, s.name ?? `${id}.${s.kind === 'video' ? 'mp4' : 'm4a'}`)

@@ -10,6 +10,7 @@ export const SHELL_CAPABILITIES: readonly Capability[] = [
   'upload.put',
   'upload.multipart',
   'media.discard',
+  'media.pending',
   'scan',
   'haptics',
   'keepAwake',

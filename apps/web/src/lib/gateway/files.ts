@@ -153,11 +153,11 @@ export function filesApi(client: GatewayClient) {
       return { uri: r.geminiFileUri, expiresAt: r.expirationTime ?? null }
     },
 
-    /** Réduit une vidéo (720p) et la normalise en MP4. Synchrone : peut prendre quelques minutes. */
-    async processVideo(url: string): Promise<{ url: string; sizeBytes: number | null; durationSec: number | null }> {
+    /** Réduit une vidéo (720p par défaut) et la normalise en MP4 H.264. Synchrone : peut prendre quelques minutes. */
+    async processVideo(url: string, resolution: '720p' | '480p' = '720p'): Promise<{ url: string; sizeBytes: number | null; durationSec: number | null }> {
       const res = await client.call<{ url?: string; metadata?: { processedSize?: number; duration?: number } }>(
         '/api/v1/files/video/process',
-        { method: 'POST', body: { url, resolution: '720p', preset: 'veryfast', normalize: true }, timeoutMs: 30 * 60_000 },
+        { method: 'POST', body: { url, resolution, preset: 'veryfast', normalize: true }, timeoutMs: 30 * 60_000 },
       )
       if (!res.url) throw new ApiError("La vidéo n'a pas pu être optimisée", 500, res)
       return { url: res.url, sizeBytes: res.metadata?.processedSize ?? null, durationSec: res.metadata?.duration ?? null }

@@ -126,6 +126,7 @@ export class CaptureSession {
   addNative(items: CapturedMedia[]) {
     const platform = nativeEnv()?.platform ?? 'ios'
     for (const item of items) {
+      handledNative.add(item.localId)
       const kind: SourceKind = item.kind
       void this.run({ tempId: uid('tmp_'), kind, name: item.fileName, previewUrl: item.thumbnailDataUrl, stage: 'upload', progress: 0 }, (p) => ingestNative(item, this.deps.files, p, platform))
     }
@@ -177,6 +178,14 @@ export class CaptureSession {
 }
 
 const sessions = new Map<string, CaptureSession>()
+
+/**
+ * Les médias de la coquille déjà pris en charge par une séance de cette page. Après un
+ * rechargement (iOS peut couper la page pendant la préparation d'une longue vidéo), l'ensemble est
+ * vide : ce que la coquille garde encore (`media.pending`) est proposé à nouveau.
+ */
+const handledNative = new Set<string>()
+export const isHandledNative = (localId: string) => handledNative.has(localId)
 
 export function getCaptureSession(key: string, deps: Deps, init: { instructionId: string | null; sources: Source[]; intent?: string }, onCreated?: (id: string) => void): CaptureSession {
   const existing = sessions.get(key)

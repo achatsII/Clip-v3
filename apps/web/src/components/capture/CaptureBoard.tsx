@@ -1,14 +1,15 @@
 'use client'
 
-import { ChevronDown, FileUp, ImagePlus, Mic, PenLine, Sparkles, Video, Wand2 } from 'lucide-react'
-import { useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { ChevronDown, FileUp, ImagePlus, Mic, PenLine, RotateCcw, Sparkles, Video, Wand2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { ChoiceTile, Textarea } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
-import { callNative, hasCapability, NativeError } from '@/lib/bridge/native'
-import { getCaptureSession } from '@/lib/capture/session'
+import type { CapturedMedia } from '@clip/bridge'
+import { callNative, hasCapability, NativeError, onNativeEvent } from '@/lib/bridge/native'
+import { getCaptureSession, isHandledNative } from '@/lib/capture/session'
 import { generationTier } from '@/lib/ai/generate'
 import { ACCEPTED_FILES } from '@/lib/media/ingest'
 import { uid } from '@/lib/model/repo'
@@ -21,6 +22,8 @@ import { WebCamera } from './WebCamera'
 import { AiCost } from '@/components/billing/AiCost'
 
 export type ForceKind = 'auto' | 'procedure' | 'lockout'
+
+const RECOVERED_LABEL: Record<CapturedMedia['kind'], string> = { video: 'La vidéo', photo: 'La photo', audio: 'La note vocale', document: 'Le document' }
 
 export function CaptureBoard({
   instructionId,
@@ -55,6 +58,33 @@ export function CaptureBoard({
   const [dragging, setDragging] = useState(false)
   const [starting, setStarting] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
+
+  // Médias que la coquille garde encore sans qu'aucune séance de cette page ne les ait reçus : la page
+  // s'est rechargée pendant leur préparation (iOS coupe la page web quand la mémoire manque).
+  const [recoverable, setRecoverable] = useState<CapturedMedia[]>([])
+  useEffect(() => {
+    if (!hasCapability('media.pending')) return
+    let alive = true
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const check = () => {
+      void callNative('media.pending', {})
+        .then((r) => alive && setRecoverable(r.items.filter((i) => !isHandledNative(i.localId))))
+        .catch(() => undefined)
+    }
+    check()
+    const off = onNativeEvent((e) => {
+      // La réponse de la capture arrive juste après cet événement : on laisse la page la recevoir.
+      if (e.type === 'media.ready' || e.type === 'app.foreground') {
+        if (timer) clearTimeout(timer)
+        timer = setTimeout(check, 600)
+      }
+    })
+    return () => {
+      alive = false
+      off()
+      if (timer) clearTimeout(timer)
+    }
+  }, [])
 
   const busy = snap.pending.some((p) => p.stage !== 'error')
   const hasContent = snap.sources.some((s) => s.url || s.text)
@@ -145,6 +175,38 @@ export function CaptureBoard({
       }}
     >
       {heading}
+      {recoverable.length > 0 && (
+        <div className="animate-slide-up mb-5 flex flex-col gap-3 rounded-[28px] bg-amber-50 p-4 sm:flex-row sm:items-center dark:bg-amber-500/10" role="status">
+          <RotateCcw className="h-6 w-6 shrink-0 text-amber-600" />
+          <p className="flex-1 text-sm font-bold text-amber-900 dark:text-amber-200">
+            {recoverable.length > 1
+              ? `${recoverable.length} médias choisis sur le téléphone n’ont pas été ajoutés : la page s’est rechargée pendant leur préparation.`
+              : `${RECOVERED_LABEL[recoverable[0].kind]} « ${recoverable[0].fileName} » n’a pas été ajouté${recoverable[0].kind === 'document' ? '' : 'e'} : la page s’est rechargée pendant sa préparation.`}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                void callNative('media.discard', { localIds: recoverable.map((i) => i.localId) }).catch(() => undefined)
+                setRecoverable([])
+              }}
+            >
+              Ignorer
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                session.addNative(recoverable)
+                setRecoverable([])
+              }}
+            >
+              Ajouter
+            </Button>
+          </div>
+        </div>
+      )}
+
 
       <div className="glass-panel rounded-[32px] p-4 sm:p-6">
         <label htmlFor="intent" className="label-caps mb-2 block text-slate-500">

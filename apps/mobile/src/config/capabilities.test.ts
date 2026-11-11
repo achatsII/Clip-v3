@@ -26,3 +26,10 @@ describe('capabilitiesFor', () => {
     expect(capabilitiesFor(withToggles({ autreChose: false }))).toEqual([...SHELL_CAPABILITIES])
   })
 })
+
+describe('reprise des médias après un rechargement de la page', () => {
+  it('media.pending reste annoncé, même capture native coupée : un média déjà pris doit pouvoir partir', () => {
+    expect(capabilitiesFor(null)).toContain('media.pending')
+    expect(capabilitiesFor({ configVersion: 1, forceUpdate: {}, toggles: { nativeCapture: false }, realtime: false })).toContain('media.pending')
+  })
+})

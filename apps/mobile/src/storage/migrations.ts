@@ -22,6 +22,8 @@ export interface MediaRecord {
   width?: number
   height?: number
   durationSec?: number
+  /** Filmé dans CLIP, choisi dans la galerie (original), ou document. */
+  origin?: 'camera' | 'library' | 'files'
 }
 
 export interface ShellStateV1 {
@@ -65,6 +67,7 @@ function asMediaRecord(v: unknown): MediaRecord | null {
   if (typeof v.width === 'number') rec.width = v.width
   if (typeof v.height === 'number') rec.height = v.height
   if (typeof v.durationSec === 'number') rec.durationSec = v.durationSec
+  if (v.origin === 'camera' || v.origin === 'library' || v.origin === 'files') rec.origin = v.origin
   return rec
 }
 

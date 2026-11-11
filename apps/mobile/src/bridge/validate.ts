@@ -108,6 +108,7 @@ export const validators: Validators = {
     if (headers === null || fields === null) return fail('headers et fields associent des noms à des textes')
     return ok({ localId: p.localId, url: p.url, fieldName: p.fieldName, fields, headers })
   },
+  'media.pending': () => ok({}),
   'media.discard': (p) => {
     if (!isRecord(p) || !Array.isArray(p.localIds) || !p.localIds.every(nonEmptyString))
       return fail('localIds doit être une liste')

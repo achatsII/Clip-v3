@@ -9,7 +9,8 @@ import { Linking, Platform, Share } from 'react-native'
 
 import { captureController } from '../capture/controller'
 import { logError, setSessionContext } from '../logging/log'
-import { discardMedia } from '../media/mediaStore'
+import { thumbnailDataUrl, videoPreview } from '../media/images'
+import { discardMedia, pendingMedia, toCapturedMedia } from '../media/mediaStore'
 import { MAX_PICK_BYTES, pickFromLibrary, tooLarge } from '../media/pick'
 import { finalizeDocument } from '../media/pipeline'
 import { uploadMultipart, uploadPut } from '../media/upload'
@@ -30,13 +31,23 @@ export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandle
   const progress = (localId: string) => (sentBytes: number, totalBytes: number) =>
     emit({ type: 'upload.progress', localId, sentBytes, totalBytes })
 
+  /**
+   * Signale à la page qu'un média vient d'être inscrit, avant de lui rendre la réponse : si la page
+   * s'est rechargée entre-temps (iOS l'a coupée), la nouvelle page le retrouve par `media.pending`.
+   */
+  const announce = async (job: Promise<{ items: CapturedMedia[] }>): Promise<{ items: CapturedMedia[] }> => {
+    const result = await job
+    if (result.items.length) emit({ type: 'media.ready', localIds: result.items.map((i) => i.localId) })
+    return result
+  }
+
   return {
-    'camera.photo': (payload) => captureController.open('photo', payload),
-    'camera.video': (payload) => captureController.open('video', payload),
-    'audio.record': (payload) => captureController.open('audio', payload),
+    'camera.photo': (payload) => announce(captureController.open('photo', payload)),
+    'camera.video': (payload) => announce(captureController.open('video', payload)),
+    'audio.record': (payload) => announce(captureController.open('audio', payload)),
     scan: (payload) => captureController.open('scan', payload),
 
-    'media.pick': async ({ kinds, multiple }) => ({ items: await pickFromLibrary(kinds, multiple ?? true) }),
+    'media.pick': ({ kinds, multiple }) => announce(pickFromLibrary(kinds, multiple ?? true).then((items) => ({ items }))),
 
     'file.pick': async ({ mimeTypes, multiple }) => {
       const result = await DocumentPicker.getDocumentAsync({
@@ -57,6 +68,17 @@ export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandle
 
     'upload.multipart': ({ localId, url, fieldName, fields, headers }) =>
       uploadMultipart(localId, url, fieldName, fields, headers, progress(localId)),
+
+    'media.pending': async () => {
+      const items: CapturedMedia[] = []
+      for (const record of pendingMedia().slice(0, 10)) {
+        let thumbnail: string | undefined
+        if (record.kind === 'photo') thumbnail = await thumbnailDataUrl(record.uri)
+        else if (record.kind === 'video') thumbnail = (await videoPreview(record.uri, record.durationSec)).thumbnail
+        items.push(toCapturedMedia(record, thumbnail))
+      }
+      return { items }
+    },
 
     'media.discard': async ({ localIds }) => {
       await discardMedia(localIds)

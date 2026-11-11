@@ -25,6 +25,7 @@ export type Capability =
   | 'upload.put'
   | 'upload.multipart'
   | 'media.discard'
+  | 'media.pending'
   | 'scan'
   | 'haptics'
   | 'keepAwake'
@@ -66,6 +67,8 @@ export interface CapturedMedia {
   durationSec?: number
   /** Petite vignette JPEG en data URL, pour l'affichage immédiat. */
   thumbnailDataUrl?: string
+  /** D'où vient le fichier : filmé dans CLIP, choisi dans la galerie (original, à réduire), ou un document. */
+  origin?: 'camera' | 'library' | 'files'
 }
 
 export type ScanFormat = 'qr' | 'code128' | 'code39' | 'ean13' | 'ean8' | 'upc_a' | 'datamatrix'
@@ -95,6 +98,12 @@ export interface BridgeRequestMap {
   }
   /** Libère les fichiers du cache de la coquille une fois envoyés. */
   'media.discard': { payload: { localIds: string[] }; result: Record<string, never> }
+  /**
+   * Les médias capturés ou choisis qui n'ont été ni envoyés ni libérés (dernières 24 h) : la page
+   * les retrouve si elle s'est rechargée avant de recevoir la réponse (iOS peut couper la page
+   * web quand la mémoire manque, pendant la préparation d'une longue vidéo).
+   */
+  'media.pending': { payload: Record<string, never>; result: { items: CapturedMedia[] } }
   scan: {
     payload: { formats?: ScanFormat[]; prompt?: string }
     result: { value: string; format: string }
@@ -147,6 +156,8 @@ export type BridgeEvent =
   | { type: 'upload.progress'; localId: string; sentBytes: number; totalBytes: number }
   | { type: 'app.foreground' }
   | { type: 'deeplink'; url: string }
+  /** Un média vient d'être inscrit (capture, galerie) : la page peut relire `media.pending`. */
+  | { type: 'media.ready'; localIds: string[] }
 
 export interface BridgeEventMessage {
   v: number
