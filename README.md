@@ -69,8 +69,11 @@ Les variables `NEXT_PUBLIC_*` sont figées dans le code livré au navigateur : r
 
 ### Déployer
 
-Un projet Vercel dont le dossier racine est `apps/web`, avec les variables ci-dessus. L'app n'a que
-deux routes serveur (`/api/config`, `/api/share`) et aucun secret de la Gateway.
+En ligne : **https://clip-v3.vercel.app** (projet Vercel `clip-v3`, dossier racine `apps/web`).
+Chaque poussée sur la branche de production du dépôt redéploie l'app. L'app n'a que deux routes
+serveur (`/api/config`, `/api/share`) et aucun secret de la Gateway ; sans variable, elle parle à la
+Gateway de QA, facturation éteinte. Seule l'adresse `clip-v3.vercel.app` est publique : les autres
+adresses de Vercel (alias d'équipe, déploiements) demandent une connexion à Vercel.
 
 ## Démarrer la coquille mobile
 
@@ -83,7 +86,8 @@ cd apps/mobile && EXPO_PUBLIC_CLIP_WEB_URL=http://192.168.1.20:3000 npx expo sta
 ```
 
 Remplacez l'adresse par celle du poste qui fait tourner l'app web (pas `localhost` : le téléphone ne
-le verrait pas). Les tests de la coquille : `cd apps/mobile && npm test`.
+le verrait pas). Sans `EXPO_PUBLIC_CLIP_WEB_URL`, la coquille affiche la production
+(https://clip-v3.vercel.app). Les tests de la coquille : `cd apps/mobile && npm test`.
 
 ## Ce qui reste à faire avant la production
 

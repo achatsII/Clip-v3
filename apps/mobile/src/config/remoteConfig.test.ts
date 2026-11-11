@@ -1,6 +1,6 @@
 import { fetchPublicConfig, parsePublicConfig } from './remoteConfig'
 import { shouldLoadInApp } from './navigation'
-import { parseWebTarget } from './env'
+import { PRODUCTION_WEB_URL, parseWebTarget, resolveWebTarget } from './env'
 
 function json(body: unknown, status = 200): Response {
   return { ok: status >= 200 && status < 300, status, json: async () => body } as unknown as Response
@@ -70,6 +70,13 @@ describe('adresse et navigation', () => {
       url: 'http://192.168.1.20:3000',
       origin: 'http://192.168.1.20:3000',
     })
+  })
+
+  it('affiche la production sans adresse donnée, et jamais la production à la place d’une adresse invalide', () => {
+    expect(resolveWebTarget(undefined)).toEqual({ url: PRODUCTION_WEB_URL, origin: PRODUCTION_WEB_URL })
+    expect(resolveWebTarget('  ')).toEqual({ url: PRODUCTION_WEB_URL, origin: PRODUCTION_WEB_URL })
+    expect(resolveWebTarget('http://192.168.1.20:3000')?.origin).toBe('http://192.168.1.20:3000')
+    expect(resolveWebTarget('ftp://x')).toBeNull()
   })
 
   it('garde l’app web dans la WebView et envoie les autres sites au navigateur', () => {
