@@ -43,6 +43,7 @@ import { StepMediaArea } from './StepMediaArea'
 import { layoutOf } from '@/lib/model/media'
 import { VoiceAssistant } from './VoiceAssistant'
 import { Input } from '@/components/ui/Field'
+import { DictationLanguage } from '@/lib/media/dictation'
 
 export interface PlayerDeps {
   data: DataApi
@@ -455,7 +456,12 @@ export function Player(props: PlayerProps) {
     </div>
   )
   // Les commandes des médias (vidéo, page, zoom) suivent la langue du poste, pas celle de l'outil.
-  return <MediaLabelsProvider value={t.media}>{player}</MediaLabelsProvider>
+  // Au poste, la dictée (retour, question) suit la langue choisie par l'opérateur.
+  return (
+    <DictationLanguage lang={lang}>
+      <MediaLabelsProvider value={t.media}>{player}</MediaLabelsProvider>
+    </DictationLanguage>
+  )
 }
 
 function EnergyChip({ point }: { point: { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string } }) {

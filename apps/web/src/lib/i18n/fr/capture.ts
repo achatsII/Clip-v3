@@ -147,10 +147,4 @@ export const capture = {
     noMicSite: 'Autorisez le micro pour ce site.',
     noMicDevice: 'Autorisez le micro dans les réglages du téléphone ou du navigateur.',
   },
-  /** Comment les vidéos des étapes se jouent au lecteur. */
-  videoModes: {
-    loop: { label: 'En boucle', hint: 'Démarre seule et recommence' },
-    once: { label: 'Une fois', hint: 'Démarre seule, joue une fois' },
-    tap: { label: 'Au toucher', hint: 'Attend qu’on touche Lecture' },
-  },
 }

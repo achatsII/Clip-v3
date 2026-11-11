@@ -27,6 +27,18 @@ export function DictationProvider({ transcribe = null, speech = false, lang, chi
   return <Ctx.Provider value={{ transcribe, speech, lang }}>{children}</Ctx.Provider>
 }
 
+/** La langue de la reconnaissance vocale pour une langue d'instruction : le Québec pour le français, le Canada pour l'anglais. */
+export const speechLang = (lang: string) => (lang === 'fr' ? 'fr-CA' : lang === 'en' ? 'en-CA' : lang)
+
+/**
+ * La dictée dans la langue du lecteur (celle que l'opérateur a choisie au poste), sans rien changer
+ * d'autre à la dictée du compte ou du lien public.
+ */
+export function DictationLanguage({ lang, children }: { lang: string; children: ReactNode }) {
+  const parent = useContext(Ctx)
+  return <Ctx.Provider value={{ ...parent, lang: speechLang(lang) }}>{children}</Ctx.Provider>
+}
+
 /** La reconnaissance vocale du navigateur (Chrome, Safari), absente des WebView iOS. */
 interface SpeechResultEvent {
   resultIndex: number

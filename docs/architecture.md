@@ -255,5 +255,17 @@ L'outil parle français et anglais ; une autre langue s'ajoute sans toucher aux 
   données au modèle (`ai/prompts.ts`) restent en français : elles ne s'affichent pas. Le lecteur des
   opérateurs garde ses propres langues (`components/player/i18n.ts`), choisies au poste ; le PDF d'une
   instruction suit la langue de l'instruction.
+- **Le lecteur des opérateurs** parle la langue choisie au poste, pour tout ce qu'il montre : ses mots,
+  ceux du métier (EPI, énergies, mises en garde, motifs de retour) et ceux des médias. `MediaView` et
+  le zoom servent aussi à l'éditeur : le lecteur leur donne ses mots par `MediaLabelsProvider`, sinon
+  ce sont ceux de l'outil. La dictée du lecteur reconnaît la langue du poste (`DictationLanguage`).
+- **La coquille mobile** a ses propres mots (`apps/mobile/src/i18n`) : la page lui dit sa langue par
+  le pont (`ui.language`), et les écrans natifs la suivent.
+- **Aucun texte en dur dans un écran** : `scripts/find-hardcoded-text.mjs` relève le texte écrit dans
+  `src/app` et `src/components`, et `tests/no-hardcoded-text.test.ts` échoue s'il en trouve. Une
+  consigne de modèle vit dans `src/lib/ai`, pas dans un composant.
 - **Les tests** lisent l'outil en français (`vitest.setup.ts`) ; un test qui veut l'anglais appelle
   `setLang('en')`.
+- **Ajouter une langue** : un dossier `i18n/<code>/` typé sur le français, la langue dans `LANGS` et
+  `LANG_NAMES` (`i18n/index.ts`), sa locale dans `locale()` ; pour la coquille, un dictionnaire de plus
+  dans `apps/mobile/src/i18n` ; pour l'IA, son nom dans `writtenIn` (`ai/prompts.ts`).

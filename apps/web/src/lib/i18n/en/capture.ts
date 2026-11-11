@@ -136,9 +136,4 @@ export const capture: typeof Fr = {
     noMicSite: 'Allow the microphone for this site.',
     noMicDevice: 'Allow the microphone in the phone or browser settings.',
   },
-  videoModes: {
-    loop: { label: 'On loop', hint: 'Starts by itself and repeats' },
-    once: { label: 'Once', hint: 'Starts by itself, plays once' },
-    tap: { label: 'On tap', hint: 'Waits for you to tap Play' },
-  },
 }

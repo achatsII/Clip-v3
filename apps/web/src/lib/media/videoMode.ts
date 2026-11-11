@@ -5,20 +5,11 @@
  * en boucle dès l'affichage, une seule fois dès l'affichage, ou seulement quand on touche Lecture.
  */
 import { useSyncExternalStore } from 'react'
-import { messages } from '../i18n'
 
 export type VideoMode = 'loop' | 'once' | 'tap'
 
-/** Les choix, dans l'ordre ; le libellé et l'indice se lisent au rendu, dans la langue de l'outil. */
-export const VIDEO_MODES: Array<{ value: VideoMode; label: string; hint: string }> = (['loop', 'once', 'tap'] as const).map((value) => ({
-  value,
-  get label() {
-    return messages().capture.videoModes[value].label
-  },
-  get hint() {
-    return messages().capture.videoModes[value].hint
-  },
-}))
+/** Les choix, dans l'ordre. Leurs mots suivent la langue de celui qui regarde (`MediaLabels.videoModes`). */
+export const VIDEO_MODES: Array<{ value: VideoMode }> = (['loop', 'once', 'tap'] as const).map((value) => ({ value }))
 
 const KEY = 'clip_pref_video_mode'
 const listeners = new Set<() => void>()
