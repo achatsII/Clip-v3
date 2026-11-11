@@ -155,7 +155,6 @@ ai_operations:
   - { key: import_s, capability: assistant.ask, feature: ai_credits, credits: 60, provider: google, level: mid }
   - { key: import_l, capability: assistant.ask, feature: ai_credits, credits: 120, provider: google, level: mid }
   - { key: step_assist, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
-  - { key: instruction_edit, capability: assistant.ask, feature: ai_credits, credits: 40, provider: google, level: mid }
   - { key: translate, capability: assistant.ask, feature: ai_credits, credits: 30, provider: google, level: mid }
   - { key: annotate, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
   # Prépare l'illustration et couvre la génération d'image qui suit.

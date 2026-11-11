@@ -14,6 +14,8 @@ const TONE: Record<WritingStandard['tone'], string> = {
 export function standardBlock(org: Pick<OrgSettings, 'standard' | 'learnings'>): string {
   const s = org.standard
   const lines: string[] = []
+  // Une usine plus ancienne peut ne pas avoir de standard enregistré : l'IA suit alors ses règles de base.
+  if (!s) return ''
   lines.push('STANDARD DE RÉDACTION DE L’USINE (prioritaire) :')
   s.rules.forEach((r) => lines.push(`- ${r}`))
   lines.push(`- Au plus ${s.maxWordsPerStep} mots par texte d’étape, ${TONE[s.tone]}.`)
@@ -22,7 +24,7 @@ export function standardBlock(org: Pick<OrgSettings, 'standard' | 'learnings'>):
     lines.push('VOCABULAIRE DE L’USINE (utilise ces termes) :')
     s.glossary.forEach((g) => lines.push(`- « ${g.term} » : ${g.meaning}`))
   }
-  if (org.learnings.length) {
+  if (org.learnings?.length) {
     lines.push('CE QUE L’USINE A DEMANDÉ APRÈS DE PRÉCÉDENTES GÉNÉRATIONS (applique-le) :')
     org.learnings.slice(-12).forEach((l) => lines.push(`- ${l.text}`))
   }
@@ -123,23 +125,6 @@ export function stepAssistPrompt(content: InstructionContent, step: Step, reques
 DEMANDE : ${request}
 
 Rends l’étape [${step.id}] corrigée.`
-}
-
-export function instructionEditSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>): string {
-  return `Tu modifies une instruction de travail d’usine selon la demande de la personne. Règles :
-- garde l’"id" de chaque étape existante que tu conserves (même si tu la déplaces ou la modifies) ;
-- une nouvelle étape a un "id" vide ;
-- une étape que tu ne touches pas reste identique, mot pour mot ;
-- ne remplis "media" que pour une nouvelle étape, avec une liste vide (les médias existants sont conservés par l’app) ;
-- n’invente aucune valeur ; garde le français québécois clair.
-
-${standardBlock(org)}`
-}
-
-export function instructionEditPrompt(content: InstructionContent, request: string): string {
-  return `${contentForPrompt(content)}
-
-DEMANDE DE LA PERSONNE : ${request}`
 }
 
 export function translateSystem(language: string): string {

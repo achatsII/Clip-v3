@@ -110,6 +110,28 @@ fichier jusqu'à `media.discard`.
 10 à 20 fois plus léger qu'un GIF, garde la qualité et le son, et se règle à la seconde dans
 l'éditeur. Les captures servent de vignettes et d'images pour le PDF.
 
+### L'assistant d'édition (`src/lib/ai/agent.ts`, `AgentPanel`)
+
+- La personne demande (texte, ou dictée au micro du champ) ; l'IA (`edit_agent`) reçoit l'instruction
+  avec l'**identifiant** de chaque étape et la liste de ses médias, l'étape regardée et l'historique de
+  l'échange, et rend `{ reply, operations, suggestions }` en JSON strict.
+- Les opérations : `set_instruction`, `add_step` (avec un id choisi par l'IA, réutilisable plus bas),
+  `update_step`, `delete_step`, `move_step`, `set_layout`, `set_media` (légende, verdict), `remove_media`,
+  `clear_annotations` — pures et testées (`applyOp`) — et trois qui demandent une IA spécialisée :
+  `annotate` (une IA qui **voit** la photo place les marques demandées), `illustrate`, `visual`.
+- L'app les applique **une à une** (`runAgentOps`) : elle amène l'éditeur à l'étape, l'entoure, montre
+  l'action en cours, puis passe à la suivante ; une action ratée n'arrête pas les autres. Tout le tour
+  s'annule d'un geste (l'instruction d'avant est gardée).
+- Suggestions : tirées de l'instruction (`suggest.ts`, gratuites), puis remplacées par celles de l'IA.
+
+### Les médias d'une étape
+
+Une étape porte jusqu'à six médias et une disposition (`layout`) : un à la fois, **à faire / à éviter**
+côte à côte (verdict `do` / `dont` sur chaque média, bordures verte et rouge), ou grille. Un média peut
+être un **schéma HTML** généré par l'IA (`visual` : SVG, dessin, vue 3D) : il voyage avec l'instruction
+et s'affiche dans une iframe `sandbox="allow-scripts"` **sans** `allow-same-origin` — il ne voit ni les
+jetons, ni les données, ni la page. Le PDF le remplace par un renvoi vers l'app.
+
 ## 5. Compatibilité et pilotage
 
 - **Feature toggles** servis par `GET /api/config` (variables d'environnement du serveur web). Sans

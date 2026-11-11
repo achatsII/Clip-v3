@@ -72,7 +72,6 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   | `import_s` | Convertir un document court (PDF, Word) | 60 |
   | `import_l` | Convertir un document long | 120 |
   | `step_assist` | Retoucher une étape (raccourcir, clarifier, ajouter un point clé…) | 5 |
-  | `instruction_edit` | Modifier toute l'instruction sur demande | 40 |
   | `translate` | Traduire une instruction | 30 |
   | `annotate` | Placer des flèches et des cercles sur une photo | 5 |
   | `illustrate` | Illustration générée à partir d'une photo (l'image comprise) | 70 |

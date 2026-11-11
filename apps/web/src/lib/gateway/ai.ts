@@ -17,7 +17,6 @@ export const AI_OPERATIONS = [
   'import_s',
   'import_l',
   'step_assist',
-  'instruction_edit',
   'translate',
   'annotate',
   'illustrate',

@@ -58,7 +58,7 @@ import {
 } from '@/lib/model/service'
 import type { Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
 import { cn, timeAgo } from '@/lib/util/cn'
-import { AiCommandBar } from './AiCommandBar'
+import { AgentPanel } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
 import { LockoutEditor } from './LockoutEditor'
 import { MetaCard } from './MetaCard'
@@ -168,6 +168,18 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const step = steps[idx]
   const changes = instr.publishedVersion && published.data ? diffSteps(published.data.json_data.content, content) : undefined
   const isDirty = !instr.publishedVersion || instr.dirty || saveState === 'saving' || (changes ? Object.values(changes).some((c) => c !== 'same') || published.data?.json_data.content.title !== content.title : true)
+
+  // L'assistant amène l'écran à l'étape qu'il modifie, et l'entoure pendant qu'il travaille.
+  const [agentStep, setAgentStep] = useState<string | null>(null)
+  const [agentOpen, setAgentOpen] = useState(false)
+  const focusStep = useCallback((id: string | null) => {
+    if (!id) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    setSelected(id)
+    requestAnimationFrame(() => document.getElementById('step-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }, [])
 
   function setStep(s: Step) {
     update({ ...content, steps: steps.map((x) => (x.id === s.id ? s : x)) })
@@ -330,7 +342,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   )
 
   return (
-    <div className="pb-40">
+    <div className={cn('pb-40', agentOpen && 'lg:pr-[424px]')}>
       <Confetti show={celebrate} />
       <div className="mb-4 flex items-center justify-between gap-3">
         <Link href="/instructions" className="inline-flex items-center gap-1 text-sm font-black text-slate-500">
@@ -508,10 +520,11 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
             <StepList steps={steps} selectedId={step?.id ?? null} onSelect={setSelected} onAdd={() => insertAfter(steps.length - 1)} changes={inReview ? changes : undefined} readOnly={readOnly} feedbackByStep={feedbackByStep} />
           </div>
         </aside>
-        <section className="min-w-0">
+        <section id="step-editor" className="min-w-0 scroll-mt-24">
           {step ? (
             <StepEditor
               key={step.id}
+              agentWorking={agentStep === step.id}
               content={content}
               step={step}
               index={idx}
@@ -544,13 +557,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         </section>
       </div>
 
-      {!readOnly && (
-        <div className="pb-safe kb-lift pointer-events-none fixed inset-x-0 bottom-24 z-30 px-4 lg:bottom-6 lg:left-72 lg:px-10">
-          <div className="mx-auto max-w-3xl">
-            <AiCommandBar content={content} onApply={update} />
-          </div>
-        </div>
-      )}
+      {!readOnly && <AgentPanel content={content} setContent={update} focusStepId={step?.id ?? null} onFocus={focusStep} onWorking={setAgentStep} onOpenChange={setAgentOpen} />}
 
       <ShareDialog open={dialog === 'share'} onClose={() => setDialog(null)} doc={doc} onLinked={refresh} />
       <HistoryDialog

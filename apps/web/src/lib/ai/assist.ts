@@ -14,8 +14,6 @@ import {
   annotateSystem,
   illustratePrompt,
   illustrateSystem,
-  instructionEditPrompt,
-  instructionEditSystem,
   questionPrompt,
   questionSystem,
   standardAgentSystem,
@@ -30,7 +28,6 @@ import {
   annotationSchema,
   answerSchema,
   illustrationSchema,
-  instructionEditSchema,
   standardSchema,
   stepEditSchema,
   translationSchema,
@@ -64,45 +61,6 @@ export async function assistStep(ai: AiApi, org: OrgAi, content: InstructionCont
     warning: warningFrom(j.warningLevel, j.warningText),
   }
   return { step: next, explanation: (j.explanation ?? '').trim() }
-}
-
-export async function editInstruction(ai: AiApi, org: OrgAi, content: InstructionContent, request: string) {
-  const res = await ai.ask<{ title: string; summary: string; ppe: string[]; tools: string[]; safety: string[]; steps: AiStep[]; explanation: string }>(
-    'instruction_edit',
-    {
-      provider: 'google',
-      level: 'mid',
-      thinking: 'enabled',
-      effort: 'low',
-      system_instruction: instructionEditSystem(org),
-      prompt: instructionEditPrompt(content, request),
-      json_schema: instructionEditSchema,
-      maxOutputTokens: 16000,
-    },
-    { scope: 'edit', timeoutMs: 120_000 },
-  )
-  const j = res.json
-  if (!j?.steps?.length) throw new ApiError("L'IA n'a pas pu appliquer cette demande. Reformulez-la.", 502)
-  const oldById = new Map(content.steps.map((s) => [s.id, s]))
-  const keep = new Set(content.steps.map((s) => s.id))
-  const steps = normalizeSteps(
-    j.steps.map((s) => ({ ...s, media: [] })),
-    new Map(),
-    keep,
-  ).map((s) => {
-    const old = oldById.get(s.id)
-    return old ? { ...s, media: old.media, energyPointId: old.energyPointId ?? null } : s
-  })
-  const next: InstructionContent = {
-    ...content,
-    title: j.title?.trim() || content.title,
-    summary: j.summary?.trim() ?? content.summary,
-    ppe: (j.ppe ?? content.ppe).filter((p) => p in PPE),
-    tools: (j.tools ?? content.tools).map((t) => t.trim()).filter(Boolean),
-    safety: (j.safety ?? content.safety).map((t) => t.trim()).filter(Boolean),
-    steps,
-  }
-  return { content: next, explanation: (j.explanation ?? '').trim() }
 }
 
 export async function translateInstruction(ai: AiApi, content: InstructionContent, language: string): Promise<TranslatedContent> {

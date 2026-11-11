@@ -104,20 +104,6 @@ export const stepEditSchema = {
   required: ['title', 'text', 'keyPoints', 'warningLevel', 'warningText', 'explanation'],
 }
 
-export const instructionEditSchema = {
-  type: 'object',
-  properties: {
-    title: str('Titre'),
-    summary: str('Résumé'),
-    ppe: { type: 'array', items: { type: 'string', enum: Object.keys(PPE) } },
-    tools: strList(),
-    safety: strList(),
-    steps: { type: 'array', items: stepSchema },
-    explanation: str('Ce que tu as changé, en une ou deux phrases'),
-  },
-  required: ['title', 'summary', 'ppe', 'tools', 'safety', 'steps', 'explanation'],
-}
-
 export const translationSchema = {
   type: 'object',
   properties: {

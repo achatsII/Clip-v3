@@ -41,6 +41,7 @@ export function StepEditor({
   onInsertAfter,
   onSourceAdded,
   highlight,
+  agentWorking,
 }: {
   content: InstructionContent
   step: Step
@@ -54,6 +55,8 @@ export function StepEditor({
   onInsertAfter: () => void
   onSourceAdded: (s: Source) => void
   highlight?: string | null
+  /** L'assistant d'édition modifie cette étape en ce moment. */
+  agentWorking?: boolean
 }) {
   const { ai, org } = useSession()
   const toast = useToast()
@@ -141,7 +144,12 @@ export function StepEditor({
   }
 
   return (
-    <div className={cn('glass-panel rounded-[32px] p-4 sm:p-6', highlight && 'ring-4 ring-amber-300/60')}>
+    <div className={cn('glass-panel rounded-[32px] p-4 transition-shadow sm:p-6', highlight && 'ring-4 ring-amber-300/60', agentWorking && 'ring-4 ring-violet-400/70')}>
+      {agentWorking && (
+        <p className="mb-3 flex items-center gap-2 rounded-2xl bg-violet-50 px-3 py-2 text-sm font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+          <Sparkles className="h-4 w-4 animate-pulse" /> L’assistant modifie cette étape…
+        </p>
+      )}
       <div className="mb-4 flex items-center gap-3">
         <span className="bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl font-black text-white tabular-nums">{index + 1}</span>
         <p className="label-caps min-w-0 flex-1 truncate text-slate-500">Étape {index + 1} sur {content.steps.length}</p>
