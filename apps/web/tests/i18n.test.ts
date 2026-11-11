@@ -3,7 +3,6 @@ import { en } from '@/lib/i18n/en'
 import { fr } from '@/lib/i18n/fr'
 import { getLang, locale, messages, setLang } from '@/lib/i18n'
 import { CATEGORIES, LANGUAGES, PPE, ROLES, WARNINGS } from '@/lib/model/catalog'
-import { THEME_PRESETS } from '@/lib/theme'
 import { formatBytes, formatDate, plural, timeAgo } from '@/lib/util/cn'
 
 afterEach(() => setLang('fr'))
@@ -62,7 +61,7 @@ describe('la langue de l’outil', () => {
     expect(PPE.casque).toBe('Casque')
     expect(ROLES.author.label).toBe('Rédacteur')
     expect(LANGUAGES.es.label).toBe('Espagnol')
-    expect(THEME_PRESETS[0].label).toBe('Océan')
+    expect(messages().catalog.themes.ocean).toBe('Océan')
     setLang('en')
     expect(CATEGORIES.sst.label).toBe('Health and safety')
     expect(CATEGORIES.sst.tile).toBe('from-rose-500 to-red-600')
@@ -73,7 +72,7 @@ describe('la langue de l’outil', () => {
     expect(ROLES.author.permissions.instructions).toBe('write')
     expect(LANGUAGES.es.label).toBe('Spanish')
     expect(LANGUAGES.es.native).toBe('Español')
-    expect(THEME_PRESETS[0].label).toBe('Ocean')
+    expect(messages().catalog.themes.ocean).toBe('Ocean')
   })
 
   it('écrit dates, nombres et tailles dans la langue choisie', () => {

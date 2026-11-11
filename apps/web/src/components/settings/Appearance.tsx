@@ -11,7 +11,9 @@ import { cn } from '@/lib/util/cn'
  * dans le menu Mon compte du téléphone. Chaque langue s'écrit dans sa propre langue.
  */
 export function AppearanceControls({ brandColor, compact = false }: { brandColor?: string | null; compact?: boolean }) {
-  const t = useMessages().settings.appearance
+  const words = useMessages()
+  const t = words.settings.appearance
+  const themes = words.catalog.themes
   const lang = useLang()
   const [theme, setTheme] = useState<UiTheme>(() => (typeof window === 'undefined' ? { mode: 'system', preset: 'ocean' } : readTheme()))
   const update = (next: UiTheme) => {
@@ -45,7 +47,7 @@ export function AppearanceControls({ brandColor, compact = false }: { brandColor
             aria-pressed={theme.preset === p.value}
           >
             <span className={cn('rounded-2xl shadow-inner', compact ? 'h-10 w-10' : 'h-12 w-12')} style={{ backgroundImage: p.swatch }} />
-            <span className="text-[11px] font-black text-slate-600 dark:text-slate-300">{p.label}</span>
+            <span className="text-[11px] font-black text-slate-600 dark:text-slate-300">{themes[p.value]}</span>
           </button>
         ))}
       </div>

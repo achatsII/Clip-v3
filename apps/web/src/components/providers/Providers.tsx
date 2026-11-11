@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
 import { callNative, hasCapability, nativeEnv } from '@/lib/bridge/native'
 import { ApiError } from '@/lib/gateway/client'
-import { useLang } from '@/lib/i18n'
+import { useLang, useMessages } from '@/lib/i18n'
 import { applyTheme, readTheme } from '@/lib/theme'
 import { installKeyboardInset } from '@/lib/ui/keyboard'
 import { ConfirmProvider } from '../ui/Confirm'
@@ -46,6 +46,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <ConfirmProvider>{children}</ConfirmProvider>
       </ToastProvider>
       <ShellLanguage />
+      <DocumentTitle />
     </QueryClientProvider>
   )
 }
@@ -56,5 +57,25 @@ function ShellLanguage() {
   useEffect(() => {
     if (hasCapability('ui.language')) void callNative('ui.language', { lang }).catch(() => undefined)
   }, [lang])
+  return null
+}
+
+/**
+ * Le titre par défaut, écrit en français par le serveur (layout.tsx), suit la langue de l'outil.
+ * Next peut le réécrire après le premier rendu : on le surveille.
+ */
+const SERVER_TITLE = 'CLIP — Instructions de travail'
+function DocumentTitle() {
+  const t = useMessages()
+  const translated = `CLIP — ${t.auth.login.tagline}`
+  useEffect(() => {
+    const apply = () => {
+      if (document.title === SERVER_TITLE && translated !== SERVER_TITLE) document.title = translated
+    }
+    apply()
+    const watch = new MutationObserver(apply)
+    watch.observe(document.head, { subtree: true, childList: true, characterData: true })
+    return () => watch.disconnect()
+  }, [translated])
   return null
 }

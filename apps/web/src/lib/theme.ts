@@ -2,8 +2,6 @@
  * Thème de l'utilisateur (ux-design-ii 5.16) : clé `ui_theme` = { mode, preset }, préservée à la
  * déconnexion. La couleur de l'usine (réglages) surcharge la primaire du preset « Océan ».
  */
-import { messages } from '@/lib/i18n'
-
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type ThemePreset = 'ocean' | 'nature' | 'crepuscule' | 'royal' | 'monochrome'
 export interface UiTheme {
@@ -11,16 +9,17 @@ export interface UiTheme {
   preset: ThemePreset
 }
 
-/** Les thèmes ; leur nom se lit dans la langue de l'outil. */
-export const THEME_PRESETS: Array<{ value: ThemePreset; label: string; swatch: string }> = (
-  [
-    { value: 'ocean', swatch: 'linear-gradient(135deg,#00C6FF,#0078FF)' },
-    { value: 'nature', swatch: 'linear-gradient(135deg,#3ee0a1,#10a96d)' },
-    { value: 'crepuscule', swatch: 'linear-gradient(135deg,#ffb000,#ff6b00)' },
-    { value: 'royal', swatch: 'linear-gradient(135deg,#9b2cfa,#2c62fa)' },
-    { value: 'monochrome', swatch: 'linear-gradient(135deg,#64748b,#334155)' },
-  ] as Array<{ value: ThemePreset; swatch: string }>
-).map((p) => Object.defineProperty({ ...p, label: '' }, 'label', { get: () => messages().catalog.themes[p.value], enumerable: true }))
+/**
+ * Les thèmes. Leur nom vit dans le dictionnaire (`catalog.themes`) : ce module est aussi lu par la
+ * mise en page racine, rendue par le serveur, qui ne charge pas les langues.
+ */
+export const THEME_PRESETS: Array<{ value: ThemePreset; swatch: string }> = [
+  { value: 'ocean', swatch: 'linear-gradient(135deg,#00C6FF,#0078FF)' },
+  { value: 'nature', swatch: 'linear-gradient(135deg,#3ee0a1,#10a96d)' },
+  { value: 'crepuscule', swatch: 'linear-gradient(135deg,#ffb000,#ff6b00)' },
+  { value: 'royal', swatch: 'linear-gradient(135deg,#9b2cfa,#2c62fa)' },
+  { value: 'monochrome', swatch: 'linear-gradient(135deg,#64748b,#334155)' },
+]
 
 export function readTheme(): UiTheme {
   const fallback: UiTheme = { mode: 'system', preset: 'ocean' }
