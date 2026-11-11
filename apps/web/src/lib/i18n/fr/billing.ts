@@ -58,7 +58,7 @@ export const billing = {
   lockBadge: 'Plus',
   /** Le bandeau de solde bas. */
   lowBalance: {
-    text: (n: number, date: string | null) => `Il vous reste ${fmt(n)} crédits${until(date)}.`,
+    text: (n: number, date: string | null) => `Il vous reste ${credits(n)}${until(date)}.`,
     more: 'Plus de crédits',
   },
   /** Pourquoi la fenêtre des crédits s’ouvre : un refus réel de la plateforme, ou le solde du mois. */
@@ -138,7 +138,7 @@ export const billing = {
     comingSoon: 'L’abonnement dans l’app arrive bientôt.',
     planComingSoon: (store: string) => `Ce plan arrive bientôt dans ${theStore(store)}.`,
     /** L’offre de bienvenue du magasin : son prix et sa durée (unité du magasin : DAY, WEEK, MONTH, YEAR). */
-    intro: (price: string, n: number, unit: string) => `Offre de bienvenue : ${price} pour ${fmt(n)} ${unit === 'DAY' ? 'jour(s)' : unit === 'WEEK' ? 'semaine(s)' : unit === 'YEAR' ? 'an(s)' : 'mois'}`,
+    intro: (price: string, n: number, unit: string) => `Offre de bienvenue : ${price} pour ${fmt(n)} ${unit === 'DAY' ? (n > 1 ? 'jours' : 'jour') : unit === 'WEEK' ? (n > 1 ? 'semaines' : 'semaine') : unit === 'YEAR' ? (n > 1 ? 'ans' : 'an') : 'mois'}`,
     subscribeTo: (plan: string) => `S’abonner à ${plan}`,
     /** Les mentions que les magasins exigent avant l’achat. */
     disclosure: (plan: string, price: string, yearly: boolean, store: string) =>

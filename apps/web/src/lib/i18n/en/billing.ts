@@ -181,7 +181,7 @@ export const billing: typeof Fr = {
     beforeTax: 'before tax',
     choose: (plan: string) => `Choose ${plan}`,
     askAdmin: 'Ask your administrator',
-    enterprise: 'Need several plants, single sign-on or a contract? Write to us: we’ll tailor an Entreprise plan for you.',
+    enterprise: 'Need several plants, single sign-on or a contract? Write to us: we’ll tailor an Enterprise plan for you.',
   },
   errors: {
     signedOut: 'No user signed in',
