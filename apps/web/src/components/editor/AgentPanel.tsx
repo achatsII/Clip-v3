@@ -1,15 +1,19 @@
 'use client'
 
 import { ArrowUp, Check, ChevronDown, ChevronUp, Loader2, Mic, RotateCcw, Sparkles, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AiCost } from '@/components/billing/AiCost'
+import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
 import { Input } from '@/components/ui/Field'
 import { errorText } from '@/components/ui/States'
 import { askAgent, runAgentOps, type AgentLogEntry } from '@/lib/ai/agent'
 import { suggestEdits } from '@/lib/ai/suggest'
+import { useEntitlement, useGate } from '@/lib/billing/state'
 import type { InstructionContent } from '@/lib/model/types'
+import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
+import { LiveEditVoice, type VoiceTurnResult } from './LiveEditVoice'
 
 interface Message {
   id: number
@@ -36,7 +40,6 @@ export function AgentPanel({
   onFocus,
   onWorking,
   onOpenChange,
-  live,
 }: {
   content: InstructionContent
   setContent: (c: InstructionContent) => void
@@ -47,8 +50,6 @@ export function AgentPanel({
   /** L'étape que l'assistant modifie en ce moment (null quand il a fini). */
   onWorking: (stepId: string | null) => void
   onOpenChange?: (open: boolean) => void
-  /** Le bouton du mode vocal en direct, quand il est offert. */
-  live?: ReactNode
 }) {
   const { ai, org } = useSession()
   const [open, setOpen] = useState(false)
@@ -57,6 +58,14 @@ export function AgentPanel({
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [agentSuggestions, setAgentSuggestions] = useState<string[] | null>(null)
+  const [liveOn, setLiveOn] = useState(false)
+  const busyRef = useRef(false)
+  const messagesRef = useRef<Message[]>([])
+  messagesRef.current = messages
+  // La voix en direct : coupée par le feature toggle, réservée au plan qui donne l'assistant vocal.
+  const voiceToggle = useToggle('voiceAssistant')
+  const voiceRight = useEntitlement('voice_assistant')
+  const gate = useGate()
   const liveContent = useRef(content)
   liveContent.current = busy ? liveContent.current : content
   const scroller = useRef<HTMLDivElement>(null)
@@ -74,14 +83,17 @@ export function AgentPanel({
 
   const patch = (id: number, p: Partial<Message> | ((m: Message) => Partial<Message>)) => setMessages((list) => list.map((m) => (m.id === id ? { ...m, ...(typeof p === 'function' ? p(m) : p) } : m)))
 
-  async function send(request = text) {
+  async function runTurn(request: string, via: 'text' | 'voice'): Promise<VoiceTurnResult> {
     const ask = request.trim()
-    if (!ask || busy) return
-    setText('')
+    if (!ask) return { reply: '', done: [], failed: [] }
+    if (busyRef.current) return { reply: 'Une modification est déjà en cours. Réessayez dans un instant.', done: [], failed: ['occupé'] }
+    busyRef.current = true
     setBusy(true)
     const userId = nextId.current++
     const agentId = nextId.current++
-    setMessages((list) => [...list, { id: userId, role: 'user', text: ask }, { id: agentId, role: 'agent', text: '', working: true }])
+    const done: string[] = []
+    const failed: string[] = []
+    setMessages((list) => [...list, { id: userId, role: 'user', text: via === 'voice' ? `🎙 ${ask}` : ask }, { id: agentId, role: 'agent', text: '', working: true }])
     try {
       const turn = await askAgent(ai, org.json_data, liveContent.current, focusStepId, ask, history.current)
       history.current.push({ role: 'user', content: ask }, { role: 'assistant', content: turn.reply })
@@ -90,8 +102,8 @@ export function AgentPanel({
       if (turn.operations.length) {
         const before = liveContent.current
         patch(agentId, { before, actions: [] })
-        // Au téléphone, on laisse voir l'étape qui change.
-        if (window.matchMedia('(max-width: 1023px)').matches) setMinimized(true)
+        // Au téléphone, on laisse voir l'étape qui change (la conversation vocale reste ouverte).
+        if (via === 'text' && window.matchMedia('(max-width: 1023px)').matches) setMinimized(true)
         await runAgentOps(turn.operations, {
           ai,
           get: () => liveContent.current,
@@ -103,17 +115,39 @@ export function AgentPanel({
             onFocus(id)
             onWorking(id)
           },
-          log: (entry) => patch(agentId, (m) => ({ actions: [...(m.actions ?? []).filter((a) => a.key !== entry.key), entry].sort((a, b) => a.key - b.key) })),
+          log: (entry) => {
+            if (entry.state === 'done') done.push(entry.label)
+            if (entry.state === 'error') failed.push(entry.label)
+            patch(agentId, (m) => ({ actions: [...(m.actions ?? []).filter((a) => a.key !== entry.key), entry].sort((a, b) => a.key - b.key) }))
+          },
         })
       }
       patch(agentId, { working: false })
+      return { reply: turn.reply, done, failed }
     } catch (e) {
-      patch(agentId, { working: false, error: true, text: `Je n’ai pas pu faire ce changement. ${errorText(e)}` })
+      const why = `Je n’ai pas pu faire ce changement. ${errorText(e)}`
+      patch(agentId, { working: false, error: true, text: why })
+      return { reply: why, done, failed: [...failed, why] }
     } finally {
       onWorking(null)
+      busyRef.current = false
       setBusy(false)
       setMinimized(false)
     }
+  }
+
+  async function send(request = text) {
+    if (!request.trim() || busy) return
+    setText('')
+    await runTurn(request, 'text')
+  }
+
+  /** Pour la voix : annule le dernier tour qui a changé quelque chose. */
+  function undoLast(): string {
+    const last = [...messagesRef.current].reverse().find((m) => m.before && !m.undone && !m.working)
+    if (!last) return 'Il n’y a rien à annuler.'
+    undo(last)
+    return 'Le dernier changement est annulé.'
   }
 
   function undo(m: Message) {
@@ -160,11 +194,11 @@ export function AgentPanel({
           <p className="font-black">Assistant</p>
           <p className="truncate text-xs font-bold text-slate-500">Il modifie l’instruction sous vos yeux</p>
         </div>
-        {live}
+        {voiceToggle && !liveOn && <LiveButton locked={voiceRight === 'locked'} onClick={() => gate(voiceRight, 'voice_assistant', () => setLiveOn(true))} />}
         <button type="button" onClick={() => setMinimized(true)} aria-label="Réduire" className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 lg:hidden">
           <ChevronDown className="h-5 w-5" />
         </button>
-        <button type="button" onClick={() => setOpen(false)} disabled={busy} aria-label="Fermer l’assistant" className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 disabled:opacity-40">
+        <button type="button" onClick={() => { setLiveOn(false); setOpen(false) }} disabled={busy} aria-label="Fermer l’assistant" className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 disabled:opacity-40">
           <X className="h-5 w-5" />
         </button>
       </header>
@@ -216,6 +250,8 @@ export function AgentPanel({
         </div>
       )}
 
+      {liveOn && <LiveEditVoice content={content} onModify={(r) => runTurn(r, 'voice')} onGoTo={onFocus} onUndo={undoLast} onStop={() => setLiveOn(false)} />}
+
       <form
         className="pb-safe flex shrink-0 items-center gap-2 border-t border-slate-900/5 px-3 pt-3 pb-3 dark:border-white/5"
         onSubmit={(e) => {
@@ -239,7 +275,7 @@ export function AgentPanel({
 export function LiveButton({ onClick, locked }: { onClick: () => void; locked?: boolean }) {
   return (
     <button type="button" onClick={onClick} aria-label="Parler à l’assistant en direct" title={locked ? 'Assistant vocal : plan Usine' : 'Parler en direct'} className="btn-press bg-gradient-accent flex h-11 items-center gap-1.5 rounded-2xl px-3 text-xs font-black text-white">
-      <Mic className="h-4 w-4" /> Direct
+      <Mic className="h-4 w-4" /> Direct {locked && <LockBadge className="ml-0.5" />}
     </button>
   )
 }

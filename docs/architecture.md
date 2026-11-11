@@ -123,6 +123,10 @@ l'éditeur. Les captures servent de vignettes et d'images pour le PDF.
   l'action en cours, puis passe à la suivante ; une action ratée n'arrête pas les autres. Tout le tour
   s'annule d'un geste (l'instruction d'avant est gardée).
 - Suggestions : tirées de l'instruction (`suggest.ts`, gratuites), puis remplacées par celles de l'IA.
+- **À la voix, en direct** (« Direct », feature `voice_assistant`) : Gemini Live (`useLiveVoice`, la même
+  mécanique que l'assistant du poste) converse et appelle `modifier(demande)`, qui passe par le même
+  moteur que le clavardage (un tour `edit_agent`, visible et annulable), `aller_a_etape`,
+  `lire_instruction` et `annuler_dernier_changement`.
 
 ### Les médias d'une étape
 

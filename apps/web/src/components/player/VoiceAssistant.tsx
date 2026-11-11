@@ -1,7 +1,8 @@
 'use client'
 
 import { Mic, MicOff, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
+import { useLiveVoice } from '@/lib/ai/useLiveVoice'
 import type { AiApi } from '@/lib/gateway/ai'
 import type { InstructionContent } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
@@ -12,17 +13,6 @@ import { cn } from '@/lib/util/cn'
  * questions à partir de l'instruction. Signaler un problème ouvre le formulaire : rien
  * d'irréversible ne part à la voix.
  */
-interface Line {
-  who: 'user' | 'ai'
-  text: string
-}
-
-type LiveSession = {
-  sendRealtimeInput: (p: { audio?: { data: string; mimeType: string }; text?: string; audioStreamEnd?: boolean }) => void
-  sendToolResponse: (p: { functionResponses: Array<{ id?: string; name?: string; response: Record<string, unknown> }> }) => void
-  close: () => void
-}
-
 const LANG_HINT: Record<string, string> = { fr: 'français québécois', en: 'English', es: 'español' }
 
 function systemPrompt(content: InstructionContent, lang: string) {
@@ -51,190 +41,52 @@ const TOOLS = [
   { name: 'signaler_probleme', description: "Ouvre à l'écran le formulaire pour signaler qu'une étape n'est pas claire, fausse ou dangereuse.", parameters: { type: 'OBJECT', properties: {} } },
 ]
 
-function toBase64(bytes: Uint8Array) {
-  let s = ''
-  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
-  return btoa(s)
-}
-
 export function VoiceAssistant({ ai, content, lang, index, onClose, onGo, onReport }: { ai: AiApi; content: InstructionContent; lang: string; index: number; onClose: () => void; onGo: (i: number) => void; onReport: () => void }) {
-  const [state, setState] = useState<'connecting' | 'listening' | 'error'>('connecting')
-  const [lines, setLines] = useState<Line[]>([])
-  const [muted, setMuted] = useState(false)
-  const [level, setLevel] = useState(0)
   const indexRef = useRef(index)
   indexRef.current = index
-  const mutedRef = useRef(false)
-  mutedRef.current = muted
   const handlers = useRef({ onGo, onReport })
   handlers.current = { onGo, onReport }
 
-  useEffect(() => {
-    let closed = false
-    let session: LiveSession | null = null
-    let stream: MediaStream | null = null
-    let micCtx: AudioContext | null = null
-    let outCtx: AudioContext | null = null
-    let playAt = 0
-    const sources: AudioBufferSourceNode[] = []
-    let lastUsage: unknown = null
-    let sessionId = ''
-    let model = ''
-    let reported = false
-
-    const report = () => {
-      if (reported || !lastUsage || !model) return
-      reported = true
-      void ai.liveUsage(sessionId, model, lastUsage)
+  const runTool = (name: string, args: Record<string, unknown>): Record<string, unknown> => {
+    const n = content.steps.length
+    const i = indexRef.current
+    if (name === 'aller_etape_suivante') {
+      if (i >= n - 1) {
+        handlers.current.onGo(n)
+        return { ok: true, message: 'Instruction terminée.' }
+      }
+      handlers.current.onGo(i + 1)
+      return { ok: true, etape: i + 2, titre: content.steps[i + 1]?.title }
     }
-
-    const stopPlayback = () => {
-      sources.splice(0).forEach((s) => {
-        try {
-          s.stop()
-        } catch {
-          /* déjà arrêtée */
-        }
-      })
-      playAt = 0
+    if (name === 'aller_etape_precedente') {
+      if (i <= 0) return { ok: false, motif: 'Déjà à la première étape.' }
+      handlers.current.onGo(i - 1)
+      return { ok: true, etape: i, titre: content.steps[i - 1]?.title }
     }
-
-    const play = (b64: string) => {
-      if (!outCtx) return
-      const bin = atob(b64)
-      const pcm = new Int16Array(bin.length / 2)
-      for (let i = 0; i < pcm.length; i++) pcm[i] = (bin.charCodeAt(i * 2 + 1) << 8) | bin.charCodeAt(i * 2)
-      const buf = outCtx.createBuffer(1, pcm.length, 24000)
-      const ch = buf.getChannelData(0)
-      for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768
-      const src = outCtx.createBufferSource()
-      src.buffer = buf
-      src.connect(outCtx.destination)
-      playAt = Math.max(playAt, outCtx.currentTime)
-      src.start(playAt)
-      playAt += buf.duration
-      sources.push(src)
-      src.onended = () => {
-        const i = sources.indexOf(src)
-        if (i >= 0) sources.splice(i, 1)
-      }
+    if (name === 'aller_a_etape') {
+      const k = Math.round(Number(args.numero))
+      if (!Number.isFinite(k) || k < 1 || k > n) return { ok: false, motif: `Il y a ${n} étapes.` }
+      handlers.current.onGo(k - 1)
+      return { ok: true, etape: k, titre: content.steps[k - 1].title }
     }
-
-    const runTool = (name: string, args: Record<string, unknown>): Record<string, unknown> => {
-      const n = content.steps.length
-      const i = indexRef.current
-      if (name === 'aller_etape_suivante') {
-        if (i >= n - 1) {
-          handlers.current.onGo(n)
-          return { ok: true, message: 'Instruction terminée.' }
-        }
-        handlers.current.onGo(i + 1)
-        return { ok: true, etape: i + 2, titre: content.steps[i + 1]?.title }
-      }
-      if (name === 'aller_etape_precedente') {
-        if (i <= 0) return { ok: false, motif: 'Déjà à la première étape.' }
-        handlers.current.onGo(i - 1)
-        return { ok: true, etape: i, titre: content.steps[i - 1]?.title }
-      }
-      if (name === 'aller_a_etape') {
-        const k = Math.round(Number(args.numero))
-        if (!Number.isFinite(k) || k < 1 || k > n) return { ok: false, motif: `Il y a ${n} étapes.` }
-        handlers.current.onGo(k - 1)
-        return { ok: true, etape: k, titre: content.steps[k - 1].title }
-      }
-      if (name === 'etat_instruction') {
-        const s = content.steps[i]
-        return i < 0 ? { ecran: 'avant de commencer', etapes: n } : i >= n ? { ecran: 'terminé', etapes: n } : { etape: i + 1, sur: n, titre: s.title, texte: s.text, mise_en_garde: s.warning?.text ?? null, points_cles: s.keyPoints ?? [] }
-      }
-      if (name === 'signaler_probleme') {
-        handlers.current.onReport()
-        return { ok: true, message: 'Le formulaire est ouvert à l’écran.' }
-      }
-      return { ok: false, motif: 'Fonction inconnue' }
+    if (name === 'etat_instruction') {
+      const s = content.steps[i]
+      return i < 0 ? { ecran: 'avant de commencer', etapes: n } : i >= n ? { ecran: 'terminé', etapes: n } : { etape: i + 1, sur: n, titre: s.title, texte: s.text, mise_en_garde: s.warning?.text ?? null, points_cles: s.keyPoints ?? [] }
     }
-
-    ;(async () => {
-      try {
-        const live = await ai.liveSession()
-        sessionId = live.sessionId
-        model = live.model
-        const { GoogleGenAI, Modality } = await import('@google/genai')
-        const genai = new GoogleGenAI({ apiKey: live.accessToken, httpOptions: { apiVersion: 'v1alpha' } })
-        outCtx = new AudioContext()
-        session = (await genai.live.connect({
-          model: live.model.replace(/^models\//, ''),
-          config: {
-            responseModalities: [Modality.AUDIO],
-            outputAudioTranscription: {},
-            inputAudioTranscription: {},
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } },
-            systemInstruction: { parts: [{ text: systemPrompt(content, lang) }] },
-            tools: [{ functionDeclarations: TOOLS as never }],
-          },
-          callbacks: {
-            onopen: () => !closed && setState('listening'),
-            onmessage: (msg) => {
-              if (msg.usageMetadata) lastUsage = msg.usageMetadata
-              if (msg.goAway) report()
-              const sc = msg.serverContent
-              if (sc?.interrupted) stopPlayback()
-              for (const part of sc?.modelTurn?.parts ?? []) if (part.inlineData?.data) play(part.inlineData.data)
-              const said = sc?.outputTranscription?.text
-              const heard = sc?.inputTranscription?.text
-              if (heard) setLines((l) => appendLine(l, 'user', heard))
-              if (said) setLines((l) => appendLine(l, 'ai', said))
-              if (msg.toolCall?.functionCalls?.length) {
-                const functionResponses = msg.toolCall.functionCalls.map((fc) => ({ id: fc.id, name: fc.name, response: { result: runTool(fc.name ?? '', (fc.args ?? {}) as Record<string, unknown>) } }))
-                session?.sendToolResponse({ functionResponses })
-              }
-            },
-            onerror: () => !closed && setState('error'),
-            onclose: () => report(),
-          },
-        })) as unknown as LiveSession
-
-        stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } })
-        micCtx = new AudioContext({ sampleRate: 16000 })
-        const node = micCtx.createScriptProcessor(4096, 1, 1)
-        node.onaudioprocess = (e) => {
-          if (mutedRef.current || !session) return
-          const f32 = e.inputBuffer.getChannelData(0)
-          let sum = 0
-          const i16 = new Int16Array(f32.length)
-          for (let i = 0; i < f32.length; i++) {
-            const v = Math.max(-1, Math.min(1, f32[i]))
-            i16[i] = v * 32767
-            sum += v * v
-          }
-          setLevel(Math.min(1, Math.sqrt(sum / f32.length) * 4))
-          session.sendRealtimeInput({ audio: { data: toBase64(new Uint8Array(i16.buffer)), mimeType: 'audio/pcm;rate=16000' } })
-        }
-        const mute = micCtx.createGain()
-        mute.gain.value = 0
-        micCtx.createMediaStreamSource(stream).connect(node)
-        node.connect(mute)
-        mute.connect(micCtx.destination)
-        session.sendRealtimeInput({ text: lang === 'fr' ? 'Bonjour, présente-toi en une phrase et demande comment aider.' : 'Hello, introduce yourself in one sentence.' })
-      } catch {
-        if (!closed) setState('error')
-      }
-    })()
-
-    return () => {
-      closed = true
-      report()
-      stopPlayback()
-      try {
-        session?.close()
-      } catch {
-        /* déjà fermée */
-      }
-      stream?.getTracks().forEach((t) => t.stop())
-      void micCtx?.close().catch(() => undefined)
-      void outCtx?.close().catch(() => undefined)
+    if (name === 'signaler_probleme') {
+      handlers.current.onReport()
+      return { ok: true, message: 'Le formulaire est ouvert à l’écran.' }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    return { ok: false, motif: 'Fonction inconnue' }
+  }
+
+  const { state, lines, muted, setMuted, level } = useLiveVoice({
+    ai,
+    systemPrompt: () => systemPrompt(content, lang),
+    tools: TOOLS,
+    greeting: lang === 'fr' ? 'Bonjour, présente-toi en une phrase et demande comment aider.' : 'Hello, introduce yourself in one sentence.',
+    onTool: runTool,
+  })
 
   return (
     <div className="pb-safe animate-slide-up fixed inset-x-0 bottom-0 z-[65] px-3 pb-3 sm:right-6 sm:bottom-6 sm:left-auto sm:w-[420px] sm:px-0 sm:pb-0">
@@ -269,10 +121,4 @@ export function VoiceAssistant({ ai, content, lang, index, onClose, onGo, onRepo
       </div>
     </div>
   )
-}
-
-function appendLine(lines: Line[], who: Line['who'], text: string): Line[] {
-  const last = lines[lines.length - 1]
-  if (last && last.who === who) return [...lines.slice(0, -1), { who, text: (last.text + text).slice(-400) }]
-  return [...lines, { who, text }]
 }
