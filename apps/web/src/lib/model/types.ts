@@ -39,7 +39,7 @@ export interface Source {
 
 export type AnnotationType = 'pen' | 'highlight' | 'arrow' | 'line' | 'circle' | 'rect' | 'text' | 'number' | 'icon' | 'blur'
 export type AnnotationColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'white' | 'black'
-export type AnnotationSize = 's' | 'm' | 'l'
+export type AnnotationSize = 's' | 'm' | 'l' | 'xl' | 'xxl'
 
 export interface Annotation {
   id: string
@@ -61,6 +61,8 @@ export interface Annotation {
   icon?: string
   /** Épaisseur du trait ou taille de l'étiquette ; moyenne par défaut. */
   size?: AnnotationSize
+  /** Agrandissement libre d'un numéro, d'une icône ou d'un texte (poignée), en plus de `size`. */
+  scale?: number
   color: AnnotationColor
 }
 

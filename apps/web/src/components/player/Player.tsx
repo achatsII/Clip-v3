@@ -8,6 +8,7 @@ import {
   Clock,
   Languages,
   Layers,
+  Maximize2,
   Lock,
   MessageCircleQuestion,
   Mic,
@@ -18,13 +19,13 @@ import {
   ThumbsUp,
   TriangleAlert,
   Volume2,
-  VolumeX,
   Wrench,
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EnergyIcon, PpeIcon } from '@/components/icons'
 import { MediaView } from '@/components/media/MediaView'
+import { ZoomViewer } from '@/components/media/ZoomViewer'
 import { Confetti } from '@/components/ui/Celebrate'
 import { Modal } from '@/components/ui/Modal'
 import { callNative, hasCapability, haptic } from '@/lib/bridge/native'
@@ -257,8 +258,9 @@ export function Player(props: PlayerProps) {
             {view === 'steps' ? <BookOpen className="h-5 w-5" /> : <Layers className="h-5 w-5" />} {view === 'steps' ? t.docView : t.stepView}
           </button>
           {speaker && (
-            <button type="button" onClick={toggleRead} className={cn('btn-press flex h-12 w-12 items-center justify-center rounded-2xl', autoRead ? 'bg-gradient-primary text-white shadow-primary' : 'hover:bg-slate-900/5')} aria-label={autoRead ? t.stopReading : t.readAloud} title={autoRead ? t.stopReading : t.readAloud}>
-              {autoRead ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+            // Un haut-parleur barré se prenait pour un micro : le bouton dit ce qu'il fait.
+            <button type="button" onClick={toggleRead} aria-pressed={autoRead} className={cn('btn-press flex h-12 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-black', autoRead ? 'bg-gradient-primary text-white shadow-primary' : 'glass-card')} aria-label={autoRead ? t.stopReading : t.readAloud} title={autoRead ? t.stopReading : t.readAloud}>
+              <Volume2 className={cn('h-5 w-5', autoRead && reading && 'animate-pulse')} /> {t.listen}
             </button>
           )}
         </div>
@@ -304,8 +306,7 @@ export function Player(props: PlayerProps) {
             {/* Sans photo ni vidéo, pas de panneau : le texte prend la place, en haut de l'écran. */}
             {step.media[0] && (
               <div className="relative h-[46dvh] shrink-0 bg-slate-900 sm:h-[52dvh] lg:h-auto lg:flex-[1.5]">
-                <MediaView media={step.media[0]} big />
-                {step.media.length > 1 && <MediaSwitcher step={step} />}
+                <StepMediaPanel step={step} zoomLabel={t.zoom} />
               </div>
             )}
             <div className={cn('flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-8', step.media[0] ? 'lg:max-w-[560px] lg:overflow-y-auto' : 'mx-auto w-full max-w-3xl pt-8 sm:pt-12')}>
@@ -450,22 +451,37 @@ export function Player(props: PlayerProps) {
   )
 }
 
-function MediaSwitcher({ step }: { step: Step }) {
+/**
+ * Le média de l'étape : les autres médias se choisissent en haut à gauche, et « Agrandir » ouvre le
+ * média affiché en plein écran pour zoomer (pincer, double-toucher, molette).
+ */
+function StepMediaPanel({ step, zoomLabel }: { step: Step; zoomLabel: string }) {
   const [i, setI] = useState(0)
+  const [zoomed, setZoomed] = useState(false)
+  const media = step.media[i] ?? step.media[0]
   return (
     <>
+      <MediaView media={step.media[0]} big />
       {i > 0 && (
         <div className="absolute inset-0">
-          <MediaView media={step.media[i]} big />
+          <MediaView media={media} big />
         </div>
       )}
-      <div className="absolute top-3 left-3 flex gap-1.5">
-        {step.media.map((m, j) => (
-          <button key={j} type="button" onClick={() => setI(j)} className={cn('btn-press h-11 rounded-2xl px-4 text-xs font-black backdrop-blur-md', i === j ? 'bg-white text-slate-900' : 'bg-black/40 text-white')}>
-            {m.kind === 'video' ? '▶' : m.kind === 'document' ? '📄' : '📷'} {j + 1}
-          </button>
-        ))}
-      </div>
+      {step.media.length > 1 && (
+        <div className="absolute top-3 left-3 flex gap-1.5">
+          {step.media.map((m, j) => (
+            <button key={j} type="button" onClick={() => setI(j)} className={cn('btn-press h-11 rounded-2xl px-4 text-xs font-black backdrop-blur-md', i === j ? 'bg-white text-slate-900' : 'bg-black/40 text-white')}>
+              {m.kind === 'video' ? '▶' : m.kind === 'document' ? '📄' : '📷'} {j + 1}
+            </button>
+          ))}
+        </div>
+      )}
+      <button type="button" onClick={() => setZoomed(true)} aria-label={zoomLabel} title={zoomLabel} className="btn-press absolute top-3 right-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-black/50 text-white ring-1 ring-white/20">
+        <Maximize2 className="h-5 w-5" />
+      </button>
+      <ZoomViewer open={zoomed} onClose={() => setZoomed(false)} label={zoomLabel}>
+        <MediaView media={media} big />
+      </ZoomViewer>
     </>
   )
 }
@@ -614,12 +630,12 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
           </div>
         </div>
       )}
-      <div className="flex w-full flex-col gap-2 sm:flex-row">
-        <button type="button" onClick={onRestart} className="btn-press glass-card flex h-14 flex-1 items-center justify-center gap-2 rounded-full font-black">
+      <div className="flex w-full flex-col gap-3 sm:flex-row">
+        <button type="button" onClick={onRestart} className="btn-press glass-card flex h-14 w-full items-center justify-center gap-2 rounded-full text-base font-black sm:flex-1">
           <RotateCcw className="h-5 w-5" /> {t.restartInstruction}
         </button>
         {onExit && (
-          <button type="button" onClick={onExit} className="btn-press bg-gradient-primary shadow-primary flex h-14 flex-1 items-center justify-center gap-2 rounded-full font-black text-white">
+          <button type="button" onClick={onExit} className="btn-press bg-gradient-primary shadow-primary flex h-14 w-full items-center justify-center gap-2 rounded-full text-base font-black text-white sm:flex-1">
             {exitLabel ?? t.backToList}
           </button>
         )}

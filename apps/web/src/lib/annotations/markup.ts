@@ -5,7 +5,7 @@
  */
 import type { Annotation } from '../model/types'
 import { ANNOTATION_ICONS, type IconElement } from './icons'
-import { BADGE, HIGHLIGHT, LABEL, STROKE, colorOf, inkOn, isLegacyText, sizeOf } from './model'
+import { BADGE, HIGHLIGHT, LABEL, STROKE, colorOf, inkOn, isLegacyText, scaleOf, sizeOf } from './model'
 
 const esc = (s: unknown) =>
   String(s ?? '')
@@ -17,6 +17,8 @@ const esc = (s: unknown) =>
 const n = (v: number) => (Math.round(v * 10) / 10).toString()
 const pct = (v: number) => `${Math.round(v * 10000) / 100}%`
 const clampCss = (s: { cqw: number; min: number; max: number }) => `clamp(${s.min}px, ${s.cqw}cqw, ${s.max}px)`
+/** Une taille bornée, agrandie librement par la poignée (`scale`). */
+const scaled = (css: string, k: number) => (k === 1 ? css : `calc(${css} * ${Math.round(k * 100) / 100})`)
 
 const SHADOW = 'drop-shadow(0 1px 2px rgba(0,0,0,.55))'
 
@@ -54,7 +56,7 @@ export function annotationsMarkup(list: Annotation[], { ratio = 1, idPrefix = 'a
     const c = colorOf(a.color)
     const t = anchor === 'above' ? 'translate(-50%,-115%)' : anchor === 'below' ? 'translate(-50%,15%)' : 'translate(-50%,-50%)'
     html.push(
-      `<span style="position:absolute;left:${pct(Math.min(0.97, Math.max(0.03, lx)))};top:${pct(Math.min(0.97, Math.max(0.03, ly)))};transform:${t};max-width:62%;padding:.22em .6em;border-radius:.6em;background:${c};color:${inkOn(a.color)};font-weight:900;font-size:${clampCss(LABEL[sizeOf(a)])};line-height:1.25;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">${esc(a.text)}</span>`,
+      `<span style="position:absolute;left:${pct(Math.min(0.97, Math.max(0.03, lx)))};top:${pct(Math.min(0.97, Math.max(0.03, ly)))};transform:${t};max-width:62%;padding:.22em .6em;border-radius:.6em;background:${c};color:${inkOn(a.color)};font-weight:900;font-size:${scaled(clampCss(LABEL[sizeOf(a)]), scaleOf(a))};line-height:1.25;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">${esc(a.text)}</span>`,
     )
   }
 
@@ -100,12 +102,12 @@ export function annotationsMarkup(list: Annotation[], { ratio = 1, idPrefix = 'a
       }
       case 'number':
       case 'icon': {
-        const d = clampCss(BADGE[size])
+        const d = scaled(clampCss(BADGE[size]), scaleOf(a))
         const inner = a.type === 'icon' ? iconSvg(a.icon ?? '', inkOn(a.color), 'width:64%;height:64%') : `<span style="font-size:calc(${d} * .5);line-height:1">${esc(a.text ?? '')}</span>`
         html.push(
           `<span style="position:absolute;left:${pct(a.x)};top:${pct(a.y)};transform:translate(-50%,-50%);width:${d};height:${d};border-radius:9999px;background:${c};color:${inkOn(a.color)};display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid ${a.color === 'white' ? '#0f172a' : '#ffffff'};box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">${inner}</span>`,
         )
-        if (a.type === 'icon' && a.text) label(a, a.x, a.y + 0.06, 'below')
+        if (a.type === 'icon' && a.text) label(a, a.x, a.y + 0.06 * scaleOf(a), 'below')
         break
       }
       case 'text':
