@@ -88,6 +88,14 @@ export function messages(): Messages {
   return DICTS[getLang()]
 }
 
+/**
+ * Les textes dans une langue donnée, quelle que soit celle de l'outil : ce qui suit la langue d'une
+ * instruction (son PDF). Une langue que l'outil ne parle pas encore prend l'anglais.
+ */
+export function messagesIn(lang: string): Messages {
+  return (DICTS as Record<string, Messages>)[lang] ?? DICTS.en
+}
+
 /** La locale des dates et des nombres. */
 export function locale(): 'fr-CA' | 'en-CA' {
   return getLang() === 'en' ? 'en-CA' : 'fr-CA'
