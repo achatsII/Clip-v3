@@ -156,6 +156,23 @@ Sans signe de vie depuis deux minutes (app fermée, téléphone en veille), la c
 « interrompue » : on la relance ici, ou on revoit les médias. Dans l'app mobile, l'écran reste
 allumé pendant la génération.
 
+### La vue « Comme au poste » (`StageEditor`)
+
+Une des deux façons de modifier les étapes ; l'autre est la fiche, avec tous les réglages. On
+modifie l'étape telle que l'opérateur la verra.
+
+- **Ordinateur** : en plein écran, dans la mise en page exacte du lecteur (le grand média à gauche,
+  le texte à droite).
+  - En haut : les outils (« Améliorer » par l'IA, le menu ⋯ : média, ajouter, dupliquer,
+    déplacer, supprimer).
+  - En bas : la bande des étapes. Les flèches du clavier passent d'une étape à l'autre.
+  - La vue laisse sa place au panneau de l'assistant.
+- **Téléphone** : la vue du téléphone, une étape à la fois, avec les mêmes outils dans la barre du
+  haut.
+
+Chaque texte se modifie là où il est. Le média se règle dans une fenêtre, avec les réglages de la
+fiche. La retouche par l'IA (`useStepAssist`) est la même que dans la fiche.
+
 ### Les médias d'une étape
 
 Une étape porte jusqu'à six médias et une disposition (`layout`) : un à la fois, **à faire / à éviter**

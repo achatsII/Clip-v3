@@ -362,6 +362,21 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     </Button>
   )
 
+  function duplicateStep() {
+    if (!step) return
+    const copy = { ...step, id: uid('st_') }
+    update({ ...content, steps: [...steps.slice(0, idx + 1), copy, ...steps.slice(idx + 1)] })
+    setSelected(copy.id)
+  }
+
+  async function deleteStep() {
+    if (!step) return
+    if (!(await confirm({ title: `Supprimer l’étape ${idx + 1} ?`, description: step.title, confirmLabel: 'Supprimer l’étape', danger: true }))) return
+    const next = steps.filter((s) => s.id !== step.id)
+    update({ ...content, steps: next })
+    setSelected(next[Math.max(0, idx - 1)]?.id ?? null)
+  }
+
   return (
     <div className={cn('pb-40', agentOpen && 'lg:pr-[424px]')}>
       <Confetti show={celebrate} />
@@ -562,9 +577,16 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               sources={sources}
               readOnly={readOnly}
               agentWorking={agentStep === step.id}
+              agentOpen={agentOpen}
+              saveLabel={saveState === 'saving' ? 'Enregistrement…' : saveState === 'error' ? 'Non enregistré — vérifiez la connexion' : 'Enregistré'}
               onChange={setStep}
               onSelect={(id) => id && setSelected(id)}
               onInsertAfter={() => insertAfter(idx)}
+              onAddEnd={() => insertAfter(steps.length - 1)}
+              onMove={moveStep}
+              onDuplicate={duplicateStep}
+              onDelete={deleteStep}
+              onExit={() => chooseView('form')}
               onSourceAdded={(s) => {
                 const next = [...sources, s]
                 setSources(next)
@@ -584,17 +606,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               onChange={setStep}
               onMove={moveStep}
               onInsertAfter={() => insertAfter(idx)}
-              onDuplicate={() => {
-                const copy = { ...step, id: uid('st_') }
-                update({ ...content, steps: [...steps.slice(0, idx + 1), copy, ...steps.slice(idx + 1)] })
-                setSelected(copy.id)
-              }}
-              onDelete={async () => {
-                if (!(await confirm({ title: `Supprimer l’étape ${idx + 1} ?`, description: step.title, confirmLabel: 'Supprimer l’étape', danger: true }))) return
-                const next = steps.filter((s) => s.id !== step.id)
-                update({ ...content, steps: next })
-                setSelected(next[Math.max(0, idx - 1)]?.id ?? null)
-              }}
+              onDuplicate={duplicateStep}
+              onDelete={deleteStep}
               onSourceAdded={(s) => {
                 const next = [...sources, s]
                 setSources(next)

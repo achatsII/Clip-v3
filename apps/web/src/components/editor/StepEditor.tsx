@@ -13,14 +13,14 @@ import { Menu } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { assistStep, createVisual, illustrationPrompt } from '@/lib/ai/assist'
+import { createVisual, illustrationPrompt } from '@/lib/ai/assist'
 import { ApiError } from '@/lib/gateway/client'
-import { STEP_ACTIONS } from '@/lib/ai/prompts'
 import { WARNINGS } from '@/lib/model/catalog'
 import { LAYOUTS, layoutOf, mediaLabel } from '@/lib/model/media'
 import type { InstructionContent, Source, Step, StepMedia, WarningLevel } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
 import { Annotator } from './Annotator'
+import { ASSIST_ACTIONS, useStepAssist } from './StepAssist'
 import { FramePicker } from './FramePicker'
 import { MediaPicker } from './MediaPicker'
 import { StepMediaArea } from '@/components/player/StepMediaArea'
@@ -66,12 +66,10 @@ export function StepEditor({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [annotating, setAnnotating] = useState<number | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const [custom, setCustom] = useState(false)
-  const [customText, setCustomText] = useState('')
-  const [suggestion, setSuggestion] = useState<{ step: Step; explanation: string } | null>(null)
   const [visualOpen, setVisualOpen] = useState(false)
   const [visualText, setVisualText] = useState('')
   const [mediaIndex, setMediaIndex] = useState(0)
+  const assist = useStepAssist({ content, step, onApply: onChange })
   const media = step.media[Math.min(mediaIndex, step.media.length - 1)]
   const confirm = useConfirm()
   const [framing, setFraming] = useState(false)
@@ -96,18 +94,6 @@ export function StepEditor({
     if (media.annotations?.length && !(await confirm({ title: 'Revenir à l’extrait vidéo ?', description: 'Les annotations de l’image seront retirées.', confirmLabel: 'Revenir à la vidéo' }))) return
     const f = media.frame
     set({ media: step.media.map((m, i) => (i === mediaIndex ? { kind: 'video', url: f.videoUrl, sourceId: media.sourceId, start: f.start, end: f.end, posterUrl: media.url } : m)) })
-  }
-
-  async function runAssist(key: string, request: string) {
-    setBusy(key)
-    try {
-      const r = await assistStep(ai, org.json_data, content, step, request)
-      setSuggestion(r)
-    } catch (e) {
-      toast.error('L’IA n’a pas pu corriger l’étape', errorText(e))
-    } finally {
-      setBusy(null)
-    }
   }
 
   async function illustrate(m: Extract<StepMedia, { kind: 'image' }>) {
@@ -342,19 +328,12 @@ export function StepEditor({
             <Sparkles className="h-3.5 w-3.5" /> Améliorer avec l’IA <AiCost operation="step_assist" className="normal-case tracking-normal" />
           </p>
           <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ['simplify', 'Simplifier'],
-                ['clarify', 'Plus clair'],
-                ['keypoint', 'Point clé'],
-                ['safety', 'Sécurité'],
-              ] as const
-            ).map(([k, label]) => (
-              <Button key={k} size="sm" loading={busy === k} disabled={!!busy && busy !== k} onClick={() => runAssist(k, STEP_ACTIONS[k])}>
+            {ASSIST_ACTIONS.map(([k, label]) => (
+              <Button key={k} size="sm" loading={assist.busy === k} disabled={!!assist.busy && assist.busy !== k} onClick={() => assist.run(k)}>
                 {label}
               </Button>
             ))}
-            <Button size="sm" onClick={() => setCustom(true)} disabled={!!busy}>
+            <Button size="sm" onClick={assist.openCustom} disabled={!!assist.busy}>
               Autre demande…
             </Button>
           </div>
@@ -403,78 +382,7 @@ export function StepEditor({
           onSave={(annotations) => set({ media: step.media.map((m, i) => (i === annotating && m.kind === 'image' ? { ...m, annotations } : m)) })}
         />
       )}
-      <Modal
-        open={custom}
-        onClose={() => setCustom(false)}
-        title="Que voulez-vous changer ?"
-        footer={
-          <>
-            <Button onClick={() => setCustom(false)}>Annuler</Button>
-            <Button
-              variant="primary"
-              disabled={!customText.trim()}
-              loading={busy === 'custom'}
-              onClick={async () => {
-                await runAssist('custom', customText.trim())
-                setCustom(false)
-                setCustomText('')
-              }}
-            >
-              Demander à l’IA <AiCost operation="step_assist" />
-            </Button>
-          </>
-        }
-      >
-        <div className="flex items-start gap-2">
-          <Textarea autoFocus value={customText} onChange={(e) => setCustomText(e.target.value)} placeholder="Ex. : précise qu’il faut tourner dans le sens horaire" />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {['Ajoute qu’il faut porter des gants', 'Mentionne la valeur de serrage', 'Coupe en deux étapes plus courtes'].map((ex) => (
-            <button key={ex} type="button" onClick={() => setCustomText(ex)} className="glass-card btn-press rounded-xl px-3 py-2 text-xs font-bold">
-              {ex}
-            </button>
-          ))}
-        </div>
-      </Modal>
-      <Modal
-        open={!!suggestion}
-        onClose={() => setSuggestion(null)}
-        title="Proposition de l’IA"
-        footer={
-          <>
-            <Button onClick={() => setSuggestion(null)}>Garder l’original</Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                if (suggestion) onChange(suggestion.step)
-                setSuggestion(null)
-              }}
-            >
-              Appliquer
-            </Button>
-          </>
-        }
-      >
-        {suggestion && (
-          <div className="space-y-3">
-            {suggestion.explanation && <p className="text-sm font-bold text-slate-500">{suggestion.explanation}</p>}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl bg-slate-900/5 p-4 dark:bg-white/5">
-                <p className="label-caps mb-1 text-slate-400">Avant</p>
-                <p className="font-black">{step.title}</p>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{step.text}</p>
-              </div>
-              <div className="rounded-2xl bg-emerald-50 p-4 dark:bg-emerald-500/10">
-                <p className="label-caps mb-1 text-emerald-600">Après</p>
-                <p className="font-black">{suggestion.step.title}</p>
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{suggestion.step.text}</p>
-                {!!suggestion.step.keyPoints?.length && <ul className="mt-2 list-disc pl-5 text-sm font-medium">{suggestion.step.keyPoints.map((k) => <li key={k}>{k}</li>)}</ul>}
-                {suggestion.step.warning && <p className="mt-2 text-sm font-black text-rose-600">{WARNINGS[suggestion.step.warning.level].label} : {suggestion.step.warning.text}</p>}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {assist.element}
     </div>
   )
 }

@@ -14,7 +14,8 @@ export interface MenuItem {
   hint?: ReactNode
 }
 
-export function Menu({ items, label = 'Plus d’actions', trigger, align = 'right' }: { items: MenuItem[]; label?: string; trigger?: ReactNode; align?: 'left' | 'right' }) {
+/** `bare` : le déclencheur fourni porte déjà son allure ; le bouton ne lui ajoute rien. */
+export function Menu({ items, label = 'Plus d’actions', trigger, align = 'right', bare = false }: { items: MenuItem[]; label?: string; trigger?: ReactNode; align?: 'left' | 'right'; bare?: boolean }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -40,7 +41,7 @@ export function Menu({ items, label = 'Plus d’actions', trigger, align = 'righ
         title={label}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="btn-press glass-card flex h-12 min-w-12 items-center justify-center rounded-full px-3 text-slate-700 dark:text-slate-200"
+        className={bare ? 'flex shrink-0 rounded-2xl' : 'btn-press glass-card flex h-12 min-w-12 items-center justify-center rounded-full px-3 text-slate-700 dark:text-slate-200'}
       >
         {trigger ?? <MoreHorizontal className="h-5 w-5" />}
       </button>

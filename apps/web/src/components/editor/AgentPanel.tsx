@@ -162,7 +162,7 @@ export function AgentPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="glass-float btn-press kb-hide fixed right-4 bottom-24 z-30 flex h-12 items-center gap-2 rounded-full px-4 text-sm font-black text-[var(--primary-strong)] lg:right-6 lg:bottom-6 dark:text-sky-300"
+        className="glass-float btn-press kb-hide fixed right-4 bottom-24 z-40 flex h-12 items-center gap-2 rounded-full px-4 text-sm font-black text-[var(--primary-strong)] lg:right-6 lg:bottom-28 dark:text-sky-300"
       >
         <Sparkles className="h-5 w-5" /> Assistant
       </button>
