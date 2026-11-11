@@ -175,24 +175,41 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}
         .catch(() => undefined)
     },
 
-    /** Génère une image (illustration) à partir d'un texte et d'images de référence. */
-    /** Une image générée (spec §2.7.1 : réponse en liste, `results[0].imageURL`). */
+    /**
+     * Une image générée à partir d'un texte et d'images de référence (spec §2.7.1 : réponse en liste,
+     * `results[0].imageURL`), par OpenAI au niveau moyen. Le guide ne liste encore que Google pour les
+     * images : si la passerelle refuse OpenAI (400 ou 422, aucune image rendue), Google la refait une
+     * fois, pour que l'illustration ne casse pas.
+     */
     async generateImage(prompt: string, referenceImages: string[], size = { width: 1024, height: 1024 }): Promise<string> {
       type Out = { success?: boolean; error?: unknown; message?: string; results?: Array<{ imageURL?: string; url?: string }> }
-      const res = await client.call<Out[] | Out>('/api/v2/ai/generate/image', {
-        method: 'POST',
-        body: { prompt, provider: 'google', level: 'mid', width: size.width, height: size.height, quantity: 1, ...(referenceImages.length ? { referenceImages } : {}) },
-        timeoutMs: 180_000,
-      })
-      const first = Array.isArray(res) ? res[0] : res
-      const url = first?.results?.[0]?.imageURL ?? first?.results?.[0]?.url
-      if (!url) {
-        const why = typeof first?.error === 'string' ? first.error : (first?.error as { message?: string } | undefined)?.message ?? first?.message
-        throw new ApiError(why ? `Le service d'images a refusé : ${why}` : "Le service d'images n'a rendu aucune image", 422, res, 'no_image')
+      const once = async (provider: ImageProvider) => {
+        const res = await client.call<Out[] | Out>('/api/v2/ai/generate/image', {
+          method: 'POST',
+          body: { prompt, provider, level: IMAGE_MODEL.level, width: size.width, height: size.height, quantity: 1, ...(referenceImages.length ? { referenceImages } : {}) },
+          timeoutMs: 180_000,
+        })
+        const first = Array.isArray(res) ? res[0] : res
+        const url = first?.results?.[0]?.imageURL ?? first?.results?.[0]?.url
+        if (!url) {
+          const why = typeof first?.error === 'string' ? first.error : (first?.error as { message?: string } | undefined)?.message ?? first?.message
+          throw new ApiError(why ? `Le service d'images a refusé : ${why}` : "Le service d'images n'a rendu aucune image", 422, res, 'no_image')
+        }
+        return url
       }
-      return url
+      try {
+        return await once(IMAGE_MODEL.provider)
+      } catch (e) {
+        if (e instanceof ApiError && (e.status === 400 || e.status === 422) && IMAGE_MODEL.provider !== IMAGE_FALLBACK) return once(IMAGE_FALLBACK)
+        throw e
+      }
     },
   }
 }
 
 export type AiApi = ReturnType<typeof aiApi>
+
+/** Les images générées (illustrations) : OpenAI, niveau moyen ; Google si la passerelle refuse OpenAI. */
+export const IMAGE_MODEL: { provider: ImageProvider; level: 'low' | 'mid' | 'high' } = { provider: 'openai', level: 'mid' }
+const IMAGE_FALLBACK: ImageProvider = 'google'
+type ImageProvider = 'openai' | 'google'

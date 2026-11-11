@@ -54,3 +54,29 @@ describe('aiApi.ask', () => {
     await expect(aiApi(gw, { billing: false }).ask('generate_s', { ...body, json_schema: {} })).rejects.toMatchObject({ code: 'JSON_PARSE_ERROR' })
   })
 })
+
+describe('aiApi.generateImage', () => {
+  const ok = { success: true, results: [{ imageURL: 'https://img.test/a.png' }] }
+
+  it('OpenAI, niveau moyen, avec les images de référence', async () => {
+    const gw = fakeGateway(() => [ok])
+    expect(await aiApi(gw).generateImage('Une presse, vue de face', ['https://x.test/photo.jpg'])).toBe('https://img.test/a.png')
+    expect(gw.calls).toHaveLength(1)
+    expect(gw.calls[0].endpoint).toBe('/api/v2/ai/generate/image')
+    expect(gw.calls[0].options.body).toMatchObject({ provider: 'openai', level: 'mid', width: 1024, height: 1024, quantity: 1, referenceImages: ['https://x.test/photo.jpg'] })
+  })
+
+  it('la passerelle refuse OpenAI : Google refait l’image une seule fois', async () => {
+    const gw = fakeGateway((_e, o) => ((o.body as { provider: string }).provider === 'openai' ? new ApiError('provider non supporté', 400, null) : [ok]))
+    expect(await aiApi(gw).generateImage('p', [])).toBe('https://img.test/a.png')
+    expect(gw.calls.map((c) => (c.options.body as { provider: string }).provider)).toEqual(['openai', 'google'])
+  })
+
+  it('aucune image rendue par OpenAI : Google la refait ; une panne du service, non', async () => {
+    const empty = fakeGateway((_e, o) => ((o.body as { provider: string }).provider === 'openai' ? [{ success: false, error: 'unsupported' }] : [ok]))
+    expect(await aiApi(empty).generateImage('p', [])).toBe('https://img.test/a.png')
+    const down = fakeGateway(() => new ApiError('Panne', 502, null))
+    await expect(aiApi(down).generateImage('p', [])).rejects.toMatchObject({ status: 502 })
+    expect(down.calls).toHaveLength(1)
+  })
+})
