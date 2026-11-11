@@ -3,8 +3,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
-  ArrowLeft,
   Archive,
+  ArrowLeft,
   Check,
   CircleCheck,
   CloudOff,
@@ -14,8 +14,10 @@ import {
   FileJson,
   History,
   Languages,
+  ListChecks,
   Loader2,
   MessageSquare,
+  MonitorSmartphone,
   Send,
   Share2,
   Sparkles,
@@ -30,7 +32,7 @@ import { useSession } from '@/components/providers/Session'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { Confetti } from '@/components/ui/Celebrate'
 import { useConfirm } from '@/components/ui/Confirm'
-import { AutoTextarea, Input, Textarea } from '@/components/ui/Field'
+import { AutoTextarea, Input, Segmented, Textarea } from '@/components/ui/Field'
 import { Menu } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
@@ -62,6 +64,7 @@ import { AgentPanel } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
 import { LockoutEditor } from './LockoutEditor'
 import { MetaCard } from './MetaCard'
+import { StageEditor } from './StageEditor'
 import { StepEditor } from './StepEditor'
 import { StepList } from './StepList'
 
@@ -168,6 +171,24 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const step = steps[idx]
   const changes = instr.publishedVersion && published.data ? diffSteps(published.data.json_data.content, content) : undefined
   const isDirty = !instr.publishedVersion || instr.dirty || saveState === 'saving' || (changes ? Object.values(changes).some((c) => c !== 'same') || published.data?.json_data.content.title !== content.title : true)
+
+  // La vue de modification, retenue sur l'appareil.
+  const [view, setView] = useState<'form' | 'stage'>('form')
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('clip_pref_editor_view') === 'stage') setView('stage')
+    } catch {
+      /* préférence facultative */
+    }
+  }, [])
+  const chooseView = (v: 'form' | 'stage') => {
+    setView(v)
+    try {
+      localStorage.setItem('clip_pref_editor_view', v)
+    } catch {
+      /* préférence facultative */
+    }
+  }
 
   // L'assistant amène l'écran à l'étape qu'il modifie, et l'entoure pendant qu'il travaille.
   const [agentStep, setAgentStep] = useState<string | null>(null)
@@ -513,15 +534,44 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         </div>
       )}
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[340px_1fr]">
-        <aside className="lg:sticky lg:top-6 lg:self-start">
+      {/* Deux façons de modifier : la fiche (tous les réglages) ou l'étape telle qu'au poste. */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="label-caps px-1 text-slate-500">Étapes</p>
+        <Segmented
+          value={view}
+          onChange={chooseView}
+          options={[
+            { value: 'form', label: 'Fiche', icon: <ListChecks className="h-4 w-4" /> },
+            { value: 'stage', label: 'Comme au poste', icon: <MonitorSmartphone className="h-4 w-4" /> },
+          ]}
+        />
+      </div>
+      <div className="mt-4 grid gap-5 lg:grid-cols-[340px_1fr]">
+        <aside className={cn('lg:sticky lg:top-6 lg:self-start', view === 'stage' && 'max-lg:hidden')}>
           <p className="label-caps mb-2 px-1 text-slate-500">{steps.length} étape{steps.length > 1 ? 's' : ''}</p>
           <div className="lg:max-h-[calc(100dvh-140px)] lg:overflow-y-auto lg:pr-1">
             <StepList steps={steps} selectedId={step?.id ?? null} onSelect={setSelected} onAdd={() => insertAfter(steps.length - 1)} changes={inReview ? changes : undefined} readOnly={readOnly} feedbackByStep={feedbackByStep} />
           </div>
         </aside>
         <section id="step-editor" className="min-w-0 scroll-mt-24">
-          {step ? (
+          {step && view === 'stage' ? (
+            <StageEditor
+              content={content}
+              step={step}
+              index={idx}
+              sources={sources}
+              readOnly={readOnly}
+              agentWorking={agentStep === step.id}
+              onChange={setStep}
+              onSelect={(id) => id && setSelected(id)}
+              onInsertAfter={() => insertAfter(idx)}
+              onSourceAdded={(s) => {
+                const next = [...sources, s]
+                setSources(next)
+                void saveSources(data, doc._id, next, actor)
+              }}
+            />
+          ) : step ? (
             <StepEditor
               key={step.id}
               agentWorking={agentStep === step.id}

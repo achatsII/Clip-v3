@@ -42,6 +42,7 @@ export function StepEditor({
   onSourceAdded,
   highlight,
   agentWorking,
+  section = 'all',
 }: {
   content: InstructionContent
   step: Step
@@ -57,6 +58,8 @@ export function StepEditor({
   highlight?: string | null
   /** L'assistant d'édition modifie cette étape en ce moment. */
   agentWorking?: boolean
+  /** « media » : seulement les réglages du média (vue « comme au poste », dans une fenêtre). */
+  section?: 'all' | 'media'
 }) {
   const { ai, org } = useSession()
   const toast = useToast()
@@ -144,12 +147,13 @@ export function StepEditor({
   }
 
   return (
-    <div className={cn('glass-panel rounded-[32px] p-4 transition-shadow sm:p-6', highlight && 'ring-4 ring-amber-300/60', agentWorking && 'ring-4 ring-violet-400/70')}>
-      {agentWorking && (
+    <div className={cn(section === 'media' ? '' : 'glass-panel rounded-[32px] p-4 transition-shadow sm:p-6', section === 'all' && highlight && 'ring-4 ring-amber-300/60', section === 'all' && agentWorking && 'ring-4 ring-violet-400/70')}>
+      {section === 'all' && agentWorking && (
         <p className="mb-3 flex items-center gap-2 rounded-2xl bg-violet-50 px-3 py-2 text-sm font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
           <Sparkles className="h-4 w-4 animate-pulse" /> L’assistant modifie cette étape…
         </p>
       )}
+      {section === 'all' && (
       <div className="mb-4 flex items-center gap-3">
         <span className="bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl font-black text-white tabular-nums">{index + 1}</span>
         <p className="label-caps min-w-0 flex-1 truncate text-slate-500">Étape {index + 1} sur {content.steps.length}</p>
@@ -171,8 +175,9 @@ export function StepEditor({
           </>
         )}
       </div>
+      )}
 
-      {highlight && <p className="mb-4 rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">Retour d’un opérateur : « {highlight} »</p>}
+      {section === 'all' && highlight && <p className="mb-4 rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">Retour d’un opérateur : « {highlight} »</p>}
 
       {/* Média */}
       <div className="relative aspect-video overflow-hidden rounded-[24px] bg-slate-900">
@@ -265,6 +270,8 @@ export function StepEditor({
         </div>
       )}
 
+      {section === 'all' && (
+        <>
       {/* Texte */}
       <div className="mt-6 space-y-4">
         <div>
@@ -352,6 +359,8 @@ export function StepEditor({
             </Button>
           </div>
         </div>
+      )}
+        </>
       )}
 
       <MediaPicker
