@@ -257,7 +257,7 @@ instruction.
   enregistrement d'un brouillon (0,9 s après la dernière modification), l'appareil annonce
   l'instruction et les étapes changées (`draft`). L'éditeur ouvert sur la même instruction ailleurs
   relit le brouillon, va à la première étape changée et le dit (« En direct : modifiée sur l'app
-  mobile »), dans la fiche comme dans « Comme au poste ». Un éditeur qui a des changements pas encore
+  mobile »). Un éditeur qui a des changements pas encore
   enregistrés ne reprend jamais le brouillon reçu : il le signale, et la personne garde les siens ou
   charge l'autre version. Le lecteur ouvert sur l'instruction se relit aussi. Vos propres
   modifications sur un autre appareil vous sont proposées (« Ouvrir ») quand cet écran est ailleurs
@@ -292,22 +292,37 @@ Sans signe de vie depuis deux minutes (app fermée, téléphone en veille), la c
 « interrompue » : on la relance ici, ou on revoit les médias. Dans l'app mobile, l'écran reste
 allumé pendant la génération.
 
-### La vue « Comme au poste » (`StageEditor`)
+### L'éditeur (`StageEditor`)
 
-Une des deux façons de modifier les étapes ; l'autre est la fiche, avec tous les réglages. On
-modifie l'étape telle que l'opérateur la verra.
+Une seule façon de modifier : l'étape telle que l'opérateur la verra, chaque texte modifié là où il
+est. Il n'y a plus de fiche à côté (« c'est mélangeant ») : chaque outil apparaît au moment où il
+sert, à côté de ce qu'il touche. L'éditeur prend tout l'écran ; la barre et la navigation de l'app
+s'effacent (`useImmersive`, `src/lib/ui/immersive.ts`).
 
+- **En haut, l'instruction entière** : retour, le titre et son état (« Modifications à publier ·
+  Enregistré » ; le toucher ouvre la fenêtre des infos : titre, résumé, postes, fiche, cadenassage),
+  « N à vérifier » quand l'IA a des questions (une à la fois, ou « C'est déjà vérifié »), le témoin du
+  direct (un point), annuler/rétablir, le bouton **Assistant** (le seul de l'IA : simplifier, rendre
+  plus clair, ajouter un point clé, vérifier la sécurité, ou « Demander autre chose » qui ouvre la
+  conversation), le « … » (infos, tester comme l'opérateur, partager, traduire, historique, PDF,
+  JSON, dupliquer, nouvelle instruction avec ces médias, régénérer, archiver) et l'action principale
+  (Publier, Faire approuver, Approuver ; rien quand tout est publié).
+- **À côté de l'étape** : son « … » (média, ajouter, dupliquer, déplacer, supprimer), « Modifier le
+  média » dans une barre sous l'image, et, sous le texte, « + Mise en garde » et « + Point clé »
+  seulement quand ils manquent (trois points clés au plus). Le niveau d'une mise en garde se choisit
+  sur son étiquette. Un retour d'opérateur s'affiche au-dessus du titre.
+- **Le média** se règle dans une fenêtre (`StepMediaEditor`) : l'aperçu, les médias de l'étape (en
+  ajouter un), puis Annoter, Vidéo | Image, « Avec l'IA » (illustration à partir de la photo, schéma
+  de l'étape) et Retirer ; le verdict, la légende et la disposition attendent sous « Plus
+  d'options ».
+- **Publier** : la fenêtre dit où l'instruction s'affichera et laisse choisir les postes à ce
+  moment-là ; l'avis sur la génération par l'IA s'y demande, quand la personne a tout relu.
 - **Ordinateur** : en plein écran, dans la mise en page exacte du lecteur (le grand média à gauche,
-  le texte à droite).
-  - En haut : les outils (« Améliorer » par l'IA, le menu ⋯ : média, ajouter, dupliquer,
-    déplacer, supprimer).
-  - En bas : la bande des étapes. Les flèches du clavier passent d'une étape à l'autre.
-  - La vue laisse sa place au panneau de l'assistant.
-- **Téléphone** : la vue du téléphone, une étape à la fois, avec les mêmes outils dans la barre du
-  haut.
-
-Chaque texte se modifie là où il est. Le média se règle dans une fenêtre, avec les réglages de la
-fiche. La retouche par l'IA (`useStepAssist`) est la même que dans la fiche.
+  le texte à droite) ; en bas, la bande des étapes (retours d'opérateurs et, en approbation, étapes
+  nouvelles ou modifiées marqués sur les vignettes). Les flèches du clavier passent d'une étape à
+  l'autre. La vue laisse sa place au panneau de l'assistant.
+- **Téléphone** : la vue du téléphone ; en bas, sous le pouce, les étapes (précédente, le choix,
+  suivante), le « … » de l'étape et l'Assistant. Cette barre se cache pendant qu'on écrit.
 
 ### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
 

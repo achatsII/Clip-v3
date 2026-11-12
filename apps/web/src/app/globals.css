@@ -192,6 +192,17 @@ html[data-kb='open'] .kb-fit {
   max-height: calc(100% - 0.75rem) !important;
 }
 
+/* ───────────────────────── Plein écran ─────────────────────────
+   L'éditeur pose data-immersive sur <html> (src/lib/ui/immersive.ts) : la barre et la navigation
+   de l'app s'effacent, il prend tout l'écran avec sa propre barre. */
+html[data-immersive] .shell-chrome {
+  display: none !important;
+}
+html[data-immersive] .shell-main {
+  max-width: none !important;
+  padding: 0 !important;
+}
+
 /* ───────────────────────── Verre (5.5) ─────────────────────────
    Écrire seulement « backdrop-filter » : Lightning CSS ajoute le préfixe -webkit- pour Safari.
    Avec les deux écrits, il ne garde que la version préfixée, et Chrome perd tout le flou. */

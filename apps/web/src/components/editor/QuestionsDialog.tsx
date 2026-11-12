@@ -1,5 +1,6 @@
 'use client'
 
+import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AiCost } from '@/components/billing/AiCost'
 import { Button } from '@/components/ui/Button'
@@ -15,9 +16,9 @@ export interface QuestionAnswer {
 
 /**
  * Répondre aux questions de l'IA, une à la fois : des réponses proposées quand la réponse est l'un
- * de quelques choix clairs, sinon un champ, écrit ou dicté. On peut passer une question. À la fin,
- * les réponses partent ensemble à l'assistant d'édition, qui corrige l'instruction sous les yeux de
- * la personne (`onApply`).
+ * de quelques choix clairs, sinon un champ, écrit ou dicté. On peut passer une question, ou la dire
+ * déjà vérifiée (`onChecked` : elle quitte la liste). À la fin, les réponses partent ensemble à
+ * l'assistant d'édition, qui corrige l'instruction sous les yeux de la personne (`onApply`).
  */
 export function QuestionsDialog({
   open,
@@ -25,12 +26,15 @@ export function QuestionsDialog({
   choices,
   onClose,
   onApply,
+  onChecked,
 }: {
   open: boolean
   questions: string[]
   choices: Record<string, string[]>
   onClose: () => void
   onApply: (answers: QuestionAnswer[]) => void
+  /** Rien à corriger : la personne l'a déjà vérifié. */
+  onChecked?: (question: string) => void
 }) {
   const t = useMessages().editor.page.questions.dialog
   const [index, setIndex] = useState(0)
@@ -107,6 +111,25 @@ export function QuestionsDialog({
       <div className="mt-4">
         <Textarea key={question} value={value} onChange={(e) => setAnswers({ ...answers, [question]: e.target.value })} placeholder={t.placeholder} rows={2} />
       </div>
+      {onChecked && (
+        <button
+          type="button"
+          onClick={() => {
+            const rest = questions.filter((q) => q !== question)
+            onChecked(question)
+            // La dernière vérifiée : les réponses déjà données partent ; sinon, la suivante prend sa place.
+            if (!rest.length) onClose()
+            else if (at >= rest.length) {
+              const given = rest.map((q) => ({ question: q, answer: (answers[q] ?? '').trim() })).filter((x) => x.answer)
+              if (given.length) onApply(given)
+              else onClose()
+            }
+          }}
+          className="btn-press mt-3 inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 text-sm font-black text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-500/10"
+        >
+          <Check className="h-4 w-4" /> {t.checked}
+        </button>
+      )}
     </Modal>
   )
 }

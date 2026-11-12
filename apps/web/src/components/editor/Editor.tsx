@@ -4,25 +4,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
   Archive,
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  ChevronUp,
   CircleCheck,
-  CloudOff,
   Copy,
   CopyPlus,
   Eye,
   FileDown,
   FileJson,
   History,
+  Info,
   Languages,
-  ListChecks,
-  Loader2,
-  MessageCircleQuestion,
   MessageSquare,
-  Radio,
-  MonitorSmartphone,
   Send,
   Share2,
   Sparkles,
@@ -30,18 +21,16 @@ import {
   ThumbsUp,
   X,
 } from 'lucide-react'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from '@/components/providers/Session'
-import { Button, LinkButton } from '@/components/ui/Button'
+import { Button } from '@/components/ui/Button'
 import { Confetti } from '@/components/ui/Celebrate'
 import { useConfirm } from '@/components/ui/Confirm'
-import { AutoTextarea, Input, Segmented, Textarea } from '@/components/ui/Field'
-import { Menu } from '@/components/ui/Menu'
+import { Input, Label, Textarea } from '@/components/ui/Field'
+import type { MenuItem } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
-import { Badge } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { cacheDraft, cacheInstruction, qk, useFeedback, useInstructions } from '@/hooks/queries'
 import { useDraftHistory } from '@/hooks/useDraftHistory'
@@ -49,13 +38,14 @@ import { useDraftWatch } from '@/hooks/useDraftWatch'
 import { LockBadge } from '@/components/billing/Billing'
 import { useBilling, useEntitlement, useGate, useLimit } from '@/lib/billing/state'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
+import { useImmersive } from '@/lib/ui/immersive'
 import { inNativeShell } from '@/lib/bridge/native'
 import { deviceId, onRealtime, publishRealtime, useRealtimeState, writtenBy } from '@/lib/realtime/client'
 import { changedSteps, followStep, readVersion, remoteDraftAction } from '@/lib/realtime/liveDraft'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
 import { diffSteps } from '@/lib/model/diff'
-import { FEEDBACK_KINDS, STATUS } from '@/lib/model/catalog'
+import { FEEDBACK_KINDS } from '@/lib/model/catalog'
 import { nowIso, T, uid } from '@/lib/model/repo'
 import {
   archiveInstruction,
@@ -70,20 +60,18 @@ import {
   updatePublishedStations,
 } from '@/lib/model/service'
 import type { Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
-import { markCreatedSeen, QUESTIONS_FOLDED, setInIdList, useIdList } from '@/lib/prefs'
-import { cn, formatDateTime, timeAgo } from '@/lib/util/cn'
+import { markCreatedSeen } from '@/lib/prefs'
+import { formatDateTime, timeAgo } from '@/lib/util/cn'
 import { AgentPanel, type AgentRequest } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
 import { LockoutEditor } from './LockoutEditor'
-import { MetaCard } from './MetaCard'
+import { MetaCard, StationPicker } from './MetaCard'
 import { QuestionsDialog, type QuestionAnswer } from './QuestionsDialog'
 import { StageEditor } from './StageEditor'
-import { StepEditor } from './StepEditor'
-import { StepList } from './StepList'
 import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
 import { attachReel, carryClips } from '@/lib/media/reel'
 import { LiveBadge } from './LiveBadge'
-import { UndoButtons, UndoPill } from './UndoControls'
+import { UndoPill } from './UndoControls'
 
 type SaveState = 'saved' | 'saving' | 'error'
 /** Ce qu'un autre appareil annonce d'un brouillon enregistré. */
@@ -119,7 +107,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [publishing, setPublishing] = useState(false)
   const reelToggle = useToggle('stepReel')
   const [celebrate, setCelebrate] = useState(false)
-  const [dialog, setDialog] = useState<null | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks'>(null)
+  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks'>(null)
   const [comment, setComment] = useState('')
   const [rating, setRating] = useState(instr.generation?.rating ?? null)
   const [ratingComment, setRatingComment] = useState<string | null>(null)
@@ -127,9 +115,6 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const questionsRef = useRef(questions)
   questionsRef.current = questions
   const [questionsOpen, setQuestionsOpen] = useState(false)
-  // « Plus tard » : la carte des questions se replie en une ligne (retenu pour cette instruction).
-  const questionsFolded = useIdList(QUESTIONS_FOLDED).includes(doc._id)
-  const foldQuestions = (on: boolean) => setInIdList(QUESTIONS_FOLDED, doc._id, on)
   const [agentRequest, setAgentRequest] = useState<AgentRequest | null>(null)
   /** Retire des questions de l'IA celles qui sont réglées (vérifiées, ou répondues et corrigées). */
   const settleQuestions = (done: string[]) => {
@@ -369,23 +354,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const changes = instr.publishedVersion && published.data ? diffSteps(published.data.json_data.content, content) : undefined
   const isDirty = !instr.publishedVersion || instr.dirty || saveState === 'saving' || (changes ? Object.values(changes).some((c) => c !== 'same') || published.data?.json_data.content.title !== content.title : true)
 
-  // La vue de modification, retenue sur l'appareil.
-  const [view, setView] = useState<'form' | 'stage'>('form')
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('clip_pref_editor_view') === 'stage') setView('stage')
-    } catch {
-      /* préférence facultative */
-    }
-  }, [])
-  const chooseView = (v: 'form' | 'stage') => {
-    setView(v)
-    try {
-      localStorage.setItem('clip_pref_editor_view', v)
-    } catch {
-      /* préférence facultative */
-    }
-  }
+  // L'éditeur prend tout l'écran : la barre et la navigation de l'app s'effacent.
+  useImmersive()
 
   // L'assistant amène l'écran à l'étape qu'il modifie, et l'entoure pendant qu'il travaille.
   const [agentStep, setAgentStep] = useState<string | null>(null)
@@ -546,27 +516,137 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const gate = useGate()
   const { openPaywall } = useBilling()
 
-  const primary = readOnly ? null : inReview ? (
-    canApprove ? (
-      <Button variant="success" size="lg" loading={publishing} onClick={() => doPublish(actor)} icon={<CircleCheck className="h-5 w-5" />}>
-        {tp.actions.approveAndPublish}
+  const askPublish = () => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog(approval ? 'review' : 'checks') }) : setDialog(approval ? 'review' : 'checks'))
+  const primary = (compact: boolean) =>
+    readOnly ? null : inReview ? (
+      canApprove ? (
+        <Button variant="success" size={compact ? 'sm' : 'md'} loading={publishing} onClick={() => doPublish(actor)} icon={<CircleCheck className="h-5 w-5" />}>
+          {compact ? tp.actions.approve : tp.actions.approveAndPublish}
+        </Button>
+      ) : null
+    ) : !isDirty ? null : (
+      <Button variant="primary" size={compact ? 'sm' : 'md'} disabled={!!problems.length} title={problems.join(' ') || undefined} loading={publishing} onClick={askPublish} icon={<Send className="h-4 w-4" />}>
+        {approval ? (compact ? tp.actions.requestApprovalShort : tp.actions.requestApproval) : tp.actions.publish} {blockedByLimit && <LockBadge />}
       </Button>
-    ) : (
-      <Badge tone="warning" className="h-12 px-4 text-xs">{tp.actions.awaitingApproval}</Badge>
     )
-  ) : !isDirty ? (
-    <LinkButton href={`/instructions/${doc._id}/lire`} variant="primary" size="lg" icon={<Eye className="h-5 w-5" />}>
-      {tp.actions.viewAtStation}
-    </LinkButton>
-  ) : approval ? (
-    <Button variant="primary" size="lg" disabled={!!problems.length} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog('review') }) : setDialog('review'))} icon={<Send className="h-5 w-5" />}>
-      {tp.actions.requestApproval} {blockedByLimit && <LockBadge />}
-    </Button>
-  ) : (
-    <Button variant="primary" size="lg" disabled={!!problems.length} loading={publishing} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog('checks') }) : setDialog('checks'))} icon={<Send className="h-5 w-5" />}>
-      {instr.publishedVersion ? tp.actions.publishVersion(instr.publishedVersion + 1) : tp.actions.publish} {blockedByLimit && <LockBadge />}
-    </Button>
-  )
+
+  // Sous le titre : où en est l'instruction, et l'enregistrement.
+  const publication = inReview ? tp.status.review : !instr.publishedVersion ? tp.status.draft : isDirty ? tp.status.unpublished : tp.status.published(instr.publishedVersion)
+  const status = liveLabel ?? (saveState === 'saved' ? `${publication} · ${saveLabel}` : saveLabel)
+
+  // Tout ce qui touche l'instruction entière, rangé dans son « … ».
+  const menu: MenuItem[] = [
+    { label: tp.info.menu, icon: <Info className="h-4 w-4" />, onClick: () => setDialog('info') },
+    { label: tp.menu.test, icon: <Eye className="h-4 w-4" />, onClick: () => router.push(`/instructions/${doc._id}/lire?apercu=1`) },
+    { label: tp.menu.share, icon: <Share2 className="h-4 w-4" />, onClick: () => setDialog('share') },
+    { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle, hint: translations === 'locked' ? <LockBadge /> : undefined },
+    { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history'), divider: true },
+    { label: tp.menu.exportPdf, icon: <FileDown className="h-4 w-4" />, onClick: () => window.open(`/instructions/${doc._id}/imprimer`, '_blank') },
+    { label: tp.menu.exportJson, icon: <FileJson className="h-4 w-4" />, onClick: exportJson },
+    {
+      label: tp.menu.duplicate,
+      icon: <Copy className="h-4 w-4" />,
+      hidden: readOnly,
+      divider: true,
+      onClick: async () => {
+        const d = await duplicateInstruction(data, { ...doc, json_data: { ...instr, draft: content } }, actor)
+        refresh()
+        router.push(`/instructions/${d._id}`)
+      },
+    },
+    {
+      // Relancer sans toucher à celle-ci : une nouvelle capture avec les mêmes médias et la même demande.
+      label: tp.menu.reuseMedia,
+      icon: <CopyPlus className="h-4 w-4" />,
+      hidden: readOnly || !sources.length,
+      onClick: async () => {
+        try {
+          const d = await newFromSources(data, { ...doc, json_data: { ...instr, sources } }, actor)
+          void qc.invalidateQueries({ queryKey: qk.instructions })
+          router.push(`/instructions/${d._id}`)
+        } catch (e) {
+          toast.error(tp.menu.reuseMediaFailed, errorText(e))
+        }
+      },
+    },
+    {
+      label: tp.menu.regenerate,
+      icon: <Sparkles className="h-4 w-4" />,
+      hidden: readOnly || !sources.length,
+      onClick: async () => {
+        if (!(await confirm({ title: tp.menu.regenerateConfirm.title, description: history.enabled ? tp.menu.regenerateConfirm.descriptionKept : tp.menu.regenerateConfirm.description, confirmLabel: tp.menu.regenerateConfirm.confirm }))) return
+        // Le brouillon enregistré tel quel : la génération en garde un point de retour avant de le remplacer.
+        await flush().catch(() => undefined)
+        onRegenerate()
+      },
+    },
+    {
+      label: tp.menu.archive,
+      icon: <Archive className="h-4 w-4" />,
+      danger: true,
+      divider: true,
+      hidden: readOnly,
+      onClick: async () => {
+        if (!(await confirm({ title: tp.menu.archiveConfirm.title(content.title), description: tp.menu.archiveConfirm.description, confirmLabel: tp.menu.archiveConfirm.confirm, danger: true }))) return
+        await archiveInstruction(data, doc)
+        refresh()
+        toast.success(tp.menu.archived)
+        router.push('/instructions')
+      },
+    },
+  ]
+
+  // Sous l'en-tête, seulement quand il y a lieu : une modification en même temps ailleurs, l'approbation.
+  const notices =
+    remote?.conflict || (inReview && instr.review) || (!inReview && instr.review?.changesRequested) ? (
+      <>
+        {remote?.conflict && (
+          <div className="flex flex-col gap-2 rounded-2xl bg-amber-50 p-3 sm:flex-row sm:items-center dark:bg-amber-500/10" role="status">
+            <p className="flex-1 text-sm font-bold text-amber-900 dark:text-amber-100">{tp.live.conflict(remote.device, remote.byName)}</p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => setRemote(null)}>
+                {tp.live.keepMine}
+              </Button>
+              <Button size="sm" variant="primary" onClick={() => void pullRemote({ byName: remote.byName, device: remote.device }, true)}>
+                {tp.live.loadTheirs}
+              </Button>
+            </div>
+          </div>
+        )}
+        {inReview && instr.review && (
+          <div className="flex flex-col gap-2 rounded-2xl bg-amber-50 p-3 sm:flex-row sm:items-center dark:bg-amber-500/10">
+            <MessageSquare className="h-5 w-5 shrink-0 text-amber-600 max-sm:hidden" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-amber-900 dark:text-amber-200">{tp.review.requested(instr.review.requestedByName, timeAgo(instr.review.requestedAt))}</p>
+              {instr.review.note && <p className="text-sm font-medium text-amber-800 dark:text-amber-300">{tp.review.quote(instr.review.note)}</p>}
+              {changes && <p className="text-xs font-bold text-amber-700">{tp.review.changesMarked}</p>}
+            </div>
+            {canApprove && (
+              <Button size="sm" onClick={() => setDialog('changes')} icon={<X className="h-4 w-4" />}>
+                {tp.review.requestChanges}
+              </Button>
+            )}
+          </div>
+        )}
+        {!inReview && instr.review?.changesRequested && (
+          <div className="flex items-start gap-3 rounded-2xl bg-rose-50 p-3 dark:bg-rose-500/10">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+            <div className="min-w-0">
+              <p className="text-sm font-black text-rose-900 dark:text-rose-200">{tp.review.changesRequested(instr.review.changesRequested.byName)}</p>
+              <p className="text-sm font-medium text-rose-800 dark:text-rose-300">{tp.review.quote(instr.review.changesRequested.comment)}</p>
+            </div>
+          </div>
+        )}
+      </>
+    ) : null
+
+  const feedbackNote = !step ? null : highlightFeedback && highlightFeedback.json_data.stepId === step.id ? highlightFeedback.json_data.comment || FEEDBACK_KINDS.unclear.label : ((feedback.data ?? []).find((f) => f.json_data.stepId === step.id)?.json_data.comment ?? null)
+  const addSource = (src: Source) => {
+    const next = [...sources, src]
+    setSources(next)
+    cacheInstruction(qc, doc._id, { sources: next })
+    void saveSources(data, doc._id, next, actor)
+  }
 
   function duplicateStep() {
     if (!step) return
@@ -584,320 +664,35 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   }
 
   return (
-    <div className={cn('pb-40', agentOpen && 'lg:pr-[424px]')}>
+    <div>
       <Confetti show={celebrate} />
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <Link href="/instructions" className="inline-flex items-center gap-1 text-sm font-black text-slate-500">
-          <ArrowLeft className="h-4 w-4" /> {tp.backToList}
-        </Link>
-        <div className="flex min-w-0 items-center gap-1">
-          {liveToggle && <LiveBadge state={realtimeState} />}
-          <UndoButtons history={history} className="max-lg:hidden" />
-          {/* L'état de l'enregistrement mène à l'historique : on y retrouve les états d'avant. */}
-          <button
-            type="button"
-            onClick={() => setDialog('history')}
-            title={tp.undo.history}
-            className={cn('btn-press inline-flex min-h-11 min-w-0 items-center gap-1.5 rounded-2xl px-2 text-xs font-black hover:bg-slate-900/5 dark:hover:bg-white/10', liveLabel ? 'text-[var(--primary)]' : saveState === 'error' ? 'text-rose-600' : 'text-slate-400')}
-            aria-live="polite"
-          >
-            {liveLabel ? <Radio className="h-3.5 w-3.5 shrink-0" /> : saveState === 'saving' ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : saveState === 'error' ? <CloudOff className="h-3.5 w-3.5 shrink-0" /> : <Check className="h-3.5 w-3.5 shrink-0" />}
-            <span className="truncate">{saveLabel}</span>
-            <History className="h-3.5 w-3.5 shrink-0 opacity-60" />
-          </button>
-        </div>
-      </div>
-      {remote?.conflict && (
-        <div className="mb-4 flex flex-col gap-3 rounded-[24px] bg-amber-50 p-4 sm:flex-row sm:items-center dark:bg-amber-500/10" role="status">
-          <p className="flex-1 text-sm font-bold text-amber-900 dark:text-amber-100">{tp.live.conflict(remote.device, remote.byName)}</p>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => setRemote(null)}>
-              {tp.live.keepMine}
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => void pullRemote({ byName: remote.byName, device: remote.device }, true)}>
-              {tp.live.loadTheirs}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <Badge className={cn('text-white', STATUS[inReview ? 'review' : instr.publishedVersion ? 'published' : 'draft'].className)}>
-              {inReview ? STATUS.review.label : instr.publishedVersion ? tp.header.publishedBadge(instr.publishedVersion) : STATUS.draft.label}
-            </Badge>
-            {instr.publishedVersion && isDirty && !inReview && <Badge tone="warning">{tp.header.unpublishedChanges}</Badge>}
-            {instr.publishedAt && <span className="text-xs font-bold text-slate-400">{tp.header.publishedAgo(timeAgo(instr.publishedAt))}</span>}
-          </div>
-          <AutoTextarea
-            singleLine
-            value={content.title}
-            readOnly={readOnly}
-            onChange={(e) => update({ ...content, title: e.target.value })}
-            aria-label={tp.header.titleLabel}
-            className="w-full bg-transparent text-3xl leading-tight font-black tracking-tighter text-balance text-slate-900 focus:outline-none sm:text-4xl dark:text-white"
-          />
-          <AutoTextarea
-            value={content.summary}
-            readOnly={readOnly}
-            onChange={(e) => update({ ...content, summary: e.target.value })}
-            aria-label={tp.header.summaryLabel}
-            placeholder={tp.header.summaryPlaceholder}
-            className="mt-1 w-full bg-transparent text-base font-medium text-slate-500 focus:outline-none dark:text-slate-400"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <LinkButton href={`/instructions/${doc._id}/lire?apercu=1`} icon={<Eye className="h-4 w-4" />}>
-            {tp.header.preview}
-          </LinkButton>
-          <Button onClick={() => setDialog('share')} icon={<Share2 className="h-4 w-4" />}>
-            {tp.header.share}
-          </Button>
-          <Menu
-            items={[
-              { label: tp.menu.exportPdf, icon: <FileDown className="h-4 w-4" />, onClick: () => window.open(`/instructions/${doc._id}/imprimer`, '_blank') },
-              { label: tp.menu.exportJson, icon: <FileJson className="h-4 w-4" />, onClick: exportJson },
-              { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history') },
-              { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle, hint: translations === 'locked' ? <LockBadge /> : undefined },
-              {
-                label: tp.menu.regenerate,
-                icon: <Sparkles className="h-4 w-4" />,
-                hidden: readOnly || !sources.length,
-                onClick: async () => {
-                  if (!(await confirm({ title: tp.menu.regenerateConfirm.title, description: history.enabled ? tp.menu.regenerateConfirm.descriptionKept : tp.menu.regenerateConfirm.description, confirmLabel: tp.menu.regenerateConfirm.confirm }))) return
-                  // Le brouillon enregistré tel quel : la génération en garde un point de retour avant de le remplacer.
-                  await flush().catch(() => undefined)
-                  onRegenerate()
-                },
-              },
-              {
-                label: tp.menu.duplicate,
-                icon: <Copy className="h-4 w-4" />,
-                hidden: readOnly,
-                onClick: async () => {
-                  const d = await duplicateInstruction(data, { ...doc, json_data: { ...instr, draft: content } }, actor)
-                  refresh()
-                  router.push(`/instructions/${d._id}`)
-                },
-              },
-              {
-                // Relancer sans toucher à celle-ci : une nouvelle capture avec les mêmes médias et la même demande.
-                label: tp.menu.reuseMedia,
-                icon: <CopyPlus className="h-4 w-4" />,
-                hidden: readOnly || !sources.length,
-                onClick: async () => {
-                  try {
-                    const d = await newFromSources(data, { ...doc, json_data: { ...instr, sources } }, actor)
-                    void qc.invalidateQueries({ queryKey: qk.instructions })
-                    router.push(`/instructions/${d._id}`)
-                  } catch (e) {
-                    toast.error(tp.menu.reuseMediaFailed, errorText(e))
-                  }
-                },
-              },
-              {
-                label: tp.menu.archive,
-                icon: <Archive className="h-4 w-4" />,
-                danger: true,
-                hidden: readOnly,
-                onClick: async () => {
-                  if (!(await confirm({ title: tp.menu.archiveConfirm.title(content.title), description: tp.menu.archiveConfirm.description, confirmLabel: tp.menu.archiveConfirm.confirm, danger: true }))) return
-                  await archiveInstruction(data, doc)
-                  refresh()
-                  toast.success(tp.menu.archived)
-                  router.push('/instructions')
-                },
-              },
-            ]}
-          />
-          {primary}
-        </div>
-      </header>
-
-      {inReview && instr.review && (
-        <div className="mb-5 flex flex-col gap-3 rounded-[28px] bg-amber-50 p-5 sm:flex-row sm:items-center dark:bg-amber-500/10">
-          <MessageSquare className="h-6 w-6 shrink-0 text-amber-600" />
-          <div className="flex-1">
-            <p className="font-black text-amber-900 dark:text-amber-200">
-              {tp.review.requested(instr.review.requestedByName, timeAgo(instr.review.requestedAt))}
-            </p>
-            {instr.review.note && <p className="text-sm font-medium text-amber-800 dark:text-amber-300">{tp.review.quote(instr.review.note)}</p>}
-            {changes && <p className="text-sm font-bold text-amber-700">{tp.review.changesMarked}</p>}
-          </div>
-          {canApprove && (
-            <Button onClick={() => setDialog('changes')} icon={<X className="h-4 w-4" />}>
-              {tp.review.requestChanges}
-            </Button>
-          )}
-        </div>
-      )}
-      {!inReview && instr.review?.changesRequested && (
-        <div className="mb-5 flex items-start gap-3 rounded-[28px] bg-rose-50 p-5 dark:bg-rose-500/10">
-          <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-rose-600" />
-          <div>
-            <p className="font-black text-rose-900 dark:text-rose-200">{tp.review.changesRequested(instr.review.changesRequested.byName)}</p>
-            <p className="text-sm font-medium text-rose-800 dark:text-rose-300">{tp.review.quote(instr.review.changesRequested.comment)}</p>
-          </div>
-        </div>
-      )}
-
-      {instr.generation && !rating && !readOnly && (
-        <div className="glass-card mb-5 flex flex-col gap-3 rounded-[28px] p-4 sm:flex-row sm:items-center">
-          <Sparkles className="h-5 w-5 shrink-0 text-[var(--primary)] max-sm:hidden" />
-          <p className="flex-1 text-sm font-bold text-slate-600 dark:text-slate-300">{tp.rating.prompt(timeAgo(instr.generation.at))}</p>
-          {ratingComment === null ? (
-            <div className="flex items-center gap-2">
-              <Button size="sm" icon={<ThumbsUp className="h-4 w-4" />} onClick={() => rate('up')}>
-                {tp.rating.yes}
-              </Button>
-              <Button size="sm" icon={<ThumbsDown className="h-4 w-4" />} onClick={() => setRatingComment('')}>
-                {tp.rating.no}
-              </Button>
-            </div>
-          ) : (
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(e) => {
-                e.preventDefault()
-                void rate('down', ratingComment ?? '')
-              }}
-            >
-              <Input data-own-undo="" autoFocus value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder={tp.rating.missingPlaceholder} aria-label={tp.rating.missingLabel} className="h-11 text-sm" wrapperClassName="flex-1 sm:w-72 sm:flex-none" />
-              <Button size="sm" type="submit" variant="primary">
-                {tp.rating.send}
-              </Button>
-            </form>
-          )}
-        </div>
-      )}
-
-      {questions.length > 0 && !readOnly && questionsFolded && (
-        <button type="button" onClick={() => foldQuestions(false)} className="btn-press mb-5 flex min-h-12 w-full items-center gap-3 rounded-[20px] bg-amber-50 px-4 py-2 text-left text-sm font-black text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
-          <MessageCircleQuestion className="h-5 w-5 shrink-0 text-amber-600" />
-          <span className="min-w-0 flex-1">{tp.questions.folded(questions.length)}</span>
-          <span className="flex shrink-0 items-center gap-1 text-amber-700 dark:text-amber-300">
-            {tp.questions.show} <ChevronDown className="h-4 w-4" />
-          </span>
-        </button>
-      )}
-      {questions.length > 0 && !readOnly && !questionsFolded && (
-        <div className="mb-5 rounded-[28px] bg-amber-50 p-5 dark:bg-amber-500/10">
-          <p className="label-caps mb-1 text-amber-700 dark:text-amber-300">{tp.questions.title}</p>
-          <p className="mb-3 text-sm font-medium text-amber-900/80 dark:text-amber-100/80">{tp.questions.intro}</p>
-          <ul className="space-y-2">
-            {questions.map((q) => (
-              <li key={q} className="flex items-start gap-3">
-                <button
-                  type="button"
-                  aria-label={tp.questions.markChecked}
-                  title={tp.questions.markChecked}
-                  onClick={() => settleQuestions([q])}
-                  className="btn-press mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-amber-400 text-amber-600 hover:bg-amber-400 hover:text-white"
-                >
-                  <Check className="h-4 w-4" />
-                </button>
-                <span className="text-[15px] font-bold text-amber-950 dark:text-amber-100">{q}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button icon={<MessageCircleQuestion className="h-4 w-4" />} onClick={() => setQuestionsOpen(true)}>
-              {tp.questions.answer}
-            </Button>
-            <button type="button" onClick={() => foldQuestions(true)} className="btn-press flex h-11 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-500/15">
-              <ChevronUp className="h-4 w-4" /> {tp.questions.later}
-            </button>
-          </div>
-        </div>
-      )}
-      <QuestionsDialog open={questionsOpen} questions={questions} choices={instr.generation?.choices ?? {}} onClose={() => setQuestionsOpen(false)} onApply={answerQuestions} />
-
-      <MetaCard content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={update} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
-
-      {content.kind === 'lockout' && content.lockout && (
-        <div className="mt-5">
-          <LockoutEditor value={content.lockout} readOnly={readOnly} onChange={(lockout) => update({ ...content, lockout })} />
-        </div>
-      )}
-
-      {/* Deux façons de modifier : la fiche (tous les réglages) ou l'étape telle qu'au poste. */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="label-caps px-1 text-slate-500">{tp.steps.title}</p>
-        <Segmented
-          value={view}
-          onChange={chooseView}
-          options={[
-            { value: 'form', label: t.editor.views.form, icon: <ListChecks className="h-4 w-4" /> },
-            { value: 'stage', label: t.editor.views.stage, icon: <MonitorSmartphone className="h-4 w-4" /> },
-          ]}
-        />
-      </div>
-      <div className="mt-4 grid gap-5 lg:grid-cols-[340px_1fr]">
-        <aside className={cn('lg:sticky lg:top-6 lg:self-start', view === 'stage' && 'max-lg:hidden')}>
-          <p className="label-caps mb-2 px-1 text-slate-500">{tp.steps.count(steps.length)}</p>
-          <div className="lg:max-h-[calc(100dvh-140px)] lg:overflow-y-auto lg:pr-1">
-            <StepList steps={steps} selectedId={step?.id ?? null} onSelect={setSelected} onAdd={() => insertAfter(steps.length - 1)} changes={inReview ? changes : undefined} readOnly={readOnly} feedbackByStep={feedbackByStep} />
-          </div>
-        </aside>
-        <section id="step-editor" className="min-w-0 scroll-mt-24">
-          {step && view === 'stage' ? (
-            <StageEditor
-              content={content}
-              step={step}
-              index={idx}
-              sources={sources}
-              readOnly={readOnly}
-              agentWorking={agentStep === step.id}
-              agentOpen={agentOpen}
-              saveLabel={saveLabel}
-              badge={liveToggle ? <LiveBadge state={realtimeState} /> : null}
-              remoteNote={flash?.stepId === step.id ? flash.note : null}
-              history={history}
-              onHistory={() => setDialog('history')}
-              onChange={setStep}
-              onSelect={(id) => id && setSelected(id)}
-              onInsertAfter={() => insertAfter(idx)}
-              onAddEnd={() => insertAfter(steps.length - 1)}
-              onMove={moveStep}
-              onDuplicate={duplicateStep}
-              onDelete={deleteStep}
-              onExit={() => chooseView('form')}
-              onSourceAdded={(s) => {
-                const next = [...sources, s]
-                setSources(next)
-                cacheInstruction(qc, doc._id, { sources: next })
-                void saveSources(data, doc._id, next, actor)
-              }}
-            />
-          ) : step ? (
-            <StepEditor
-              key={step.id}
-              agentWorking={agentStep === step.id}
-              remoteNote={flash?.stepId === step.id ? flash.note : null}
-              content={content}
-              step={step}
-              index={idx}
-              sources={sources}
-              readOnly={readOnly}
-              highlight={highlightFeedback && highlightFeedback.json_data.stepId === step.id ? highlightFeedback.json_data.comment || FEEDBACK_KINDS.unclear.label : (feedback.data ?? []).find((f) => f.json_data.stepId === step.id)?.json_data.comment ?? null}
-              onChange={setStep}
-              onMove={moveStep}
-              onInsertAfter={() => insertAfter(idx)}
-              onDuplicate={duplicateStep}
-              onDelete={deleteStep}
-              onSourceAdded={(s) => {
-                const next = [...sources, s]
-                setSources(next)
-                cacheInstruction(qc, doc._id, { sources: next })
-                void saveSources(data, doc._id, next, actor)
-              }}
-            />
-          ) : (
-            <div className="glass-panel rounded-[32px] p-10 text-center font-bold text-slate-500">{tp.steps.empty}</div>
-          )}
-        </section>
-      </div>
+      <StageEditor
+        content={content}
+        step={step}
+        index={idx}
+        sources={sources}
+        readOnly={readOnly}
+        agentWorking={!!step && agentStep === step.id}
+        agentOpen={agentOpen}
+        top={{ title: content.title, status, statusTone: liveLabel ? 'live' : saveState === 'error' ? 'error' : undefined, primary, menu, onInfo: () => setDialog('info'), questions: readOnly ? 0 : questions.length, onQuestions: () => setQuestionsOpen(true) }}
+        notices={notices}
+        badge={liveToggle ? <LiveBadge state={realtimeState} compact /> : null}
+        remoteNote={step && flash?.stepId === step.id ? flash.note : null}
+        feedbackNote={feedbackNote}
+        feedbackByStep={feedbackByStep}
+        changes={inReview ? changes : undefined}
+        history={history}
+        onAssistant={() => setAgentOpen(true)}
+        onChange={setStep}
+        onSelect={(id) => id && setSelected(id)}
+        onInsertAfter={() => insertAfter(idx)}
+        onAddEnd={() => insertAfter(steps.length - 1)}
+        onMove={moveStep}
+        onDuplicate={duplicateStep}
+        onDelete={deleteStep}
+        onSourceAdded={addSource}
+      />
+      <QuestionsDialog open={questionsOpen} questions={questions} choices={instr.generation?.choices ?? {}} onClose={() => setQuestionsOpen(false)} onApply={answerQuestions} onChecked={(q) => settleQuestions([q])} />
 
       {!readOnly && (
         <AgentPanel
@@ -906,6 +701,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           focusStepId={step?.id ?? null}
           onFocus={focusStep}
           onWorking={setAgentStep}
+          open={agentOpen}
           onOpenChange={setAgentOpen}
           request={agentRequest}
           onTurnStart={history.begin}
@@ -919,6 +715,20 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         />
       )}
 
+      <Modal open={dialog === 'info'} onClose={() => setDialog(null)} size="lg" title={tp.info.title}>
+        <div className="space-y-5">
+          <div>
+            <Label htmlFor="instruction-title">{tp.header.titleLabel}</Label>
+            <Input id="instruction-title" value={content.title} readOnly={readOnly} onChange={(e) => update({ ...content, title: e.target.value })} className="h-14 text-lg font-black" />
+          </div>
+          <div>
+            <Label htmlFor="instruction-summary">{tp.header.summaryLabel}</Label>
+            <Textarea id="instruction-summary" rows={2} value={content.summary} readOnly={readOnly} onChange={(e) => update({ ...content, summary: e.target.value })} placeholder={tp.header.summaryPlaceholder} />
+          </div>
+          <MetaCard embedded content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={update} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
+          {content.kind === 'lockout' && content.lockout && <LockoutEditor value={content.lockout} readOnly={readOnly} onChange={(lockout) => update({ ...content, lockout })} />}
+        </div>
+      </Modal>
       <ShareDialog open={dialog === 'share'} onClose={() => setDialog(null)} doc={doc} onLinked={refresh} />
       <HistoryDialog
         open={dialog === 'history'}
@@ -953,7 +763,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         footer={
           <>
             <Button onClick={() => setDialog(null)}>{tp.publish.notYet}</Button>
-            <Button variant="primary" loading={publishing} onClick={() => doPublish()} icon={<Send className="h-4 w-4" />}>
+            {/* Le focus va au bouton : pas de clavier qui surgit au téléphone. */}
+            <Button variant="primary" data-autofocus loading={publishing} onClick={() => doPublish()} icon={<Send className="h-4 w-4" />}>
               {tp.actions.publish}
             </Button>
           </>
@@ -962,6 +773,10 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         <p className="font-medium text-slate-600 dark:text-slate-300">
           {stationIds.length ? tp.publish.replaces(stationIds.length) : tp.publish.library}
         </p>
+        {/* Le bon moment pour dire où elle s'affiche. */}
+        <div className="mt-4">
+          <StationPicker label={tp.publish.where} stationIds={stationIds} stations={stations} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
+        </div>
         {notes.length > 0 && (
           <ul className="mt-4 space-y-2">
             {notes.map((n) => (
@@ -970,6 +785,35 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               </li>
             ))}
           </ul>
+        )}
+        {/* L'avis sur la génération : au moment où la personne a tout relu. */}
+        {instr.generation && !rating && (
+          <div className="mt-4 rounded-2xl bg-slate-900/[0.03] p-3 dark:bg-white/5">
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{tp.rating.prompt(timeAgo(instr.generation.at))}</p>
+            {ratingComment === null ? (
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" icon={<ThumbsUp className="h-4 w-4" />} onClick={() => rate('up')}>
+                  {tp.rating.yes}
+                </Button>
+                <Button size="sm" icon={<ThumbsDown className="h-4 w-4" />} onClick={() => setRatingComment('')}>
+                  {tp.rating.no}
+                </Button>
+              </div>
+            ) : (
+              <form
+                className="mt-2 flex items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void rate('down', ratingComment ?? '')
+                }}
+              >
+                <Input data-own-undo="" autoFocus value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder={tp.rating.missingPlaceholder} aria-label={tp.rating.missingLabel} className="h-11 text-sm" wrapperClassName="flex-1" />
+                <Button size="sm" type="submit" variant="primary">
+                  {tp.rating.send}
+                </Button>
+              </form>
+            )}
+          </div>
         )}
       </Modal>
       <Modal

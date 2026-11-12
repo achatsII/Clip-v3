@@ -157,7 +157,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* En-tête (téléphone et tablette) */}
-      <header className="glass-nav pt-safe sticky top-0 z-30 border-b lg:hidden">
+      <header className="glass-nav pt-safe shell-chrome sticky top-0 z-30 border-b lg:hidden">
         <div className="flex h-16 items-center justify-between px-4">
           <Link href="/accueil">
             <Logo />
@@ -176,7 +176,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       {/* Un changement de langue redessine la page en entier : tout suit, même ce qui lit le catalogue. */}
-      <main className="mx-auto w-full max-w-7xl px-4 pt-6 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">
+      {/* `shell-main`, `shell-chrome` : l'éditeur prend tout l'écran (`useImmersive`). */}
+      <main className="shell-main mx-auto w-full max-w-7xl px-4 pt-6 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">
         <Fragment key={langVersion}>{children}</Fragment>
       </main>
       {/* Les créations en cours sur les autres appareils : seulement pour qui crée des instructions. */}
@@ -185,7 +186,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <RealtimeBridge />
 
       {/* Navigation du bas (téléphone) */}
-      <nav className="glass-nav pb-safe kb-hide fixed inset-x-0 bottom-0 z-40 border-t lg:hidden" aria-label={t.shell.mainNav}>
+      <nav className="glass-nav pb-safe kb-hide shell-chrome fixed inset-x-0 bottom-0 z-40 border-t lg:hidden" aria-label={t.shell.mainNav}>
         <div className="mx-auto grid max-w-lg grid-cols-5 items-end px-2 pt-2">
           {[nav[0], nav[1]].filter(Boolean).map((n) => (
             <BottomLink key={n.href} item={n} active={isActive(n.href)} />

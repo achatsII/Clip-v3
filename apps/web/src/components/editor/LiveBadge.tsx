@@ -13,7 +13,8 @@ import { cn } from '@/lib/util/cn'
  * Toucher le témoin dit pourquoi le direct ne passe pas, et offre de le rebrancher. Resté coupé,
  * l'appareil le dit aussi au serveur, une fois (diagnostic, rien de personnel).
  */
-export function LiveBadge({ state }: { state: RealtimeState }) {
+/** `compact` : le point seul (l'en-tête de l'éditeur) ; le texte reste dans la fenêtre du témoin. */
+export function LiveBadge({ state, compact = false }: { state: RealtimeState; compact?: boolean }) {
   const t = useMessages().editor.page.liveBadge
   const [open, setOpen] = useState(false)
   const look = state === 'live' ? { dot: 'bg-emerald-500 animate-pulse', text: t.on, hint: t.onHint } : state === 'connecting' ? { dot: 'bg-slate-400', text: t.connecting, hint: t.connectingHint } : { dot: 'bg-amber-500', text: t.polling, hint: t.pollingHint }
@@ -47,15 +48,15 @@ export function LiveBadge({ state }: { state: RealtimeState }) {
         aria-expanded={open}
         aria-label={look.text}
         title={look.hint}
-        className="btn-press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-slate-900/[0.05] px-2.5 text-[11px] font-black text-slate-500 dark:bg-white/10 dark:text-slate-300"
+        className={compact ? 'btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl hover:bg-slate-900/5 dark:hover:bg-white/10' : 'btn-press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-slate-900/[0.05] px-2.5 text-[11px] font-black text-slate-500 dark:bg-white/10 dark:text-slate-300'}
       >
         <span className={cn('h-2 w-2 shrink-0 rounded-full', look.dot)} aria-hidden />
-        <span className="max-sm:hidden" role="status">
+        <span className={compact ? 'sr-only' : 'max-sm:hidden'} role="status">
           {look.text}
         </span>
       </button>
       {open && (
-        <span className="glass-panel absolute top-10 right-0 z-30 w-72 rounded-2xl p-3 text-left text-xs font-bold text-slate-700 shadow-xl dark:text-slate-200" role="dialog" aria-label={look.text}>
+        <span className={cn('glass-panel absolute right-0 z-30 w-72 rounded-2xl p-3 text-left text-xs font-bold text-slate-700 shadow-xl dark:text-slate-200', compact ? 'top-12' : 'top-10')} role="dialog" aria-label={look.text}>
           <span className="block text-sm font-black text-slate-900 dark:text-white">{look.text}</span>
           <span className="mt-1 block">{look.hint}</span>
           {why && (

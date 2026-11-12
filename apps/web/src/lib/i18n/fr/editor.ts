@@ -3,11 +3,6 @@ const num = (n: number) => n.toLocaleString('fr-CA')
 
 /** L’éditeur : fiche, « Comme au poste », assistant, annotations, dialogues. */
 export const editor = {
-  /** Les deux façons de modifier une instruction : la fiche (tous les réglages) ou l’étape telle qu’au poste. */
-  views: {
-    form: 'Fiche',
-    stage: 'Comme au poste',
-  },
   /** Les mots d’une étape, partagés par la fiche et la vue « Comme au poste ». */
   step: {
     of: (n: number, total: number) => `Étape ${num(n)} sur ${num(total)}`,
@@ -20,8 +15,6 @@ export const editor = {
     addKeyPoint: 'Ajouter un point clé',
     removeKeyPoint: 'Retirer le point clé',
     warningText: 'Texte de la mise en garde',
-    improveWithAi: 'Améliorer avec l’IA',
-    otherRequest: 'Autre demande…',
   },
   /** La zone des médias d’une étape, comme au poste. */
   mediaArea: {
@@ -62,26 +55,37 @@ export const editor = {
       unknown: 'inconnue.',
     },
     backToList: 'Instructions',
+    /** L’état de l’instruction, sous son titre, avec celui de l’enregistrement. */
+    status: {
+      draft: 'Brouillon',
+      published: (version: number) => `Publiée · v${num(version)}`,
+      unpublished: 'Modifications à publier',
+      review: 'En attente d’approbation',
+    },
+    /** Le titre, le résumé, les postes et la fiche : dans une fenêtre, ouverte par le titre. */
+    info: {
+      open: 'Modifier le titre, les postes et les infos',
+      menu: 'Titre, postes et infos',
+      title: 'Infos de l’instruction',
+      untitled: 'Instruction sans titre',
+    },
     header: {
-      publishedBadge: (version: number) => `Publiée · v${num(version)}`,
-      unpublishedChanges: 'Modifications non publiées',
-      /** « il y a 3 jours », déjà dans la langue de l’outil. */
-      publishedAgo: (when: string) => `Publiée ${when}`,
       titleLabel: 'Titre de l’instruction',
       summaryLabel: 'Résumé',
       summaryPlaceholder: 'À quoi sert cette instruction, en une phrase',
-      preview: 'Aperçu',
-      share: 'Partager',
     },
     actions: {
       approveAndPublish: 'Approuver et publier',
-      awaitingApproval: 'En attente d’approbation',
-      viewAtStation: 'Voir au poste',
       requestApproval: 'Demander l’approbation',
+      /** Au téléphone, dans la barre du haut. */
+      requestApprovalShort: 'Faire approuver',
+      approve: 'Approuver',
       publish: 'Publier',
-      publishVersion: (version: number) => `Publier la version ${num(version)}`,
     },
     menu: {
+      label: 'Plus d’actions sur l’instruction',
+      test: 'Tester comme l’opérateur',
+      share: 'Partager (lien et code QR)',
       reuseMedia: 'Nouvelle instruction avec ces médias',
       reuseMediaFailed: 'La nouvelle instruction n’a pas pu être créée',
       exportPdf: 'Exporter en PDF',
@@ -138,13 +142,8 @@ export const editor = {
       loadTheirs: 'Charger sa version',
     },
     questions: {
-      title: 'À vérifier avant de publier',
-      markChecked: 'Marquer comme vérifié',
-      intro: 'L’IA n’a pas pu trancher ces points. Répondez, et elle corrige l’instruction ; ou cochez ce que vous avez déjà vérifié.',
-      answer: 'Répondre',
-      later: 'Plus tard',
-      folded: (n: number) => `${num(n)} point${n > 1 ? 's' : ''} à vérifier avant de publier`,
-      show: 'Afficher',
+      /** La pastille de l’en-tête : elle ouvre les questions, une à la fois. */
+      pill: (n: number) => `${num(n)} à vérifier`,
       /** La fenêtre : une question à la fois. */
       dialog: {
         title: 'Les questions de l’IA',
@@ -154,6 +153,7 @@ export const editor = {
         skip: 'Passer',
         next: 'Suivant',
         apply: 'Corriger l’instruction',
+        checked: 'C’est déjà vérifié',
       },
       /** Ce que l'assistant d'édition reçoit, et que la personne voit dans la conversation. */
       request: (items: Array<{ question: string; answer: string }>) =>
@@ -161,8 +161,6 @@ export const editor = {
       applied: 'Réponses envoyées à l’assistant',
     },
     steps: {
-      title: 'Étapes',
-      count: (n: number) => `${num(n)} étape${n > 1 ? 's' : ''}`,
       empty: 'Ajoutez une première étape.',
     },
     /** Ce qui empêche de publier. */
@@ -183,6 +181,7 @@ export const editor = {
       notYet: 'Pas encore',
       replaces: (stations: number) => `Elle remplacera la version actuelle sur ${num(stations)} poste${stations > 1 ? 's' : ''} et dans les liens partagés.`,
       library: 'Elle sera visible dans la bibliothèque et par les liens partagés.',
+      where: 'Où l’afficher ?',
     },
     deleteStepTitle: (n: number) => `Supprimer l’étape ${num(n)} ?`,
     toasts: {
@@ -211,6 +210,14 @@ export const editor = {
   },
   /** La vue « Comme au poste » : l’étape telle que l’opérateur la verra, modifiable sur place. */
   stage: {
+    region: 'Modifier l’instruction',
+    assistant: 'Assistant',
+    askAssistant: 'Demander autre chose à l’assistant…',
+    addKeyPointShort: 'Point clé',
+    addWarningShort: 'Mise en garde',
+    warningLevel: 'Niveau de la mise en garde',
+    firstStep: 'Ajouter la première étape',
+    emptyHint: 'L’opérateur lit une étape à la fois. Commencez par la première.',
     mediaTitle: (n: number) => `Média de l’étape ${num(n)}`,
     editMedia: 'Modifier le média',
     addMedia: 'Ajouter un média',
@@ -219,7 +226,6 @@ export const editor = {
     previous: 'Étape précédente',
     next: 'Étape suivante',
     goTo: 'Aller à l’étape',
-    improve: 'Améliorer',
     titleLabel: 'Titre de l’étape',
     titlePlaceholder: 'Ce qu’il faut faire',
     warningPlaceholder: 'Le risque, en une phrase',
@@ -229,8 +235,6 @@ export const editor = {
     textPlaceholder: 'Comment faire, en une ou deux phrases',
     keyPoint: (n: number) => `Point clé ${num(n)}`,
     stepActions: 'Actions sur l’étape',
-    clickToEdit: 'Cliquez un texte pour le modifier.',
-    tapToEdit: 'Touchez un texte pour le modifier.',
     addMediaHint: 'Ajouter une photo, un extrait, un schéma',
     stepsNav: 'Étapes',
     thumbTitle: (n: number, title: string) => `Étape ${num(n)} · ${title}`,
@@ -238,8 +242,6 @@ export const editor = {
   },
   /** Une étape dans la fiche : médias, texte, mise en garde, retouches par l’IA. */
   stepEditor: {
-    moveUp: 'Monter',
-    moveDown: 'Descendre',
     operatorFeedback: (comment: string) => `Retour d’un opérateur : « ${comment} »`,
     addMediaHint: 'Ajouter une photo, un extrait vidéo ou un plan',
     removeMedia: 'Retirer ce média',
@@ -255,22 +257,17 @@ export const editor = {
     video: 'Vidéo',
     image: 'Image',
     otherMoment: 'Autre instant',
-    changeOrAdd: 'Changer ou ajouter',
     chooseMedia: 'Choisir un média',
     annotate: 'Annoter',
-    aiIllustration: 'Illustration IA',
-    aiVisual: 'Schéma IA',
+    aiIllustration: 'Illustration à partir de la photo',
+    aiVisual: 'Schéma de l’étape',
+    withAi: 'Avec l’IA',
+    moreOptions: 'Plus d’options',
     verdicts: { none: 'Neutre', do: '✓ À faire', dont: '✕ À éviter' },
     captionPlaceholder: 'Légende (facultatif)',
     captionLabel: 'Légende du média',
     layoutLabel: 'Disposition au poste',
     layouts: { focus: 'Un à la fois', compare: 'À faire / À éviter', grid: 'Grille' },
-    action: 'Action',
-    actionPlaceholder: 'Retirer le garde de protection',
-    words: (n: number) => `${num(n)} mot${n > 1 ? 's' : ''}`,
-    how: 'Comment',
-    warning: 'Mise en garde',
-    noWarning: 'Aucune',
     frameTaken: 'Image tirée de la vidéo',
     frameTakenDetail: 'Touchez « Annoter » pour y montrer ce qu’il faut regarder.',
     backToVideo: {
@@ -296,16 +293,13 @@ export const editor = {
   },
   /** La liste des étapes de la fiche. */
   stepList: {
-    untitled: 'Étape sans titre',
-    warnings: { danger: 'Danger', caution: 'Attention', info: 'Info' },
     added: 'Nouvelle',
     modified: 'Modifiée',
     feedback: (n: number) => `${num(n)} retour${n > 1 ? 's' : ''}`,
-    add: 'Ajouter une étape',
   },
   /** Les retouches d’une étape par l’IA : en un geste, ou la demande libre. */
   assist: {
-    actions: { simplify: 'Simplifier', clarify: 'Plus clair', keypoint: 'Point clé', safety: 'Sécurité' },
+    actions: { simplify: 'Simplifier l’étape', clarify: 'Rendre plus clair', keypoint: 'Ajouter un point clé', safety: 'Vérifier la sécurité' },
     /** Des exemples de demande libre, à toucher pour les reprendre. */
     examples: ['Ajoute qu’il faut porter des gants', 'Mentionne la valeur de serrage', 'Coupe en deux étapes plus courtes'],
     failed: 'L’IA n’a pas pu corriger l’étape',

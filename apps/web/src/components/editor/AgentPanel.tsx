@@ -245,8 +245,9 @@ export function AgentPanel({
 
   const bubble = variant === 'bubble'
   if (!open) {
-    // La bulle de l'aperçu est posée par la page, dans la barre du lecteur (`AgentBubble`).
-    return bubble ? null : (
+    // La bulle de l'aperçu est posée par la page, dans la barre du lecteur (`AgentBubble`) ; ouvert par
+    // la page (l'éditeur : le bouton « Assistant » de l'en-tête), le panneau n'a pas son propre bouton.
+    return bubble || openProp !== undefined ? null : (
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -274,7 +275,7 @@ export function AgentPanel({
       aria-label={t.editorTools.agent.label}
       // Ses champs gardent leur propre annulation : Ctrl+Z n'y annule pas l'instruction.
       data-own-undo=""
-      className={cn('kb-bottom fixed inset-x-0 bottom-0 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:max-h-none lg:w-[400px] lg:rounded-[32px] dark:border-white/10 dark:bg-slate-900', bubble ? 'z-[60] lg:top-6' : 'z-50 lg:top-24')}
+      className={cn('kb-bottom fixed inset-x-0 bottom-0 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:max-h-none lg:w-[400px] lg:rounded-[32px] dark:border-white/10 dark:bg-slate-900', bubble ? 'z-[60] lg:top-6' : 'z-50 lg:top-6')}
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-slate-900/5 px-4 py-3 dark:border-white/5">
         <span className="bg-gradient-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">
