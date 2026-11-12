@@ -16,6 +16,9 @@ export const fr = {
     torchOff: 'Éteindre la lampe',
     switchCamera: 'Changer de caméra',
     zoomReset: 'Revenir au cadrage normal',
+    /** Le grossissement, comme dans l'appareil photo : « 0,5× », « 1× », « 1,4× ». */
+    zoomLabel: (m: number) => `${(Math.round(m * 10) / 10).toString().replace('.', ',')}×`,
+    zoomTo: (label: string) => `Zoom ${label}`,
     tryAgain: 'Réessayez.',
   },
   system: {

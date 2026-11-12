@@ -15,6 +15,8 @@ export const en: ShellStrings = {
     torchOff: 'Turn off the light',
     switchCamera: 'Switch camera',
     zoomReset: 'Back to normal framing',
+    zoomLabel: (m: number) => `${Math.round(m * 10) / 10}×`,
+    zoomTo: (label: string) => `Zoom ${label}`,
     tryAgain: 'Try again.',
   },
   system: {
