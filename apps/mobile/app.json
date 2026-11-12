@@ -30,7 +30,9 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -81,6 +83,12 @@
     "locales": {
       "fr": "./locales/fr.json",
       "en": "./locales/en.json"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "81861ee1-73f1-49af-b1b9-de4550804e33"
+      }
+    },
+    "owner": "achats_ii"
   }
 }
