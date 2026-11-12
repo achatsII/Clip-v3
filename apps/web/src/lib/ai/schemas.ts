@@ -210,8 +210,8 @@ export const standardSchema = {
 export const visualSchema = {
   type: 'object',
   properties: {
-    title: str('Titre court du schéma, 2 à 6 mots'),
-    html: str('La page HTML complète et autonome'),
+    title: str('Titre court du schéma, 2 à 5 mots'),
+    html: str('La page HTML complète et autonome : le dessin seul, sans en-tête ni texte d’explication'),
   },
   required: ['title', 'html'],
 }

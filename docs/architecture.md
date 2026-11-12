@@ -311,7 +311,10 @@ Une étape porte jusqu'à six médias et une disposition (`layout`) : un à la f
 côte à côte (verdict `do` / `dont` sur chaque média, bordures verte et rouge), ou grille. Un média peut
 être un **schéma HTML** généré par l'IA (`visual` : SVG, dessin, vue 3D) : il voyage avec l'instruction
 et s'affiche dans une iframe `sandbox="allow-scripts"` **sans** `allow-same-origin` — il ne voit ni les
-jetons, ni les données, ni la page. Le PDF le remplace par un renvoi vers l'app.
+jetons, ni les données, ni la page. Le PDF le remplace par un renvoi vers l'app. Un schéma est le
+dessin seul, lisible d'un coup d'œil (`visualSystem`, `src/lib/ai/prompts.ts`) : une idée (la pièce et
+le geste de l'étape), ni en-tête ni texte d'explication, au plus 4 libellés de 1 à 3 mots, le bleu pour
+le geste et les couleurs de sécurité seulement quand l'étape porte un risque.
 
 ### Les vidéos au poste, sur un réseau faible (toggle `stepReel`, repli éteint)
 

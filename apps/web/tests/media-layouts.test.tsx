@@ -57,6 +57,10 @@ describe('l’IA dessine et annote sur demande', () => {
     const ai = fakeAi({ title: 'Panneau', html: '<svg viewBox="0 0 10 10"></svg>' })
     const v = await createVisual(ai, emptyContent(), step({}), 'vue de face')
     expect(ai.ask.mock.calls[0][0]).toBe('visual')
+    // Le dessin seul : ni en-tête ni texte d'explication, très peu de mots.
+    expect(ai.ask.mock.calls[0][1].system_instruction).toMatch(/AUCUN en-tête/)
+    expect(ai.ask.mock.calls[0][1].system_instruction).toMatch(/Au plus 4 libellés de 1 à 3 mots/)
+    expect(ai.ask.mock.calls[0][1].prompt).toMatch(/sans en-tête ni texte d’explication/)
     expect(v).toMatchObject({ kind: 'html', title: 'Panneau' })
     expect(v.html.startsWith('<!doctype html>')).toBe(true)
     await expect(createVisual(fakeAi({ title: 'x', html: `<svg>${'a'.repeat(400_000)}</svg>` }), emptyContent(), step({}), '')).rejects.toThrow(/trop lourd/)

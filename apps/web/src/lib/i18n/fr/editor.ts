@@ -281,7 +281,7 @@ export const editor = {
     visualFailed: 'Le schéma n’a pas pu être dessiné',
     visualDialog: {
       title: 'Un schéma pour cette étape',
-      intro: 'L’IA dessine un schéma clair (vue de face, de dessus, en coupe, ou en 3D) à partir de l’étape. Décrivez ce qu’il doit montrer, ou laissez vide.',
+      intro: 'L’IA dessine un schéma simple qui montre le geste de l’étape, avec très peu de mots (vue de face, de dessus, en coupe, ou en 3D). Décrivez ce qu’il doit montrer, ou laissez vide.',
       placeholder: 'Ex. : vue de face du panneau avec les 3 boutons, le rouge à gauche, et une flèche vers le vert',
       label: 'Ce que le schéma doit montrer',
       draw: 'Dessiner le schéma',

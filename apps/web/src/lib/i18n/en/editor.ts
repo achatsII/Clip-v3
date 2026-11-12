@@ -264,7 +264,7 @@ export const editor: typeof Fr = {
     visualFailed: 'The diagram couldn’t be drawn',
     visualDialog: {
       title: 'A diagram for this step',
-      intro: 'The AI draws a clear diagram (front, top, cross-section or 3D view) from the step. Describe what it should show, or leave it blank.',
+      intro: 'The AI draws a simple diagram that shows the step’s action, with very few words (front, top, cross-section or 3D view). Describe what it should show, or leave it blank.',
       placeholder: 'E.g., front view of the panel with the 3 buttons, the red one on the left, and an arrow to the green one',
       label: 'What the diagram should show',
       draw: 'Draw the diagram',
