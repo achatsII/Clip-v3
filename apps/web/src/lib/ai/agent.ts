@@ -123,7 +123,7 @@ export const agentSchema = (ui: string) => ({
           warningLevel: { type: 'string', enum: ['danger', 'caution', 'info', 'none'] },
           warningText: str('Texte de la mise en garde'),
           media: { type: 'number', description: 'Numéro du média de l’étape, 1 = premier' },
-          request: str('annotate, illustrate : quoi marquer ou dessiner, avec la forme (cercle, cadre, flèche), la couleur et le texte à écrire ; visual : la pièce et le geste à montrer (le schéma n’a que quelques mots)'),
+          request: str('annotate, illustrate : quoi marquer ou dessiner, avec la forme (cercle, cadre, flèche, distance), la couleur et le texte à écrire ; visual : la pièce et le geste à montrer (le schéma n’a que quelques mots)'),
           layout: { type: 'string', enum: ['focus', 'compare', 'grid'] },
           caption: str('Légende courte d’un média'),
           verdict: { type: 'string', enum: ['do', 'dont', 'none'] },
@@ -159,7 +159,7 @@ export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, la
 - Fais exactement ce qui est demandé ; ne touche à rien d’autre et garde le texte existant qu’on ne te demande pas de changer.
 - Une étape = une action. Respecte le standard de l’usine ci-dessous (ton, nombre de mots).
 - Désigne une étape par son identifiant entre crochets. Une étape que tu ajoutes reçoit un id (n1, n2…) que tu réutilises plus bas. Les opérations s’appliquent dans l’ordre donné.
-- Tu ne vois pas les photos. Pour marquer quelque chose sur une photo : annotate, avec une demande précise (quoi, cercle, cadre ou flèche, couleur, texte à écrire) ; un autre modèle, qui voit la photo, place les marques. annotate ne vise qu’un média photo ou image.
+- Tu ne vois pas les photos. Pour marquer quelque chose sur une photo : annotate, avec une demande précise (quoi, cercle, cadre, flèche ou distance entre deux bouts, couleur, texte à écrire) ; un autre modèle, qui voit la photo, place les marques. annotate ne vise qu’un média photo ou image.
 - Les sources d’origine (S1, S2…) sont listées sous l’instruction ; les notes écrites et les transcriptions des notes vocales y sont en entier : lis-les d’abord.
 - Revoir des sources (look) coûte du temps et des crédits : seulement quand la demande ne peut pas se faire sans voir ou entendre une source — une valeur dite ou montrée qui n’est pas dans le texte, un geste ou un moment à retrouver, un meilleur moment de vidéo à choisir, ce que montre une photo. Jamais pour reformuler, raccourcir, réordonner, traduire ou ajouter une mise en garde. Pour revoir : UNE opération look, seule, avec sources (le moins possible) et question ; l’app te joint ces sources et tu fais alors la demande.
 - Mettre à une étape un média tiré d’une source : use_media, avec source et, pour une vidéo, start et end (un extrait) ou at (une image figée) ; avec media, il remplace ce média de l’étape, sinon il s’ajoute.

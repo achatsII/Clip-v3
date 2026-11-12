@@ -28,14 +28,15 @@ export function useMediaLabels(): MediaLabels {
  * Les annotations par-dessus une image (coordonnées relatives, de 0 à 1). Le dessin est celui du
  * PDF (src/lib/annotations/markup.ts) ; les tailles suivent la largeur de l'image (`cqw`).
  */
-export function AnnotationLayer({ annotations, className, ratio }: { annotations: Annotation[]; className?: string; ratio?: number | null }) {
+export function AnnotationLayer({ annotations, className, ratio, blink = true }: { annotations: Annotation[]; className?: string; ratio?: number | null; blink?: boolean }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   // Les marques déjà là au premier affichage ne bougent pas ; une marque qui arrive ensuite (une
   // flèche ajoutée par l'assistant, ou sur un autre appareil) clignote un instant pour se faire voir.
+  // Pas dans l'annotateur (`blink` faux) : ce qu'on y trace s'affiche tel quel, tout de suite.
   const known = useRef<Set<string> | null>(null)
   if (known.current === null) known.current = new Set(annotations.filter((a) => !isFresh(a.id)).map((a) => a.id))
   const [, settle] = useReducer((n: number) => n + 1, 0)
-  const fresh = annotations.filter((a) => !known.current!.has(a.id))
+  const fresh = blink ? annotations.filter((a) => !known.current!.has(a.id)) : []
   const steady = fresh.length ? annotations.filter((a) => known.current!.has(a.id)) : annotations
   const freshKey = fresh.map((a) => a.id).join(',')
   useEffect(() => {
@@ -47,7 +48,9 @@ export function AnnotationLayer({ annotations, className, ratio }: { annotations
     return () => clearTimeout(t)
   }, [freshKey])
   const html = useMemo(() => annotationsMarkup(steady, { ratio: ratio ?? 1, idPrefix: `an${id}` }), [steady, ratio, id])
-  const freshHtml = useMemo(() => (fresh.length ? annotationsMarkup(fresh, { ratio: ratio ?? 1, idPrefix: `af${id}` }) : ''), [freshKey, ratio, id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Une marque qui clignote suit quand même ce qui la change (sa légende, sa taille).
+  const freshSig = fresh.length ? JSON.stringify(fresh) : ''
+  const freshHtml = useMemo(() => (fresh.length ? annotationsMarkup(fresh, { ratio: ratio ?? 1, idPrefix: `af${id}` }) : ''), [freshSig, ratio, id]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!annotations.length) return null
   return (
     <>
@@ -58,8 +61,28 @@ export function AnnotationLayer({ annotations, className, ratio }: { annotations
 }
 
 /** Image aux proportions réelles, avec ses annotations, contenue dans la boîte parente. */
-export function AnnotatedImage({ src, annotations = [], alt = '', className, fit = 'contain', children }: { src: string; annotations?: Annotation[]; alt?: string; className?: string; fit?: 'contain' | 'cover'; children?: React.ReactNode }) {
+export function AnnotatedImage({ src, annotations = [], alt = '', className, fit = 'contain', blink, children }: { src: string; annotations?: Annotation[]; alt?: string; className?: string; fit?: 'contain' | 'cover'; blink?: boolean; children?: React.ReactNode }) {
   const [ratio, setRatio] = useState<number | null>(null)
+  const outer = useRef<HTMLDivElement>(null)
+  // Le cadre suit exactement l'image affichée : toute la largeur, sauf si la hauteur manque ; alors
+  // toute la hauteur. Les annotations, posées en proportion de ce cadre, tombent au même endroit de
+  // la photo dans l'annotateur, au poste, côte à côte (à faire / à éviter) et au PDF.
+  const [bound, setBound] = useState<{ w: number; h: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = outer.current
+    if (fit === 'cover' || !el || !ratio) return
+    const measure = () => {
+      const cw = el.clientWidth
+      const ch = el.clientHeight
+      const w = ch * ratio
+      // La hauteur manque : l'image se règle sur la hauteur. Sinon, la largeur suit le conteneur.
+      setBound((b) => (cw && ch && w < cw - 0.5 ? (b && Math.abs(b.w - w) < 0.5 && Math.abs(b.h - ch) < 0.5 ? b : { w, h: ch }) : null))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ratio, fit])
   if (fit === 'cover') {
     return (
       <div className={cn('relative h-full w-full overflow-hidden', className)}>
@@ -69,8 +92,8 @@ export function AnnotatedImage({ src, annotations = [], alt = '', className, fit
     )
   }
   return (
-    <div className={cn('flex h-full w-full items-center justify-center', className)}>
-      <div className="relative max-h-full max-w-full" style={ratio ? { aspectRatio: String(ratio), height: ratio < 1.2 ? '100%' : undefined, width: ratio >= 1.2 ? '100%' : undefined } : undefined}>
+    <div ref={outer} className={cn('flex h-full w-full items-center justify-center', className)}>
+      <div className="relative max-h-full max-w-full shrink-0" style={bound ? { width: bound.w, height: bound.h } : ratio ? { aspectRatio: String(ratio), width: '100%' } : undefined}>
         <img
           src={src}
           alt={alt}
@@ -78,7 +101,7 @@ export function AnnotatedImage({ src, annotations = [], alt = '', className, fit
           onLoad={(e) => setRatio(e.currentTarget.naturalWidth / Math.max(1, e.currentTarget.naturalHeight))}
           className="block h-full max-h-full w-full max-w-full rounded-[inherit] object-contain select-none"
         />
-        <AnnotationLayer annotations={annotations} ratio={ratio} />
+        <AnnotationLayer annotations={annotations} ratio={ratio} blink={blink} />
         {children}
       </div>
     </div>

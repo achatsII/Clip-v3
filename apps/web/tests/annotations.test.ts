@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ANNOTATION_ICON_KEYS } from '@/lib/annotations/icons'
-import { annotationsMarkup } from '@/lib/annotations/markup'
-import { hitTest, sanitizeAnnotation, translate } from '@/lib/annotations/model'
+import { annotationsMarkup, keepInside } from '@/lib/annotations/markup'
+import { handlesOf, hitTest, sanitizeAnnotation, translate } from '@/lib/annotations/model'
 import type { Annotation } from '@/lib/model/types'
 
 const pen: Annotation = { id: 'p', type: 'pen', x: 0.1, y: 0.1, points: [[0.1, 0.1], [0.3, 0.1], [0.3, 0.3]], color: 'red' }
@@ -52,5 +52,72 @@ describe('annotations : dessin (écran et PDF)', () => {
 
   it('chaque icône proposée a son dessin', () => {
     for (const k of ANNOTATION_ICON_KEYS) expect(annotationsMarkup([{ id: k, type: 'icon', x: 0.5, y: 0.5, icon: k, color: 'red' }])).toContain('<svg viewBox="0 0 24 24"')
+  })
+})
+
+describe('annotations : distance, pointillé, zone remplie', () => {
+  const measure: Annotation = { id: 'm', type: 'measure', x: 0.2, y: 0.5, x2: 0.8, y2: 0.5, color: 'blue', text: '12 mm' }
+
+  it('une distance : une pointe à chaque bout, une butée à chaque bout, la valeur au milieu', () => {
+    const html = annotationsMarkup([measure], { ratio: 1, idPrefix: 'd' })
+    expect(html).toContain('marker-start="url(#d-ah-blue)"')
+    expect(html).toContain('marker-end="url(#d-ah-blue)"')
+    // La ligne et ses deux butées, perpendiculaires (ici verticales).
+    expect(html.match(/<line /g)).toHaveLength(3)
+    expect(html).toMatch(/<line x1="200" y1="[\d.]+" x2="200" y2="[\d.]+"/)
+    expect(html).toContain('left:50%;top:50%')
+    expect(html).toContain('12 mm')
+  })
+
+  it('une distance se touche, se tire par ses deux bouts et se garde', () => {
+    expect(hitTest([measure], 500, 505, 1000, 1000)).toBe('m')
+    expect(handlesOf(measure, 1000, 1000).map((h) => h.kind)).toEqual(['start', 'end'])
+    expect(sanitizeAnnotation({ ...measure, dashed: true, filled: true })).toEqual({ ...measure, dashed: true })
+    expect(sanitizeAnnotation({ ...box, dashed: true, filled: true })).toMatchObject({ dashed: true, filled: true })
+  })
+
+  it('pointillé : le trait se coupe ; rempli : la forme devient une zone transparente', () => {
+    const line = annotationsMarkup([{ id: 'l', type: 'line', x: 0.1, y: 0.1, x2: 0.5, y2: 0.5, color: 'red', dashed: true }])
+    expect(line).toContain('stroke-dasharray')
+    const zone = annotationsMarkup([{ ...box, filled: true }])
+    expect(zone).toContain('fill-opacity=".3"')
+    expect(annotationsMarkup([box])).toContain('fill="none"')
+  })
+})
+
+describe('annotations : une légende reste toujours dans l’image', () => {
+  const top = (html: string) => Number(/top:([\d.]+)%;transform:translate\(([-\d.]+)%,([-\d.]+)%\)/.exec(html)?.[1])
+  const shift = (html: string) => /transform:translate\(([-\d.]+)%,([-\d.]+)%\)/.exec(html)!.slice(1).map(Number)
+
+  it('un cadre au milieu : la légende dessous', () => {
+    const html = annotationsMarkup([{ ...box, y: 0.3, h: 0.3 }])
+    expect(top(html)).toBe(60)
+    expect(shift(html)[1]).toBe(15)
+  })
+
+  it('un cadre qui touche le bas : la légende passe au-dessus du cadre', () => {
+    const html = annotationsMarkup([{ ...box, y: 0.55, h: 0.45 }])
+    expect(top(html)).toBe(55)
+    expect(shift(html)[1]).toBe(-115)
+  })
+
+  it('un cadre haut comme l’image : la légende se pose dedans, au bas, sans sortir', () => {
+    const html = annotationsMarkup([{ ...box, y: 0, h: 1 }])
+    expect(top(html)).toBe(100)
+    // Ancrée au bas, elle remonte d’au moins toute sa hauteur : elle reste dans l’image.
+    expect(shift(html)[1]).toBeLessThanOrEqual(-100)
+  })
+
+  it('près d’un bord, une étiquette glisse vers l’intérieur ; au centre, elle reste centrée', () => {
+    expect(keepInside(0.5, -0.5, 0.62)).toBe(-0.5)
+    expect(keepInside(0.98, -0.5, 0.62)).toBeCloseTo(-0.968, 2)
+    expect(keepInside(0.02, -0.5, 0.62)).toBeCloseTo(-0.032, 2)
+    // Pour toute étiquette jusqu’à la taille prévue, rien ne dépasse.
+    for (const at of [0, 0.1, 0.5, 0.9, 1])
+      for (const size of [0.05, 0.2]) {
+        const s = keepInside(at, 0.15, 0.2)
+        expect(at + s * size).toBeGreaterThanOrEqual(-1e-9)
+        expect(at + (s + 1) * size).toBeLessThanOrEqual(1 + 1e-9)
+      }
   })
 })

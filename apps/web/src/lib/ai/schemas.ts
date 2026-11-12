@@ -161,7 +161,7 @@ export const annotationSchema = {
         type: 'object',
         properties: {
           label: str('Ce que la marque montre, 1 à 4 mots'),
-          shape: { type: 'string', enum: ['circle', 'rect', 'arrow'] },
+          shape: { type: 'string', enum: ['circle', 'rect', 'arrow', 'measure'], description: 'measure : une distance, d’un bout à l’autre de la boîte (en largeur si la boîte est plus large que haute)' },
           box: { type: 'array', items: { type: 'number' }, description: '[ymin, xmin, ymax, xmax] normalisés de 0 à 1000' },
           color: { type: 'string', enum: ['red', 'orange', 'yellow', 'green', 'blue', 'white', 'black'], description: 'Rouge par défaut ; la couleur demandée sinon' },
         },

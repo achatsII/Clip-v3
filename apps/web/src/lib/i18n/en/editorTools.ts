@@ -22,6 +22,7 @@ export const editorTools: typeof Fr = {
     stay: 'Stay',
     leave: 'Leave',
     textPlaceholder: 'Text to show (e.g. Screw A, 25 N·m)',
+    measurePlaceholder: 'Distance value (e.g. 12 mm)',
     textLabel: 'Annotation text',
     textOk: 'OK',
     deleteHint: 'Delete (Del)',
@@ -46,6 +47,7 @@ export const editorTools: typeof Fr = {
       highlight: 'Highlighter',
       arrow: 'Arrow',
       line: 'Line',
+      measure: 'Distance',
       circle: 'Circle',
       rect: 'Box',
       text: 'Text',
@@ -54,6 +56,7 @@ export const editorTools: typeof Fr = {
       blur: 'Blur',
     },
     sizes: { s: 'Small', m: 'Medium', l: 'Large', xl: 'Extra large', xxl: 'Huge' },
+    styles: { dashed: 'Dashed', filled: 'Filled' },
     colors: { red: 'Red', orange: 'Orange', yellow: 'Yellow', green: 'Green', blue: 'Blue', white: 'White', black: 'Black' },
     icons: {
       danger: 'Danger',

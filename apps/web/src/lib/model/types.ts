@@ -37,7 +37,7 @@ export interface Source {
   capturedOn?: 'web' | 'ios' | 'android'
 }
 
-export type AnnotationType = 'pen' | 'highlight' | 'arrow' | 'line' | 'circle' | 'rect' | 'text' | 'number' | 'icon' | 'blur'
+export type AnnotationType = 'pen' | 'highlight' | 'arrow' | 'line' | 'measure' | 'circle' | 'rect' | 'text' | 'number' | 'icon' | 'blur'
 export type AnnotationColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'white' | 'black'
 export type AnnotationSize = 's' | 'm' | 'l' | 'xl' | 'xxl'
 
@@ -47,7 +47,7 @@ export interface Annotation {
   /** Coordonnées relatives (0 à 1) à l'image : point d'ancrage, début d'un trait, coin d'un cadre. */
   x: number
   y: number
-  /** Fin d'une flèche ou d'une ligne. */
+  /** Fin d'une flèche, d'une ligne ou d'une distance. */
   x2?: number
   y2?: number
   /** Largeur et hauteur d'un cercle, d'un cadre ou d'une zone floutée. */
@@ -55,7 +55,7 @@ export interface Annotation {
   h?: number
   /** Crayon et surligneur : le tracé, en coordonnées relatives. */
   points?: Array<[number, number]>
-  /** Texte d'une étiquette, d'un numéro, ou légende d'une forme. */
+  /** Texte d'une étiquette, d'un numéro, valeur d'une distance (« 12 mm »), ou légende d'une forme. */
   text?: string
   /** Icône (clé de src/lib/annotations/icons.ts). */
   icon?: string
@@ -63,6 +63,10 @@ export interface Annotation {
   size?: AnnotationSize
   /** Agrandissement libre d'un numéro, d'une icône ou d'un texte (poignée), en plus de `size`. */
   scale?: number
+  /** Trait pointillé : flèche, ligne, distance, cercle ou cadre. */
+  dashed?: boolean
+  /** Cercle ou cadre rempli d'une couleur transparente : une zone. */
+  filled?: boolean
   color: AnnotationColor
 }
 

@@ -115,3 +115,22 @@ describe('une flèche qui arrive se fait voir', () => {
     expect(container.innerHTML).toContain('a2')
   })
 })
+
+describe('dans l’annotateur, ce qu’on trace s’affiche tout de suite', () => {
+  const mark = (id: string, x2 = 0.4): Annotation => ({ id, type: 'arrow', x: 0.1, y: 0.1, x2, y2: 0.4, color: 'red' })
+
+  it('une marque tracée ici ne clignote pas et suit le doigt, pendant qu’on la trace', () => {
+    const { container, rerender } = render(<AnnotationLayer annotations={[]} ratio={1} blink={false} />)
+    rerender(<AnnotationLayer annotations={[mark('n', 0.1)]} ratio={1} blink={false} />)
+    rerender(<AnnotationLayer annotations={[mark('n', 0.7)]} ratio={1} blink={false} />)
+    expect(container.querySelector('.mark-in')).toBeNull()
+    expect(container.innerHTML).toContain('x2="700"')
+  })
+
+  it('une marque qui clignote montre quand même sa nouvelle légende', () => {
+    const { container, rerender } = render(<AnnotationLayer annotations={[]} ratio={1} />)
+    rerender(<AnnotationLayer annotations={[mark('n')]} ratio={1} />)
+    rerender(<AnnotationLayer annotations={[{ ...mark('n'), text: 'Ici' }]} ratio={1} />)
+    expect(container.querySelector('.mark-in')?.innerHTML).toContain('Ici')
+  })
+})

@@ -264,7 +264,7 @@ instruction.
   dans l'app, une fois par instruction toutes les dix minutes ; jamais celles des autres.
   L'écran qui suit va à l'étape changée, l'encadre quelques secondes (« En direct : modifiée sur
   l'app mobile ») et une marque qui vient d'arriver clignote en apparaissant
-  (`src/lib/annotations/fresh.ts`). Un témoin dit où en est le direct (`LiveBadge`) : vert quand
+  (`src/lib/annotations/fresh.ts`) ; jamais dans l'annotateur, où ce qu'on trace s'affiche tel quel. Un témoin dit où en est le direct (`LiveBadge`) : vert quand
   il est branché ; ambre quand il ne passe pas (réseau qui bloque, jeton refusé), et l'écran se
   relit alors seul toutes les 8 s (`useDraftWatch`, `src/lib/realtime/watch.ts`) : une lecture
   minuscule des instructions modifiées depuis peu (date et appareil seulement), et l'instruction
@@ -304,6 +304,20 @@ en bas à droite. Ouverte, c'est la même conversation que dans l'éditeur : éc
 direct. Ce qu'elle change s'enregistre dans le brouillon et le lecteur va à l'étape modifiée ; sur
 ordinateur, le lecteur se pousse pour laisser sa colonne au panneau. Ctrl+Z annule le dernier
 passage, et un point de retour le précède.
+
+### Les annotations d'une photo (`src/lib/annotations`, `Annotator`)
+
+Les marques se posent en proportion de l'image (0 à 1) et se dessinent par une seule source
+(`annotationsMarkup`) : éditeur, poste, PDF. Le cadre où elles se posent est exactement l'image
+affichée (`AnnotatedImage` : toute la largeur, ou toute la hauteur quand elle manque), au bureau, au
+téléphone et dans les tuiles « à faire / à éviter » ; une marque tombe au même endroit de la photo
+partout. Les sortes : crayon, surligneur, flèche, ligne, **distance** (une pointe et une butée à chaque
+bout, la valeur au milieu : « 12 mm », demandée dès qu'on la trace), cercle, cadre, texte, numéro,
+icône, flou ; traits et formes en **pointillé**, cercle et cadre **remplis** (une zone transparente).
+Une étiquette reste toujours dans l'image : la légende d'une forme va dessous, au-dessus quand la
+forme touche le bas, dedans quand elle prend toute la hauteur, et près d'un bord elle glisse vers
+l'intérieur (`keepInside`). Dans l'annotateur, la barre des options garde sa hauteur : l'image ne
+bouge pas quand une marque se choisit ou se lâche.
 
 ### Les médias d'une étape
 

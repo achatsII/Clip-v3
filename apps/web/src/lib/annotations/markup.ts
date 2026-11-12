@@ -22,6 +22,20 @@ const scaled = (css: string, k: number) => (k === 1 ? css : `calc(${css} * ${Mat
 
 const SHADOW = 'drop-shadow(0 1px 2px rgba(0,0,0,.55))'
 
+/** Largeur maximale d'une étiquette (`max-width`), et hauteur qu'on lui suppose au plus, en part de l'image. */
+const LABEL_MAX_W = 0.62
+const LABEL_MAX_H = 0.2
+/** La place qu'une étiquette demande sous ou sur une forme, pour choisir où poser une légende. */
+const CAPTION_ROOM = 0.14
+
+/**
+ * Le décalage d'une étiquette (en part de sa propre taille) : celui qu'on veut, sinon juste assez
+ * pour qu'une étiquette jusqu'à `max` de l'image reste dedans, posée en `at` (0 à 1).
+ */
+export function keepInside(at: number, wanted: number, max: number): number {
+  return Math.min((1 - at) / max - 1, Math.max(-at / max, wanted))
+}
+
 /** Le dessin d'une icône (tracés Lucide) en SVG, dans la couleur `ink`. */
 export function iconSvg(key: string, ink: string, style = ''): string {
   const icon = (ANNOTATION_ICONS as Record<string, { node: IconElement[] }>)[key]
@@ -52,18 +66,30 @@ export function annotationsMarkup(list: Annotation[], { ratio = 1, idPrefix = 'a
     return `url(#${idPrefix}-ah-${color})`
   }
 
+  // Une étiquette reste toujours dans l'image : près d'un bord, elle glisse vers l'intérieur. Sa
+  // largeur est celle de son texte (au plus 62 %), même posée près du bord droit.
   const label = (a: Annotation, lx: number, ly: number, anchor: 'center' | 'above' | 'below') => {
     const c = colorOf(a.color)
-    const t = anchor === 'above' ? 'translate(-50%,-115%)' : anchor === 'below' ? 'translate(-50%,15%)' : 'translate(-50%,-50%)'
+    const x = Math.min(1, Math.max(0, lx))
+    const y = Math.min(1, Math.max(0, ly))
+    const tx = keepInside(x, -0.5, LABEL_MAX_W)
+    const ty = keepInside(y, anchor === 'above' ? -1.15 : anchor === 'below' ? 0.15 : -0.5, LABEL_MAX_H)
     html.push(
-      `<span style="position:absolute;left:${pct(Math.min(0.97, Math.max(0.03, lx)))};top:${pct(Math.min(0.97, Math.max(0.03, ly)))};transform:${t};max-width:62%;padding:.22em .6em;border-radius:.6em;background:${c};color:${inkOn(a.color)};font-weight:900;font-size:${scaled(clampCss(LABEL[sizeOf(a)]), scaleOf(a))};line-height:1.25;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">${esc(a.text)}</span>`,
+      `<span style="position:absolute;left:${pct(x)};top:${pct(y)};transform:translate(${n(tx * 100)}%,${n(ty * 100)}%);width:max-content;max-width:${LABEL_MAX_W * 100}%;padding:.22em .6em;border-radius:.6em;background:${c};color:${inkOn(a.color)};font-weight:900;font-size:${scaled(clampCss(LABEL[sizeOf(a)]), scaleOf(a))};line-height:1.25;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">${esc(a.text)}</span>`,
     )
+  }
+  // La légende d'une forme : dessous, sinon dessus si la forme touche le bas, sinon dedans.
+  const caption = (a: Annotation, top: number, bottom: number, cx: number) => {
+    if (bottom + CAPTION_ROOM <= 1) label(a, cx, bottom, 'below')
+    else if (top - CAPTION_ROOM >= 0) label(a, cx, top, 'above')
+    else label(a, cx, bottom, 'above')
   }
 
   for (const a of list) {
     const c = colorOf(a.color)
     const size = sizeOf(a)
     const stroke = STROKE[size]
+    const dash = a.dashed ? ` stroke-dasharray="${n(stroke * 1.5)} ${n(stroke * 2.2)}"` : ''
     switch (a.type) {
       case 'pen':
       case 'highlight': {
@@ -82,17 +108,39 @@ export function annotationsMarkup(list: Annotation[], { ratio = 1, idPrefix = 'a
           break
         }
         const end = a.type === 'arrow' ? ` marker-end="${marker(a.color)}"` : ''
-        svg.push(`<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(a.x2 ?? a.x)}" y2="${Y(a.y2 ?? a.y)}" stroke="${c}" stroke-width="${stroke}" stroke-linecap="round"${end} style="filter:${SHADOW}"/>`)
+        svg.push(`<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(a.x2 ?? a.x)}" y2="${Y(a.y2 ?? a.y)}" stroke="${c}" stroke-width="${stroke}" stroke-linecap="round"${dash}${end} style="filter:${SHADOW}"/>`)
         if (a.text) label(a, a.x, a.y, (a.y2 ?? a.y) >= a.y ? 'above' : 'below')
+        break
+      }
+      case 'measure': {
+        // Une distance : une pointe à chaque bout, une butée qui marque chaque bout, la valeur au milieu.
+        const x1 = a.x * 1000
+        const y1 = a.y * H
+        const x2 = (a.x2 ?? a.x) * 1000
+        const y2 = (a.y2 ?? a.y) * H
+        const len = Math.hypot(x2 - x1, y2 - y1) || 1
+        const tick = stroke * 2.6
+        const nx = (-(y2 - y1) / len) * tick
+        const ny = ((x2 - x1) / len) * tick
+        const tip = marker(a.color)
+        const ticks = [
+          [x1, y1],
+          [x2, y2],
+        ]
+          .map(([px, py]) => `<line x1="${n(px - nx)}" y1="${n(py - ny)}" x2="${n(px + nx)}" y2="${n(py + ny)}" stroke="${c}" stroke-width="${n(stroke * 0.8)}" stroke-linecap="round"/>`)
+          .join('')
+        svg.push(`<g style="filter:${SHADOW}"><line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" stroke="${c}" stroke-width="${stroke}" stroke-linecap="round"${dash} marker-start="${tip}" marker-end="${tip}"/>${ticks}</g>`)
+        if (a.text) label(a, (a.x + (a.x2 ?? a.x)) / 2, (a.y + (a.y2 ?? a.y)) / 2, 'center')
         break
       }
       case 'circle':
       case 'rect': {
         const w = a.w ?? 0.1
         const h = a.h ?? 0.1
-        if (a.type === 'circle') svg.push(`<ellipse cx="${X(a.x + w / 2)}" cy="${Y(a.y + h / 2)}" rx="${n((w / 2) * 1000)}" ry="${n((h / 2) * H)}" fill="none" stroke="${c}" stroke-width="${stroke}" style="filter:${SHADOW}"/>`)
-        else svg.push(`<rect x="${X(a.x)}" y="${Y(a.y)}" width="${n(w * 1000)}" height="${n(h * H)}" rx="${n(stroke * 1.6)}" fill="none" stroke="${c}" stroke-width="${stroke}" style="filter:${SHADOW}"/>`)
-        if (a.text) label(a, a.x + w / 2, a.y + h, 'below')
+        const fill = a.filled ? `fill="${c}" fill-opacity=".3"` : 'fill="none"'
+        if (a.type === 'circle') svg.push(`<ellipse cx="${X(a.x + w / 2)}" cy="${Y(a.y + h / 2)}" rx="${n((w / 2) * 1000)}" ry="${n((h / 2) * H)}" ${fill} stroke="${c}" stroke-width="${stroke}"${dash} style="filter:${SHADOW}"/>`)
+        else svg.push(`<rect x="${X(a.x)}" y="${Y(a.y)}" width="${n(w * 1000)}" height="${n(h * H)}" rx="${n(stroke * 1.6)}" ${fill} stroke="${c}" stroke-width="${stroke}"${dash} style="filter:${SHADOW}"/>`)
+        if (a.text) caption(a, a.y, a.y + h, a.x + w / 2)
         break
       }
       case 'blur': {

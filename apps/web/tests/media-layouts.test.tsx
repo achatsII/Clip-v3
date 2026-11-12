@@ -66,6 +66,13 @@ describe('l’IA dessine et annote sur demande', () => {
     await expect(createVisual(fakeAi({ title: 'x', html: `<svg>${'a'.repeat(400_000)}</svg>` }), emptyContent(), step({}), '')).rejects.toThrow(/trop lourd/)
   })
 
+  it('« la distance entre les deux trous, 12 mm » : une distance d’un bout à l’autre, dans le sens le plus long', async () => {
+    const wide = await annotateImage(fakeAi({ marks: [{ label: '12 mm', shape: 'measure', box: [400, 200, 500, 800] }] }), 'https://x/p.jpg', step({}), 'distance de 12 mm entre les trous')
+    expect(wide[0]).toMatchObject({ type: 'measure', x: 0.2, x2: 0.8, y: 0.45, y2: 0.45, text: '12 mm' })
+    const tall = await annotateImage(fakeAi({ marks: [{ label: '3 cm', shape: 'measure', box: [100, 480, 900, 520] }] }), 'https://x/p.jpg', step({}), 'hauteur')
+    expect(tall[0]).toMatchObject({ type: 'measure', x: 0.5, x2: 0.5, y: 0.1, y2: 0.9 })
+  })
+
   it('« encercle le bouton vert » : la demande et la couleur passent à la marque', async () => {
     const ai = fakeAi({ marks: [{ label: 'Démarrer', shape: 'circle', box: [100, 200, 300, 400], color: 'green' }] })
     const [mark] = await annotateImage(ai, 'https://x/p.jpg', step({}), 'encercle le bouton vert et écris Démarrer')

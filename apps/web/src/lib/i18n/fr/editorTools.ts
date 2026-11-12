@@ -22,6 +22,8 @@ export const editorTools = {
     stay: 'Rester',
     leave: 'Quitter',
     textPlaceholder: 'Texte à afficher (ex. Vis A, 25 N·m)',
+    /** La valeur d’une distance, écrite au milieu de la flèche à deux pointes. */
+    measurePlaceholder: 'Valeur de la distance (ex. 12 mm)',
     textLabel: 'Texte de l’annotation',
     textOk: 'OK',
     deleteHint: 'Supprimer (Suppr)',
@@ -49,6 +51,7 @@ export const editorTools = {
       highlight: 'Surligneur',
       arrow: 'Flèche',
       line: 'Ligne',
+      measure: 'Distance',
       circle: 'Cercle',
       rect: 'Cadre',
       text: 'Texte',
@@ -57,6 +60,8 @@ export const editorTools = {
       blur: 'Flouter',
     },
     sizes: { s: 'Petit', m: 'Moyen', l: 'Grand', xl: 'Très grand', xxl: 'Énorme' },
+    /** Le style d’un trait ou d’une forme. */
+    styles: { dashed: 'Pointillé', filled: 'Rempli' },
     colors: { red: 'Rouge', orange: 'Orange', yellow: 'Jaune', green: 'Vert', blue: 'Bleu', white: 'Blanc', black: 'Noir' },
     /** Les icônes à poser, par leur clé (celle que garde l’annotation ; voir lib/annotations/icons.ts). */
     icons: {

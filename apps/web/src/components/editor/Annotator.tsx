@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowUpRight, Circle, Copy, EyeOff, Hash, Highlighter, Loader2, Minus, MousePointer2, Pencil, Redo2, Sparkles, Square, Sticker, Trash2, Type, Undo2, X, ZoomOut } from 'lucide-react'
+import { ArrowUpRight, Circle, Copy, EyeOff, Hash, Highlighter, Loader2, Minus, MousePointer2, MoveHorizontal, Pencil, Redo2, Sparkles, Square, Sticker, Trash2, Type, Undo2, X, ZoomOut } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnnotatedImage } from '@/components/media/MediaView'
@@ -16,12 +16,15 @@ import {
   COLOR_ORDER,
   SIZES,
   bbox,
+  canDash,
+  canFill,
   clamp01,
   clampScale,
   handlesOf,
   hitTest,
   inkOn,
   isPointLike,
+  isSegment,
   moveEnd,
   pointHalf,
   resizeBy,
@@ -48,6 +51,7 @@ const DRAW_TOOLS: Array<{ value: AnnotationType; key: string; icon: ReactNode }>
   { value: 'highlight', key: 'h', icon: <Highlighter className="h-5 w-5" /> },
   { value: 'arrow', key: 'a', icon: <ArrowUpRight className="h-5 w-5" /> },
   { value: 'line', key: 'l', icon: <Minus className="h-5 w-5" /> },
+  { value: 'measure', key: 'm', icon: <MoveHorizontal className="h-5 w-5" /> },
   { value: 'circle', key: 'o', icon: <Circle className="h-5 w-5" /> },
   { value: 'rect', key: 'r', icon: <Square className="h-5 w-5" /> },
   { value: 'text', key: 't', icon: <Type className="h-5 w-5" /> },
@@ -127,6 +131,8 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
   const [color, setColor] = useState<AnnotationColor>('red')
   const [size, setSize] = useState<AnnotationSize>('m')
   const [icon, setIcon] = useState<AnnotationIconKey>('danger')
+  const [dashed, setDashed] = useState(false)
+  const [filled, setFilled] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const [textEdit, setTextEdit] = useState<{ id?: string; x: number; y: number; value: string } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -226,6 +232,13 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
     if (patch.size) setSize(patch.size)
     // Une taille choisie remplace l'agrandissement libre d'une pastille ou d'un texte.
     if (selectedItem) update(selectedItem.id, patch.size && isPointLike(selectedItem) ? { ...patch, scale: undefined } : patch)
+  }
+
+  /** Pointillé ou rempli : pour la marque choisie, et pour les suivantes. */
+  function applyLook(patch: { dashed?: boolean; filled?: boolean }) {
+    if (patch.dashed !== undefined) setDashed(patch.dashed)
+    if (patch.filled !== undefined) setFilled(patch.filled)
+    if (selectedItem) update(selectedItem.id, Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v || undefined])))
   }
 
   function stepSize(dir: 1 | -1) {
@@ -347,8 +360,10 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
       base = { id, type: 'number', x: p.x, y: p.y, text: String(next), color, size }
     } else if (tool === 'icon') base = { id, type: 'icon', x: p.x, y: p.y, icon, color, size }
     else if (tool === 'pen' || tool === 'highlight') base = { id, type: tool, x: p.x, y: p.y, points: [[p.x, p.y]], color, size }
-    else if (tool === 'arrow' || tool === 'line') base = { id, type: tool, x: p.x, y: p.y, x2: p.x, y2: p.y, color, size }
+    else if (tool === 'arrow' || tool === 'line' || tool === 'measure') base = { id, type: tool, x: p.x, y: p.y, x2: p.x, y2: p.y, color, size }
     else base = { id, type: tool, x: p.x, y: p.y, w: 0, h: 0, color, size }
+    if (dashed && canDash(base.type)) base.dashed = true
+    if (filled && canFill(base.type)) base.filled = true
     gesture.current = { kind: 'draw', id, start: p, base, pointerId: e.pointerId }
     setLive([...items, base])
   }
@@ -361,7 +376,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
       if (Math.hypot((p.x - last[0]) * p.w, (p.y - last[1]) * p.h) < 2.5) return a
       return { ...a, points: [...a.points, [p.x, p.y] as [number, number]] }
     }
-    if (a.type === 'arrow' || a.type === 'line') {
+    if (a.type === 'arrow' || a.type === 'line' || a.type === 'measure') {
       const end = shift ? snap45(s, p, p.w, p.h) : p
       return { ...a, x2: end.x, y2: end.y }
     }
@@ -456,11 +471,13 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
     const r = surface.current?.getBoundingClientRect()
     const W = r?.width ?? 1
     const H = r?.height ?? 1
-    if ((a.type === 'arrow' || a.type === 'line') && Math.hypot(((a.x2 ?? a.x) - a.x) * W, ((a.y2 ?? a.y) - a.y) * H) < 12) return
+    if (isSegment(a) && Math.hypot(((a.x2 ?? a.x) - a.x) * W, ((a.y2 ?? a.y) - a.y) * H) < 12) return
     if ((a.type === 'circle' || a.type === 'rect' || a.type === 'blur') && ((a.w ?? 0) * W < 10 || (a.h ?? 0) * H < 10)) return
     commit(list.map((x) => (x.id === a.id && x.points ? { ...x, points: thin(x.points) } : x)))
     // La forme tracée reste sélectionnée : ses poignées, sa taille et sa couleur sont à portée.
     if (a.type !== 'pen' && a.type !== 'highlight') setSelected(a.id)
+    // Une distance tracée : on écrit sa valeur tout de suite (« 12 mm »).
+    if (a.type === 'measure') setTextEdit({ id: a.id, x: a.x, y: a.y, value: a.text ?? '' })
   }
 
   function onDoubleClick(e: React.MouseEvent) {
@@ -575,6 +592,47 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
     </div>
   )
 
+  // Pointillé (traits et formes) et rempli (cercle, cadre) : un aperçu du trait et un mot.
+  const looks = (type: AnnotationType, isDashed: boolean, isFilled: boolean) => {
+    const dash = canDash(type)
+    const fill = canFill(type)
+    if (!dash && !fill) return null
+    const look = (on: boolean, label: string, preview: ReactNode, onClick: () => void) => (
+      <button
+        type="button"
+        aria-pressed={on}
+        onClick={onClick}
+        className={cn('btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-black', on ? 'bg-white text-slate-900' : 'bg-white/10 text-white')}
+      >
+        {preview}
+        {label}
+      </button>
+    )
+    return (
+      <>
+        {dash &&
+          look(
+            isDashed,
+            t.editorTools.annotator.styles.dashed,
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="3 4" />
+            </svg>,
+            () => applyLook({ dashed: !isDashed }),
+          )}
+        {fill &&
+          look(
+            isFilled,
+            t.editorTools.annotator.styles.filled,
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <rect x="4" y="5" width="16" height="14" rx="3" fill="currentColor" fillOpacity=".35" stroke="currentColor" strokeWidth="2.5" />
+            </svg>,
+            () => applyLook({ filled: !isFilled }),
+          )}
+        <span className="mx-0.5 h-6 w-px shrink-0 bg-white/15" />
+      </>
+    )
+  }
+
   const toolTile = (value: Tool, label: string, icon: ReactNode, key: string) => (
     <button
       key={value}
@@ -626,7 +684,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
         onDoubleClick={onDoubleClick}
       >
         <div className="absolute inset-0 origin-top-left px-2 pb-2" style={{ transform: `translate3d(${view.tx}px, ${view.ty}px, 0) scale(${view.k})` }}>
-          <AnnotatedImage src={src} annotations={shown} className="rounded-2xl">
+          <AnnotatedImage src={src} annotations={shown} className="rounded-2xl" blink={false}>
             <div ref={surface} className="absolute inset-0" />
             {selectedItem && !textEdit && <SelectionFrame a={selectedItem} box={box} k={view.k} />}
           </AnnotatedImage>
@@ -658,7 +716,15 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
             confirmText()
           }}
         >
-          <Input autoFocus value={textEdit.value} onChange={(e) => setTextEdit({ ...textEdit, value: e.target.value })} placeholder={t.editorTools.annotator.textPlaceholder} aria-label={t.editorTools.annotator.textLabel} className="h-12" wrapperClassName="flex-1" />
+          <Input
+            autoFocus
+            value={textEdit.value}
+            onChange={(e) => setTextEdit({ ...textEdit, value: e.target.value })}
+            placeholder={items.find((a) => a.id === textEdit.id)?.type === 'measure' ? t.editorTools.annotator.measurePlaceholder : t.editorTools.annotator.textPlaceholder}
+            aria-label={t.editorTools.annotator.textLabel}
+            className="h-12"
+            wrapperClassName="flex-1"
+          />
           <button type="submit" className="btn-press bg-gradient-primary h-12 shrink-0 rounded-2xl px-4 text-sm font-black text-white">
             {t.editorTools.annotator.textOk}
           </button>
@@ -669,6 +735,9 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
       )}
 
       <footer className="pb-safe shrink-0 space-y-2 border-t border-white/10 bg-slate-900/95 px-2 pt-2">
+        {/* Les options gardent toujours la même hauteur : choisir ou lâcher une marque ne fait pas
+            bouger l'image (et les marques avec elle). */}
+        <div className="flex h-[6.25rem] flex-col justify-end gap-2" data-testid="annotator-options">
         {selectedItem ? (
           <>
             <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-1">
@@ -686,6 +755,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
             </div>
             {selectedItem.type !== 'blur' && (
               <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-1">
+                {looks(selectedItem.type, !!selectedItem.dashed, !!selectedItem.filled)}
                 {sizes}
                 {swatches}
               </div>
@@ -718,12 +788,14 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
               <p className="px-2 py-2.5 text-xs font-bold text-white/65">{t.editorTools.annotator.blurHint}</p>
             ) : (
               <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-1">
+                {looks(tool, dashed, filled)}
                 {sizes}
                 {swatches}
               </div>
             )}
           </>
         )}
+        </div>
         {/* La sélection et l'IA restent visibles ; les outils de dessin défilent à côté. */}
         <div className="flex items-center gap-1 pb-1">
           {toolTile('select', t.editorTools.annotator.tools.select, <MousePointer2 className="h-5 w-5" />, 'v')}
@@ -753,7 +825,7 @@ function SelectionFrame({ a, box, k }: { a: Annotation; box: { w: number; h: num
   if (isPointLike(a)) {
     const { hw, hh } = pointHalf(a, box.w)
     frame = { left: `${a.x * 100}%`, top: `${a.y * 100}%`, width: 2 * hw + 12, height: 2 * hh + 12, transform: 'translate(-50%, -50%)' }
-  } else if (a.type !== 'arrow' && a.type !== 'line') {
+  } else if (!isSegment(a)) {
     const b = bbox(a)
     frame = { left: `${b.x1 * 100}%`, top: `${b.y1 * 100}%`, width: `${(b.x2 - b.x1) * 100}%`, height: `${(b.y2 - b.y1) * 100}%` }
   }

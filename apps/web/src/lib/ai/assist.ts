@@ -74,7 +74,7 @@ export async function assistStep(ai: AiApi, org: OrgAi, content: InstructionCont
  * l'IA marque ce que le geste de l'étape touche, sur l'image elle-même).
  */
 export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, request?: string, hint?: string): Promise<Annotation[]> {
-  const res = await ai.ask<{ marks: Array<{ label: string; shape: 'circle' | 'rect' | 'arrow'; box: number[]; color?: AnnotationColor }> }>(
+  const res = await ai.ask<{ marks: Array<{ label: string; shape: 'circle' | 'rect' | 'arrow' | 'measure'; box: number[]; color?: AnnotationColor }> }>(
     'annotate',
     {
       provider: 'google',
@@ -101,6 +101,10 @@ export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, req
       const fromX = cx > 0.5 ? Math.max(0.05, xmin - 0.18) : Math.min(0.95, xmax + 0.18)
       const fromY = cy > 0.5 ? Math.max(0.05, ymin - 0.14) : Math.min(0.95, ymax + 0.14)
       out.push({ id: uid('an_'), type: 'arrow', x: fromX, y: fromY, x2: cx, y2: cy, text: m.label, color })
+    } else if (m.shape === 'measure') {
+      // Une distance : d'un bout à l'autre de la boîte, dans son sens le plus long.
+      const across = xmax - xmin >= ymax - ymin
+      out.push(across ? { id: uid('an_'), type: 'measure', x: xmin, y: cy, x2: xmax, y2: cy, text: m.label, color } : { id: uid('an_'), type: 'measure', x: cx, y: ymin, x2: cx, y2: ymax, text: m.label, color })
     } else {
       out.push({ id: uid('an_'), type: m.shape === 'rect' ? 'rect' : 'circle', x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin, text: m.label, color })
     }
