@@ -33,6 +33,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (Vercel, serveur), le temps réel annonce début, étapes et fin sur le canal de l'organisation
   (`/api/realtime/token`, `src/lib/realtime`) : l'autre appareil se met à jour aussitôt. Les images
   générées passent par OpenAI, niveau mid (`IMAGE_MODEL`, repli Google si la passerelle refuse).
+- **Revenir en arrière** (toggle `draftHistory`) : annuler et rétablir pendant la séance
+  (`src/lib/history/undo.ts`), et des points de retour du brouillon dans `clip_checkpoint`
+  (`src/lib/model/checkpoints.ts`) : au plus un par 10 minutes de modification, avant l'assistant, une
+  régénération ou un retour, sans doublon ni copie de la version publiée, 20 par instruction. Après
+  chaque enregistrement, le cache de l'instruction suit (`cacheDraft`).
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Interface** : français du Québec et anglais, par les dictionnaires typés de `src/lib/i18n`

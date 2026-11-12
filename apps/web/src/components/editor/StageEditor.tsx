@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Copy, ImagePlus, Loader2, MoreHorizontal, Plus, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Copy, History, ImagePlus, Loader2, MoreHorizontal, Plus, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { StepMediaArea } from '@/components/player/StepMediaArea'
 import { AutoTextarea } from '@/components/ui/Field'
@@ -10,8 +10,10 @@ import { useMessages, type Messages } from '@/lib/i18n'
 import { WARNINGS } from '@/lib/model/catalog'
 import type { InstructionContent, Source, Step, WarningLevel } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
+import type { DraftHistory } from '@/hooks/useDraftHistory'
 import { ASSIST_ACTIONS, useStepAssist } from './StepAssist'
 import { StepEditor } from './StepEditor'
+import { UndoButtons } from './UndoControls'
 
 /** Un texte modifiable qui garde l'allure du lecteur : on le touche, on écrit. */
 const editable = 'w-full rounded-xl bg-transparent transition hover:bg-slate-900/[0.03] focus:bg-white/80 focus:ring-4 focus:ring-[rgba(var(--primary-rgb),0.18)] focus:outline-none dark:hover:bg-white/5 dark:focus:bg-slate-900/60'
@@ -48,6 +50,10 @@ export interface StageEditorProps {
   agentOpen?: boolean
   /** « Enregistré », « Enregistrement… » : l'état de l'enregistrement, dans l'en-tête. */
   saveLabel?: ReactNode
+  /** Annuler et rétablir (dans l'en-tête, sur ordinateur). */
+  history?: DraftHistory
+  /** Ouvre l'historique : versions publiées et points de retour du brouillon. */
+  onHistory?: () => void
   onChange: (s: Step) => void
   onSelect: (id: string) => void
   onInsertAfter: () => void
@@ -109,6 +115,7 @@ function stepMenu(p: Inner, t: Messages) {
     ...(p.index > 0 ? [{ label: t.editor.stage.moveBefore, icon: <ArrowLeft className="h-4 w-4" />, onClick: () => p.onMove(-1) }] : []),
     ...(p.index < total - 1 ? [{ label: t.editor.stage.moveAfter, icon: <ArrowRight className="h-4 w-4" />, onClick: () => p.onMove(1) }] : []),
     { label: t.editor.step.delete, icon: <Trash2 className="h-4 w-4" />, onClick: p.onDelete, danger: true },
+    ...(p.onHistory ? [{ label: t.editor.page.menu.history, icon: <History className="h-4 w-4" />, onClick: p.onHistory }] : []),
   ]
 }
 
@@ -269,17 +276,19 @@ function StageCanvas(p: Inner) {
       {/* Au-dessus du contenu : les menus de l'en-tête s'ouvrent par-dessus l'étape. */}
       <header className="glass-nav relative z-20 border-b">
         <div className="flex h-16 items-center gap-3 px-4">
-          <button type="button" onClick={p.onExit} className="btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-slate-700 hover:bg-slate-900/5 dark:text-slate-200 dark:hover:bg-white/10">
-            <ArrowLeft className="h-4 w-4" /> {t.editor.views.form}
+          <button type="button" onClick={p.onExit} aria-label={t.editor.views.form} className="btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-slate-700 hover:bg-slate-900/5 dark:text-slate-200 dark:hover:bg-white/10">
+            <ArrowLeft className="h-4 w-4" /> {!p.agentOpen && t.editor.views.form}
           </button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-black text-slate-900 dark:text-white">{content.title}</p>
             {p.saveLabel && <p className="truncate text-xs font-bold text-slate-400">{p.saveLabel}</p>}
           </div>
-          <StepNav p={p} className="w-[min(460px,40vw)]" />
+          {!readOnly && p.history && <UndoButtons history={p.history} className="shrink-0" />}
+          <StepNav p={p} className="w-[min(420px,34vw)]" />
           {!readOnly && (
             <div className="flex shrink-0 items-center gap-1.5">
-              <AssistButton p={p} />
+              {/* L'assistant ouvert à droite : le bouton se fait petit pour laisser sa place à la barre. */}
+              <AssistButton p={p} compact={p.agentOpen} />
               <Menu bare label={t.editor.stage.stepActions} items={stepMenu(p, t)} trigger={<span className="btn-press glass-card flex h-11 w-11 items-center justify-center rounded-2xl"><MoreHorizontal className="h-5 w-5" /></span>} />
             </div>
           )}

@@ -54,6 +54,7 @@ document et filtré à chaque lecture). Le jour où l'identifiant `clip-v3` exis
 | `clip_feedback` | un retour d'opérateur | instruction, étape, type, commentaire, photo, statut |
 | `clip_event` | une consultation ou une réalisation | type, instruction, poste, durée, source |
 | `clip_import` | un lot d'import de documents | fichiers et leur état |
+| `clip_checkpoint` | un point de retour du brouillon (modifications enregistrées, pas publiées) | instruction, contenu complet, raison, empreinte, auteur, date |
 
 Le contenu publié est séparé du brouillon : un lien public ne lit que `clip_published` (et ce qu'il
 faut pour signaler un retour), jamais les brouillons.
@@ -167,6 +168,29 @@ une photo ou une page tirés d'une source.
   moteur que le clavardage (un tour `edit_agent`, visible et annulable), `aller_a_etape`,
   `lire_instruction` et `annuler_dernier_changement`.
 
+### Revenir en arrière (`src/lib/history/undo.ts`, `src/lib/model/checkpoints.ts`, `useDraftHistory`)
+
+Derrière le toggle `draftHistory`. Deux niveaux :
+
+- **Annuler, rétablir** pendant la séance : boutons de l'en-tête (ordinateur), pastille en bas à
+  gauche (téléphone), Ctrl+Z et Ctrl+Maj+Z (⌘Z, ⇧⌘Z). Les frappes rapprochées dans un même champ
+  forment un seul pas ; un passage de l'assistant aussi. Pas dans une fenêtre ni dans le champ de
+  l'assistant, qui gardent leur propre annulation. Annuler va à l'étape qui change.
+- **Les points de retour** (`clip_checkpoint`), pour revenir en arrière après avoir fermé l'app. Ils
+  s'écrivent avec retenue : au plus un toutes les 10 minutes pendant qu'on modifie (l'état d'avant la
+  modification ; regarder n'écrit rien) ; avant un passage de l'assistant qui change quelque chose,
+  avant de régénérer et avant de revenir à une autre version ; tel que l'IA vient de le créer. Jamais
+  deux fois de suite le même contenu (empreinte), ni une copie de la version publiée. Au plus 20 par
+  instruction : les plus anciens s'effacent, sauf la dernière version de l'IA. Le gardien lit la liste
+  une fois par séance, puis la tient lui-même : une écriture et au plus un effacement par point.
+- **L'historique** (le menu, ou l'état « Enregistré » de l'en-tête) montre les versions publiées et
+  les points de retour, du plus récent au plus ancien. Revenir remet le contenu dans le brouillon,
+  sans rien publier, après un point de retour de l'état actuel ; « Annuler » le défait aussitôt.
+
+Le cache de l'instruction suit chaque enregistrement (`cacheDraft`) et l'éditeur, comme l'aperçu,
+attend la relecture d'une instruction déjà lue avant de s'ouvrir : revenir à une instruction montre
+toujours le dernier brouillon.
+
 ### Une génération suivie sur tous les appareils (`src/lib/ai/creation.ts`)
 
 La génération tourne dans l'appareil qui la lance : l'app mobile ou le navigateur. Pour que les
@@ -235,6 +259,16 @@ modifie l'étape telle que l'opérateur la verra.
 
 Chaque texte se modifie là où il est. Le média se règle dans une fenêtre, avec les réglages de la
 fiche. La retouche par l'IA (`useStepAssist`) est la même que dans la fiche.
+
+### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
+
+L'aperçu (`/instructions/{id}/lire?apercu=1`) montre le brouillon tel qu'au poste. Pour qui peut
+modifier, l'assistant d'édition y est une bulle ronde : dans la barre des étapes, à droite de
+« Suivant », pour ne rien cacher de l'étape ; ailleurs (avant de commencer, à la fin), elle flotte
+en bas à droite. Ouverte, c'est la même conversation que dans l'éditeur : écrire, dicter, parler en
+direct. Ce qu'elle change s'enregistre dans le brouillon et le lecteur va à l'étape modifiée ; sur
+ordinateur, le lecteur se pousse pour laisser sa colonne au panneau. Ctrl+Z annule le dernier
+passage, et un point de retour le précède.
 
 ### Les médias d'une étape
 

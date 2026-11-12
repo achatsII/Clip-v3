@@ -2,6 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { PreviewEditing } from '@/components/editor/PreviewEditing'
 import { Player } from '@/components/player/Player'
 import { useSession } from '@/components/providers/Session'
 import { LinkButton } from '@/components/ui/Button'
@@ -26,6 +28,14 @@ export default function ReadInstructionPage() {
   // Toggle coupé : la fonction n'existe pas. Facturation : ouverte si incluse (ou facturation éteinte).
   const voice = voiceToggle && (voiceRight === 'off' || voiceRight === 'open')
   const preview = params.get('apercu') === '1'
+  // L'aperçu d'un brouillon qu'on peut modifier : l'assistant d'édition, dans une bulle.
+  const previewAgent = useToggle('previewAgent')
+  const editable = preview && previewAgent && session.can('instructions', 'write')
+  // L'aperçu part du brouillon : déjà lu plus tôt, il attend sa relecture (il a pu changer ailleurs).
+  const [freshId, setFreshId] = useState<string | null>(null)
+  useEffect(() => {
+    if (instruction.data && !instruction.isFetching) setFreshId(id)
+  }, [instruction.data, instruction.isFetching, id])
   const publishedId = instruction.data?.json_data.publishedId
   const published = useQuery({
     queryKey: ['published', id, publishedId],
@@ -35,7 +45,7 @@ export default function ReadInstructionPage() {
 
   const back = () => (window.history.length > 1 ? router.back() : router.push(`/instructions/${id}`))
 
-  if (instruction.isLoading || (published.isLoading && !preview && publishedId)) return <Skeleton className="h-[70dvh] w-full" />
+  if (instruction.isLoading || (published.isLoading && !preview && publishedId) || (preview && freshId !== id && instruction.isFetching)) return <Skeleton className="h-[70dvh] w-full" />
   if (instruction.error) return <ErrorState error={instruction.error} onRetry={() => instruction.refetch()} />
   const doc = instruction.data!
   const content = preview ? doc.json_data.draft : published.data?.json_data.content ?? null
@@ -49,20 +59,19 @@ export default function ReadInstructionPage() {
       />
     )
   }
-  return (
-    <Player
-      content={content}
-      instructionId={id}
-      publishedId={publishedId ?? undefined}
-      version={preview ? null : published.data?.json_data.version}
-      branding={published.data?.json_data.branding ?? { orgName: session.org.json_data.name, logoUrl: session.org.json_data.logoUrl, color: session.org.json_data.color }}
-      source="app"
-      deps={{ data: session.data, ai: session.ai, files: session.files }}
-      preview={preview}
-      onExit={back}
-      exitLabel={preview ? t.instructions.read.backToEditor : t.common.close}
-      allowVoice={voice}
-      allowQuestions
-    />
-  )
+  const player = {
+    instructionId: id,
+    publishedId: publishedId ?? undefined,
+    version: preview ? null : published.data?.json_data.version,
+    branding: published.data?.json_data.branding ?? { orgName: session.org.json_data.name, logoUrl: session.org.json_data.logoUrl, color: session.org.json_data.color },
+    source: 'app' as const,
+    deps: { data: session.data, ai: session.ai, files: session.files },
+    preview,
+    onExit: back,
+    exitLabel: preview ? t.instructions.read.backToEditor : t.common.close,
+    allowVoice: voice,
+    allowQuestions: true,
+  }
+  if (editable) return <PreviewEditing key={id} doc={doc} player={player} />
+  return <Player content={content} {...player} />
 }

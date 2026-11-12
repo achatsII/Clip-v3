@@ -267,6 +267,29 @@ export interface Version {
   createdAt: string
 }
 
+/**
+ * Pourquoi un point de retour du brouillon existe : posé tout seul pendant qu'on modifie (au plus un
+ * par 10 minutes), avant un passage de l'assistant, avant de régénérer, avant de revenir à une autre
+ * version, ou tel que l'IA l'a créé.
+ */
+export type CheckpointReason = 'auto' | 'agent' | 'regenerate' | 'restore' | 'generated'
+
+/** Un état enregistré du brouillon, pour y revenir plus tard (même après avoir fermé l'app). */
+export interface DraftCheckpoint {
+  instructionId: string
+  content: InstructionContent
+  reason: CheckpointReason
+  /** La demande faite à l'assistant, ou la version qu'on a remise. */
+  note: string | null
+  /** L'empreinte du contenu : deux points de retour identiques ne s'enregistrent pas. */
+  hash: string
+  title: string
+  stepCount: number
+  at: string
+  byId: string
+  byName: string
+}
+
 export interface Branding {
   orgName: string
   logoUrl?: string | null

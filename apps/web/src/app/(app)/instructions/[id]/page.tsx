@@ -21,6 +21,7 @@ import { useMessages } from '@/lib/i18n'
 import { T } from '@/lib/model/repo'
 import type { GeneratingInfo, Instruction } from '@/lib/model/types'
 import { readAutoAnnotate } from '@/lib/ai/autoAnnotate'
+import { useToggle } from '@/lib/toggles'
 
 export default function InstructionPage() {
   const { id } = useParams<{ id: string }>()
@@ -30,7 +31,14 @@ export default function InstructionPage() {
   const session = useSession()
   const t = useMessages()
   const instruction = useInstruction(id)
+  // Déjà lue plus tôt : l'éditeur attend la relecture, car il part de ce brouillon (il a pu changer
+  // ailleurs depuis). Une fois ouvert, il suit lui-même les changements.
+  const [freshId, setFreshId] = useState<string | null>(null)
+  useEffect(() => {
+    if (instruction.data && !instruction.isFetching) setFreshId(id)
+  }, [instruction.data, instruction.isFetching, id])
   const stations = useStations()
+  const draftHistory = useToggle('draftHistory')
   const job = useSyncExternalStore(subscribeJobs, () => jobOf(id), () => undefined)
   const started = useRef(false)
   // Une création lancée sur un autre appareil : on la suit, et la page se met à jour à la fin.
@@ -67,10 +75,11 @@ export default function InstructionPage() {
         actor: { id: session.profile.userId, name: session.displayName },
         forceKind: kind === 'auto' ? undefined : kind,
         autoAnnotate: readAutoAnnotate(),
+        checkpoints: draftHistory,
         onDone: refresh,
       })
     },
-    [qc, id, session, stations.data, refresh],
+    [qc, id, session, stations.data, refresh, draftHistory],
   )
 
   // Lancement demandé par l'écran de capture (?generer=auto|procedure|lockout).
@@ -90,7 +99,7 @@ export default function InstructionPage() {
     }
   }, [job?.status, id, refresh])
 
-  if (instruction.isLoading) {
+  if (instruction.isLoading || (freshId !== id && instruction.isFetching)) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-2/3" />

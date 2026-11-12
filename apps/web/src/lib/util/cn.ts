@@ -47,6 +47,15 @@ export function formatDate(iso?: string | null): string {
   return new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+/** Le jour et l'heure (« 12 nov., 14 h 32 ») ; l'année seulement si ce n'est pas celle-ci. */
+export function formatDateTime(iso?: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleString(locale(), { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }), hour: 'numeric', minute: '2-digit' })
+}
+
 /**
  * « 3 étapes » : le nombre dans la langue de l'outil et le mot qu'on lui donne, déjà traduit.
  * Le pluriel suit la règle de la langue (en français, 0 et 1 sont au singulier). Pour une phrase,

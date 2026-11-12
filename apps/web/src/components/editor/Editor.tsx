@@ -41,7 +41,8 @@ import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { Badge } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
-import { qk, useFeedback, useInstructions } from '@/hooks/queries'
+import { cacheDraft, cacheInstruction, qk, useFeedback, useInstructions } from '@/hooks/queries'
+import { useDraftHistory } from '@/hooks/useDraftHistory'
 import { LockBadge } from '@/components/billing/Billing'
 import { useBilling, useEntitlement, useGate, useLimit } from '@/lib/billing/state'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
@@ -61,13 +62,12 @@ import {
   publishInstruction,
   requestChanges,
   requestReview,
-  restoreVersion,
   saveDraft,
   saveSources,
   updatePublishedStations,
 } from '@/lib/model/service'
 import type { Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
-import { cn, timeAgo } from '@/lib/util/cn'
+import { cn, formatDateTime, timeAgo } from '@/lib/util/cn'
 import { AgentPanel, type AgentRequest } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
 import { LockoutEditor } from './LockoutEditor'
@@ -76,6 +76,7 @@ import { QuestionsDialog, type QuestionAnswer } from './QuestionsDialog'
 import { StageEditor } from './StageEditor'
 import { StepEditor } from './StepEditor'
 import { StepList } from './StepList'
+import { UndoButtons, UndoPill } from './UndoControls'
 
 type SaveState = 'saved' | 'saving' | 'error'
 /** Ce qu'un autre appareil annonce d'un brouillon enregistré. */
@@ -168,6 +169,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     try {
       const saved = latest.current
       await saveDraft(data, doc._id, docRef.current.json_data, saved, actor)
+      // Revenir ici (depuis l'aperçu, la liste) montre ce brouillon, pas celui de la première lecture.
+      cacheDraft(qc, doc._id, saved)
       setSaveState('saved')
       // Les autres appareils ouverts sur cette instruction suivent : l'étape changée en premier.
       if (liveRef.current) publishRealtime({ type: 'draft', id: doc._id, title: saved.title, userId: actor.id, byName: actor.name, device: inNativeShell() ? 'app' : 'web', steps: changedSteps(lastSaved.current, saved), from: deviceId })
@@ -176,26 +179,56 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       setSaveState('error')
       throw new Error('save')
     }
-  }, [data, doc._id, actor])
+  }, [data, doc._id, actor, qc])
+
+  /** Remet un état (annuler, rétablir, revenir à une version) et va à l'étape qui change. */
+  const applyContent = useCallback(
+    (next: InstructionContent) => {
+      const before = latest.current
+      latest.current = next
+      setContent(next)
+      setSaveState('saving')
+      if (timer.current) clearTimeout(timer.current)
+      timer.current = setTimeout(() => void flush().catch(() => undefined), 900)
+      const to = followStep(changedSteps(before, next), next)
+      setSelected((sel) => to ?? (next.steps.some((s) => s.id === sel) ? sel : (next.steps[0]?.id ?? null)))
+    },
+    [flush],
+  )
+
+  // Annuler, rétablir (boutons, Ctrl+Z) et les points de retour du brouillon dans la base.
+  const history = useDraftHistory({
+    instructionId: doc._id,
+    active: !readOnly,
+    current: () => latest.current,
+    apply: applyContent,
+    published: published.data?.json_data.content ?? null,
+  })
+  const record = history.record
+  const resetHistory = history.reset
 
   const update = useCallback(
     (next: InstructionContent) => {
+      record(latest.current, next)
+      latest.current = next
       setContent(next)
       setSaveState('saving')
       if (timer.current) clearTimeout(timer.current)
       timer.current = setTimeout(() => void flush().catch(() => undefined), 900)
     },
-    [flush],
+    [flush, record],
   )
 
   useEffect(
     () => () => {
       if (timer.current) {
         clearTimeout(timer.current)
-        void saveDraft(data, doc._id, docRef.current.json_data, latest.current, actor).catch(() => undefined)
+        const draft = latest.current
+        cacheDraft(qc, doc._id, draft)
+        void saveDraft(data, doc._id, docRef.current.json_data, draft, actor).catch(() => undefined)
       }
     },
-    [data, doc._id, actor],
+    [data, doc._id, actor, qc],
   )
 
   useEffect(() => {
@@ -238,6 +271,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         lastSaved.current = draft
         setContent(draft)
         setSaveState('saved')
+        // Les pas d'annulation d'ici ne s'appliquent plus au brouillon d'un autre appareil.
+        resetHistory()
         setSources(fresh!.json_data.sources)
         setStationIds(fresh!.json_data.stationIds)
         const to = followStep(e.steps, draft)
@@ -252,7 +287,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         if (next) void pullRemote(next)
       }
     },
-    [data, doc._id],
+    [data, doc._id, resetHistory],
   )
   useEffect(() => {
     if (!live) return
@@ -492,10 +527,21 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         <Link href="/instructions" className="inline-flex items-center gap-1 text-sm font-black text-slate-500">
           <ArrowLeft className="h-4 w-4" /> {tp.backToList}
         </Link>
-        <span className={cn('inline-flex items-center gap-1.5 text-xs font-black', liveLabel ? 'text-[var(--primary)]' : saveState === 'error' ? 'text-rose-600' : 'text-slate-400')} aria-live="polite">
-          {liveLabel ? <Radio className="h-3.5 w-3.5" /> : saveState === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saveState === 'error' ? <CloudOff className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
-          {saveLabel}
-        </span>
+        <div className="flex min-w-0 items-center gap-1">
+          <UndoButtons history={history} className="max-lg:hidden" />
+          {/* L'état de l'enregistrement mène à l'historique : on y retrouve les états d'avant. */}
+          <button
+            type="button"
+            onClick={() => setDialog('history')}
+            title={tp.undo.history}
+            className={cn('btn-press inline-flex min-h-11 min-w-0 items-center gap-1.5 rounded-2xl px-2 text-xs font-black hover:bg-slate-900/5 dark:hover:bg-white/10', liveLabel ? 'text-[var(--primary)]' : saveState === 'error' ? 'text-rose-600' : 'text-slate-400')}
+            aria-live="polite"
+          >
+            {liveLabel ? <Radio className="h-3.5 w-3.5 shrink-0" /> : saveState === 'saving' ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : saveState === 'error' ? <CloudOff className="h-3.5 w-3.5 shrink-0" /> : <Check className="h-3.5 w-3.5 shrink-0" />}
+            <span className="truncate">{saveLabel}</span>
+            <History className="h-3.5 w-3.5 shrink-0 opacity-60" />
+          </button>
+        </div>
       </div>
       {remote?.conflict && (
         <div className="mb-4 flex flex-col gap-3 rounded-[24px] bg-amber-50 p-4 sm:flex-row sm:items-center dark:bg-amber-500/10" role="status">
@@ -550,7 +596,17 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               { label: tp.menu.exportJson, icon: <FileJson className="h-4 w-4" />, onClick: exportJson },
               { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history') },
               { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle, hint: translations === 'locked' ? <LockBadge /> : undefined },
-              { label: tp.menu.regenerate, icon: <Sparkles className="h-4 w-4" />, onClick: async () => (await confirm({ title: tp.menu.regenerateConfirm.title, description: tp.menu.regenerateConfirm.description, confirmLabel: tp.menu.regenerateConfirm.confirm })) && onRegenerate(), hidden: readOnly || !sources.length },
+              {
+                label: tp.menu.regenerate,
+                icon: <Sparkles className="h-4 w-4" />,
+                hidden: readOnly || !sources.length,
+                onClick: async () => {
+                  if (!(await confirm({ title: tp.menu.regenerateConfirm.title, description: history.enabled ? tp.menu.regenerateConfirm.descriptionKept : tp.menu.regenerateConfirm.description, confirmLabel: tp.menu.regenerateConfirm.confirm }))) return
+                  // Le brouillon enregistré tel quel : la génération en garde un point de retour avant de le remplacer.
+                  await flush().catch(() => undefined)
+                  onRegenerate()
+                },
+              },
               {
                 label: tp.menu.duplicate,
                 icon: <Copy className="h-4 w-4" />,
@@ -643,7 +699,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
                 void rate('down', ratingComment ?? '')
               }}
             >
-              <Input autoFocus value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder={tp.rating.missingPlaceholder} aria-label={tp.rating.missingLabel} className="h-11 text-sm" wrapperClassName="flex-1 sm:w-72 sm:flex-none" />
+              <Input data-own-undo="" autoFocus value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder={tp.rating.missingPlaceholder} aria-label={tp.rating.missingLabel} className="h-11 text-sm" wrapperClassName="flex-1 sm:w-72 sm:flex-none" />
               <Button size="sm" type="submit" variant="primary">
                 {tp.rating.send}
               </Button>
@@ -717,6 +773,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               agentWorking={agentStep === step.id}
               agentOpen={agentOpen}
               saveLabel={saveLabel}
+              history={history}
+              onHistory={() => setDialog('history')}
               onChange={setStep}
               onSelect={(id) => id && setSelected(id)}
               onInsertAfter={() => insertAfter(idx)}
@@ -728,6 +786,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               onSourceAdded={(s) => {
                 const next = [...sources, s]
                 setSources(next)
+                cacheInstruction(qc, doc._id, { sources: next })
                 void saveSources(data, doc._id, next, actor)
               }}
             />
@@ -749,6 +808,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               onSourceAdded={(s) => {
                 const next = [...sources, s]
                 setSources(next)
+                cacheInstruction(qc, doc._id, { sources: next })
                 void saveSources(data, doc._id, next, actor)
               }}
             />
@@ -767,9 +827,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           onWorking={setAgentStep}
           onOpenChange={setAgentOpen}
           request={agentRequest}
+          onTurnStart={history.begin}
+          onTurnEnd={history.end}
           sources={sources}
           onSourcesChange={(next) => {
             setSources(next)
+            cacheInstruction(qc, doc._id, { sources: next })
             void data.patch(T.instruction, doc._id, { sources: next })
           }}
         />
@@ -780,14 +843,26 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         open={dialog === 'history'}
         onClose={() => setDialog(null)}
         doc={doc}
+        current={content}
+        dirty={isDirty}
+        withCheckpoints={history.enabled}
         onRestore={async (v) => {
-          await restoreVersion(data, doc, v, actor)
-          setContent(v.content)
-          setSelected(v.content.steps[0]?.id ?? null)
+          // L'état d'avant reste : un point de retour, et « Annuler » tout de suite.
+          await history.beforeRestore(`v${v.number}`)
+          applyContent(v.content)
+          await flush()
           refresh()
-          toast.success(tp.toasts.restored(v.number), tp.toasts.restoredDetail)
+          toast.success(tp.toasts.restored(v.number), history.enabled ? tp.toasts.restoredUndo : tp.toasts.restoredDetail, history.enabled ? { label: tp.undo.undo, onClick: history.undo } : undefined)
+        }}
+        onRestoreCheckpoint={async (c) => {
+          await history.beforeRestore(c.at)
+          applyContent(c.content)
+          await flush()
+          refresh()
+          toast.success(tp.toasts.restoredState(formatDateTime(c.at)), tp.toasts.restoredUndo, { label: tp.undo.undo, onClick: history.undo })
         }}
       />
+      <UndoPill history={history} />
       <TranslateDialog open={dialog === 'translate'} onClose={() => setDialog(null)} content={content} onTranslated={(lang, translated) => update({ ...content, translations: { ...(content.translations ?? {}), [lang]: translated } })} />
 
       <Modal

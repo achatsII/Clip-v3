@@ -3,6 +3,7 @@ import type { AiApi } from '../gateway/ai'
 import type { DataApi, Doc } from '../gateway/data'
 import type { FilesApi } from '../gateway/files'
 import { messages } from '../i18n'
+import { recordCheckpoint } from '../model/checkpoints'
 import { nowIso, T } from '../model/repo'
 import { saveDraft, type Actor } from '../model/service'
 import type { Instruction, OrgSettings, Station } from '../model/types'
@@ -29,6 +30,11 @@ export function startGeneration(input: {
   forceKind?: 'procedure' | 'lockout'
   /** Annoter les images au deuxième temps, sur l'image elle-même (choix de la personne ; oui par défaut). */
   autoAnnotate?: boolean
+  /**
+   * Les points de retour du brouillon (feature toggle `draftHistory`) : le brouillon remplacé par une
+   * régénération en garde un, et la version de l'IA aussi.
+   */
+  checkpoints?: boolean
   onDone?: () => void
 }): Promise<void> {
   const { doc, data, files, ai, org, stations, actor } = input
@@ -46,6 +52,8 @@ export function startGeneration(input: {
     keepAwake(true)
     try {
       const instr = doc.json_data
+      // Une régénération remplace le brouillon : il reste dans l'historique (sans retarder la génération).
+      if (input.checkpoints && instr.draft) await Promise.race([recordCheckpoint(data, doc._id, instr.draft, 'regenerate', actor), new Promise((r) => setTimeout(r, 4000))])
       const out = await generateInstruction({
         ai,
         files,
@@ -90,6 +98,8 @@ export function startGeneration(input: {
           stationGuess: out.stationGuess,
         },
       })
+      // La version de l'IA, gardée pour y revenir après des modifications.
+      if (input.checkpoints) void recordCheckpoint(data, doc._id, content, 'generated', actor)
       tell('done')
     } catch (e) {
       await report.fail(e instanceof Error ? e.message : messages().capture.progress.failed)

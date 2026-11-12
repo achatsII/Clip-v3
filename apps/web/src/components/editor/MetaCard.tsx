@@ -84,7 +84,7 @@ export function MetaCard({
             </div>
             {!readOnly && (
               <div className="relative mt-2">
-                <Input value={stationQuery} onChange={(e) => setStationQuery(e.target.value)} placeholder={t.stationPlaceholder} />
+                <Input data-own-undo="" value={stationQuery} onChange={(e) => setStationQuery(e.target.value)} placeholder={t.stationPlaceholder} />
                 {stationQuery && (
                   <div className="glass-panel absolute inset-x-0 top-14 z-20 rounded-2xl p-1.5">
                     {matches.map((s) => (
@@ -203,7 +203,7 @@ export function MetaCard({
                     setTag('')
                   }}
                 >
-                  <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder={t.tagPlaceholder} aria-label={t.addTag} className="h-11 text-sm" wrapperClassName="w-60" />
+                  <Input data-own-undo="" value={tag} onChange={(e) => setTag(e.target.value)} placeholder={t.tagPlaceholder} aria-label={t.addTag} className="h-11 text-sm" wrapperClassName="w-60" />
                 </form>
               )}
             </div>

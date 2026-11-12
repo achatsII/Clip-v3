@@ -25,6 +25,8 @@ export const T = {
   feedback: 'clip_feedback',
   event: 'clip_event',
   importJob: 'clip_import',
+  /** Les points de retour du brouillon (historique des modifications non publiées). */
+  checkpoint: 'clip_checkpoint',
 } as const
 
 export const nowIso = () => new Date().toISOString()

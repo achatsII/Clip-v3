@@ -21,7 +21,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { EnergyIcon, PpeIcon } from '@/components/icons'
 import { MediaLabelsProvider } from '@/components/media/MediaView'
 import { Confetti } from '@/components/ui/Celebrate'
@@ -69,6 +69,17 @@ export interface PlayerProps {
   /** Questions écrites à l'IA (exige le droit `assistant:ask`). */
   allowQuestions?: boolean
   showBranding?: boolean
+  /** Aller à cette étape (l'aperçu qu'on modifie : l'étape que l'assistant change). `key` change à chaque demande. */
+  focus?: { stepId: string; key: number } | null
+  /** L'étape affichée (null avant de commencer et à la fin). */
+  onStepChange?: (stepId: string | null) => void
+  /** Des classes de plus pour le cadre plein écran (laisser la place au panneau de l'assistant). */
+  frameClassName?: string
+  /**
+   * Un bouton de plus, en bas à droite (la bulle de l'assistant dans l'aperçu) : dans la barre des
+   * étapes, à droite de « Suivant », pour ne rien cacher de l'étape ; ailleurs, il flotte.
+   */
+  accessory?: ReactNode
 }
 
 function deviceId(): string {
@@ -103,7 +114,7 @@ function localized(content: InstructionContent, lang: string): InstructionConten
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory } = props
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
     try {
@@ -159,6 +170,18 @@ export function Player(props: PlayerProps) {
   }, [preview, deps.data, instructionId, stationId, version, source])
 
   const step: Step | undefined = index >= 0 && index < total ? content.steps[index] : undefined
+
+  // L'aperçu qu'on modifie : on va à l'étape demandée, et on dit laquelle est affichée.
+  useEffect(() => {
+    if (!focus) return
+    const i = content.steps.findIndex((s) => s.id === focus.stepId)
+    if (i < 0) return
+    setIndex(i)
+    setView('steps')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.key])
+  const stepId = step?.id ?? null
+  useEffect(() => onStepChange?.(stepId), [stepId, onStepChange])
 
   const speakStep = useCallback(
     (s: Step | undefined) => {
@@ -231,10 +254,11 @@ export function Player(props: PlayerProps) {
   }
 
   const progress = total ? ((index + 1) / total) * 100 : 0
+  const footer = view === 'steps' && index >= 0 && index < total
   const energyById = new Map((content.lockout?.energyPoints ?? []).map((e) => [e.id, e]))
 
   const player = (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-50 dark:bg-slate-950" role="application" aria-label={content.title}>
+    <div className={cn('fixed inset-0 z-50 flex flex-col bg-slate-50 dark:bg-slate-950', frameClassName)} role="application" aria-label={content.title}>
       <Confetti show={index === total} />
       {/* En-tête */}
       <header className="pt-safe glass-nav z-10 border-b">
@@ -367,7 +391,8 @@ export function Player(props: PlayerProps) {
       </main>
 
       {/* Navigation */}
-      {view === 'steps' && index >= 0 && index < total && (
+      {accessory && !footer && <div className="kb-hide fixed right-4 bottom-[calc(7.5rem+env(safe-area-inset-bottom))] z-[60] lg:right-6">{accessory}</div>}
+      {footer && (
         <footer className="pb-safe glass-nav z-10 border-t">
           <div className="mx-auto flex max-w-5xl gap-3 px-3 py-3 sm:px-5">
             <button type="button" onClick={() => go(index - 1)} className="btn-press glass-card flex h-20 flex-1 items-center justify-center gap-2 rounded-[28px] text-lg font-black text-slate-700 sm:flex-none sm:px-10 dark:text-slate-200" aria-label={t.previous}>
@@ -376,6 +401,7 @@ export function Player(props: PlayerProps) {
             <button type="button" onClick={() => go(index + 1)} className="btn-press bg-gradient-primary shadow-primary flex h-20 flex-[2] items-center justify-center gap-3 rounded-[28px] text-xl font-black tracking-wide text-white sm:flex-1">
               {index === total - 1 ? t.finish : t.next} {index === total - 1 ? <Check className="h-7 w-7" /> : <ArrowRight className="h-7 w-7" />}
             </button>
+            {accessory && <div className="flex shrink-0 items-center">{accessory}</div>}
           </div>
         </footer>
       )}

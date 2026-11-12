@@ -1,7 +1,7 @@
 'use client'
 
-import { Copy, History, Languages, Link2, Loader2, RotateCcw } from 'lucide-react'
-import { useState } from 'react'
+import { Bot, Copy, History, Languages, Link2, Loader2, RotateCcw, Sparkles } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { AiCost } from '@/components/billing/AiCost'
 import { QrCode } from '@/components/QrCode'
 import { useSession } from '@/components/providers/Session'
@@ -9,16 +9,18 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { ErrorState, SkeletonRows, errorText } from '@/components/ui/States'
+import { Badge } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
-import { useVersions } from '@/hooks/queries'
+import { useCheckpoints, useVersions } from '@/hooks/queries'
 import { translateInstruction } from '@/lib/ai/assist'
 import type { Doc } from '@/lib/gateway/data'
-import { locale, useMessages } from '@/lib/i18n'
+import { locale, useMessages, type Messages } from '@/lib/i18n'
 import { LANGUAGES } from '@/lib/model/catalog'
+import { contentHash, getCheckpoint, type CheckpointMeta } from '@/lib/model/checkpoints'
 import { T } from '@/lib/model/repo'
-import type { Instruction, InstructionContent, Version } from '@/lib/model/types'
+import type { DraftCheckpoint, Instruction, InstructionContent, Version } from '@/lib/model/types'
 import { copyText, createShareLink, linkUrl } from '@/lib/share'
-import { formatDate } from '@/lib/util/cn'
+import { cn, formatDateTime } from '@/lib/util/cn'
 
 export function ShareDialog({ open, onClose, doc, onLinked }: { open: boolean; onClose: () => void; doc: Doc<Instruction>; onLinked: () => void }) {
   const { data } = useSession()
@@ -85,53 +87,162 @@ export function ShareDialog({ open, onClose, doc, onLinked }: { open: boolean; o
   )
 }
 
-export function HistoryDialog({ open, onClose, doc, onRestore }: { open: boolean; onClose: () => void; doc: Doc<Instruction>; onRestore: (v: Version) => Promise<void> }) {
+/** Pourquoi ce point de retour existe, dans les mots de l'historique. */
+function reasonLabel(t: Messages['editor']['dialogs']['history'], c: CheckpointMeta): string {
+  if (c.reason === 'agent') return t.reasons.agent(c.note)
+  if (c.reason === 'regenerate') return t.reasons.regenerate
+  if (c.reason === 'generated') return t.reasons.generated
+  if (c.reason === 'restore') {
+    const v = c.note?.match(/^v(\d+)$/)
+    if (v) return t.reasons.restoreVersion(Number(v[1]))
+    if (c.note && !Number.isNaN(Date.parse(c.note))) return t.reasons.restoreState(formatDateTime(c.note))
+    return t.reasons.restore
+  }
+  return t.reasons.auto
+}
+
+type HistoryItem = { kind: 'version'; at: string; doc: Doc<Version> } | { kind: 'checkpoint'; at: string; doc: Doc<CheckpointMeta> }
+
+/**
+ * L'historique d'une instruction, du plus récent au plus ancien : les versions publiées et les points
+ * de retour du brouillon (modifications enregistrées, pas encore publiées). Revenir remet ce contenu
+ * dans le brouillon, sans rien publier ; l'éditeur garde un point de retour de l'état d'avant.
+ */
+export function HistoryDialog({
+  open,
+  onClose,
+  doc,
+  current,
+  dirty,
+  withCheckpoints,
+  onRestore,
+  onRestoreCheckpoint,
+}: {
+  open: boolean
+  onClose: () => void
+  doc: Doc<Instruction>
+  /** Le brouillon en ce moment : le point de retour qui lui est identique se dit « brouillon actuel ». */
+  current?: InstructionContent
+  /** Le brouillon diffère de la version publiée : on peut revenir à celle-ci. */
+  dirty?: boolean
+  /** Les points de retour du brouillon (feature toggle `draftHistory`). */
+  withCheckpoints?: boolean
+  onRestore: (v: Version) => Promise<void>
+  onRestoreCheckpoint?: (c: DraftCheckpoint) => Promise<void>
+}) {
   const t = useMessages().editor.dialogs.history
+  const tp = useMessages().editor.page
+  const { data } = useSession()
+  const toast = useToast()
   const versions = useVersions(doc._id, open)
+  const checkpoints = useCheckpoints(doc._id, open && !!withCheckpoints)
   const [restoring, setRestoring] = useState<string | null>(null)
+  const currentHash = useMemo(() => (open && withCheckpoints && current ? contentHash(current) : null), [open, withCheckpoints, current])
+  const items = useMemo<HistoryItem[]>(
+    () =>
+      [
+        ...(versions.data ?? []).map((v) => ({ kind: 'version' as const, at: v.json_data.createdAt, doc: v })),
+        ...(withCheckpoints ? (checkpoints.data ?? []) : []).map((c) => ({ kind: 'checkpoint' as const, at: c.json_data.at, doc: c })),
+      ].sort((a, b) => (b.at ?? '').localeCompare(a.at ?? '')),
+    [versions.data, checkpoints.data, withCheckpoints],
+  )
+  const loading = (versions.isLoading || (withCheckpoints && checkpoints.isLoading)) && !items.length
+
+  async function run(id: string, action: () => Promise<void>) {
+    setRestoring(id)
+    try {
+      await action()
+      onClose()
+    } catch (e) {
+      toast.error(tp.toasts.restoreFailed, errorText(e))
+    } finally {
+      setRestoring(null)
+    }
+  }
+
   return (
     <Modal open={open} onClose={onClose} title={t.title} size="md">
-      {versions.isLoading ? (
+      {versions.error && <ErrorState className="mb-3 py-6" title={t.versionsFailed} error={versions.error} onRetry={() => versions.refetch()} />}
+      {withCheckpoints && checkpoints.error && <ErrorState className="mb-3 py-6" title={t.checkpointsFailed} error={checkpoints.error} onRetry={() => checkpoints.refetch()} />}
+      {loading ? (
         <SkeletonRows count={3} />
-      ) : versions.error ? (
-        <ErrorState error={versions.error} onRetry={() => versions.refetch()} />
-      ) : !versions.data?.length ? (
-        <div className="py-8 text-center">
-          <History className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-          <p className="font-bold text-slate-500">{t.empty}</p>
-        </div>
+      ) : !items.length ? (
+        !versions.error && !(withCheckpoints && checkpoints.error) && (
+          <div className="py-8 text-center">
+            <History className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+            <p className="font-bold text-slate-500">{withCheckpoints ? t.emptyAll : t.empty}</p>
+          </div>
+        )
       ) : (
         <ol className="space-y-2">
-          {versions.data.map((v) => (
-            <li key={v._id} className="glass-card flex items-center gap-3 rounded-2xl p-3">
-              <span className="bg-gradient-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white">v{v.json_data.number}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-black">{v.json_data.changelog}</span>
-                <span className="block text-xs font-bold text-slate-500">
-                  {formatDate(v.json_data.createdAt)} · {v.json_data.publishedByName}
-                  {v.json_data.approvedByName ? ` · ${t.approvedBy(v.json_data.approvedByName)}` : ''}
+          {items.map((item) => {
+            if (item.kind === 'version') {
+              const v = item.doc
+              const live = v.json_data.number === doc.json_data.publishedVersion
+              return (
+                <li key={v._id} className="glass-card flex items-center gap-3 rounded-2xl p-3">
+                  <span className="bg-gradient-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white">v{v.json_data.number}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-1.5 text-sm font-black">
+                      {v.json_data.changelog} {live && <Badge tone="success">{t.atStations}</Badge>}
+                    </span>
+                    <span className="block text-xs font-bold text-slate-500">
+                      {formatDateTime(v.json_data.createdAt)} · {v.json_data.publishedByName}
+                      {v.json_data.approvedByName ? ` · ${t.approvedBy(v.json_data.approvedByName)}` : ''}
+                    </span>
+                  </span>
+                  {(!live || dirty) && (
+                    <Button size="sm" loading={restoring === v._id} disabled={!!restoring} aria-label={t.restoreLabel(`v${v.json_data.number}`)} icon={<RotateCcw className="h-4 w-4" />} onClick={() => void run(v._id, () => onRestore(v.json_data))}>
+                      {t.restore}
+                    </Button>
+                  )}
+                </li>
+              )
+            }
+            const c = item.doc
+            const label = reasonLabel(t, c.json_data)
+            const isCurrent = !!currentHash && c.json_data.hash === currentHash
+            const reason = c.json_data.reason
+            return (
+              <li key={c._id} className="glass-card flex items-center gap-3 rounded-2xl p-3">
+                <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', reason === 'generated' ? 'bg-gradient-accent text-white' : 'bg-slate-900/[0.06] text-slate-500 dark:bg-white/10 dark:text-slate-300')}>
+                  {reason === 'generated' ? <Sparkles className="h-5 w-5" /> : reason === 'agent' ? <Bot className="h-5 w-5" /> : <History className="h-5 w-5" />}
                 </span>
-              </span>
-              {v.json_data.number !== doc.json_data.publishedVersion && (
-                <Button
-                  size="sm"
-                  loading={restoring === v._id}
-                  icon={<RotateCcw className="h-4 w-4" />}
-                  onClick={async () => {
-                    setRestoring(v._id)
-                    await onRestore(v.json_data)
-                    setRestoring(null)
-                    onClose()
-                  }}
-                >
-                  {t.restore}
-                </Button>
-              )}
-            </li>
-          ))}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-black">{label}</span>
+                  <span className="block text-xs font-bold text-slate-500">
+                    {formatDateTime(c.json_data.at)} · {c.json_data.byName} · {t.steps(c.json_data.stepCount)}
+                  </span>
+                </span>
+                {isCurrent ? (
+                  <Badge>{t.current}</Badge>
+                ) : (
+                  onRestoreCheckpoint && (
+                    <Button
+                      size="sm"
+                      loading={restoring === c._id}
+                      disabled={!!restoring}
+                      aria-label={t.restoreLabel(label)}
+                      icon={<RotateCcw className="h-4 w-4" />}
+                      onClick={() =>
+                        void run(c._id, async () => {
+                          const full = await getCheckpoint(data, c._id)
+                          if (!full) throw new Error(tp.toasts.restoreFailed)
+                          await onRestoreCheckpoint(full.json_data)
+                        })
+                      }
+                    >
+                      {t.restore}
+                    </Button>
+                  )
+                )}
+              </li>
+            )
+          })}
         </ol>
       )}
       <p className="mt-4 text-xs font-medium text-slate-400">{t.note}</p>
+      {withCheckpoints && <p className="mt-1 text-xs font-medium text-slate-400">{t.kept}</p>}
     </Modal>
   )
 }

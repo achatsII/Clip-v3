@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -14,6 +14,10 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   storePurchases: true,
   // L'édition en direct entre appareils (temps réel) : l'éditeur ouvert ailleurs suit les changements.
   liveEditing: true,
+  // Annuler, rétablir, et les points de retour du brouillon enregistrés dans la base.
+  draftHistory: true,
+  // L'assistant d'édition en bulle dans l'aperçu.
+  previewAgent: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -27,4 +31,6 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   valueReport: false,
   storePurchases: false,
   liveEditing: false,
+  draftHistory: false,
+  previewAgent: false,
 }

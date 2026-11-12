@@ -54,6 +54,10 @@ export function AgentPanel({
   request,
   sources,
   onSourcesChange,
+  onTurnStart,
+  onTurnEnd,
+  variant = 'panel',
+  open: openProp,
 }: {
   content: InstructionContent
   setContent: (c: InstructionContent) => void
@@ -70,10 +74,25 @@ export function AgentPanel({
   sources?: Source[]
   /** Les sources après une revue (URI Gemini rafraîchies), à garder dans l'instruction. */
   onSourcesChange?: (sources: Source[]) => void
+  /** L'assistant va modifier (la demande en main) : l'éditeur en fait un seul pas d'annulation. */
+  onTurnStart?: (request: string) => void
+  onTurnEnd?: () => void
+  /**
+   * `bubble` : par-dessus l'aperçu plein écran, une petite bulle ronde en bas à droite, au-dessus des
+   * boutons du lecteur ; ouverte, la même conversation (écrire, dicter, parler en direct).
+   */
+  variant?: 'panel' | 'bubble'
+  /** Ouvert ou fermé par la page (la bulle de l'aperçu vit dans la barre du lecteur). */
+  open?: boolean
 }) {
   const { ai, org, files } = useSession()
   const t = useMessages()
-  const [open, setOpen] = useState(false)
+  const [openInner, setOpenInner] = useState(false)
+  const open = openProp ?? openInner
+  const setOpen = (v: boolean) => {
+    if (openProp === undefined) setOpenInner(v)
+    onOpenChange?.(v)
+  }
   const [minimized, setMinimized] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
@@ -97,7 +116,6 @@ export function AgentPanel({
   const working = messages.find((m) => m.working)
   const current = working?.actions?.findLast((a) => a.state === 'working')
 
-  useEffect(() => onOpenChange?.(open), [open, onOpenChange])
   // Une demande de l'éditeur : le panneau s'ouvre et la traite sous les yeux de la personne.
   const handled = useRef(0)
   useEffect(() => {
@@ -157,25 +175,30 @@ export function AgentPanel({
         patch(agentId, (m) => ({ before, actions: (m.actions ?? []).filter((a) => a.key === -1) }))
         // Au téléphone, on laisse voir l'étape qui change (la conversation vocale reste ouverte).
         if (via === 'text' && window.matchMedia('(max-width: 1023px)').matches) setMinimized(true)
-        await runAgentOps(turn.operations, {
-          ai,
-          sources,
-          files,
-          get: () => liveContent.current,
-          set: (c) => {
-            liveContent.current = c
-            setContent(c)
-          },
-          focus: (id) => {
-            onFocus(id)
-            onWorking(id)
-          },
-          log: (entry) => {
-            if (entry.state === 'done') done.push(entry.label)
-            if (entry.state === 'error') failed.push(entry.label)
-            patch(agentId, (m) => ({ actions: [...(m.actions ?? []).filter((a) => a.key !== entry.key), entry].sort((a, b) => a.key - b.key) }))
-          },
-        })
+        onTurnStart?.(ask)
+        try {
+          await runAgentOps(turn.operations, {
+            ai,
+            sources,
+            files,
+            get: () => liveContent.current,
+            set: (c) => {
+              liveContent.current = c
+              setContent(c)
+            },
+            focus: (id) => {
+              onFocus(id)
+              onWorking(id)
+            },
+            log: (entry) => {
+              if (entry.state === 'done') done.push(entry.label)
+              if (entry.state === 'error') failed.push(entry.label)
+              patch(agentId, (m) => ({ actions: [...(m.actions ?? []).filter((a) => a.key !== entry.key), entry].sort((a, b) => a.key - b.key) }))
+            },
+          })
+        } finally {
+          onTurnEnd?.()
+        }
       }
       patch(agentId, { working: false })
       return { reply: turn.reply, done, failed }
@@ -212,8 +235,10 @@ export function AgentPanel({
     patch(m.id, { undone: true })
   }
 
+  const bubble = variant === 'bubble'
   if (!open) {
-    return (
+    // La bulle de l'aperçu est posée par la page, dans la barre du lecteur (`AgentBubble`).
+    return bubble ? null : (
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -226,7 +251,7 @@ export function AgentPanel({
 
   if (minimized) {
     return (
-      <div className="kb-bottom pb-safe fixed inset-x-0 bottom-0 z-50 px-3 pb-3 lg:hidden">
+      <div className={cn('kb-bottom pb-safe fixed inset-x-0 bottom-0 px-3 pb-3 lg:hidden', bubble ? 'z-[60]' : 'z-50')}>
         <button type="button" onClick={() => setMinimized(false)} className="glass-float flex h-14 w-full items-center gap-3 rounded-full px-4 text-left">
           <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[var(--primary)]" />
           <span className="min-w-0 flex-1 truncate text-sm font-black">{current?.label ?? t.editorTools.agent.busy}</span>
@@ -239,7 +264,9 @@ export function AgentPanel({
   return (
     <section
       aria-label={t.editorTools.agent.label}
-      className="kb-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:top-24 lg:right-6 lg:bottom-6 lg:max-h-none lg:w-[400px] lg:rounded-[32px] dark:border-white/10 dark:bg-slate-900"
+      // Ses champs gardent leur propre annulation : Ctrl+Z n'y annule pas l'instruction.
+      data-own-undo=""
+      className={cn('kb-bottom fixed inset-x-0 bottom-0 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:max-h-none lg:w-[400px] lg:rounded-[32px] dark:border-white/10 dark:bg-slate-900', bubble ? 'z-[60] lg:top-6' : 'z-50 lg:top-24')}
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-slate-900/5 px-4 py-3 dark:border-white/5">
         <span className="bg-gradient-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">
@@ -323,6 +350,16 @@ export function AgentPanel({
         <AiCost operation="edit_agent" className="" />
       </p>
     </section>
+  )
+}
+
+/** La bulle qui ouvre l'assistant dans l'aperçu : ronde, discrète, à droite de « Suivant ». */
+export function AgentBubble({ onClick }: { onClick: () => void }) {
+  const t = useMessages()
+  return (
+    <button type="button" onClick={onClick} aria-label={t.editorTools.agent.title} title={t.editorTools.agent.subtitle} className="glass-float btn-press flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[var(--primary-strong)] dark:text-sky-300">
+      <Sparkles className="h-6 w-6" />
+    </button>
   )
 }
 
