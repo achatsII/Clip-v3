@@ -1,0 +1,28 @@
+<title>05 Voici Clip</title>
+<style>
+.lk{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;gap:30px;white-space:nowrap}
+.lk .tx small{display:block;margin-top:10px;font-family:'Inter',system-ui,sans-serif;font-size:19px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#0056d6}
+</style>
+<div data-slot="shape">
+  <div class="L" id="Lic"></div>
+  <div class="L" id="Llk"><div class="lk"><span id="mk"></span><span class="tx"><span id="wm"></span><small>Instructions de travail · IA</small></span></div></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+const {T,W}=scene();
+$('Lic').innerHTML=`<div style="position:absolute;left:-120px;top:-120px;width:240px;height:240px">${LOGO(240)}</div>`;
+$('mk').innerHTML=LOGO(150); $('wm').innerHTML=WORDMARK(128);
+const tV=W('v05','voici')-0.04, tC=W('v05','clip')-0.06, tL=tC+0.02;
+const beat=M.track(0,[[tV,1,[30,0.6]],[tV+0.16,0,[14,0.8]]]);
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{icon:SH_ICON, logo:SH_LOGO}, start:'icon', SEQ:[[tL,'logo']],
+  shapePress:[tV+0.05],
+  layers:[
+    {el:'Lic',tin:null,tout:tL},
+    {el:'Llk',tin:tL,tout:null,o:{lin:0.25}},
+  ],
+});
+</script>

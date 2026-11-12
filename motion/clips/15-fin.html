@@ -1,0 +1,42 @@
+<title>15 Clip, la promesse, la démo</title>
+<style>
+.fin{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:30px;white-space:nowrap;font-family:'Inter',system-ui,sans-serif}
+.fin .frow{display:flex;align-items:center;gap:26px}
+.fin .tag{display:flex;gap:14px;font-size:46px;font-weight:800;letter-spacing:-.035em;color:#475569}
+.fin .tag span{display:inline-block}
+.fin .cta{margin-top:6px;height:92px;padding:0 46px;border-radius:999px;display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,#00c6ff,#0078ff);box-shadow:0 14px 32px rgba(0,120,255,.35);color:#fff;font-size:34px;font-weight:900;letter-spacing:.01em}
+</style>
+<div data-slot="shape">
+  <div class="L" id="Lpdf"></div>
+  <div class="L" id="Lic"></div>
+  <div class="L" id="Lfin"><div class="fin"><div class="frow"><span id="mk"></span><span id="wm"></span></div>
+    <div class="tag"><span id="g0">Le savoir-faire de vos experts,</span><span id="g1">au poste,</span><span id="g2" style="color:#0f172a;font-weight:900">en quelques minutes.</span></div>
+    <div class="cta" id="cta"><span id="cti"></span>Demandez une démo</div></div></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_ui-pdfPage.js"></script>
+<script data-include="_thumbs.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+useUI();
+const {T,W}=scene();
+$('Lpdf').innerHTML=SCREEN('pdfPage','s14',560,724);
+$('Lic').innerHTML=`<div style="position:absolute;left:-120px;top:-120px;width:240px;height:240px">${LOGO(240)}</div>`;
+$('mk').innerHTML=LOGO(120); $('wm').innerHTML=WORDMARK(112); $('cti').innerHTML=M.icon('arrow',34,'#fff',2.6);
+const SHP={w:560,h:724,r:8,bg:'#FFFFFF',cam:1.1};
+const tI=W('v15','clip')-0.2, tF=tI+0.55, tg=[W('v15','savoir-faire'),W('v15','poste'),W('v15','quelques')].map(x=>x-0.25), tD=W('v16','demandez')-0.15;
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{pdf:SHP, icon:SH_ICON, fin:SH_FIN}, start:'pdf', SEQ:[[tI,'icon'],[tF,'fin']],
+  shapePress:[tD+0.05],
+  layers:[
+    {el:'Lpdf',tin:null,tout:tI+0.05},
+    {el:'Lic',tin:tI,tout:tF},
+    {el:'Lfin',tin:tF,tout:null,o:{lin:0.3},update:(t)=>{
+      tg.forEach((t0,i)=>M.rise($('g'+i),t,t0,null,{dy:16,lin:0.3}));
+      M.rise($('cta'),t,tD,null,{dy:18,lin:0.3}); $('cta').style.transform+=` scale(${(1+0.04*M.pulse(t,tD+0.5,0.25)).toFixed(4)})`;
+    }},
+  ],
+});
+</script>

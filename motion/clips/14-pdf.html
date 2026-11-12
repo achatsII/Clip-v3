@@ -1,0 +1,37 @@
+<title>14 Export PDF</title>
+<style>.ui.s6 .tablet{left:0!important;top:0!important;width:1324px!important;height:816px!important;box-shadow:none!important}
+.ui.s14 .page{left:0!important;top:0!important;margin-left:0!important;box-shadow:none!important}.ui.s14 .file{position:static!important}</style>
+<div data-slot="world"><div class="ui s14" id="fw" style="left:-250px;top:400px;width:500px;height:90px"></div></div><!--/world-->
+<div data-slot="shape">
+  <div class="L" id="Ltab"></div>
+  <div class="L" id="Lpdf"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_ui-tablet.js"></script>
+<script data-include="_ui-pdfPage.js"></script>
+<script data-include="_ui-pdfFile.js"></script>
+<script data-include="_thumbs.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+useUI(); document.head.insertAdjacentHTML('beforeend',`<style>${FB_CSS}</style>`);
+const {T,W}=scene();
+$('Ltab').innerHTML=SCREEN('tablet','s6',1324,816,{'rails-huile':'assets/rails-huile.jpg'});
+const R=document.querySelector('.ui.s6'); R.querySelector('.scr').insertAdjacentHTML('beforeend',FEEDBACK_SHEET('fb'));
+const st=[...R.querySelectorAll('.pl-step')], sub=[...R.querySelectorAll('.pl-sub .pl-st')];
+st[0].style.opacity=0; st[1].style.opacity=1; sub[0].style.opacity=0; sub[1].style.opacity=1; R.querySelector('.pl-prog i').style.width='60%';
+const lis=R.querySelector('.pl-hb.listen'); lis.style.background='#0078ff'; lis.style.color='#fff'; $('fbk0').classList.add('sel');
+$('Lpdf').innerHTML=SCREEN('pdfPage','s14',560,724);
+$('fw').innerHTML=ui('pdfFile');
+const SHP={w:560,h:724,r:8,bg:'#FFFFFF',cam:1.22};
+const tC=W('v14','clic')-0.25, tP=W('v14','pdf')-0.1;
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{tab:SH_TAB, pdf:SHP, pdf2:{...SHP,cam:1.1}}, start:'tab', SEQ:[[tC,'pdf'],[tP-0.2,'pdf2']],
+  layers:[
+    {el:'Ltab',tin:null,tout:tC+0.05},
+    {el:'Lpdf',tin:tC,tout:null,o:{lin:0.3},anchor:'c'},
+  ],
+  extra:(t)=>M.rise($('fw'),t,tP,null,{dy:20,lin:0.3}),
+});
+</script>

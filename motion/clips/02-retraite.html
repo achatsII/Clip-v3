@@ -1,0 +1,23 @@
+<title>02 Ses mains, la retraite</title>
+<div data-slot="shape">
+  <div class="L" id="Lv"></div>
+  <div class="L" id="Lov"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_shared.js"></script>
+<script>
+useChips();
+const {T,W}=scene();
+$('Lv').innerHTML=VIDEO('v','assets/c2-brosse.webm','assets/c2-brosse.jpg');
+$('Lov').innerHTML=CHIP('c1','timer','Retraite','l’an prochain',false,GRAD.danger);
+Object.assign($('c1').style,{left:'-700px',top:'-380px'});
+const tR=W('v02','retraite')-0.08;
+M.scene({
+  W:1920,H:1080,bg:'#0f172a',center:CENTER,T,intro:null,
+  SH:{bleed:SH_BLEED}, start:'bleed', SEQ:[],
+  layers:[
+    {el:'Lv',tin:null,tout:null,update:(t,g)=>{fitPhoto($('v'),g,1.04+0.04*M.eio(t/2.6)); syncVideo($('v'),t);}},
+    {el:'Lov',tin:null,tout:null,update:(t)=>{ M.rise($('c1'),t,tR,null,{dy:-18,lin:0.3}); }},
+  ],
+});
+</script>

@@ -1,0 +1,31 @@
+<title>04 Nulle part par écrit → le logo</title>
+<div data-slot="shape">
+  <div class="L" id="Lph"></div>
+  <div class="L" id="Lov"></div>
+  <div class="L" id="Lic"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_shared.js"></script>
+<script>
+useChips();
+const {T,W,E}=scene();
+$('Lph').innerHTML=PHOTO('ph','assets/cartable.jpg');
+$('Lov').innerHTML=CHIP('c1','alert','Nulle part par écrit','',false,GRAD.danger);
+Object.assign($('c1').style,{left:'120px',top:'300px'});
+// le logo : le dégradé de la marque, puis l'arc du « C » qui se dessine et son point
+$('Lic').innerHTML=`<div style="position:absolute;left:-120px;top:-120px;width:240px;height:240px;border-radius:68px;background:linear-gradient(135deg,#00C6FF,#0078FF)"></div><div style="position:absolute;left:0;top:0">${ARC(240,'arc')}</div>`;
+const tN=W('v04','nulle')-0.06, tEnd=E('v04'), tCard=tN+0.3, tIcon=tEnd, tDraw=tIcon+0.1;
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{bleed:SH_BLEED, card:SH_CARD, icon:SH_ICON}, start:'bleed', SEQ:[[tCard,'card'],[tIcon,'icon']],
+  layers:[
+    {el:'Lph',tin:null,tout:tIcon+0.08,o:{lout:0.22},update:(t,g)=>{fitPhoto($('ph'),g,1.03+0.06*M.eio(t/3.2));}},
+    {el:'Lov',tin:null,tout:tCard+0.05,o:{lout:0.15},update:(t)=>{ M.rise($('c1'),t,tN,null,{dy:18,lin:0.28}); }},
+    {el:'Lic',tin:tIcon,tout:null,o:{lin:0.2},update:(t)=>{
+      const k=M.eio((t-tDraw)/0.55); $('arc').setAttribute('stroke-dashoffset',(70*(1-k)).toFixed(2));
+      $('arcd').setAttribute('opacity',M.clamp((t-tDraw-0.45)/0.15).toFixed(3));
+      $('arcd').setAttribute('r',(4*(1+0.6*M.pulse(t,tDraw+0.6,0.18))).toFixed(3));
+    }},
+  ],
+});
+</script>

@@ -1,0 +1,39 @@
+<title>10 Retoucher, annoter, traduire</title>
+<style>.ui.s9 .phone{left:0!important;top:0!important}.ui.s8 .an{box-shadow:none}</style>
+<div data-slot="shape">
+  <div class="L" id="Lag"></div>
+  <div class="L" id="Lan"></div>
+  <div class="L" id="Lph"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_ui-agent.js"></script>
+<script data-include="_ui-annot.js"></script>
+<script data-include="_ui-phoneLang.js"></script>
+<script data-include="_thumbs.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+useUI();
+const {T,W}=scene();
+$('Lag').innerHTML=SCREEN('agent','s7',1140,880);
+$('Lan').innerHTML=SCREEN('annot','s8',1140,860,{'panneau':'assets/panneau.jpg'});
+$('Lph').innerHTML=SCREEN('phoneLang','s9',420,850);
+const A=AGENT_SETUP(), N=ANNOT_SETUP(), L=[...document.querySelectorAll('#Lph .lay')];  // FR, ZH, AR, ES
+const tR=W('v10','retouchez')-0.1, tMot=W('v10','mot')-0.1, tAn=W('v10','annotez')-0.25, tClic=W('v10','annotez')+0.38, tTr=W('v10','traduisez')-0.25;
+const langT=[tTr, W('v10','traduisez')+0.35, W('v10','quelques')-0.05, W('v10','secondes')-0.05]; // FR, ES, ZH, AR
+const order=[0,3,1,2];
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{ag:SH_WIN7, an:SH_ANNOT, ph:SH_PHONE}, start:'ag', SEQ:[[tAn,'an'],[tTr,'ph']],
+  layers:[
+    {el:'Lag',tin:null,tout:tAn+0.05,update:(t)=>A.update(t,tR,tMot)},
+    {el:'Lan',tin:tAn,tout:tTr+0.05,o:{lin:0.25},update:(t)=>N.update(t,tAn+0.25,tClic)},
+    {el:'Lph',tin:tTr,tout:null,o:{lin:0.25},update:(t)=>{
+      let cur=0; for(let k=0;k<4;k++) if(t>=langT[k]) cur=k;
+      L.forEach((el,i)=>{ const on=order[cur]===i; el.style.opacity=on?1:0; });
+    }},
+  ],
+  cursor:{size:46,clicks:[tAn+0.25],keys:[[0,520,300],[tAn-0.1,330,-360],[tAn+0.25,305,-395],[tAn+0.6,305,-395],[tTr,330,-300]]},
+  extra:(t)=>{ $('cursor').style.opacity=(M.clamp((t-tAn+0.3)/0.2)*(1-M.clamp((t-tTr+0.15)/0.15))).toFixed(3); },
+});
+</script>

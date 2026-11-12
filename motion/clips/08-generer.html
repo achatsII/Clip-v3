@@ -1,0 +1,35 @@
+<title>08 Générer : l’IA rédige</title>
+<style>.ui.s5 .gp{top:0!important;left:0!important}</style>
+<div data-slot="shape">
+  <div class="L" id="Lwin"></div>
+  <div class="L" id="Lgen"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_ui-capture.js"></script>
+<script data-include="_ui-gen.js"></script>
+<script data-include="_thumbs.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+useUI();
+const {T,W}=scene();
+$('Lwin').innerHTML=SCREEN('capture','s4',1120,880);
+CAPTURE_SETUP(); CAP.count(5); CAP.cards.forEach(c=>c.style.opacity=1);
+$('Lgen').innerHTML=SCREEN('gen','s5',540,600);
+const G=GEN_SETUP();
+const tB=W('v08','bouton')-0.05, tIA=W('v08',"l'IA")-0.15;
+const st=[[tIA+0.15,W('v08','redige')],[W('v08','redige'),W('v08',"l'instruction")],[W('v08',"l'instruction"),W('v08','travail')+0.1],[W('v08','travail')+0.1,T-0.15]];
+const press=M.track(0,[[tB-0.07,1,[45,1]],[tB+0.05,0,[22,.72]]]);
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{win:SH_WIN, gen:SH_GEN}, start:'win', SEQ:[[tIA,'gen']],
+  layers:[
+    {el:'Lwin',tin:null,tout:tIA+0.05,update:(t)=>{
+      CAP.gen.style.transform=`scale(${(1-0.05*press(t)).toFixed(4)})`; CAP.loading(t>=tB+0.05, t);
+    }},
+    {el:'Lgen',tin:tIA,tout:null,o:{lin:0.3},update:(t)=>G.update(t,st,tIA)},
+  ],
+  cursor:{size:46,clicks:[tB],keys:[[0,140,120],[tB-0.45,387,372],[tB+0.2,387,372],[tIA,400,420]]},
+  extra:(t)=>{ $('cursor').style.opacity=(M.clamp(t/0.25)*(1-M.clamp((t-tIA+0.1)/0.2))).toFixed(3); },
+});
+</script>
