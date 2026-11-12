@@ -292,7 +292,7 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
 
       <div className="flex items-start gap-4">
         <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
-        <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label={t.editor.stage.titleLabel} placeholder={t.editor.stage.titlePlaceholder} className={cn(editable, 'min-w-0 flex-1 px-2 pt-1 text-3xl leading-[1.05] font-black tracking-tighter text-slate-900 sm:text-4xl dark:text-white')} />
+        <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label={t.editor.stage.titleLabel} placeholder={t.editor.stage.titlePlaceholder} className={cn(editable, 'min-w-0 flex-1 px-2 pt-1 leading-[1.05] font-black tracking-tighter hyphens-auto text-slate-900 dark:text-white', p.agentOpen ? 'text-3xl' : 'text-3xl sm:text-4xl')} />
         {menu && !readOnly && <StepMenu p={p} step={step} />}
       </div>
 
