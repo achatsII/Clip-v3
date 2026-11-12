@@ -31,7 +31,8 @@ de l'utilisateur (connexion par formulaire, jetons en `localStorage`, un seul ra
 |---|---|
 | `GET /api/config` | configuration publique : feature toggles, version minimale de la coquille, temps réel disponible |
 | `POST /api/share` | crée un **lien public à portée limitée** (poste, instruction) : la portée est bâtie côté serveur à partir du type de lien et de la ressource, jamais à partir du navigateur ; l'appel part avec le jeton de l'utilisateur |
-| `GET /api/realtime/token` | **prévue, pas encore bâtie** : jeton Ably de courte durée pour l'écran TV synchronisé (avec `ABLY_KEY`) |
+| `POST /api/realtime/token` | jeton Ably d'une heure pour un appareil connecté, limité au canal de son organisation (avec `ABLY_KEY`) |
+| `GET /api/realtime/status` | diagnostic sans connexion : la clé est-elle là, et Ably l'accepte-t-il avec les droits de l'app (`{ configured, ok, code? }`) |
 
 ### Identifiant d'application
 
@@ -160,6 +161,9 @@ toast avec « Ouvrir ».
   fois l'état écrit. Les messages ne portent que l'identifiant et le titre.
 - **À la réception** : les autres relisent aussitôt la Gateway. La relecture à intervalle reste en
   filet.
+- **Le diagnostic** : `GET /api/realtime/status` demande un vrai jeton à Ably avec les droits de
+  l'app ; `ok: false` avec `code` 40101 veut dire une clé mal copiée, 40160 des droits insuffisants
+  (la clé doit pouvoir publier, écouter et voir la présence sur `clip:org:*`).
 
 Sans signe de vie depuis deux minutes (app fermée, téléphone en veille), la création est
 « interrompue » : on la relance ici, ou on revoit les médias. Dans l'app mobile, l'écran reste
