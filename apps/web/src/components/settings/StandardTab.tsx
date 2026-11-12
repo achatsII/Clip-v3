@@ -75,7 +75,7 @@ export function StandardTab() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="max-words">{t.maxWords}</Label>
-              <Input id="max-words" type="number" inputMode="numeric" min={10} max={60} readOnly={readOnly} value={draft.maxWordsPerStep} onChange={(e) => setDraft({ ...draft, maxWordsPerStep: Math.min(60, Math.max(10, Number(e.target.value) || 25)) })} />
+              <Input id="max-words" type="number" inputMode="numeric" min={10} max={60} readOnly={readOnly} value={draft.maxWordsPerStep} onChange={(e) => setDraft({ ...draft, maxWordsPerStep: Math.min(60, Math.max(10, Number(e.target.value) || 20)) })} />
             </div>
             <div>
               <Label>{t.tone}</Label>

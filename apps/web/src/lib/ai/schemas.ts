@@ -26,9 +26,9 @@ const stepSchema = {
   type: 'object',
   properties: {
     id: str("Identifiant de l'étape existante à conserver ; vide pour une nouvelle étape"),
-    title: str("Verbe d'action à l'infinitif + objet, 2 à 8 mots"),
-    text: str('Une seule action, phrases courtes et simples'),
-    keyPoints: strList('0 à 3 points clés : ce qui fait réussir, avec la raison'),
+    title: str("Verbe d'action à l'infinitif + objet, 2 à 6 mots"),
+    text: str("Une ou deux phrases courtes : comment faire, sans répéter le titre ni ce que le média montre"),
+    keyPoints: strList("0 à 2 points clés de 3 à 8 mots, seulement s'ils font vraiment réussir l'étape ; le plus souvent aucun"),
     warningLevel: { type: 'string', enum: ['none', 'info', 'caution', 'danger'] },
     warningText: str('Texte de la mise en garde ; vide si aucune'),
     media: { type: 'array', items: mediaRef, description: '0 à 2 médias, le meilleur en premier' },
@@ -104,9 +104,9 @@ export const instructionSchema = {
 export const stepEditSchema = {
   type: 'object',
   properties: {
-    title: str("Verbe d'action à l'infinitif + objet, 2 à 8 mots"),
-    text: str('Une seule action, phrases courtes'),
-    keyPoints: strList('0 à 3 points clés'),
+    title: str("Verbe d'action à l'infinitif + objet, 2 à 6 mots"),
+    text: str('Une ou deux phrases courtes'),
+    keyPoints: strList('0 à 2 points clés courts'),
     warningLevel: { type: 'string', enum: ['none', 'info', 'caution', 'danger'] },
     warningText: str('Texte de la mise en garde ; vide si aucune'),
     explanation: str('Ce que tu as changé, en une phrase'),

@@ -110,6 +110,11 @@ fichier jusqu'à `media.discard`.
    ou fiche de cadenassage), la liste numérotée des sources. Le modèle renvoie les étapes et, pour
    chacune, ses médias **par référence** : `{source, start, end}` pour un extrait vidéo, `{source}` pour
    une photo, `{source, page}` pour une page de PDF.
+   Le moins de texte possible par étape (`generationSystem`, `src/lib/ai/prompts.ts`) : titre de 2 à
+   6 mots, une ou deux phrases courtes qui ne répètent ni le titre ni ce que le média montre, 0 à 2
+   points clés (le plus souvent aucun), une mise en garde seulement à l'étape où le risque se
+   présente, jamais répétée ; les EPI et les consignes générales vont dans la fiche. Le standard d'une
+   nouvelle usine : 20 mots au plus par étape.
 3. **Post-traitement** : validation des références et des temps, identifiants stables, vignettes des
    extraits vidéo (`/files/gifs/generate`, captures), rapprochement du poste deviné avec les postes
    existants.

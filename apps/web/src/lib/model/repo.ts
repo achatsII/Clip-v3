@@ -45,7 +45,7 @@ export function defaultStandard(): WritingStandard {
   return {
     rules: defaultRules(),
     startWithSafety: true,
-    maxWordsPerStep: 25,
+    maxWordsPerStep: 20,
     tone: 'infinitif',
     glossary: [],
     version: 1,
