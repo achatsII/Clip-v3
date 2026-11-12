@@ -43,6 +43,12 @@ export const instructions: typeof Fr = {
     inProgress: 'In progress',
     running: (stage: string, from: string, ago: string) => `${stage} · ${from} ${ago}`,
     interrupted: 'Interrupted: the device creating it isn’t responding',
+    readyTitle: 'Just created',
+    readyHint: 'Open them to review and publish.',
+    ready: (ago: string, steps: number) => `Created ${ago}${steps ? ` · ${steps.toLocaleString('en-CA')} step${steps === 1 ? '' : 's'}` : ''}`,
+    readyChip: 'Ready',
+    dismiss: (title: string) => `Stop suggesting “${title}” here`,
+    dismissShort: 'Stop suggesting',
   },
   watcher: {
     untitled: 'The instruction',

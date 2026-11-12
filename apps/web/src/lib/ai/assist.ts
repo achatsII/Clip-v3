@@ -20,8 +20,6 @@ import {
   standardAgentSystem,
   stepAssistPrompt,
   stepAssistSystem,
-  translatePrompt,
-  translateSystem,
   visualPrompt,
   visualSystem,
 } from './prompts'
@@ -31,7 +29,6 @@ import {
   illustrationSchema,
   standardSchema,
   stepEditSchema,
-  translationSchema,
   visualSchema,
 } from './schemas'
 
@@ -66,33 +63,6 @@ export async function assistStep(ai: AiApi, org: OrgAi, content: InstructionCont
     warning: warningFrom(j.warningLevel, j.warningText),
   }
   return { step: next, explanation: (j.explanation ?? '').trim() }
-}
-
-export async function translateInstruction(ai: AiApi, content: InstructionContent, language: string): Promise<TranslatedContent> {
-  const res = await ai.ask<{ title: string; summary: string; safety: string[]; steps: Array<{ id: string; title: string; text: string; keyPoints: string[]; warning: string }> }>(
-    'translate',
-    {
-      provider: 'google',
-      level: 'mid',
-      thinking: 'disabled',
-      system_instruction: translateSystem(language),
-      prompt: translatePrompt(content),
-      json_schema: translationSchema,
-      maxOutputTokens: 16000,
-    },
-    { scope: `translate-${language}`, timeoutMs: 120_000 },
-  )
-  const j = res.json
-  if (!j?.steps?.length) throw new ApiError(messages().editor.ai.translateFailed, 502)
-  const ids = new Set(content.steps.map((s) => s.id))
-  return {
-    title: j.title,
-    summary: j.summary,
-    safety: j.safety ?? [],
-    steps: j.steps
-      .filter((s) => ids.has(s.id))
-      .map((s) => ({ id: s.id, title: s.title, text: s.text, keyPoints: s.keyPoints ?? [], warning: s.warning?.trim() || null })),
-  }
 }
 
 /**

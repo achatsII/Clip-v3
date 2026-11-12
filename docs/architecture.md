@@ -168,6 +168,28 @@ une photo ou une page tirés d'une source.
   moteur que le clavardage (un tour `edit_agent`, visible et annulable), `aller_a_etape`,
   `lire_instruction` et `annuler_dernier_changement`.
 
+### Traduire pour les opérateurs (`src/lib/ai/translate.ts`, `src/lib/model/translation.ts`)
+
+Une traduction se range à côté du contenu (`translations[langue]`) ; le lecteur l'applique
+(`localized`). Elle couvre tout ce que l'opérateur lit :
+
+- **Un appel** (`translate`) : les textes des étapes, et en `extras` le reste, chacun avec son id
+  (outils, équipement, fiche de cadenassage, légendes et textes alternatifs, texte des annotations,
+  titre et texte des schémas). Le texte d'un schéma de l'IA se lit dans la page (`visualText.ts` :
+  balises SVG comprises, quelques attributs, et les chaînes du code qui ressemblent à un libellé) ;
+  le modèle ne traduit que ce qui s'affiche, et le dessin comme le code ne changent pas.
+- **Les images, en option** (non cochée) : le même appel repère, en basse définition, les images où
+  un texte pour l'opérateur se lit. Seules celles-là sont refaites par le modèle d'image avec ce
+  texte traduit (`translate_image`, une par image refaite), au format le plus proche de l'original.
+  Les illustrations de l'IA, sans texte, ne sont pas proposées. Un refus de facturation arrête la
+  suite ; le texte reste traduit.
+- Un média traduit nomme le média d'origine (`of`, `mediaKey`) : s'il change ensuite, sa traduction
+  ne s'applique plus.
+- **L'assistant** traduit aussi : `translate` (une ou plusieurs langues, images si on le demande),
+  `translate_media` (la légende, les marques ou le schéma d'un seul média, `step_assist`) et
+  `translate_image` (une image refaite). Vers la langue de l'instruction, le média lui-même change ;
+  vers une autre langue, sa traduction se range dans celle de l'instruction, qui doit exister.
+
 ### Revenir en arrière (`src/lib/history/undo.ts`, `src/lib/model/checkpoints.ts`, `useDraftHistory`)
 
 Derrière le toggle `draftHistory`. Deux niveaux :
@@ -204,6 +226,11 @@ nul, titre et état seulement) est relue toutes les 10 secondes pendant une cré
 est relue toutes les 60 secondes, seulement sur l'accueil et la liste, jamais onglet caché. Quand
 une création commence ou finit, les listes et l'instruction se relisent ; la fin s'annonce par un
 toast avec « Ouvrir ».
+
+Dans la liste, une instruction en création se voit de loin : le dégradé de la marque coule, un
+reflet passe et l'étape s'écrit (`creating-flow`, `creating-sweep`, lus dans la petite requête). À
+l'accueil, une création finie ne disparaît pas : « Viennent d'être créées » (`useRecentCreations`,
+les dernières 24 h) la propose jusqu'à ce qu'on l'ouvre sur cet appareil, ou qu'on l'écarte.
 
 - **Accueil** : section « En création ».
 - **Cartes** : « En création ».

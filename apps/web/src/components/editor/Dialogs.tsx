@@ -6,13 +6,13 @@ import { AiCost } from '@/components/billing/AiCost'
 import { QrCode } from '@/components/QrCode'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
-import { Select } from '@/components/ui/Field'
+import { Select, Switch } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { ErrorState, SkeletonRows, errorText } from '@/components/ui/States'
 import { Badge } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { useCheckpoints, useVersions } from '@/hooks/queries'
-import { translateInstruction } from '@/lib/ai/assist'
+import { imageCandidates, translateContent, type TranslateProgress } from '@/lib/ai/translate'
 import type { Doc } from '@/lib/gateway/data'
 import { locale, useMessages, type Messages } from '@/lib/i18n'
 import { LANGUAGES } from '@/lib/model/catalog'
@@ -252,17 +252,21 @@ export function TranslateDialog({ open, onClose, content, onTranslated }: { open
   const toast = useToast()
   const t = useMessages().editor.dialogs.translate
   const [lang, setLang] = useState('en')
-  const [busy, setBusy] = useState(false)
+  const [images, setImages] = useState(false)
+  const [progress, setProgress] = useState<TranslateProgress | null>(null)
   const existing = Object.keys(content.translations ?? {})
+  // Les images qu'on peut refaire avec leur texte traduit (pas les illustrations de l'IA, sans texte).
+  const imageCount = useMemo(() => imageCandidates(content).length, [content])
+  const busy = !!progress
   return (
-    <Modal open={open} onClose={onClose} title={t.title} size="sm">
+    <Modal open={open} onClose={() => !busy && onClose()} title={t.title} size="sm">
       <p className="mb-4 text-sm font-medium text-slate-500">{t.intro}</p>
       {!!existing.length && (
         <p className="mb-3 text-sm font-bold text-slate-600 dark:text-slate-300">
           {t.already(existing.map((l) => LANGUAGES[l]?.label ?? l).join(', '))}
         </p>
       )}
-      <Select value={lang} onChange={(e) => setLang(e.target.value)} aria-label={t.language}>
+      <Select value={lang} onChange={(e) => setLang(e.target.value)} aria-label={t.language} disabled={busy}>
         {/* Les plus demandées dans les usines d'abord, puis toutes les autres. */}
         {([true, false] as const).map((common) => (
           <optgroup key={String(common)} label={common ? t.mostRequested : t.otherLanguages}>
@@ -278,6 +282,21 @@ export function TranslateDialog({ open, onClose, content, onTranslated }: { open
           </optgroup>
         ))}
       </Select>
+      {imageCount > 0 && (
+        <div className="mt-3">
+          <Switch
+            checked={images}
+            onChange={setImages}
+            disabled={busy}
+            label={t.images.label}
+            description={
+              <>
+                {t.images.hint(imageCount)} <AiCost operation="translate_image" />
+              </>
+            }
+          />
+        </div>
+      )}
       <Button
         className="mt-4"
         block
@@ -285,20 +304,23 @@ export function TranslateDialog({ open, onClose, content, onTranslated }: { open
         loading={busy}
         icon={busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
         onClick={async () => {
-          setBusy(true)
+          setProgress({ phase: 'text', done: 0, total: 1 })
+          const name = LANGUAGES[lang]?.label ?? lang
           try {
-            const translated = await translateInstruction(ai, content, LANGUAGES[lang]?.label ?? lang)
-            onTranslated(lang, translated)
-            toast.success(t.added, t.addedDetail(LANGUAGES[lang]?.label ?? lang))
+            const r = await translateContent(ai, content, { language: lang, images, onProgress: setProgress })
+            onTranslated(lang, r.translation)
+            const extra = [r.images.redone ? t.images.redone(r.images.redone) : '', r.images.failed ? t.images.failed(r.images.failed) : ''].filter(Boolean).join(' ')
+            toast.success(t.added, [t.addedDetail(name), extra].filter(Boolean).join(' '))
             onClose()
           } catch (e) {
             toast.error(t.failed, errorText(e))
           } finally {
-            setBusy(false)
+            setProgress(null)
           }
         }}
       >
-        {existing.includes(lang) ? t.update : t.translate} <AiCost operation="translate" />
+        {busy && progress ? (progress.phase === 'text' ? t.progress.text : t.progress.images(progress.done, progress.total)) : existing.includes(lang) ? t.update : t.translate}
+        {!busy && <AiCost operation="translate" />}
       </Button>
       <p className="mt-3 text-xs font-medium text-slate-400">{t.note}</p>
     </Modal>

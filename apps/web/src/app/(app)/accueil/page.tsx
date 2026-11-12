@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Check, CheckCircle2, ClipboardCheck, Flame, MapPin, MessageSquareWarning, Mic, Palette, PenLine, QrCode, ScanLine, Sparkles, Trophy, UserPlus, Video } from 'lucide-react'
+import { ArrowRight, Check, CheckCircle2, ClipboardCheck, EyeOff, Flame, MapPin, MessageSquareWarning, Mic, Palette, PenLine, QrCode, ScanLine, Sparkles, Trophy, UserPlus, Video } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo } from 'react'
@@ -16,7 +16,26 @@ import { useFeedback, useInstructions, useStations } from '@/hooks/queries'
 import { num, useMessages, type Messages } from '@/lib/i18n'
 import { FEEDBACK_KINDS } from '@/lib/model/catalog'
 import { T } from '@/lib/model/repo'
+import { usePref, writePref } from '@/lib/prefs'
 import { cn, timeAgo } from '@/lib/util/cn'
+
+/** La mise en route repliée sur cet appareil. */
+const SETUP_HIDDEN = 'clip_pref_setup_hidden'
+
+/** L'avancement de la mise en route : un anneau, et « 2/5 ». */
+function SetupRing({ done, total, small }: { done: number; total: number; small?: boolean }) {
+  return (
+    <span className={cn('relative flex shrink-0 items-center justify-center', small ? 'h-9 w-9' : 'h-14 w-14')}>
+      <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden>
+        <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="4" className="text-slate-900/10 dark:text-white/10" />
+        <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--primary)" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(done / total) * 97.4} 97.4`} />
+      </svg>
+      <span className={cn('font-black tabular-nums', small ? 'text-[10px]' : 'text-sm')}>
+        {done}/{total}
+      </span>
+    </span>
+  )
+}
 
 function greeting(g: Messages['home']['greeting'], name: string) {
   const h = new Date().getHours()
@@ -75,6 +94,7 @@ export default function HomePage() {
     { done: org.json_data.standard.version > 1, label: t.setup.standard, href: '/reglages?onglet=standard', icon: <PenLine className="h-4 w-4" /> },
   ]
   const setupDone = setup.filter((s) => s.done).length
+  const setupHidden = usePref(SETUP_HIDDEN) === '1'
   const canCreate = can('instructions', 'write')
 
   return (
@@ -128,22 +148,25 @@ export default function HomePage() {
 
       {canCreate && <CreationList />}
 
-      {role === 'admin' && setupDone < setup.length && (
+      {/* La mise en route se cache d'un geste, et revient de la petite pastille. */}
+      {role === 'admin' && setupDone < setup.length && setupHidden && (
+        <button type="button" onClick={() => writePref(SETUP_HIDDEN, null)} className="btn-press glass-card flex h-12 items-center gap-3 self-start rounded-2xl pr-4 pl-2 text-sm font-black text-slate-600 dark:text-slate-300">
+          <SetupRing done={setupDone} total={setup.length} small />
+          {t.setup.compact(setupDone, setup.length)}
+          <span className="text-[var(--primary)]">{t.setup.show}</span>
+        </button>
+      )}
+      {role === 'admin' && setupDone < setup.length && !setupHidden && (
         <Card className="p-6">
           <div className="mb-4 flex items-center gap-4">
-            <span className="relative flex h-14 w-14 items-center justify-center">
-              <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90">
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="4" className="text-slate-900/10 dark:text-white/10" />
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--primary)" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(setupDone / setup.length) * 97.4} 97.4`} />
-              </svg>
-              <span className="text-sm font-black tabular-nums">
-                {setupDone}/{setup.length}
-              </span>
-            </span>
-            <div>
+            <SetupRing done={setupDone} total={setup.length} />
+            <div className="min-w-0 flex-1">
               <h2 className="text-lg font-black tracking-tight">{t.setup.title}</h2>
               <p className="text-sm font-bold text-slate-500">{t.setup.hint}</p>
             </div>
+            <button type="button" onClick={() => writePref(SETUP_HIDDEN, '1')} aria-label={t.setup.hide} title={t.setup.hide} className="btn-press flex h-11 shrink-0 items-center gap-1.5 self-start rounded-2xl px-3 text-xs font-black text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10">
+              <EyeOff className="h-4 w-4" /> <span className="max-sm:hidden">{t.setup.hideShort}</span>
+            </button>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {setup.map((s) => (

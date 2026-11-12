@@ -45,6 +45,13 @@ export const instructions = {
     inProgress: 'En cours',
     running: (stage: string, from: string, ago: string) => `${stage} · ${from} ${ago}`,
     interrupted: 'Interrompue : l’appareil qui la créait ne répond plus',
+    /** Celles qui viennent d'être créées : elles restent à l'accueil jusqu'à ce qu'on les ouvre. */
+    readyTitle: 'Viennent d’être créées',
+    readyHint: 'Ouvrez-les pour les relire et les publier.',
+    ready: (ago: string, steps: number) => `Créée ${ago}${steps ? ` · ${steps.toLocaleString('fr-CA')} étape${steps > 1 ? 's' : ''}` : ''}`,
+    readyChip: 'Prête',
+    dismiss: (title: string) => `Ne plus proposer « ${title} » ici`,
+    dismissShort: 'Ne plus proposer',
   },
   /** L'annonce d'une création finie sur un autre appareil. */
   watcher: {

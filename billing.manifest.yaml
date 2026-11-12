@@ -177,7 +177,11 @@ ai_operations:
   - { key: import_s, capability: assistant.ask, feature: ai_credits, credits: 60, provider: google, level: mid }
   - { key: import_l, capability: assistant.ask, feature: ai_credits, credits: 120, provider: google, level: mid }
   - { key: step_assist, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
+  # Traduire une instruction : ses textes, les annotations, les légendes et le texte des schémas.
   - { key: translate, capability: assistant.ask, feature: ai_credits, credits: 30, provider: google, level: mid }
+  # Refaire une image avec son texte traduit (option, non cochée par défaut) : lire et traduire le
+  # texte de l'image, et couvrir la génération d'image qui suit, comme une illustration.
+  - { key: translate_image, capability: assistant.ask, feature: ai_credits, credits: 70, provider: google, level: mid }
   - { key: annotate, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
   # Prépare l'illustration et couvre la génération d'image qui suit.
   - { key: illustrate, capability: assistant.ask, feature: ai_credits, credits: 70, provider: google, level: mid }

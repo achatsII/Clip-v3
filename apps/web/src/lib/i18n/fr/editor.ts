@@ -126,6 +126,9 @@ export const editor = {
       markChecked: 'Marquer comme vérifié',
       intro: 'L’IA n’a pas pu trancher ces points. Répondez, et elle corrige l’instruction ; ou cochez ce que vous avez déjà vérifié.',
       answer: 'Répondre',
+      later: 'Plus tard',
+      folded: (n: number) => `${num(n)} point${n > 1 ? 's' : ''} à vérifier avant de publier`,
+      show: 'Afficher',
       /** La fenêtre : une question à la fois. */
       dialog: {
         title: 'Les questions de l’IA',
@@ -389,7 +392,7 @@ export const editor = {
     },
     translate: {
       title: 'Traduire pour les opérateurs',
-      intro: 'Les opérateurs choisissent leur langue dans le lecteur. Les médias restent les mêmes.',
+      intro: 'Les opérateurs choisissent leur langue dans le lecteur. Les annotations, les légendes, les outils et le texte des schémas se traduisent avec le reste.',
       already: (languages: string) => `Déjà traduite : ${languages}`,
       language: 'Langue',
       mostRequested: 'Les plus demandées',
@@ -400,6 +403,17 @@ export const editor = {
       added: 'Traduction ajoutée',
       addedDetail: (language: string) => `${language} sera proposée dans le lecteur à la prochaine publication.`,
       failed: 'La traduction a échoué',
+      /** Refaire les images où du texte se lit : en option, non cochée par défaut. */
+      images: {
+        label: 'Refaire aussi les images où il y a du texte',
+        hint: (n: number) => `L’IA redessine, avec leur texte traduit, celles de ces ${num(n)} images où elle lit du texte. Vérifiez-les avant de publier.`,
+        redone: (n: number) => `${num(n)} image${n > 1 ? 's' : ''} refaite${n > 1 ? 's' : ''} avec son texte traduit.`,
+        failed: (n: number) => `${num(n)} image${n > 1 ? 's' : ''} n’${n > 1 ? 'ont' : 'a'} pas pu être refaite${n > 1 ? 's' : ''}.`,
+      },
+      progress: {
+        text: 'Traduction des textes…',
+        images: (done: number, total: number) => (total ? `Images refaites : ${num(done)} sur ${num(total)}…` : 'Recherche du texte dans les images…'),
+      },
     },
   },
   /** Les messages de l’IA de l’éditeur, du lecteur et des réglages (`lib/ai/assist.ts`). */

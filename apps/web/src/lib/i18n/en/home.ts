@@ -28,6 +28,10 @@ export const home: typeof Fr = {
     logo: 'Add the plant’s logo',
     invite: 'Invite a coworker',
     standard: 'Adjust your writing standard',
+    hide: 'Hide the setup',
+    hideShort: 'Hide',
+    show: 'Show',
+    compact: (done: number, total: number) => `Setup: ${done} of ${total}`,
   },
   tiles: {
     published: 'Published',

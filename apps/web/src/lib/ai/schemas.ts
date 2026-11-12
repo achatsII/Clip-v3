@@ -114,7 +114,13 @@ export const stepEditSchema = {
   required: ['title', 'text', 'keyPoints', 'warningLevel', 'warningText', 'explanation'],
 }
 
-export const translationSchema = {
+const extrasList = {
+  type: 'array',
+  items: { type: 'object', properties: { id: str(), text: str() }, required: ['id', 'text'] },
+}
+
+/** La traduction d'une instruction ; `images` : repérer les images jointes qui ont du texte. */
+export const translationSchema = (images = false) => ({
   type: 'object',
   properties: {
     title: str(),
@@ -128,8 +134,22 @@ export const translationSchema = {
         required: ['id', 'title', 'text', 'keyPoints', 'warning'],
       },
     },
+    extras: extrasList,
+    ...(images ? { imagesWithText: strList('Les images jointes (I1, I2…) dont le texte gagne à être traduit') } : {}),
   },
-  required: ['title', 'summary', 'safety', 'steps'],
+  required: ['title', 'summary', 'safety', 'steps', 'extras', ...(images ? ['imagesWithText'] : [])],
+})
+
+/** Les textes d'un seul média, traduits. */
+export const extrasSchema = { type: 'object', properties: { extras: extrasList }, required: ['extras'] }
+
+/** Le texte lu sur une image, et sa traduction. */
+export const imageTextSchema = {
+  type: 'object',
+  properties: {
+    texts: { type: 'array', items: { type: 'object', properties: { from: str('Le texte tel qu’écrit sur l’image'), to: str('Sa traduction') }, required: ['from', 'to'] } },
+  },
+  required: ['texts'],
 }
 
 export const annotationSchema = {

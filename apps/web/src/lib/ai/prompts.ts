@@ -142,17 +142,46 @@ DEMANDE : ${request}
 Rends l’étape [${step.id}] corrigée.`
 }
 
-export function translateSystem(language: string): string {
-  return `Tu traduis une instruction de travail d’usine vers la langue « ${language} », pour des opérateurs dont c’est la langue maternelle. Phrases courtes et simples, termes du métier exacts, valeurs et unités inchangées, mêmes identifiants d’étapes. Tu ne résumes rien et tu n’ajoutes rien.`
+/**
+ * La traduction d'une instruction : les textes des étapes, et en `extras` tout le reste que
+ * l'opérateur lit (outils, cadenassage, légendes, annotations, texte des schémas), chacun avec son
+ * id. `images` : des images sont jointes (I1, I2…) pour repérer celles qui ont du texte à traduire.
+ */
+export function translateSystem(language: string, images = false): string {
+  return `Tu traduis une instruction de travail d’usine en ${language}, pour des opérateurs dont c’est la langue maternelle. Phrases courtes et simples, termes du métier exacts, valeurs et unités inchangées, mêmes identifiants d’étapes. Tu ne résumes rien et tu n’ajoutes rien.
+- extras : traduis chaque texte seul et rends-le avec le même id. Un repère (E1, P2), une référence, une valeur, une marque ou un nombre restent tels quels.
+- Les extras dont l’id contient « :code: » sont des chaînes tirées du code d’un schéma : traduis seulement celles qui s’affichent à l’écran comme libellé ; rends les autres exactement telles quelles.${
+    images
+      ? '\n- Les images jointes (I1, I2…) : dans imagesWithText, liste celles où un texte écrit pour l’opérateur se lit et gagne à être traduit (consigne, panneau, écran, étiquette de commande) ; pas une marque, un numéro de pièce ni un texte illisible.'
+      : ''
+  }`
 }
 
-export function translatePrompt(content: InstructionContent): string {
-  return JSON.stringify({
+export function translatePrompt(content: InstructionContent, extras: Array<{ id: string; text: string }>, images: string[] = []): string {
+  const body = JSON.stringify({
     title: content.title,
     summary: content.summary,
     safety: content.safety,
     steps: content.steps.map((s) => ({ id: s.id, title: s.title, text: s.text, keyPoints: s.keyPoints ?? [], warning: s.warning?.text ?? '' })),
+    extras,
   })
+  return images.length ? `${body}\n\nIMAGES JOINTES, dans l’ordre :\n${images.join('\n')}` : body
+}
+
+/** Les textes d'un seul média (l'assistant) : rien que des extras. */
+export function translateExtrasSystem(language: string): string {
+  return `Tu traduis en ${language} les textes d’un média d’une instruction de travail d’usine (légende, marques sur une photo, libellés d’un schéma), pour des opérateurs dont c’est la langue maternelle. Courts comme l’original, termes du métier exacts, valeurs et unités inchangées. Rends chaque texte avec le même id. Un repère (E1, P2), une référence, une marque ou un nombre restent tels quels. Les ids qui contiennent « :code: » sont des chaînes du code d’un schéma : traduis seulement celles qui s’affichent comme libellé, rends les autres exactement telles quelles.`
+}
+
+/** Le texte écrit sur une image, pour la refaire traduite. */
+export function translateImageSystem(language: string): string {
+  return `Tu lis le texte écrit sur une image d’atelier (panneau, écran, étiquette, consigne, schéma) et tu le traduis en ${language} pour un opérateur. Rends chaque texte lisible tel qu’il est écrit (from) et sa traduction (to), aussi courte que l’original. Une marque, un numéro de pièce, une valeur ou un repère (E1) ne se traduisent pas : ne les rends pas. Rien à traduire : texts vide.`
+}
+
+/** La demande au modèle d'image : la même image, seul le texte change (en anglais, sa langue la plus sûre). */
+export function translatedImagePrompt(texts: Array<{ from: string; to: string }>): string {
+  const swaps = texts.map((t) => `"${t.from.replace(/"/g, "'")}" → "${t.to.replace(/"/g, "'")}"`).join('; ')
+  return `Recreate the reference image exactly: same framing, composition, objects, colors, lighting and perspective. Only replace the visible text, keeping each text in the same place, size, color and font style: ${swaps}. Do not add, remove or move anything else. No watermark.`
 }
 
 export function annotateSystem(): string {

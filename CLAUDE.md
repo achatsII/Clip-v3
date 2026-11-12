@@ -33,6 +33,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (Vercel, serveur), le temps réel annonce début, étapes et fin sur le canal de l'organisation
   (`/api/realtime/token`, `src/lib/realtime`) : l'autre appareil se met à jour aussitôt. Les images
   générées passent par OpenAI, niveau mid (`IMAGE_MODEL`, repli Google si la passerelle refuse).
+- **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
+  (`src/lib/model/translation.ts`), médias compris : légendes, annotations, texte des schémas, et
+  en option les images refaites avec leur texte traduit. Un média traduit nomme l'original (`of`).
 - **Revenir en arrière** (toggle `draftHistory`) : annuler et rétablir pendant la séance
   (`src/lib/history/undo.ts`), et des points de retour du brouillon dans `clip_checkpoint`
   (`src/lib/model/checkpoints.ts`) : au plus un par 10 minutes de modification, avant l'assistant, une
@@ -86,8 +89,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   | `generate_l` | Générer à partir de beaucoup de médias | 750 |
   | `import_s` | Convertir un document court (PDF, Word) | 60 |
   | `import_l` | Convertir un document long | 120 |
-  | `step_assist` | Retoucher une étape (raccourcir, clarifier, ajouter un point clé…) | 5 |
-  | `translate` | Traduire une instruction | 30 |
+  | `step_assist` | Retoucher une étape (raccourcir, clarifier, ajouter un point clé, traduire les textes d'un média…) | 5 |
+  | `translate` | Traduire une instruction : ses textes, les annotations, les légendes et le texte des schémas | 30 |
+  | `translate_image` | Refaire une image avec son texte traduit (option de la traduction, ou l'assistant ; l'image comprise) | 70 |
   | `annotate` | Placer des flèches et des cercles sur une photo | 5 |
   | `illustrate` | Illustration générée à partir d'une photo (l'image comprise) | 70 |
   | `ask_question` | Répondre à une question d'opérateur sur l'instruction | 2 |
@@ -124,7 +128,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Une nouvelle opération qui appelle un modèle, transcrit, ou traite une vidéo se propose à la
   facturation dès son écriture (skill `billing`). Restent ouverts sans débit, leur coût compté dans
   les opérations qui les déclenchent : la génération d'image (`ai:generate_image`, dans
-  `illustrate`), la transcription des notes (`files:transcribe`) et le traitement des vidéos
+  `illustrate` et `translate_image`), la transcription des notes (`files:transcribe`) et le traitement des vidéos
   (`files:process*`, dans les générations). Restent aussi ouverts, sans débit à la minute, la
   lecture à voix haute et l'assistant vocal, tous deux par la voix en direct (`ai:live`). La lecture
   (`LiveSpeaker`, `src/lib/liveSpeech.ts`) est ouverte à tous, liens publics compris. L'assistant

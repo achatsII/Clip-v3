@@ -20,18 +20,20 @@
 import type { AiApi, AiOperation, AskFile } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
 import { getLang, messages } from '../i18n'
-import { PPE } from '../model/catalog'
+import { LANGUAGES, PPE } from '../model/catalog'
 import { layoutOf, mediaLabel } from '../model/media'
 import { uid } from '../model/repo'
 import type { FilesApi } from '../gateway/files'
 import type { Annotation, InstructionContent, OrgSettings, Source, Step, StepLayout, StepMedia, WarningLevel } from '../model/types'
 import { annotateImage, createVisual, illustrationPrompt } from './assist'
+import { languageCode, translateContent, translateImage, translateMediaTexts } from './translate'
+import { localizeMedia, mediaKey, withMediaTranslation } from '../model/translation'
 import { enrichMedia, generationTier, measureSources, prepareForAi } from './generate'
 import { resolveMedia, warningFrom } from './normalize'
 import { standardBlock } from './prompts'
 import type { LiveTool } from './useLiveVoice'
 
-export const AGENT_OPS = ['set_instruction', 'add_step', 'update_step', 'delete_step', 'move_step', 'annotate', 'clear_annotations', 'illustrate', 'visual', 'set_layout', 'set_media', 'remove_media', 'use_media', 'look'] as const
+export const AGENT_OPS = ['set_instruction', 'add_step', 'update_step', 'delete_step', 'move_step', 'annotate', 'clear_annotations', 'illustrate', 'visual', 'set_layout', 'set_media', 'remove_media', 'use_media', 'look', 'translate', 'translate_media', 'translate_image'] as const
 export type AgentOpName = (typeof AGENT_OPS)[number]
 
 export interface AgentOp {
@@ -70,6 +72,12 @@ export interface AgentOp {
   at?: number
   /** use_media, document : la page. */
   page?: number
+  /** translate : les langues visées (codes). */
+  languages?: string[]
+  /** translate_media, translate_image : la langue visée ; la langue de l'instruction par défaut. */
+  language?: string
+  /** translate : refaire aussi les images où du texte se lit (seulement si la personne le demande). */
+  images?: boolean
 }
 
 export interface AgentTurn {
@@ -130,6 +138,9 @@ export const agentSchema = (ui: string) => ({
           end: { type: 'number', description: 'use_media, vidéo : fin de l’extrait, en secondes' },
           at: { type: 'number', description: 'use_media, vidéo : l’instant d’une image figée, en secondes (à la place d’un extrait)' },
           page: { type: 'number', description: 'use_media, document : la page, 1 = première' },
+          languages: strList('translate : les langues visées, en codes (en, es, pt, ar, ht, tl, vi, zh…)'),
+          language: str('translate_media, translate_image : la langue visée, en code ; vide = la langue de l’instruction'),
+          images: { type: 'boolean', description: 'translate : refaire aussi les images où du texte se lit, seulement si la personne le demande (plus cher)' },
         },
         required: ['op'],
       },
@@ -139,8 +150,11 @@ export const agentSchema = (ui: string) => ({
   required: ['reply', 'operations', 'suggestions'],
 })
 
-/** `lang.ui` : la langue de la personne (l'outil) ; `lang.content` : celle de l'instruction. */
-export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, lang: { ui: string; content: string }): string {
+/**
+ * `lang.ui` : la langue de la personne (l'outil) ; `lang.content` : celle de l'instruction.
+ * `translate` : faux quand la traduction n'est pas offerte (toggle coupé, ou pas dans le plan).
+ */
+export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, lang: { ui: string; content: string }, opts: { translate?: boolean } = {}): string {
   return `Tu es l’assistant d’édition de CLIP. Tu modifies une instruction de travail d’usine à la demande de la personne qui la rédige. Tu rends une liste d’opérations que l’app applique une à une, sous ses yeux.
 - Fais exactement ce qui est demandé ; ne touche à rien d’autre et garde le texte existant qu’on ne te demande pas de changer.
 - Une étape = une action. Respecte le standard de l’usine ci-dessous (ton, nombre de mots).
@@ -151,6 +165,8 @@ export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, la
 - Mettre à une étape un média tiré d’une source : use_media, avec source et, pour une vidéo, start et end (un extrait) ou at (une image figée) ; avec media, il remplace ce média de l’étape, sinon il s’ajoute.
 - Un dessin explicatif (vue de face, coupe, plan, 3D) : visual. Une illustration à partir de la photo de l’étape : illustrate (seulement si l’étape a une photo).
 - Montrer ce qu’il faut faire et ne pas faire : set_media avec verdict do ou dont, puis set_layout compare.
+- Traduire pour les opérateurs : translate, avec languages (codes) ; la traduction couvre les textes, les marques sur les photos, les légendes, les outils et les schémas. images: true seulement si la personne demande aussi les images : l’IA redessine celles où du texte se lit, avec ce texte traduit (plus cher). Refaire une traduction existante : translate.
+- Un seul média : translate_media traduit sa légende, ses marques ou son schéma ; translate_image redessine une photo ou une image avec son texte traduit (plus cher). language : la langue visée ; sans language, celle de l’instruction (un média dont le texte est dans une autre langue). Vers une autre langue, l’instruction doit déjà y être traduite (voir TRADUCTIONS) ; sinon, translate d’abord.${opts.translate === false ? '\n- La traduction n’est pas offerte à cette personne : n’utilise jamais translate, translate_media ni translate_image ; dis-le simplement dans reply.' : ''}
 - Mise en garde : danger (blessure possible), caution (erreur ou bris possible), info.
 - N’invente aucune valeur (couple, pression, cote, référence) : si elle manque, demande-la dans reply, sans opération.
 - Demande floue : UNE question courte dans reply, sans opération.
@@ -162,7 +178,10 @@ ${standardBlock(org)}`
 
 function mediaLine(m: StepMedia, i: number): string {
   const bits = [`${i + 1} ${mediaLabel(m).toLowerCase()}`]
-  if (m.kind === 'image' && m.annotations?.length) bits.push(`${m.annotations.length} marque(s)`)
+  if (m.kind === 'image' && m.annotations?.length) {
+    const labels = m.annotations.flatMap((a) => (a.text && /\p{L}/u.test(a.text) ? [`« ${a.text.slice(0, 40)} »`] : [])).slice(0, 4)
+    bits.push(`${m.annotations.length} marque(s)${labels.length ? ` (${labels.join(', ')})` : ''}`)
+  }
   if (m.kind === 'html' && m.title) bits.push(`« ${m.title} »`)
   if (m.verdict) bits.push(m.verdict === 'do' ? 'à faire' : 'à éviter')
   if (m.caption) bits.push(`légende « ${m.caption} »`)
@@ -205,6 +224,8 @@ export function agentPrompt(content: InstructionContent, focusStepId: string | n
   lines.push(`EPI : ${content.ppe.join(', ') || 'aucun'}`)
   if (content.tools.length) lines.push(`OUTILS : ${content.tools.join(', ')}`)
   if (content.safety.length) lines.push(`MISES EN GARDE GÉNÉRALES : ${content.safety.join(' | ')}`)
+  const translated = Object.keys(content.translations ?? {})
+  lines.push(`TRADUCTIONS : ${translated.length ? translated.map((c) => `${c} (${LANGUAGES[c]?.native ?? c})`).join(', ') : 'aucune'}`)
   lines.push('ÉTAPES :')
   content.steps.forEach((s, i) => {
     lines.push(`${i + 1}. [${s.id}] ${s.title} — ${s.text}${s.keyPoints?.length ? ` (points clés : ${s.keyPoints.join(' ; ')})` : ''}${s.warning ? ` (${s.warning.level} : ${s.warning.text})` : ''}`)
@@ -230,11 +251,13 @@ export async function askAgent(
     sources?: Source[]
     /** Le deuxième tour : les sources demandées, jointes, et la question posée. */
     look?: { operation: AiOperation; files: AskFile[]; lines: string[]; question: string }
+    /** Faux : la traduction n'est pas offerte (toggle coupé, ou pas dans le plan). */
+    canTranslate?: boolean
   } = {},
 ): Promise<AgentTurn> {
   const ui = getLang()
   const look = opts.look
-  const system = agentSystem(org, { ui, content: contentLang(content) })
+  const system = agentSystem(org, { ui, content: contentLang(content) }, { translate: opts.canTranslate })
   const res = await ai.ask<AgentTurn>(
     look ? look.operation : 'edit_agent',
     {
@@ -294,9 +317,10 @@ export async function agentTurn(input: {
   sources?: Source[]
   onLook?: (info: LookInfo) => void
   onSources?: (sources: Source[]) => void
+  canTranslate?: boolean
 }): Promise<AgentTurn> {
   const sources = input.sources ?? []
-  const first = await askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, { sources })
+  const first = await askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, { sources, canTranslate: input.canTranslate })
   const lookOp = first.operations.find((o) => o.op === 'look')
   const operations = first.operations.filter((o) => o.op !== 'look')
   if (!lookOp) return first
@@ -323,6 +347,7 @@ export async function agentTurn(input: {
   })
   return askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, {
     sources,
+    canTranslate: input.canTranslate,
     look: { operation: tier.op, files: prepared.askFiles, lines, question: lookOp.question?.trim() || input.request },
   })
 }
@@ -482,6 +507,9 @@ export function describeOp(content: InstructionContent, op: AgentOp, ids: IdMap)
     remove_media: w.removeMedia(n),
     use_media: w.useMedia(n),
     look: w.look,
+    translate: w.translate([...(op.languages ?? []), ...(op.language ? [op.language] : [])].map((c) => LANGUAGES[languageCode(c) ?? '']?.label ?? c).join(', ')),
+    translate_media: w.translateMedia(n),
+    translate_image: w.translateImage(n),
   }
   return { label: text[op.op], stepId }
 }
@@ -506,6 +534,9 @@ export interface AgentRunContext {
   sources?: Source[]
   /** Pour tirer une image figée d'une vidéo (use_media avec at). */
   files?: FilesApi
+  /** Faux : la traduction n'est pas offerte (toggle coupé, ou pas dans le plan) ; `onLocked` montre le refus. */
+  canTranslate?: boolean
+  onLocked?: (feature: 'translations') => void
 }
 
 const MAX_MEDIA = 6
@@ -570,6 +601,67 @@ async function applyUseMedia(ctx: AgentRunContext, op: AgentOp, ids: IdMap): Pro
 }
 
 const AI_OPS = new Set<AgentOpName>(['annotate', 'visual', 'illustrate'])
+const TRANSLATE_OPS = new Set<AgentOpName>(['translate', 'translate_media', 'translate_image'])
+
+/**
+ * Traduire : toute l'instruction dans une ou plusieurs langues (`translate`, images en option), les
+ * textes d'un seul média (`translate_media`) ou une image refaite avec son texte traduit
+ * (`translate_image`). Vers la langue de l'instruction, le média lui-même change ; vers une autre
+ * langue, sa traduction se range dans celle de l'instruction, qui doit déjà exister.
+ */
+async function applyTranslateOp(ctx: AgentRunContext, op: AgentOp, ids: IdMap): Promise<OpResult> {
+  const t = messages().editorTools.agent
+  const label = (code: string) => LANGUAGES[code]?.label ?? code
+  // Le même droit que le menu « Traduire » : la feature `translations` du plan.
+  if (ctx.canTranslate === false) {
+    ctx.onLocked?.('translations')
+    throw new AgentOpError(t.errors.translationsLocked)
+  }
+  if (op.op === 'translate') {
+    const codes: string[] = []
+    for (const raw of [...(op.languages ?? []), ...(op.language ? [op.language] : [])]) {
+      const code = languageCode(raw)
+      if (!code) throw new AgentOpError(t.errors.unknownLanguage(raw))
+      if (code !== contentLang(ctx.get()) && !codes.includes(code)) codes.push(code)
+    }
+    if (!codes.length) throw new AgentOpError(t.errors.noLanguage)
+    let redone = 0
+    for (const code of codes) {
+      const r = await translateContent(ctx.ai, ctx.get(), { language: code, images: !!op.images })
+      const latest = ctx.get()
+      ctx.set({ ...latest, translations: { ...(latest.translations ?? {}), [code]: r.translation } })
+      redone += r.images.redone
+    }
+    return { content: ctx.get(), label: t.done.translated(codes.map(label).join(', '), redone), stepId: null }
+  }
+  const content = ctx.get()
+  const { step } = stepOf(content, ids, op.step)
+  const i = mediaIndexOf(step, op.media, op.op === 'translate_image')
+  const m = step.media[i]
+  const code = op.language?.trim() ? languageCode(op.language) : contentLang(content)
+  if (!code) throw new AgentOpError(t.errors.unknownLanguage(op.language ?? ''))
+  const source = code === contentLang(content)
+  if (!source && !content.translations?.[code]) throw new AgentOpError(t.errors.translateFirst(label(code)))
+  if (op.op === 'translate_image') {
+    if (m.kind !== 'image') throw new AgentOpError(t.errors.imageOnly)
+    const url = await translateImage(ctx.ai, m.url, code)
+    if (!url) throw new AgentOpError(t.errors.noTextInImage)
+    const latest = ctx.get()
+    const at = stepOf(latest, ids, op.step)
+    const next = source
+      ? withStep(latest, at.index, { ...at.step, media: at.step.media.map((x, j) => (j === i && x.kind === 'image' ? { ...x, url, generated: true } : x)) })
+      : withMediaTranslation(latest, code, at.step.id, i, { of: mediaKey(m), url })
+    return { content: next, label: t.done.imageTranslated(at.index + 1, i + 1, label(code)), stepId: step.id }
+  }
+  const tr = await translateMediaTexts(ctx.ai, step.id, i, m, code)
+  if (!tr) throw new AgentOpError(t.errors.nothingToTranslate)
+  const latest = ctx.get()
+  const at = stepOf(latest, ids, op.step)
+  const next = source
+    ? withStep(latest, at.index, { ...at.step, media: at.step.media.map((x, j) => (j === i ? localizeMedia(x, { ...tr, of: mediaKey(x) }) : x)) })
+    : withMediaTranslation(latest, code, at.step.id, i, tr)
+  return { content: next, label: t.done.mediaTranslated(at.index + 1, i + 1, label(code)), stepId: step.id }
+}
 
 /** Applique les opérations une à une, en montrant chacune. Une opération ratée n'arrête pas les autres. */
 export async function runAgentOps(ops: AgentOp[], ctx: AgentRunContext): Promise<{ done: number; failed: number }> {
@@ -583,7 +675,8 @@ export async function runAgentOps(ops: AgentOp[], ctx: AgentRunContext): Promise
     ctx.log({ key, label: before.label, stepId: before.stepId, state: 'working' })
     await pause(250)
     try {
-      const r = op.op === 'use_media' ? await applyUseMedia(ctx, op, ids) : AI_OPS.has(op.op) ? await applyAiOp(ctx, op, ids) : applyOp(ctx.get(), op, ids)
+      const r =
+        op.op === 'use_media' ? await applyUseMedia(ctx, op, ids) : TRANSLATE_OPS.has(op.op) ? await applyTranslateOp(ctx, op, ids) : AI_OPS.has(op.op) ? await applyAiOp(ctx, op, ids) : applyOp(ctx.get(), op, ids)
       ctx.set(r.content)
       ctx.focus(r.stepId)
       ctx.log({ key, label: r.label, stepId: r.stepId, state: 'done' })
@@ -615,7 +708,7 @@ export const LIVE_EDIT_TOOLS: LiveTool[] = [
   {
     name: 'modifier',
     description:
-      "Fait un changement dans l'instruction : textes, étapes (ajouter, retirer, déplacer), mises en garde, marques précises sur une photo, schéma, illustration, à faire / à éviter. Rend ce qui a été fait. La demande doit être complète : l'étape visée (numéro ET titre), ce qu'il faut faire, les textes exacts.",
+      "Fait un changement dans l'instruction : textes, étapes (ajouter, retirer, déplacer), mises en garde, marques précises sur une photo, schéma, illustration, à faire / à éviter, traductions (toute l'instruction, ou le texte d'une image). Rend ce qui a été fait. La demande doit être complète : l'étape visée (numéro ET titre), ce qu'il faut faire, les textes exacts.",
     parameters: { type: 'OBJECT', properties: { demande: { type: 'STRING', description: 'La demande complète, comme on l’écrirait à un rédacteur' } }, required: ['demande'] },
   },
   {

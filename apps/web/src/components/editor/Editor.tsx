@@ -6,6 +6,8 @@ import {
   Archive,
   ArrowLeft,
   Check,
+  ChevronDown,
+  ChevronUp,
   CircleCheck,
   CloudOff,
   Copy,
@@ -67,6 +69,7 @@ import {
   updatePublishedStations,
 } from '@/lib/model/service'
 import type { Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
+import { markCreatedSeen, QUESTIONS_FOLDED, setInIdList, useIdList } from '@/lib/prefs'
 import { cn, formatDateTime, timeAgo } from '@/lib/util/cn'
 import { AgentPanel, type AgentRequest } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
@@ -115,6 +118,9 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const questionsRef = useRef(questions)
   questionsRef.current = questions
   const [questionsOpen, setQuestionsOpen] = useState(false)
+  // « Plus tard » : la carte des questions se replie en une ligne (retenu pour cette instruction).
+  const questionsFolded = useIdList(QUESTIONS_FOLDED).includes(doc._id)
+  const foldQuestions = (on: boolean) => setInIdList(QUESTIONS_FOLDED, doc._id, on)
   const [agentRequest, setAgentRequest] = useState<AgentRequest | null>(null)
   /** Retire des questions de l'IA celles qui sont réglées (vérifiées, ou répondues et corrigées). */
   const settleQuestions = (done: string[]) => {
@@ -230,6 +236,9 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     },
     [data, doc._id, actor, qc],
   )
+
+  // Ouverte ici : l'accueil ne la propose plus parmi celles qui viennent d'être créées.
+  useEffect(() => markCreatedSeen(doc._id), [doc._id])
 
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
@@ -708,7 +717,16 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         </div>
       )}
 
-      {questions.length > 0 && !readOnly && (
+      {questions.length > 0 && !readOnly && questionsFolded && (
+        <button type="button" onClick={() => foldQuestions(false)} className="btn-press mb-5 flex min-h-12 w-full items-center gap-3 rounded-[20px] bg-amber-50 px-4 py-2 text-left text-sm font-black text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
+          <MessageCircleQuestion className="h-5 w-5 shrink-0 text-amber-600" />
+          <span className="min-w-0 flex-1">{tp.questions.folded(questions.length)}</span>
+          <span className="flex shrink-0 items-center gap-1 text-amber-700 dark:text-amber-300">
+            {tp.questions.show} <ChevronDown className="h-4 w-4" />
+          </span>
+        </button>
+      )}
+      {questions.length > 0 && !readOnly && !questionsFolded && (
         <div className="mb-5 rounded-[28px] bg-amber-50 p-5 dark:bg-amber-500/10">
           <p className="label-caps mb-1 text-amber-700 dark:text-amber-300">{tp.questions.title}</p>
           <p className="mb-3 text-sm font-medium text-amber-900/80 dark:text-amber-100/80">{tp.questions.intro}</p>
@@ -728,9 +746,14 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               </li>
             ))}
           </ul>
-          <Button className="mt-4" icon={<MessageCircleQuestion className="h-4 w-4" />} onClick={() => setQuestionsOpen(true)}>
-            {tp.questions.answer}
-          </Button>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button icon={<MessageCircleQuestion className="h-4 w-4" />} onClick={() => setQuestionsOpen(true)}>
+              {tp.questions.answer}
+            </Button>
+            <button type="button" onClick={() => foldQuestions(true)} className="btn-press flex h-11 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-500/15">
+              <ChevronUp className="h-4 w-4" /> {tp.questions.later}
+            </button>
+          </div>
         </div>
       )}
       <QuestionsDialog open={questionsOpen} questions={questions} choices={instr.generation?.choices ?? {}} onClose={() => setQuestionsOpen(false)} onApply={answerQuestions} />

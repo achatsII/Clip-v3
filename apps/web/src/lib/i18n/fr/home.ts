@@ -29,6 +29,10 @@ export const home = {
     logo: 'Ajouter le logo de l’usine',
     invite: 'Inviter un collègue',
     standard: 'Ajuster votre standard de rédaction',
+    hide: 'Masquer la mise en route',
+    hideShort: 'Masquer',
+    show: 'Afficher',
+    compact: (done: number, total: number) => `Mise en route : ${done} sur ${total}`,
   },
   tiles: {
     published: 'Publiées',

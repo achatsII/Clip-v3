@@ -149,6 +149,9 @@ export const editorTools = {
       marksAdded: (step: number, marks: number) => `Étape ${nb(step)} : ${nb(marks)} marque${marks > 1 ? 's' : ''} sur la photo`,
       visualAdded: (step: number, title: string) => `Étape ${nb(step)} : schéma « ${title} » ajouté`,
       illustrationAdded: (step: number) => `Étape ${nb(step)} : illustration ajoutée`,
+      translated: (languages: string, images: number) => `Traduite : ${languages}${images ? ` · ${nb(images)} image${images > 1 ? 's' : ''} refaite${images > 1 ? 's' : ''}` : ''}`,
+      mediaTranslated: (step: number, media: number, language: string) => `Étape ${nb(step)}, média ${nb(media)} : textes traduits (${language})`,
+      imageTranslated: (step: number, media: number, language: string) => `Étape ${nb(step)}, média ${nb(media)} : image refaite, texte en ${language}`,
     },
     /** Les parties changées, dans ces lignes. */
     parts: {
@@ -182,6 +185,9 @@ export const editorTools = {
       removeMedia: (step: string) => `${step} : je retire un média…`,
       useMedia: (step: string) => `${step} : je prends le bon moment dans les sources…`,
       look: 'Je revois les sources…',
+      translate: (languages: string) => `Je traduis en ${languages}…`,
+      translateMedia: (step: string) => `${step} : je traduis les textes du média…`,
+      translateImage: (step: string) => `${step} : je refais l’image avec son texte traduit…`,
     },
     /** Une action ratée : ce qu’elle faisait, et pourquoi. */
     opFailed: (action: string, why: string) => `${action} — ${why}`,
@@ -200,6 +206,13 @@ export const editorTools = {
       marksOnImage: 'Les marques se posent sur une photo ou une image',
       noReferencePhoto: 'Pas de photo de référence : demandez plutôt un schéma',
       sourceNotFound: (ref: string) => `Source introuvable (${ref})`,
+      unknownLanguage: (lang: string) => `Langue inconnue (${lang})`,
+      noLanguage: 'Aucune langue à traduire',
+      translateFirst: (language: string) => `Traduisez d’abord l’instruction en ${language}`,
+      nothingToTranslate: 'Ce média n’a pas de texte à traduire',
+      noTextInImage: 'Aucun texte à traduire sur cette image',
+      imageOnly: 'Seule une photo ou une image se refait avec son texte traduit',
+      translationsLocked: 'La traduction pour les opérateurs n’est pas comprise dans votre plan',
     },
   },
 

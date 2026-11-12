@@ -14,6 +14,7 @@ export const AI_COSTS: Record<AiOperation, number> = {
   import_l: 120,
   step_assist: 5,
   translate: 30,
+  translate_image: 70,
   annotate: 5,
   illustrate: 70,
   ask_question: 2,

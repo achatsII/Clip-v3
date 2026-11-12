@@ -10,7 +10,7 @@ import { errorText } from '@/components/ui/States'
 import { agentBusy, agentTurn, runAgentOps, type AgentLogEntry, type VoiceTurnResult } from '@/lib/ai/agent'
 import { suggestEdits } from '@/lib/ai/suggest'
 import { AI_COSTS } from '@/lib/billing/catalog'
-import { useEntitlement, useGate } from '@/lib/billing/state'
+import { useBilling, useEntitlement, useGate } from '@/lib/billing/state'
 import { BILLING_V2 } from '@/lib/config'
 import { useMessages } from '@/lib/i18n'
 import type { InstructionContent, Source } from '@/lib/model/types'
@@ -106,6 +106,11 @@ export function AgentPanel({
   const voiceToggle = useToggle('voiceAssistant')
   const voiceRight = useEntitlement('voice_assistant')
   const gate = useGate()
+  // Traduire : le même droit que le menu « Traduire » (toggle, et la feature du plan).
+  const translateToggle = useToggle('translations')
+  const translateRight = useEntitlement('translations')
+  const canTranslate = translateToggle && translateRight !== 'locked'
+  const { openPaywall } = useBilling()
   const liveContent = useRef(content)
   liveContent.current = busy ? liveContent.current : content
   const scroller = useRef<HTMLDivElement>(null)
@@ -164,6 +169,7 @@ export function AgentPanel({
           }))
         },
         onSources: onSourcesChange,
+        canTranslate,
       })
       if (looked) patch(agentId, (m) => ({ actions: (m.actions ?? []).map((a) => (a.key === -1 ? { ...a, label: ta.looked(looked!), state: 'done' as const } : a)) }))
       history.current.push({ role: 'user', content: ask }, { role: 'assistant', content: turn.reply })
@@ -181,6 +187,8 @@ export function AgentPanel({
             ai,
             sources,
             files,
+            canTranslate,
+            onLocked: (feature) => openPaywall({ feature }),
             get: () => liveContent.current,
             set: (c) => {
               liveContent.current = c

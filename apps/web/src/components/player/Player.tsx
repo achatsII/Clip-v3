@@ -34,6 +34,7 @@ import type { DataApi } from '@/lib/gateway/data'
 import type { FilesApi } from '@/lib/gateway/files'
 import { ENERGY, LANGUAGES, PPE, textDir, WARNINGS } from '@/lib/model/catalog'
 import { logUsage } from '@/lib/model/repo'
+import { localized } from '@/lib/model/translation'
 import type { Branding, InstructionContent, Step } from '@/lib/model/types'
 import { LiveSpeaker, stepSpeech } from '@/lib/liveSpeech'
 import { cn, formatDuration } from '@/lib/util/cn'
@@ -92,24 +93,6 @@ function deviceId(): string {
     return id
   } catch {
     return 'anonyme'
-  }
-}
-
-/** Le contenu dans la langue choisie (les médias ne changent pas). */
-function localized(content: InstructionContent, lang: string): InstructionContent {
-  const t = lang !== content.language ? content.translations?.[lang] : undefined
-  if (!t) return content
-  const byId = new Map(t.steps.map((s) => [s.id, s]))
-  return {
-    ...content,
-    title: t.title || content.title,
-    summary: t.summary || content.summary,
-    safety: t.safety?.length ? t.safety : content.safety,
-    steps: content.steps.map((s) => {
-      const x = byId.get(s.id)
-      if (!x) return s
-      return { ...s, title: x.title, text: x.text, keyPoints: x.keyPoints ?? s.keyPoints, warning: s.warning ? { ...s.warning, text: x.warning || s.warning.text } : null }
-    }),
   }
 }
 

@@ -119,6 +119,9 @@ export const editor: typeof Fr = {
       markChecked: 'Mark as checked',
       intro: 'The AI couldn’t settle these points. Answer them and it fixes the instruction, or tick what you’ve already checked.',
       answer: 'Answer',
+      later: 'Later',
+      folded: (n: number) => `${num(n)} point${n === 1 ? '' : 's'} to check before publishing`,
+      show: 'Show',
       dialog: {
         title: 'Questions from the AI',
         progress: (index: number, total: number) => `Question ${num(index)} of ${num(total)}`,
@@ -366,7 +369,7 @@ export const editor: typeof Fr = {
     },
     translate: {
       title: 'Translate for operators',
-      intro: 'Operators choose their language in the player. The media stay the same.',
+      intro: 'Operators choose their language in the player. Annotations, captions, tools and the text of diagrams are translated along with the rest.',
       already: (languages: string) => `Already translated: ${languages}`,
       language: 'Language',
       mostRequested: 'Most requested',
@@ -377,6 +380,16 @@ export const editor: typeof Fr = {
       added: 'Translation added',
       addedDetail: (language: string) => `${language} will be offered in the player the next time you publish.`,
       failed: 'Translation failed',
+      images: {
+        label: 'Also redo images that contain text',
+        hint: (n: number) => `The AI redraws, with their text translated, those of these ${num(n)} images where it reads text. Check them before publishing.`,
+        redone: (n: number) => `${num(n)} image${n === 1 ? '' : 's'} redone with translated text.`,
+        failed: (n: number) => `${num(n)} image${n === 1 ? '' : 's'} couldn’t be redone.`,
+      },
+      progress: {
+        text: 'Translating the text…',
+        images: (done: number, total: number) => (total ? `Images redone: ${num(done)} of ${num(total)}…` : 'Looking for text in the images…'),
+      },
     },
   },
   ai: {

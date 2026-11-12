@@ -166,11 +166,56 @@ export interface InstructionContent {
   translations?: Record<string, TranslatedContent>
 }
 
+/**
+ * Une traduction, rangée à côté du contenu : ce que l'opérateur lit dans sa langue. Les médias
+ * ne changent pas, sauf ce qu'une traduction de média leur donne (`MediaTranslation`).
+ */
 export interface TranslatedContent {
   title: string
   summary: string
   safety: string[]
-  steps: Array<{ id: string; title: string; text: string; keyPoints?: string[]; warning?: string | null }>
+  steps: Array<{
+    id: string
+    title: string
+    text: string
+    keyPoints?: string[]
+    warning?: string | null
+    /** Les médias de l'étape dans cette langue, dans l'ordre des médias (null : rien à traduire). */
+    media?: Array<MediaTranslation | null>
+  }>
+  tools?: string[]
+  equipment?: string
+  lockout?: LockoutTranslation
+  /** Quand la traduction a été faite, et si les images avec du texte ont été refaites. */
+  translatedAt?: string
+  images?: boolean
+}
+
+/**
+ * Un média dans une autre langue : sa légende, le texte de ses annotations, un schéma au texte
+ * traduit, ou l'image refaite par l'IA avec son texte traduit. `of` nomme le média d'origine
+ * (`mediaKey`) : s'il a changé depuis, cette traduction ne s'applique plus.
+ */
+export interface MediaTranslation {
+  of: string
+  caption?: string
+  alt?: string
+  /** Le texte des annotations, par identifiant d'annotation. */
+  labels?: Record<string, string>
+  /** Un schéma : la page avec son texte traduit, et son titre. */
+  html?: string
+  title?: string
+  /** Une image refaite par l'IA, son texte traduit. */
+  url?: string
+}
+
+/** La fiche de cadenassage dans une autre langue (les repères E1, P1… ne changent pas). */
+export interface LockoutTranslation {
+  equipment?: string
+  location?: string
+  material?: string[]
+  restartSteps?: string[]
+  energyPoints?: Array<{ id: string; description?: string; magnitude?: string; isolationDevice?: string; location?: string; lockingMethod?: string; verification?: string }>
 }
 
 export interface GenerationInfo {

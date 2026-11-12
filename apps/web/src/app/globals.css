@@ -254,6 +254,41 @@ html[data-kb='open'] .kb-fit {
 @utility bg-gradient-accent {
   background-image: var(--gradient-accent);
 }
+
+/* Une instruction en création : le dégradé de la marque (et le violet de l'IA) coule doucement,
+   un reflet passe. Le parent du reflet est positionné et coupe ce qui déborde. */
+@keyframes creating-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+@keyframes creating-sweep {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+@utility creating-flow {
+  background-image: linear-gradient(120deg, var(--primary-strong), var(--primary), #9b2cfa, var(--primary), var(--primary-strong));
+  background-size: 300% 300%;
+  animation: creating-flow 7s ease-in-out infinite;
+}
+@utility creating-sweep {
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, 0.32) 50%, transparent 75%);
+    animation: creating-sweep 2.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
 @utility shadow-primary {
   box-shadow: var(--shadow-primary);
 }
