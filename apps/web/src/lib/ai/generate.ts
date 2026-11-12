@@ -8,7 +8,7 @@ import { contentLanguage, messages } from '../i18n'
 import type { FilesApi } from '../gateway/files'
 import type { InstructionContent, OrgSettings, Source, StepMedia } from '../model/types'
 import { sourceDetail } from './creation'
-import { AiInstruction, normalizeInstruction } from './normalize'
+import { AiInstruction, normalizeInstruction, type MarkHint } from './normalize'
 import { generationPrompt, generationSystem, importSystem, SourceLine } from './prompts'
 import { instructionSchema } from './schemas'
 
@@ -135,6 +135,8 @@ export interface GenerateInput {
 
 export interface GenerateOutput {
   content: InstructionContent
+  /** Les images où l'IA veut un repère : annotées ensuite sur l'image elle-même (`annotateMarks`). */
+  marks: MarkHint[]
   sources: Source[]
   stationGuess: string | null
   questions: string[]
@@ -176,9 +178,9 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
 
   input.onStage?.('finish')
   // Les sources gardent leur ordre : S1 = première source utilisable.
-  const { content, stationGuess, questions } = normalizeInstruction(result.json, prepared.sources, language)
+  const { content, stationGuess, questions, marks } = normalizeInstruction(result.json, prepared.sources, language)
   if (!content.steps.length) throw new ApiError(messages().capture.generate.noSteps, 422)
-  return { content, sources: mergeSources(input.sources, prepared.sources), stationGuess, questions, model: result.model, operation: tier.op }
+  return { content, marks, sources: mergeSources(input.sources, prepared.sources), stationGuess, questions, model: result.model, operation: tier.op }
 }
 
 function mergeSources(all: Source[], updated: Source[]): Source[] {

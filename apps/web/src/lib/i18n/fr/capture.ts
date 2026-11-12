@@ -91,12 +91,19 @@ export const capture = {
     percent: (n: number) => `${n.toLocaleString('fr-CA')} %`,
   },
   /** La génération en cours, ici ou sur un autre appareil. */
+  /** Le choix des annotations automatiques, dans les options de génération. */
+  autoAnnotate: {
+    label: 'Annoter les images automatiquement',
+    hint: 'L’IA encercle ce qu’il faut regarder sur chaque image figée ou photo qui en a besoin, sur l’image elle-même. Jamais sur un extrait vidéo.',
+    perImage: (credits: string) => `${credits} par image annotée`,
+  },
   progress: {
     /** Les étapes : leur clé s'écrit dans l'instruction, leur libellé se lit sur chaque appareil. */
     stages: {
       prepare: 'Préparation des médias',
       analyze: 'L’IA regarde et écoute vos notes',
       finish: 'Mise en forme des étapes',
+      annotate: 'Annotation des images',
     },
     /** Le détail d'une étape : la source préparée sur le total, les vignettes. */
     sourceOf: (index: number, total: number) => `${index.toLocaleString('fr-CA')} sur ${total.toLocaleString('fr-CA')}`,

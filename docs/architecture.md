@@ -112,6 +112,16 @@ fichier jusqu'à `media.discard`.
 3. **Post-traitement** : validation des références et des temps, identifiants stables, vignettes des
    extraits vidéo (`/files/gifs/generate`, captures), rapprochement du poste deviné avec les postes
    existants.
+4. **Les repères, en deux temps** (`src/lib/ai/autoAnnotate.ts`). L'appel multimodal voit la vidéo en
+   basse définition, à environ une image par seconde : il ne peut pas placer un cercle au pixel près
+   sur une image qu'il n'a pas vue exactement. Il dit seulement quelles images figées ou photos
+   méritent un repère (`focusLabel` : ce qu'il faut montrer). Une fois les images tirées, chacune est
+   annotée sur l'image elle-même, en haute définition, par le même appel que « Annoter avec l'IA »
+   (`annotateImage`, opération `annotate`, débitée par image quand la facturation est allumée), trois
+   à la fois ; la piste de la génération guide sans s'imposer. Un extrait vidéo n'est jamais annoté.
+   La personne choisit dans les options de la capture (« Annoter les images automatiquement »,
+   gardé sur l'appareil, oui par défaut). Une image qui échoue reste sans marque ; un refus de
+   facturation arrête la suite sans faire échouer la génération.
 
 **Extrait vidéo plutôt que GIF** : un extrait joué en boucle depuis la vidéo source (début/fin) est
 10 à 20 fois plus léger qu'un GIF, garde la qualité et le son, et se règle à la seconde dans

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { enrichMedia } from '@/lib/ai/generate'
-import { focusAnnotation, resolveMedia } from '@/lib/ai/normalize'
+import { normalizeInstruction, resolveMedia } from '@/lib/ai/normalize'
 import type { FilesApi } from '@/lib/gateway/files'
 import { emptyContent } from '@/lib/model/repo'
 import type { Source, StepMedia } from '@/lib/model/types'
@@ -10,18 +10,35 @@ const video: Source = { id: 'v', kind: 'video', url: 'https://x/v.mp4', duration
 const byId = new Map([['S1', video]])
 
 describe('image figée d’une vidéo, choisie par l’IA', () => {
-  it('« at » donne une image figée qui garde son extrait, et la marque autour du bouton', () => {
-    const m = resolveMedia({ source: 'S1', at: 42.37, focus: [400, 300, 600, 500], focusLabel: 'Bouton vert' }, byId)
+  it('« at » donne une image figée qui garde son extrait, sans marque devinée sur la vidéo', () => {
+    const m = resolveMedia({ source: 'S1', at: 42.37, focusLabel: 'Bouton vert' }, byId)
     expect(m).toMatchObject({ kind: 'image', url: '', frame: { videoUrl: 'https://x/v.mp4', at: 42.4, start: 39.4, end: 45.4 } })
-    if (m?.kind === 'image') expect(m.annotations?.[0]).toMatchObject({ type: 'circle', x: 0.3, y: 0.4, w: 0.2, h: 0.2, text: 'Bouton vert' })
+    if (m?.kind === 'image') expect(m.annotations).toBeUndefined()
   })
 
-  it('un instant hors de la vidéo est ramené dedans ; une boîte douteuse ne pose aucune marque', () => {
+  it('un instant hors de la vidéo est ramené dedans', () => {
     const m = resolveMedia({ source: 'S1', at: 999 }, byId)
     if (m?.kind === 'image') expect(m.frame!.at).toBeLessThanOrEqual(120)
-    expect(focusAnnotation([0, 0, 1000, 1000], 'Tout')).toEqual([])
-    expect(focusAnnotation([10, 10, 12, 12], 'Rien')).toEqual([])
-    expect(focusAnnotation('n’importe quoi', '')).toEqual([])
+  })
+
+  it('la génération dit quelles images méritent un repère : images figées et photos, jamais un extrait vidéo', () => {
+    const photo: Source = { id: 'p', kind: 'photo', url: 'https://x/p.jpg', createdAt: now }
+    const { content, marks } = normalizeInstruction(
+      {
+        title: 'Démarrer la presse',
+        steps: [
+          { title: 'Appuyer sur le bouton vert', text: 'Appuyer.', media: [{ source: 'S1', at: 12, focusLabel: 'Bouton vert' }] },
+          { title: 'Tourner la clé', text: 'Tourner.', media: [{ source: 'S1', start: 20, end: 26, focusLabel: 'Clé' }] },
+          { title: 'Vérifier la jauge', text: 'Lire.', media: [{ source: 'S2', focusLabel: 'Jauge de pression' }, { source: 'S1', at: 40 }] },
+        ],
+      },
+      [video, photo],
+    )
+    expect(marks).toEqual([
+      { stepId: content.steps[0].id, mediaIndex: 0, hint: 'Bouton vert' },
+      { stepId: content.steps[2].id, mediaIndex: 0, hint: 'Jauge de pression' },
+    ])
+    expect(content.steps[1].media[0].kind).toBe('video')
   })
 
   it('après la génération, l’image est tirée de la vidéo ; si ça échoue, l’étape garde l’extrait', async () => {

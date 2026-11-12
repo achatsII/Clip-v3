@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Eye, Loader2, Sparkles, Wand2 } from 'lucide-react'
+import { Check, Crosshair, Eye, Loader2, Sparkles, Wand2 } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/Button'
 import { detailLabel, type StageKey } from '@/lib/ai/creation'
@@ -14,6 +14,8 @@ const STAGES: Array<{ key: StageKey; icon: ReactNode }> = [
   { key: 'prepare', icon: <Loader2 className="h-5 w-5" /> },
   { key: 'analyze', icon: <Eye className="h-5 w-5" /> },
   { key: 'finish', icon: <Wand2 className="h-5 w-5" /> },
+  // Seulement quand la génération annote ses images (deuxième temps) : la ligne paraît à ce moment.
+  { key: 'annotate', icon: <Crosshair className="h-5 w-5" /> },
 ]
 
 /** D'où vient une création suivie à distance : « Lancée depuis l'app mobile par Mélanie ». `inline` : en minuscule, au fil d'une phrase. */
@@ -60,7 +62,8 @@ export function GenerationProgress({ job, onRetry, onCancel, remote }: { job: Jo
   }
 
   const stage = job?.status === 'running' ? job.stage : 'prepare'
-  const idx = Math.max(0, STAGES.findIndex((s) => s.key === stage))
+  const stages = stage === 'annotate' ? STAGES : STAGES.filter((s) => s.key !== 'annotate')
+  const idx = Math.max(0, stages.findIndex((s) => s.key === stage))
   const elapsed = job?.status === 'running' ? (now - job.startedAt) / 1000 : 0
 
   return (
@@ -76,7 +79,7 @@ export function GenerationProgress({ job, onRetry, onCancel, remote }: { job: Jo
         </div>
       </div>
       <ol className="relative mt-8 space-y-3">
-        {STAGES.map((s, i) => (
+        {stages.map((s, i) => (
           <li key={s.key} className={cn('flex items-center gap-3 rounded-2xl px-4 py-3 transition', i === idx ? 'bg-primary-soft' : 'opacity-70')}>
             <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl', i < idx ? 'bg-emerald-500 text-white' : i === idx ? 'bg-gradient-primary text-white' : 'bg-slate-900/5 text-slate-400 dark:bg-white/10')}>
               {i < idx ? <Check className="h-5 w-5" /> : i === idx ? <Loader2 className="h-5 w-5 animate-spin" /> : s.icon}

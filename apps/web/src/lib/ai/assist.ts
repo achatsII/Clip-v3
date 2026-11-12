@@ -99,7 +99,11 @@ export async function translateInstruction(ai: AiApi, content: InstructionConten
  * Des marques sur une photo : ce que le geste de l'étape touche, ou exactement ce que la personne
  * demande (« encercle le bouton vert et écris Démarrer »).
  */
-export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, request?: string): Promise<Annotation[]> {
+/**
+ * `hint` : ce que la génération voulait montrer sur cette image (une piste, pas une demande stricte :
+ * l'IA marque ce que le geste de l'étape touche, sur l'image elle-même).
+ */
+export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, request?: string, hint?: string): Promise<Annotation[]> {
   const res = await ai.ask<{ marks: Array<{ label: string; shape: 'circle' | 'rect' | 'arrow'; box: number[]; color?: AnnotationColor }> }>(
     'annotate',
     {
@@ -108,7 +112,7 @@ export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, req
       thinking: 'disabled',
       mediaResolution: 'high',
       system_instruction: annotateSystem(),
-      prompt: annotatePrompt(step, request),
+      prompt: annotatePrompt(step, request, hint),
       files: [{ url: imageUrl, filename: 'photo.jpg', mimeType: 'image/jpeg' }],
       json_schema: annotationSchema,
     },

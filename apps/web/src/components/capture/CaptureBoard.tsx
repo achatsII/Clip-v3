@@ -4,13 +4,16 @@ import { ChevronDown, FileUp, ImagePlus, Mic, PenLine, RotateCcw, Sparkles, Vide
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
-import { ChoiceTile, Textarea } from '@/components/ui/Field'
+import { ChoiceTile, Switch, Textarea } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import type { CapturedMedia } from '@clip/bridge'
 import { callNative, hasCapability, NativeError, onNativeEvent } from '@/lib/bridge/native'
 import { getCaptureSession, isHandledNative } from '@/lib/capture/session'
+import { setAutoAnnotate, useAutoAnnotate } from '@/lib/ai/autoAnnotate'
 import { generationTier } from '@/lib/ai/generate'
+import { AI_COSTS } from '@/lib/billing/catalog'
+import { BILLING_V2 } from '@/lib/config'
 import { useMessages } from '@/lib/i18n'
 import { ACCEPTED_FILES } from '@/lib/media/ingest'
 import { uid } from '@/lib/model/repo'
@@ -55,6 +58,7 @@ export function CaptureBoard({
   const [noteOpen, setNoteOpen] = useState(false)
   const [note, setNote] = useState('')
   const [optionsOpen, setOptionsOpen] = useState(false)
+  const autoAnnotate = useAutoAnnotate()
   const [kind, setKind] = useState<ForceKind>('auto')
   const [dragging, setDragging] = useState(false)
   const [starting, setStarting] = useState(false)
@@ -286,6 +290,19 @@ export function CaptureBoard({
               <ChoiceTile selected={kind === 'auto'} onClick={() => setKind('auto')} icon={<Wand2 className="h-5 w-5" />} title={tb.auto} description={tb.autoHint} />
               <ChoiceTile selected={kind === 'procedure'} onClick={() => setKind('procedure')} title={t.catalog.kinds.procedure.label} description={tb.procedureHint} />
               <ChoiceTile selected={kind === 'lockout'} onClick={() => setKind('lockout')} title={t.catalog.kinds.lockout.label} description={tb.lockoutHint} />
+              <div className="sm:col-span-3">
+                <Switch
+                  checked={autoAnnotate}
+                  onChange={setAutoAnnotate}
+                  label={t.capture.autoAnnotate.label}
+                  description={
+                    <>
+                      {t.capture.autoAnnotate.hint}
+                      {BILLING_V2 && <span className="font-bold"> {t.capture.autoAnnotate.perImage(t.billing.credits(AI_COSTS.annotate))}</span>}
+                    </>
+                  }
+                />
+              </div>
             </div>
           )}
         </div>

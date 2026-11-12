@@ -20,6 +20,7 @@ import { Button, LinkButton } from '@/components/ui/Button'
 import { useMessages } from '@/lib/i18n'
 import { T } from '@/lib/model/repo'
 import type { GeneratingInfo, Instruction } from '@/lib/model/types'
+import { readAutoAnnotate } from '@/lib/ai/autoAnnotate'
 
 export default function InstructionPage() {
   const { id } = useParams<{ id: string }>()
@@ -65,6 +66,7 @@ export default function InstructionPage() {
         stations: stations.data ?? [],
         actor: { id: session.profile.userId, name: session.displayName },
         forceKind: kind === 'auto' ? undefined : kind,
+        autoAnnotate: readAutoAnnotate(),
         onDone: refresh,
       })
     },

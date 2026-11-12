@@ -13,22 +13,18 @@ export interface AiMediaRef {
   page?: number
   /** Image fixe : l'instant à figer. */
   at?: number
-  /** Image fixe : [ymin, xmin, ymax, xmax] de 0 à 1000 autour de ce qu'il faut regarder. */
-  focus?: number[]
+  /**
+   * Image fixe ou photo : ce qu'un repère doit y montrer. La génération ne place pas le repère (elle
+   * a vu la vidéo en basse définition) : il se pose ensuite sur l'image elle-même (`autoAnnotate.ts`).
+   */
   focusLabel?: string
 }
 
-/** Le cercle que l'IA pose sur une image figée, autour de ce qu'il faut regarder (ou rien si la boîte est douteuse). */
-export function focusAnnotation(box: unknown, label: unknown): Annotation[] {
-  if (!Array.isArray(box) || box.length < 4) return []
-  const [ymin, xmin, ymax, xmax] = box.slice(0, 4).map((v) => Math.min(1000, Math.max(0, Number(v) || 0)) / 1000)
-  const r3 = (v: number) => Math.round(v * 1000) / 1000
-  const w = r3(xmax - xmin)
-  const h = r3(ymax - ymin)
-  // Trop petite (bruit) ou presque toute l'image (rien de précis à montrer) : on s'abstient.
-  if (w < 0.02 || h < 0.02 || w * h > 0.6) return []
-  const text = typeof label === 'string' ? label.trim().slice(0, 40) : ''
-  return [{ id: uid('an_'), type: 'circle', x: r3(xmin), y: r3(ymin), w, h, color: 'red', ...(text ? { text } : {}) }]
+/** Ce que la génération veut montrer sur ses images : une demande par image, annotée au deuxième temps. */
+export interface MarkHint {
+  stepId: string
+  mediaIndex: number
+  hint: string
 }
 
 export interface AiStep {
@@ -93,9 +89,8 @@ export function resolveMedia(ref: AiMediaRef, sourcesById: Map<string, Source>):
       let end = Number.isFinite(ref.end) && Number(ref.end) > at ? Number(ref.end) : at + 3
       if (Number.isFinite(dur)) end = Math.min(end, dur)
       if (end - start > 45) start = Math.max(0, end - 45)
-      const annotations = focusAnnotation(ref.focus, ref.focusLabel)
       const round = (v: number) => Math.round(v * 10) / 10
-      return { kind: 'image', url: '', sourceId: src.id, frame: { videoUrl: src.url, at: round(at), start: round(start), end: round(end) }, ...(annotations.length ? { annotations } : {}) }
+      return { kind: 'image', url: '', sourceId: src.id, frame: { videoUrl: src.url, at: round(at), start: round(start), end: round(end) } }
     }
     let start = Number.isFinite(ref.start) ? Math.max(0, Number(ref.start)) : 0
     let end = Number.isFinite(ref.end) ? Number(ref.end) : start + 8
@@ -121,7 +116,8 @@ function mediaKey(m: StepMedia): string {
   return `${m.kind}:${m.url}${m.kind === 'document' ? `#${m.page ?? 1}` : ''}`
 }
 
-export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<string, Source>, keepIds?: Set<string>): Step[] {
+/** `marks` : reçoit, pour chaque image où l'IA veut un repère, ce qu'il faut y montrer. */
+export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<string, Source>, keepIds?: Set<string>, marks?: MarkHint[]): Step[] {
   const out: Step[] = []
   for (const s of steps ?? []) {
     const title = clean(s.title)
@@ -131,7 +127,11 @@ export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<str
     const media: StepMedia[] = []
     for (const ref of s.media ?? []) {
       const m = resolveMedia(ref, sourcesById)
-      if (m && !media.some((x) => mediaKey(x) === mediaKey(m))) media.push(m)
+      if (m && !media.some((x) => mediaKey(x) === mediaKey(m))) {
+        media.push(m)
+        const hint = clean(ref.focusLabel).slice(0, 60)
+        if (marks && hint && m.kind === 'image') marks.push({ stepId: id, mediaIndex: media.length - 1, hint })
+      }
       if (media.length >= 2) break
     }
     out.push({
@@ -180,10 +180,13 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
   content: InstructionContent
   stationGuess: string | null
   questions: string[]
+  /** Les images où un repère aide, à annoter sur l'image elle-même. */
+  marks: MarkHint[]
 } {
   const sourcesById = new Map<string, Source>()
   sources.forEach((s, i) => sourcesById.set(`S${i + 1}`, s))
-  const steps = normalizeSteps(raw.steps, sourcesById)
+  const marks: MarkHint[] = []
+  const steps = normalizeSteps(raw.steps, sourcesById, undefined, marks)
   const category = (CATEGORY_KEYS.includes(raw.category as CategoryKey) ? raw.category : 'production') as CategoryKey
   const lockout = normalizeLockout(raw.lockout, sourcesById)
   const kind = raw.kind === 'lockout' && lockout ? 'lockout' : 'procedure'
@@ -215,6 +218,7 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
     },
     stationGuess: clean(raw.station) || null,
     questions: cleanList(raw.questions, 4),
+    marks,
   }
 }
 

@@ -62,8 +62,9 @@ RÈGLES D’ÉCRITURE :
 MÉDIAS :
 - Chaque étape porte le média qui montre le mieux l’action :
   · un extrait vidéo (start et end en secondes, 3 à 20 s, centré sur le geste) quand le mouvement compte : manipuler, tourner, insérer, enchaîner des gestes ;
-  · une image fixe tirée de la vidéo (at = l’instant en secondes, sans start ni end) quand un coup d’œil suffit : un bouton à appuyer, un réglage, une étiquette, une position, un état à vérifier. Choisis l’instant où ce qu’il faut voir est net et bien visible. Ajoute focus = [ymin, xmin, ymax, xmax] (0 à 1000) et focusLabel (1 à 3 mots) autour de ce qu’il faut regarder, seulement si c’est clairement visible à cet instant ;
+  · une image fixe tirée de la vidéo (at = l’instant en secondes, sans start ni end) quand un coup d’œil suffit : un bouton à appuyer, un réglage, une étiquette, une position, un état à vérifier. Choisis l’instant où ce qu’il faut voir est net et bien visible ;
   · une photo, ou la page d’un document (plan, dessin, schéma).
+- Sur une image fixe ou une photo, focusLabel (1 à 4 mots) dit ce qu’un repère doit montrer (ex. « Bouton vert »), seulement si c’est bien visible et qu’un repère aide vraiment l’opérateur ; sinon, vide. Tu ne places pas le repère : il sera posé ensuite, sur l’image elle-même. Un extrait vidéo n’en a jamais.
 - Référence uniquement les identifiants de sources fournis (S1, S2…). Pour une vidéo, start < end, et start, end et at restent dans la durée indiquée.
 - Le plus souvent, l’extrait vidéo ; l’image fixe seulement quand le mouvement n’apporte rien (un « appuyer sur le bouton » n’a pas besoin de trois secondes de vidéo).
 - Une étape sans média pertinent garde une liste vide plutôt qu’un média hors sujet.
@@ -158,9 +159,10 @@ export function annotateSystem(): string {
   return 'Tu repères sur une photo d’atelier ce que le geste d’une étape de travail touche (poignée, vis, bouton, sectionneur, pièce…). Tu rends 1 à 3 marques avec leur boîte [ymin, xmin, ymax, xmax] normalisée de 0 à 1000, serrée sur l’objet. "circle" pour un petit élément, "rect" pour une zone, "arrow" pour montrer un sens ou un point précis. Libellés dans la langue de l’étape (celle de son titre et de son texte), 1 à 4 mots.'
 }
 
-export function annotatePrompt(step: Step, request?: string): string {
+export function annotatePrompt(step: Step, request?: string, hint?: string): string {
   if (request?.trim()) return `ÉTAPE : ${step.title} — ${step.text}\nDEMANDE PRÉCISE : ${request.trim()}\nMarque exactement ce qui est demandé, rien d’autre. Si un texte est demandé, mets-le tel quel dans label. Si une couleur est demandée, donne-la dans color.`
-  return `ÉTAPE : ${step.title} — ${step.text}\nMarque sur la photo ce que l’opérateur doit regarder ou toucher pour cette étape.`
+  const clue = hint?.trim() ? `\nPISTE : la rédaction veut montrer « ${hint.trim()} ». Marque-le s’il est bien visible sur cette photo ; sinon, ce que le geste touche.` : ''
+  return `ÉTAPE : ${step.title} — ${step.text}\nMarque sur la photo ce que l’opérateur doit regarder ou toucher pour cette étape.${clue}`
 }
 
 export function illustrateSystem(): string {

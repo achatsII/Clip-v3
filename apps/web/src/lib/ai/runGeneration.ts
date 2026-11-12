@@ -7,7 +7,8 @@ import { nowIso, T } from '../model/repo'
 import { saveDraft, type Actor } from '../model/service'
 import type { Instruction, OrgSettings, Station } from '../model/types'
 import { publishRealtime } from '../realtime/client'
-import { creationReporter, DETAIL_THUMBNAILS } from './creation'
+import { annotateMarks } from './autoAnnotate'
+import { creationReporter, DETAIL_THUMBNAILS, sourceDetail } from './creation'
 import { enrichMedia, generateInstruction } from './generate'
 import { runJob } from './jobs'
 import { matchStation } from './normalize'
@@ -26,6 +27,8 @@ export function startGeneration(input: {
   stations: Doc<Station>[]
   actor: Actor
   forceKind?: 'procedure' | 'lockout'
+  /** Annoter les images au deuxième temps, sur l'image elle-même (choix de la personne ; oui par défaut). */
+  autoAnnotate?: boolean
   onDone?: () => void
 }): Promise<void> {
   const { doc, data, files, ai, org, stations, actor } = input
@@ -60,7 +63,13 @@ export function startGeneration(input: {
       await data.patch(T.instruction, doc._id, { sources: out.sources })
 
       stage('finish', DETAIL_THUMBNAILS)
-      const content = await enrichMedia(out.content, files, async (png, name) => (await files.upload(png, name, 'pages')).url)
+      let content = await enrichMedia(out.content, files, async (png, name) => (await files.upload(png, name, 'pages')).url)
+
+      // Deuxième temps : les repères se posent sur les images elles-mêmes, en haute définition.
+      if (input.autoAnnotate !== false && out.marks.length) {
+        const annotated = await annotateMarks(ai, content, out.marks, { onProgress: (done, total) => stage('annotate', sourceDetail(Math.min(done + 1, total), total)) })
+        content = annotated.content
+      }
 
       const matched = matchStation(out.stationGuess, stations.map((s) => ({ id: s._id, name: s.json_data.name, code: s.json_data.code })))
       const stationIds = instr.stationIds.length ? instr.stationIds : matched ? [matched] : []

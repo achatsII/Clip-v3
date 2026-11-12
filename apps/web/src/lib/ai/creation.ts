@@ -31,7 +31,7 @@ export function diffCreations(before: ReadonlySet<string>, after: ReadonlySet<st
 }
 
 /** Les étapes d'une création. Leur clé s'écrit dans l'instruction ; leur libellé se lit au rendu. */
-export const STAGE_KEYS = ['prepare', 'analyze', 'finish'] as const
+export const STAGE_KEYS = ['prepare', 'analyze', 'finish', 'annotate'] as const
 export type StageKey = (typeof STAGE_KEYS)[number]
 
 /** Ce que dit une étape, dans la langue de chaque appareil (celui qui génère comme les autres). */

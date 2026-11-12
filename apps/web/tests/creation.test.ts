@@ -109,7 +109,7 @@ describe('la génération écrit son état dans l’instruction', () => {
     startGeneration({ doc, data: { patch } as never, files: { upload: vi.fn() } as never, ai: {} as never, org: {} as never, stations: [], actor: { id: 'u1', name: 'Mélanie' } })
 
   it('réussie : l’état part au début, s’efface avec le brouillon ; l’écran reste allumé pendant', async () => {
-    vi.mocked(generateInstruction).mockResolvedValue({ content, sources: [], model: 'm', operation: 'generate_s', questions: [], stationGuess: null } as never)
+    vi.mocked(generateInstruction).mockResolvedValue({ content, marks: [], sources: [], model: 'm', operation: 'generate_s', questions: [], stationGuess: null } as never)
     vi.mocked(enrichMedia).mockImplementation(async (c) => c)
     const patch = vi.fn(async (_t: string, _id: string, _p: Record<string, unknown>) => undefined)
     await run(patch)

@@ -87,11 +87,18 @@ export const capture: typeof Fr = {
     noTranscript: 'No transcript: the AI will listen to the recording.',
     percent: (n: number) => `${n.toLocaleString('en-CA')}%`,
   },
+  /** Le choix des annotations automatiques, dans les options de génération. */
+  autoAnnotate: {
+    label: 'Annotate images automatically',
+    hint: 'The AI circles what to look at on each still image or photo that needs it, right on the image. Never on a video clip.',
+    perImage: (credits: string) => `${credits} per annotated image`,
+  },
   progress: {
     stages: {
       prepare: 'Preparing the media',
       analyze: 'The AI watches and listens to your notes',
       finish: 'Formatting the steps',
+      annotate: 'Annotating images',
     },
     sourceOf: (index: number, total: number) => `${index.toLocaleString('en-CA')} of ${total.toLocaleString('en-CA')}`,
     thumbnails: 'Clip thumbnails',
