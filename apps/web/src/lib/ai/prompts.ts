@@ -80,7 +80,7 @@ ${opts.forceKind === 'lockout' ? 'La personne a choisi le format « fiche de cad
 
 ${standardBlock(org)}
 
-QUESTIONS : liste au plus 4 points que les sources ne permettent pas de trancher et qu’une personne doit vérifier avant de publier. Aucune question si tout est clair.`
+QUESTIONS : liste au plus 4 points que les sources ne permettent pas de trancher et qu’une personne doit vérifier avant de publier. Aucune question si tout est clair. Pour chacune, propose 2 à 4 réponses courtes (choices) seulement si la réponse est l’un de quelques choix clairs : oui ou non, deux façons de faire vues dans les sources. Pour une valeur à mesurer ou à lire (couple, pression, numéro…), aucun choix : la personne l’écrira. Jamais une valeur inventée parmi les choix.`
 }
 
 export interface SourceLine {

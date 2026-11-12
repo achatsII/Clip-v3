@@ -104,6 +104,22 @@ export const editor = {
     questions: {
       title: 'À vérifier avant de publier',
       markChecked: 'Marquer comme vérifié',
+      intro: 'L’IA n’a pas pu trancher ces points. Répondez, et elle corrige l’instruction ; ou cochez ce que vous avez déjà vérifié.',
+      answer: 'Répondre',
+      /** La fenêtre : une question à la fois. */
+      dialog: {
+        title: 'Les questions de l’IA',
+        progress: (index: number, total: number) => `Question ${num(index)} sur ${num(total)}`,
+        suggested: 'Réponses proposées',
+        placeholder: 'Votre réponse, écrite ou dictée',
+        skip: 'Passer',
+        next: 'Suivant',
+        apply: 'Corriger l’instruction',
+      },
+      /** Ce que l'assistant d'édition reçoit, et que la personne voit dans la conversation. */
+      request: (items: Array<{ question: string; answer: string }>) =>
+        `Voici mes réponses aux points à vérifier. Corrige l’instruction en conséquence : écris une valeur donnée telle quelle à l’étape concernée ; « non » ou « ne s’applique pas » retire la mention.\n${items.map((x, i) => `${i + 1}. ${x.question} → ${x.answer}`).join('\n')}`,
+      applied: 'Réponses envoyées à l’assistant',
     },
     steps: {
       title: 'Étapes',

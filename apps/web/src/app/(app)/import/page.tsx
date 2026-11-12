@@ -132,7 +132,7 @@ export default function ImportPage() {
           const station = matchStation(r.stationGuess, stationList)
           await saveDraft(data, doc._id, doc.json_data, content, actor, {
             stationIds: station ? [station] : [],
-            generation: { at: nowIso(), model: r.model, operation: r.operation, questions: r.questions, stationGuess: r.stationGuess, rating: null, comment: null },
+            generation: { at: nowIso(), model: r.model, operation: r.operation, questions: r.questions, choices: r.choices, stationGuess: r.stationGuess, rating: null, comment: null },
           })
           next = update(item.id, { status: 'done', instructionId: doc._id, title: content.title })
         } catch (e) {

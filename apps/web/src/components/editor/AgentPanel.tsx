@@ -34,6 +34,14 @@ interface Message {
  * change. Chaque tour s'annule d'un geste. Au téléphone, la feuille se réduit pendant qu'il
  * travaille pour laisser voir l'étape ; au bureau, c'est une colonne à droite.
  */
+/** Une demande envoyée par l'éditeur (les réponses aux questions de l'IA) : le panneau s'ouvre et la traite. */
+export interface AgentRequest {
+  id: number
+  text: string
+  /** Appelé à la fin : `ok` si l'assistant a répondu sans erreur. */
+  onDone?: (ok: boolean) => void
+}
+
 export function AgentPanel({
   content,
   setContent,
@@ -41,6 +49,7 @@ export function AgentPanel({
   onFocus,
   onWorking,
   onOpenChange,
+  request,
 }: {
   content: InstructionContent
   setContent: (c: InstructionContent) => void
@@ -51,6 +60,8 @@ export function AgentPanel({
   /** L'étape que l'assistant modifie en ce moment (null quand il a fini). */
   onWorking: (stepId: string | null) => void
   onOpenChange?: (open: boolean) => void
+  /** Une demande à traiter tout de suite, envoyée par l'éditeur. */
+  request?: AgentRequest | null
 }) {
   const { ai, org } = useSession()
   const t = useMessages()
@@ -79,6 +90,16 @@ export function AgentPanel({
   const current = working?.actions?.findLast((a) => a.state === 'working')
 
   useEffect(() => onOpenChange?.(open), [open, onOpenChange])
+  // Une demande de l'éditeur : le panneau s'ouvre et la traite sous les yeux de la personne.
+  const handled = useRef(0)
+  useEffect(() => {
+    if (!request || handled.current === request.id) return
+    handled.current = request.id
+    setOpen(true)
+    setMinimized(false)
+    void runTurn(request.text, 'text').then((r) => request.onDone?.(r.failed.length === 0 && !!r.reply))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request])
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })
   }, [messages])

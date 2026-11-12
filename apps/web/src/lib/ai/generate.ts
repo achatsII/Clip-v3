@@ -140,6 +140,8 @@ export interface GenerateOutput {
   sources: Source[]
   stationGuess: string | null
   questions: string[]
+  /** Les réponses proposées aux questions qui en ont (clé : la question). */
+  choices: Record<string, string[]>
   model: string | null
   operation: AiOperation
 }
@@ -178,9 +180,9 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
 
   input.onStage?.('finish')
   // Les sources gardent leur ordre : S1 = première source utilisable.
-  const { content, stationGuess, questions, marks } = normalizeInstruction(result.json, prepared.sources, language)
+  const { content, stationGuess, questions, choices, marks } = normalizeInstruction(result.json, prepared.sources, language)
   if (!content.steps.length) throw new ApiError(messages().capture.generate.noSteps, 422)
-  return { content, marks, sources: mergeSources(input.sources, prepared.sources), stationGuess, questions, model: result.model, operation: tier.op }
+  return { content, marks, sources: mergeSources(input.sources, prepared.sources), stationGuess, questions, choices, model: result.model, operation: tier.op }
 }
 
 function mergeSources(all: Source[], updated: Source[]): Source[] {
@@ -194,7 +196,7 @@ export async function importDocument(input: {
   org: Pick<OrgSettings, 'standard' | 'learnings'>
   source: Source
   stationNames: string[]
-}): Promise<{ content: InstructionContent; stationGuess: string | null; questions: string[]; model: string | null; operation: AiOperation }> {
+}): Promise<{ content: InstructionContent; stationGuess: string | null; questions: string[]; choices: Record<string, string[]>; model: string | null; operation: AiOperation }> {
   const pages = input.source.pageCount ?? 5
   const operation: AiOperation = pages > 12 ? 'import_l' : 'import_s'
   const result = await input.ai.ask<AiInstruction>(

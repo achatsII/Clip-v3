@@ -181,6 +181,11 @@ export interface GenerationInfo {
   comment?: string | null
   /** Ce que l'IA n'a pas pu trancher : affiché à la personne comme « À vérifier ». */
   questions?: string[]
+  /**
+   * Les réponses proposées à une question (clé : son texte), quand la réponse est l'un de quelques
+   * choix clairs ; jamais une valeur inventée. Absent pour une question à réponse libre.
+   */
+  choices?: Record<string, string[]>
   /** Poste deviné par l'IA (texte libre), avant rapprochement. */
   stationGuess?: string | null
 }

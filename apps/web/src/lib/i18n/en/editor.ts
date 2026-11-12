@@ -99,6 +99,20 @@ export const editor: typeof Fr = {
     questions: {
       title: 'Check before publishing',
       markChecked: 'Mark as checked',
+      intro: 'The AI couldn’t settle these points. Answer them and it fixes the instruction, or tick what you’ve already checked.',
+      answer: 'Answer',
+      dialog: {
+        title: 'Questions from the AI',
+        progress: (index: number, total: number) => `Question ${num(index)} of ${num(total)}`,
+        suggested: 'Suggested answers',
+        placeholder: 'Your answer, typed or dictated',
+        skip: 'Skip',
+        next: 'Next',
+        apply: 'Fix the instruction',
+      },
+      request: (items: Array<{ question: string; answer: string }>) =>
+        `Here are my answers to the points to check. Fix the instruction accordingly: write a given value as is in the step it belongs to; “no” or “doesn’t apply” removes the mention.\n${items.map((x, i) => `${i + 1}. ${x.question} → ${x.answer}`).join('\n')}`,
+      applied: 'Answers sent to the assistant',
     },
     steps: {
       title: 'Steps',

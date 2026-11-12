@@ -61,7 +61,8 @@ export interface AiInstruction {
     energyPoints?: Array<Partial<EnergyPoint> & { photoSource?: string }>
     restartSteps?: string[]
   }
-  questions?: string[]
+  /** Une question, avec ses réponses proposées ; une simple chaîne pour une ancienne réponse du modèle. */
+  questions?: Array<string | { question?: string; choices?: string[] }>
 }
 
 const clean = (s: unknown): string => (typeof s === 'string' ? s.replace(/\s+/g, ' ').trim() : '')
@@ -180,6 +181,8 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
   content: InstructionContent
   stationGuess: string | null
   questions: string[]
+  /** Les réponses proposées, par question (seulement celles qui en ont). */
+  choices: Record<string, string[]>
   /** Les images où un repère aide, à annoter sur l'image elle-même. */
   marks: MarkHint[]
 } {
@@ -217,9 +220,24 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
       language,
     },
     stationGuess: clean(raw.station) || null,
-    questions: cleanList(raw.questions, 4),
+    ...normalizeQuestions(raw.questions),
     marks,
   }
+}
+
+/** Les questions de la génération et leurs réponses proposées (2 à 4, courtes, sans doublon). */
+export function normalizeQuestions(raw: AiInstruction['questions']): { questions: string[]; choices: Record<string, string[]> } {
+  const questions: string[] = []
+  const choices: Record<string, string[]> = {}
+  for (const q of Array.isArray(raw) ? raw : []) {
+    const text = clean(typeof q === 'string' ? q : q?.question)
+    if (!text || questions.includes(text)) continue
+    questions.push(text)
+    const list = typeof q === 'string' ? [] : [...new Set(cleanList(q?.choices, 4).map((c) => c.slice(0, 60)))]
+    if (list.length >= 2) choices[text] = list
+    if (questions.length >= 4) break
+  }
+  return { questions, choices }
 }
 
 /** Rapproche le poste deviné par l'IA des postes existants (code exact, puis nom). */

@@ -86,6 +86,7 @@ export function startGeneration(input: {
           rating: null,
           comment: null,
           questions: out.questions,
+          choices: out.choices,
           stationGuess: out.stationGuess,
         },
       })

@@ -85,7 +85,18 @@ export const instructionSchema = {
     safety: strList('Mises en garde générales, avant de commencer'),
     steps: { type: 'array', items: stepSchema },
     lockout: lockoutSchema,
-    questions: strList('Au plus 4 points que les sources ne permettent pas de trancher, à faire vérifier'),
+    questions: {
+      type: 'array',
+      description: 'Au plus 4 points que les sources ne permettent pas de trancher, à faire vérifier',
+      items: {
+        type: 'object',
+        properties: {
+          question: str('La question, courte et claire, posée à la personne qui rédige'),
+          choices: strList("2 à 4 réponses courtes, seulement si la réponse est l'un de quelques choix clairs (oui / non, deux façons de faire vues dans les sources) ; vide pour une valeur à mesurer ou à lire : jamais une valeur inventée"),
+        },
+        required: ['question'],
+      },
+    },
   },
   required: ['title', 'summary', 'kind', 'category', 'tags', 'station', 'ppe', 'tools', 'safety', 'steps', 'questions'],
 }

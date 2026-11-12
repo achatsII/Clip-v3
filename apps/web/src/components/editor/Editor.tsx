@@ -16,6 +16,7 @@ import {
   Languages,
   ListChecks,
   Loader2,
+  MessageCircleQuestion,
   MessageSquare,
   MonitorSmartphone,
   Send,
@@ -61,10 +62,11 @@ import {
 } from '@/lib/model/service'
 import type { Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
 import { cn, timeAgo } from '@/lib/util/cn'
-import { AgentPanel } from './AgentPanel'
+import { AgentPanel, type AgentRequest } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
 import { LockoutEditor } from './LockoutEditor'
 import { MetaCard } from './MetaCard'
+import { QuestionsDialog, type QuestionAnswer } from './QuestionsDialog'
 import { StageEditor } from './StageEditor'
 import { StepEditor } from './StepEditor'
 import { StepList } from './StepList'
@@ -101,6 +103,24 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [rating, setRating] = useState(instr.generation?.rating ?? null)
   const [ratingComment, setRatingComment] = useState<string | null>(null)
   const [questions, setQuestions] = useState<string[]>(instr.generation?.questions ?? [])
+  const questionsRef = useRef(questions)
+  questionsRef.current = questions
+  const [questionsOpen, setQuestionsOpen] = useState(false)
+  const [agentRequest, setAgentRequest] = useState<AgentRequest | null>(null)
+  /** Retire des questions de l'IA celles qui sont réglées (vérifiées, ou répondues et corrigées). */
+  const settleQuestions = (done: string[]) => {
+    const next = questionsRef.current.filter((q) => !done.includes(q))
+    setQuestions(next)
+    void data.patch(T.instruction, doc._id, { 'generation.questions': next })
+  }
+  const answerQuestions = (answers: QuestionAnswer[]) => {
+    setQuestionsOpen(false)
+    setAgentRequest({
+      id: Date.now(),
+      text: tp.questions.request(answers),
+      onDone: (ok) => ok && settleQuestions(answers.map((a) => a.question)),
+    })
+  }
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latest = useRef(content)
   latest.current = content
@@ -522,18 +542,16 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
 
       {questions.length > 0 && !readOnly && (
         <div className="mb-5 rounded-[28px] bg-amber-50 p-5 dark:bg-amber-500/10">
-          <p className="label-caps mb-2 text-amber-700 dark:text-amber-300">{tp.questions.title}</p>
+          <p className="label-caps mb-1 text-amber-700 dark:text-amber-300">{tp.questions.title}</p>
+          <p className="mb-3 text-sm font-medium text-amber-900/80 dark:text-amber-100/80">{tp.questions.intro}</p>
           <ul className="space-y-2">
             {questions.map((q) => (
               <li key={q} className="flex items-start gap-3">
                 <button
                   type="button"
                   aria-label={tp.questions.markChecked}
-                  onClick={() => {
-                    const next = questions.filter((x) => x !== q)
-                    setQuestions(next)
-                    void data.patch(T.instruction, doc._id, { 'generation.questions': next })
-                  }}
+                  title={tp.questions.markChecked}
+                  onClick={() => settleQuestions([q])}
                   className="btn-press mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-amber-400 text-amber-600 hover:bg-amber-400 hover:text-white"
                 >
                   <Check className="h-4 w-4" />
@@ -542,8 +560,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               </li>
             ))}
           </ul>
+          <Button className="mt-4" icon={<MessageCircleQuestion className="h-4 w-4" />} onClick={() => setQuestionsOpen(true)}>
+            {tp.questions.answer}
+          </Button>
         </div>
       )}
+      <QuestionsDialog open={questionsOpen} questions={questions} choices={instr.generation?.choices ?? {}} onClose={() => setQuestionsOpen(false)} onApply={answerQuestions} />
 
       <MetaCard content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={update} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
 
@@ -624,7 +646,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         </section>
       </div>
 
-      {!readOnly && <AgentPanel content={content} setContent={update} focusStepId={step?.id ?? null} onFocus={focusStep} onWorking={setAgentStep} onOpenChange={setAgentOpen} />}
+      {!readOnly && <AgentPanel content={content} setContent={update} focusStepId={step?.id ?? null} onFocus={focusStep} onWorking={setAgentStep} onOpenChange={setAgentOpen} request={agentRequest} />}
 
       <ShareDialog open={dialog === 'share'} onClose={() => setDialog(null)} doc={doc} onLinked={refresh} />
       <HistoryDialog

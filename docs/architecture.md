@@ -127,6 +127,14 @@ fichier jusqu'à `media.discard`.
 10 à 20 fois plus léger qu'un GIF, garde la qualité et le son, et se règle à la seconde dans
 l'éditeur. Les captures servent de vignettes et d'images pour le PDF.
 
+**Les questions de la génération.** Ce que les sources ne tranchent pas devient au plus quatre
+questions (« À vérifier avant de publier »), chacune avec 2 à 4 réponses proposées quand la réponse
+est l'un de quelques choix clairs (oui ou non, deux façons de faire vues dans les sources), jamais une
+valeur inventée (`generation.choices`). « Répondre » ouvre une question à la fois (`QuestionsDialog`) :
+une réponse proposée, ou écrite, ou dictée, ou la question passée. Les réponses partent ensemble à
+l'assistant d'édition, qui corrige l'instruction sous les yeux de la personne ; les questions
+répondues disparaissent. Cocher une question la règle sans la répondre.
+
 ### L'assistant d'édition (`src/lib/ai/agent.ts`, `AgentPanel`)
 
 - La personne demande (texte, ou dictée au micro du champ) ; l'IA (`edit_agent`) reçoit l'instruction
