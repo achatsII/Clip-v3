@@ -8,6 +8,7 @@ import { messages, messagesIn } from '../i18n'
 import { summarizeChanges } from './diff'
 import { coverOf, emptyContent, findPublished, nowIso, T } from './repo'
 import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Source, Version } from './types'
+import { reuseSource } from './library'
 
 export interface Actor {
   id: string
@@ -191,6 +192,21 @@ export async function duplicateInstruction(data: DataApi, doc: Doc<Instruction>,
     origin: 'duplicate',
     coverUrl: coverOf(draft),
     stepCount: draft.steps.length,
+  })
+}
+
+/**
+ * Une nouvelle instruction avec les médias et la demande d'une autre : on la relance, on en fait
+ * une variante, sans toucher à l'originale. Elle s'ouvre sur la capture : on ajoute, on retire, on
+ * génère.
+ */
+export async function newFromSources(data: DataApi, doc: Doc<Instruction>, actor: Actor): Promise<Doc<Instruction>> {
+  const src = doc.json_data
+  return createInstruction(data, actor, {
+    intent: src.intent,
+    sources: (src.sources ?? []).map(reuseSource),
+    stationIds: src.stationIds,
+    origin: 'capture',
   })
 }
 

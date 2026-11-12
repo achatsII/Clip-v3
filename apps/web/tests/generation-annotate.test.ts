@@ -41,7 +41,7 @@ describe('la génération et ses annotations', () => {
     expect(annotateMarks).toHaveBeenCalledWith(expect.anything(), content, marks, expect.anything())
     const saved = r.patch.mock.calls.at(-1)![2] as { draft: { steps: Array<{ media: Array<{ annotations?: unknown[] }> }> } }
     expect(saved.draft.steps[0].media[0].annotations).toHaveLength(1)
-    expect(vi.mocked(publishRealtime).mock.calls.map((c) => c[0].stage ?? c[0].phase)).toContain('annotate')
+    expect(vi.mocked(publishRealtime).mock.calls.map((c) => (c[0] as { stage?: string }).stage ?? (c[0] as { phase?: string }).phase)).toContain('annotate')
   })
 
   it('n’annote rien quand la personne a éteint le choix', async () => {

@@ -19,6 +19,9 @@ export const shell: typeof Fr = {
   account: 'My account',
   appearance: 'Appearance',
   signOut: 'Sign out',
+  live: {
+    editingElsewhere: (title: string, device: 'app' | 'web') => `You’re editing ${title ? `“${title}”` : 'an instruction'} from ${device === 'app' ? 'the mobile app' : 'another computer'}`,
+  },
   scan: {
     title: 'Scan a code',
     prompt: 'Scan the station or part code',

@@ -91,6 +91,21 @@ export const capture = {
     percent: (n: number) => `${n.toLocaleString('fr-CA')} %`,
   },
   /** La génération en cours, ici ou sur un autre appareil. */
+  /** Les médias déjà pris : ceux des instructions précédentes, à reprendre. */
+  library: {
+    open: 'Médias déjà pris',
+    title: 'Médias déjà pris',
+    intro: 'Reprenez des vidéos, photos, notes et documents de vos instructions précédentes. Rien n’est téléversé de nouveau.',
+    search: 'Chercher une instruction, un fichier, un mot',
+    kinds: { all: 'Tout', video: 'Vidéos', photo: 'Photos', audio: 'Notes vocales', note: 'Notes', document: 'Documents' },
+    empty: 'Aucun média pour l’instant : ceux de vos instructions apparaîtront ici.',
+    noMatch: 'Rien ne correspond. Essayez un autre mot ou un autre type.',
+    add: (n: number) => (n ? `Ajouter ${n.toLocaleString('fr-CA')} média${n > 1 ? 's' : ''}` : 'Ajouter'),
+    added: (n: number) => `${n.toLocaleString('fr-CA')} média${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}`,
+    pages: (n: number) => `${n.toLocaleString('fr-CA')} page${n > 1 ? 's' : ''}`,
+    already: 'Ces médias sont déjà dans cette capture.',
+    selected: 'Choisi',
+  },
   /** Le choix des annotations automatiques, dans les options de génération. */
   autoAnnotate: {
     label: 'Annoter les images automatiquement',

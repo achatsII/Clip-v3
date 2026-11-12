@@ -17,6 +17,10 @@ export const shell = {
   account: 'Mon compte',
   appearance: 'Apparence',
   signOut: 'Se déconnecter',
+  /** Vos modifications sur un autre appareil, pendant que celui-ci est ailleurs dans l'app. */
+  live: {
+    editingElsewhere: (title: string, device: 'app' | 'web') => `Vous modifiez ${title ? `« ${title} »` : 'une instruction'} sur ${device === 'app' ? 'l’app mobile' : 'un autre ordinateur'}`,
+  },
   scan: {
     title: 'Scanner un code',
     prompt: 'Scannez le code du poste ou de la pièce',

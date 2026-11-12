@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, FileUp, ImagePlus, Mic, PenLine, RotateCcw, Sparkles, Video, Wand2 } from 'lucide-react'
+import { ChevronDown, FileUp, ImagePlus, Library, Mic, PenLine, RotateCcw, Sparkles, Video, Wand2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -22,6 +22,7 @@ import { cn } from '@/lib/util/cn'
 import { AudioRecorder } from './AudioRecorder'
 import { DictateButton } from './DictateButton'
 import { PendingCard, SourceCard } from './SourceCard'
+import { MediaLibraryDialog } from './MediaLibraryDialog'
 import { WebCamera } from './WebCamera'
 import { AiCost } from '@/components/billing/AiCost'
 
@@ -147,6 +148,7 @@ export function CaptureBoard({
     },
   ]
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(false)
 
   async function generate() {
     if (!hasContent) return
@@ -250,6 +252,20 @@ export function CaptureBoard({
           </button>
         ))}
       </div>
+      <div className="mt-3 flex justify-center sm:justify-start">
+        <Button size="sm" icon={<Library className="h-4 w-4" />} onClick={() => setLibraryOpen(true)}>
+          {t.capture.library.open}
+        </Button>
+      </div>
+      <MediaLibraryDialog
+        open={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        excludeId={snap.instructionId}
+        onAdd={(list) => {
+          setLibraryOpen(false)
+          void session.addExisting(list).then((n) => (n ? toast.success(t.capture.library.added(n)) : toast.info(t.capture.library.already)))
+        }}
+      />
       <input
         ref={fileInput}
         type="file"

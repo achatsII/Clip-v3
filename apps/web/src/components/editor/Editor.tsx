@@ -9,6 +9,7 @@ import {
   CircleCheck,
   CloudOff,
   Copy,
+  CopyPlus,
   Eye,
   FileDown,
   FileJson,
@@ -18,6 +19,7 @@ import {
   Loader2,
   MessageCircleQuestion,
   MessageSquare,
+  Radio,
   MonitorSmartphone,
   Send,
   Share2,
@@ -42,7 +44,10 @@ import { useToast } from '@/components/ui/Toast'
 import { qk, useFeedback, useInstructions } from '@/hooks/queries'
 import { LockBadge } from '@/components/billing/Billing'
 import { useBilling, useEntitlement, useGate, useLimit } from '@/lib/billing/state'
-import { useToggle } from '@/lib/toggles'
+import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
+import { inNativeShell } from '@/lib/bridge/native'
+import { deviceId, onRealtime, publishRealtime } from '@/lib/realtime/client'
+import { changedSteps, followStep, remoteDraftAction } from '@/lib/realtime/liveDraft'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
 import { diffSteps } from '@/lib/model/diff'
@@ -51,6 +56,7 @@ import { nowIso, T, uid } from '@/lib/model/repo'
 import {
   archiveInstruction,
   duplicateInstruction,
+  newFromSources,
   needsApproval,
   publishInstruction,
   requestChanges,
@@ -72,6 +78,8 @@ import { StepEditor } from './StepEditor'
 import { StepList } from './StepList'
 
 type SaveState = 'saved' | 'saving' | 'error'
+/** Ce qu'un autre appareil annonce d'un brouillon enregistré. */
+type DraftNotice = { byName?: string; device: 'app' | 'web'; steps?: string[] }
 
 function newStep(): Step {
   return { id: uid('st_'), title: '', text: '', keyPoints: [], warning: null, media: [] }
@@ -124,6 +132,16 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latest = useRef(content)
   latest.current = content
+  // L'édition en direct : le dernier brouillon enregistré (ici ou reçu), pour dire ce qui change.
+  const realtime = useRealtimeAvailable()
+  const liveToggle = useToggle('liveEditing')
+  const live = realtime && liveToggle && !readOnly
+  const liveRef = useRef(live)
+  liveRef.current = live
+  const lastSaved = useRef<InstructionContent>(instr.draft!)
+  const saveStateRef = useRef<SaveState>('saved')
+  saveStateRef.current = saveState
+  const [remote, setRemote] = useState<{ byName?: string; device: 'app' | 'web'; conflict: boolean; at: number } | null>(null)
   const docRef = useRef(doc)
   docRef.current = doc
 
@@ -148,8 +166,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     }
     setSaveState('saving')
     try {
-      await saveDraft(data, doc._id, docRef.current.json_data, latest.current, actor)
+      const saved = latest.current
+      await saveDraft(data, doc._id, docRef.current.json_data, saved, actor)
       setSaveState('saved')
+      // Les autres appareils ouverts sur cette instruction suivent : l'étape changée en premier.
+      if (liveRef.current) publishRealtime({ type: 'draft', id: doc._id, title: saved.title, userId: actor.id, byName: actor.name, device: inNativeShell() ? 'app' : 'web', steps: changedSteps(lastSaved.current, saved), from: deviceId })
+      lastSaved.current = saved
     } catch {
       setSaveState('error')
       throw new Error('save')
@@ -184,12 +206,74 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     return () => window.removeEventListener('beforeunload', warn)
   }, [])
 
+  // Un brouillon enregistré sur un autre appareil : on le reprend et on va à l'étape changée, sauf si
+  // on modifie ici aussi (on le dit, sans rien écraser). Les annonces rapprochées se regroupent.
+  const pulling = useRef(false)
+  const again = useRef<DraftNotice | null>(null)
+  const pullRemote = useCallback(
+    async (e: DraftNotice, force = false) => {
+      if (!force && remoteDraftAction(!!timer.current || saveStateRef.current === 'saving') === 'conflict') {
+        setRemote({ byName: e.byName, device: e.device, conflict: true, at: Date.now() })
+        return
+      }
+      if (pulling.current) {
+        again.current = e
+        return
+      }
+      pulling.current = true
+      try {
+        const fresh = await data.get<Instruction>(T.instruction, doc._id)
+        const draft = fresh?.json_data.draft
+        if (!draft) return
+        // La personne a commencé à modifier pendant la lecture : on ne reprend rien.
+        if (!force && timer.current) {
+          setRemote({ byName: e.byName, device: e.device, conflict: true, at: Date.now() })
+          return
+        }
+        if (force && timer.current) {
+          clearTimeout(timer.current)
+          timer.current = null
+        }
+        latest.current = draft
+        lastSaved.current = draft
+        setContent(draft)
+        setSaveState('saved')
+        setSources(fresh!.json_data.sources)
+        setStationIds(fresh!.json_data.stationIds)
+        const to = followStep(e.steps, draft)
+        if (to) setSelected(to)
+        setRemote({ byName: e.byName, device: e.device, conflict: false, at: Date.now() })
+      } catch {
+        /* la prochaine annonce, ou un rechargement, rattrapera */
+      } finally {
+        pulling.current = false
+        const next = again.current
+        again.current = null
+        if (next) void pullRemote(next)
+      }
+    },
+    [data, doc._id],
+  )
+  useEffect(() => {
+    if (!live) return
+    return onRealtime((e) => {
+      if (e.type === 'draft' && e.id === doc._id) void pullRemote({ byName: e.byName, device: e.device, steps: e.steps })
+    })
+  }, [live, doc._id, pullRemote])
+  // L'avis « modifiée en direct » s'efface de lui-même ; un conflit reste jusqu'au choix.
+  useEffect(() => {
+    if (!remote || remote.conflict) return
+    const t = setTimeout(() => setRemote(null), 5000)
+    return () => clearTimeout(t)
+  }, [remote])
+
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: qk.instruction(doc._id) })
     void qc.invalidateQueries({ queryKey: qk.instructions })
   }
 
-  const saveLabel = saveState === 'saving' ? tp.saveState.saving : saveState === 'error' ? tp.saveState.error : tp.saveState.saved
+  const liveLabel = remote && !remote.conflict ? tp.live.updated(remote.device, remote.byName) : null
+  const saveLabel = liveLabel ?? (saveState === 'saving' ? tp.saveState.saving : saveState === 'error' ? tp.saveState.error : tp.saveState.saved)
   const steps = content.steps
   const idx = Math.max(0, steps.findIndex((s) => s.id === selected))
   const step = steps[idx]
@@ -408,11 +492,24 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         <Link href="/instructions" className="inline-flex items-center gap-1 text-sm font-black text-slate-500">
           <ArrowLeft className="h-4 w-4" /> {tp.backToList}
         </Link>
-        <span className={cn('inline-flex items-center gap-1.5 text-xs font-black', saveState === 'error' ? 'text-rose-600' : 'text-slate-400')} aria-live="polite">
-          {saveState === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saveState === 'error' ? <CloudOff className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+        <span className={cn('inline-flex items-center gap-1.5 text-xs font-black', liveLabel ? 'text-[var(--primary)]' : saveState === 'error' ? 'text-rose-600' : 'text-slate-400')} aria-live="polite">
+          {liveLabel ? <Radio className="h-3.5 w-3.5" /> : saveState === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saveState === 'error' ? <CloudOff className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
           {saveLabel}
         </span>
       </div>
+      {remote?.conflict && (
+        <div className="mb-4 flex flex-col gap-3 rounded-[24px] bg-amber-50 p-4 sm:flex-row sm:items-center dark:bg-amber-500/10" role="status">
+          <p className="flex-1 text-sm font-bold text-amber-900 dark:text-amber-100">{tp.live.conflict(remote.device, remote.byName)}</p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => setRemote(null)}>
+              {tp.live.keepMine}
+            </Button>
+            <Button size="sm" variant="primary" onClick={() => void pullRemote({ byName: remote.byName, device: remote.device }, true)}>
+              {tp.live.loadTheirs}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
@@ -462,6 +559,21 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
                   const d = await duplicateInstruction(data, { ...doc, json_data: { ...instr, draft: content } }, actor)
                   refresh()
                   router.push(`/instructions/${d._id}`)
+                },
+              },
+              {
+                // Relancer sans toucher à celle-ci : une nouvelle capture avec les mêmes médias et la même demande.
+                label: tp.menu.reuseMedia,
+                icon: <CopyPlus className="h-4 w-4" />,
+                hidden: readOnly || !sources.length,
+                onClick: async () => {
+                  try {
+                    const d = await newFromSources(data, { ...doc, json_data: { ...instr, sources } }, actor)
+                    void qc.invalidateQueries({ queryKey: qk.instructions })
+                    router.push(`/instructions/${d._id}`)
+                  } catch (e) {
+                    toast.error(tp.menu.reuseMediaFailed, errorText(e))
+                  }
                 },
               },
               {

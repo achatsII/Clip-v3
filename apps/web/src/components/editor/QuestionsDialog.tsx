@@ -88,11 +88,13 @@ export function QuestionsDialog({
         <div className="mt-5">
           <p className="label-caps mb-2 text-slate-500">{t.suggested}</p>
           <div className="flex flex-wrap gap-2">
-            {proposed.map((c) => (
+            {proposed.map((c, i) => (
               <button
                 key={c}
                 type="button"
                 aria-pressed={value === c}
+                // Avec des réponses proposées, le focus va à la première : pas de clavier qui surgit.
+                data-autofocus={i === 0 ? true : undefined}
                 onClick={() => setAnswers({ ...answers, [question]: value === c ? '' : c })}
                 className={cn('btn-press min-h-11 rounded-2xl px-4 text-[15px] font-black', value === c ? 'bg-gradient-primary shadow-primary text-white' : 'glass-card text-slate-800 dark:text-slate-100')}
               >

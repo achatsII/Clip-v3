@@ -54,6 +54,8 @@ export const editor: typeof Fr = {
       publishVersion: (version: number) => `Publish version ${num(version)}`,
     },
     menu: {
+      reuseMedia: 'New instruction with these media',
+      reuseMediaFailed: 'The new instruction couldn’t be created',
       exportPdf: 'Export as PDF',
       exportJson: 'Export as JSON',
       history: 'Version history',
@@ -95,6 +97,13 @@ export const editor: typeof Fr = {
       thanks: 'Thanks!',
       noted: 'Thanks, noted',
       notedDetail: 'Future generations will take it into account.',
+    },
+    live: {
+      updated: (device: 'app' | 'web', byName?: string) => `Live: updated from ${device === 'app' ? 'the mobile app' : 'another computer'}${byName ? ` · ${byName}` : ''}`,
+      conflict: (device: 'app' | 'web', byName?: string) =>
+        `${byName ? `${byName} is` : 'Someone is'} also editing this instruction from ${device === 'app' ? 'the mobile app' : 'another computer'}. Keep your changes, or load their version: anything you haven’t saved yet will be lost.`,
+      keepMine: 'Keep mine',
+      loadTheirs: 'Load their version',
     },
     questions: {
       title: 'Check before publishing',

@@ -11,6 +11,7 @@ import { ingestFile, ingestNative, kindOfFile, type IngestStage } from '../media
 import { uid } from '../model/repo'
 import { createInstruction, saveSources, type Actor } from '../model/service'
 import type { Source, SourceKind } from '../model/types'
+import { reuseSource } from '../model/library'
 
 export interface PendingUpload {
   tempId: string
@@ -131,6 +132,20 @@ export class CaptureSession {
       const kind: SourceKind = item.kind
       void this.run({ tempId: uid('tmp_'), kind, name: item.fileName, previewUrl: item.thumbnailDataUrl, stage: 'upload', progress: 0 }, (p) => ingestNative(item, this.deps.files, p, platform))
     }
+  }
+
+  /**
+   * Reprend des médias déjà pris (d'autres instructions) : même fichier, nouvel identifiant, rien à
+   * téléverser. Un média déjà dans cette capture n'est pas ajouté deux fois.
+   */
+  async addExisting(list: Source[]): Promise<number> {
+    const key = (x: Source) => x.url ?? `note:${x.text ?? ''}`
+    const known = new Set(this.snap.sources.map(key))
+    const fresh = list.filter((x) => !known.has(key(x))).map(reuseSource)
+    if (!fresh.length) return 0
+    this.set({ sources: [...this.snap.sources, ...fresh] })
+    await this.persist()
+    return fresh.length
   }
 
   async addNote(text: string) {

@@ -9,6 +9,23 @@ import type { Realtime, RealtimeChannel } from 'ably'
 import { orgChannel, type RealtimeEvent } from './events'
 
 let client: Realtime | null = null
+const listeners = new Set<(e: RealtimeEvent) => void>()
+
+/** Cet onglet, pour les autres : deux appareils d'une même personne ne se confondent pas. */
+export const deviceId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `d-${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+/** S'abonne à ce qui arrive des autres appareils (reçu par `RealtimeBridge`). */
+export function onRealtime(fn: (e: RealtimeEvent) => void): () => void {
+  listeners.add(fn)
+  return () => {
+    listeners.delete(fn)
+  }
+}
+
+/** Remet un événement reçu aux écrans abonnés. */
+export function dispatchRealtime(e: RealtimeEvent): void {
+  listeners.forEach((fn) => fn(e))
+}
 let channel: RealtimeChannel | null = null
 let connecting: Promise<RealtimeChannel | null> | null = null
 let org: string | null = null

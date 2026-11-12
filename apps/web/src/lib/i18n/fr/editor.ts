@@ -57,6 +57,8 @@ export const editor = {
       publishVersion: (version: number) => `Publier la version ${num(version)}`,
     },
     menu: {
+      reuseMedia: 'Nouvelle instruction avec ces médias',
+      reuseMediaFailed: 'La nouvelle instruction n’a pas pu être créée',
       exportPdf: 'Exporter en PDF',
       exportJson: 'Exporter en JSON',
       history: 'Historique des versions',
@@ -101,6 +103,14 @@ export const editor = {
       notedDetail: 'Les prochaines générations en tiendront compte.',
     },
     /** Les points que l’IA demande de vérifier. */
+    /** L'édition en direct : ce qu'un autre appareil vient d'enregistrer. */
+    live: {
+      updated: (device: 'app' | 'web', byName?: string) => `En direct : modifiée sur ${device === 'app' ? 'l’app mobile' : 'un autre ordinateur'}${byName ? ` · ${byName}` : ''}`,
+      conflict: (device: 'app' | 'web', byName?: string) =>
+        `${byName ? `${byName} modifie` : 'Quelqu’un modifie'} aussi cette instruction sur ${device === 'app' ? 'l’app mobile' : 'un autre ordinateur'}. Gardez vos changements, ou chargez sa version : ce que vous n’avez pas encore enregistré sera perdu.`,
+      keepMine: 'Garder les miens',
+      loadTheirs: 'Charger sa version',
+    },
     questions: {
       title: 'À vérifier avant de publier',
       markChecked: 'Marquer comme vérifié',

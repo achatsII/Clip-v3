@@ -119,7 +119,7 @@ describe('la génération écrit son état dans l’instruction', () => {
     expect(last).toMatchObject({ generating: null, generationError: null, title: 'Changer la matrice', stepCount: 1 })
     expect(vi.mocked(callNative).mock.calls.map((c) => c[1])).toEqual([{ on: true }, { on: false }])
     // Les autres appareils l'apprennent aussitôt : le début, chaque nouvelle étape, la fin.
-    expect(vi.mocked(publishRealtime).mock.calls.map((c) => [c[0].phase, c[0].stage ?? null])).toEqual([['start', null], ['stage', 'finish'], ['done', null]])
+    expect(vi.mocked(publishRealtime).mock.calls.map((c) => [(c[0] as { phase?: string }).phase, (c[0] as { stage?: string }).stage ?? null])).toEqual([['start', null], ['stage', 'finish'], ['done', null]])
     expect(jobOf('i9')?.status).toBe('done')
     clearJob('i9')
   })
@@ -130,7 +130,7 @@ describe('la génération écrit son état dans l’instruction', () => {
     await run(patch)
     expect(patch.mock.calls.at(-1)![2]).toMatchObject({ generating: null, generationError: { message: 'La vidéo est illisible.' } })
     expect(jobOf('i9')).toMatchObject({ status: 'error', message: 'La vidéo est illisible.' })
-    expect(vi.mocked(publishRealtime).mock.calls.map((c) => c[0].phase)).toEqual(['start', 'failed'])
+    expect(vi.mocked(publishRealtime).mock.calls.map((c) => (c[0] as { phase?: string }).phase)).toEqual(['start', 'failed'])
     clearJob('i9')
   })
 })

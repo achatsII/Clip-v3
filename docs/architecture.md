@@ -185,6 +185,15 @@ toast avec « Ouvrir ».
 - **Cartes** : « En création ».
 - **Page de l'instruction** : elle suit l'étape, puis montre l'instruction dès qu'elle est prête.
 
+**Les médias déjà pris** (`src/lib/model/library.ts`). Les médias d'une instruction (vidéos, photos,
+notes vocales et leur transcription, notes, documents, et la demande) restent dans l'instruction. À
+la capture, « Médias déjà pris » ouvre ceux des instructions déjà générées (les plus récentes
+d'abord), filtrés par type et par recherche ; on les reprend sans rien téléverser. Dans le menu d'une
+instruction, « Nouvelle instruction avec ces médias » ouvre une capture avec ses médias et sa
+demande : on ajoute, on retire, on génère, sans toucher à l'originale. Un média repris garde le même
+fichier, sans `path` : le retirer d'une capture ne supprime jamais le fichier d'une autre
+instruction.
+
 **Le temps réel (Ably), s'il est configuré** (`ABLY_KEY`, côté serveur).
 - **Le jeton** : chaque appareil connecté demande un jeton à `/api/realtime/token`. La route relit
   la personne par `/api/v1/auth/me`, puis ne donne accès qu'au canal de son organisation
@@ -193,6 +202,15 @@ toast avec « Ouvrir ».
   fois l'état écrit. Les messages ne portent que l'identifiant et le titre.
 - **À la réception** : les autres relisent aussitôt la Gateway. La relecture à intervalle reste en
   filet.
+- **L'édition en direct** (toggle `liveEditing`, `src/lib/realtime/liveDraft.ts`) : après chaque
+  enregistrement d'un brouillon (0,9 s après la dernière modification), l'appareil annonce
+  l'instruction et les étapes changées (`draft`). L'éditeur ouvert sur la même instruction ailleurs
+  relit le brouillon, va à la première étape changée et le dit (« En direct : modifiée sur l'app
+  mobile »), dans la fiche comme dans « Comme au poste ». Un éditeur qui a des changements pas encore
+  enregistrés ne reprend jamais le brouillon reçu : il le signale, et la personne garde les siens ou
+  charge l'autre version. Le lecteur ouvert sur l'instruction se relit aussi. Vos propres
+  modifications sur un autre appareil vous sont proposées (« Ouvrir ») quand cet écran est ailleurs
+  dans l'app, une fois par instruction toutes les dix minutes ; jamais celles des autres.
 - **Le diagnostic** : `GET /api/realtime/status` demande un vrai jeton à Ably avec les droits de
   l'app ; `ok: false` avec `code` 40101 veut dire une clé mal copiée, 40160 des droits insuffisants
   (la clé doit pouvoir publier, écouter et voir la présence sur `clip:org:*`).

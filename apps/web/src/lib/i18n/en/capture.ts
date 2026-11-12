@@ -87,6 +87,20 @@ export const capture: typeof Fr = {
     noTranscript: 'No transcript: the AI will listen to the recording.',
     percent: (n: number) => `${n.toLocaleString('en-CA')}%`,
   },
+  library: {
+    open: 'Media you already took',
+    title: 'Media you already took',
+    intro: 'Reuse videos, photos, notes and documents from your earlier instructions. Nothing is uploaded again.',
+    search: 'Search an instruction, a file, a word',
+    kinds: { all: 'All', video: 'Videos', photo: 'Photos', audio: 'Voice notes', note: 'Notes', document: 'Documents' },
+    empty: 'No media yet: the media from your instructions will show up here.',
+    noMatch: 'Nothing matches. Try another word or another type.',
+    add: (n: number) => (n ? `Add ${n.toLocaleString('en-CA')} item${n !== 1 ? 's' : ''}` : 'Add'),
+    added: (n: number) => `${n.toLocaleString('en-CA')} item${n !== 1 ? 's' : ''} added`,
+    pages: (n: number) => `${n.toLocaleString('en-CA')} page${n !== 1 ? 's' : ''}`,
+    already: 'These media are already in this capture.',
+    selected: 'Selected',
+  },
   /** Le choix des annotations automatiques, dans les options de génération. */
   autoAnnotate: {
     label: 'Annotate images automatically',
