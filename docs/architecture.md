@@ -313,6 +313,29 @@ côte à côte (verdict `do` / `dont` sur chaque média, bordures verte et rouge
 et s'affiche dans une iframe `sandbox="allow-scripts"` **sans** `allow-same-origin` — il ne voit ni les
 jetons, ni les données, ni la page. Le PDF le remplace par un renvoi vers l'app.
 
+### Les vidéos au poste, sur un réseau faible (toggle `stepReel`, repli éteint)
+
+- **Un lecteur gardé** (`src/lib/media/videoPool.ts`, au lecteur d'instruction) : d'une étape à
+  l'autre, le même élément vidéo saute au bon moment avec ce qu'il a déjà téléchargé ; la vidéo ne se
+  recharge pas. Un lecteur neuf commence à télécharger au moment de l'extrait (`#t=`). L'étape
+  suivante se prépare d'avance si elle lit une autre vidéo.
+- **La vidéo des étapes** (`src/lib/media/reel.ts`) : une seule vidéo courte, montée par la Gateway
+  avec l'extrait de chaque étape, dans l'ordre (`POST /api/v1/files/videos/compose`, 720p, scope
+  `files:process`). Chaque extrait note sa place (`clip : { url, at, src, start, end }`) ; le poste ne
+  télécharge que ces secondes, et la suivante est déjà chargée. Elle ne retient jamais la
+  publication : les extraits inchangés gardent leur place (`carryClips`) ; si un extrait a changé, la
+  vidéo se monte après, en arrière-plan, et le document public la reçoit s'il en est encore à cette
+  version (`attachReel`). D'ici là, ou si le montage échoue, le poste lit la vidéo d'origine ; après un
+  échec, on ne réessaie pas avant 30 minutes. **Novembre 2026 : la route répond 500 en QA, même avec
+  l'exemple de sa propre spec** ; rien ne se monte tant qu'elle n'est pas réparée.
+- **Une vidéo qui quitte l'écran arrête de télécharger** (ailleurs qu'au lecteur) : détachée, elle
+  continuerait jusqu'à ce que le navigateur la jette.
+- **Économie de données ou 2G** (`navigator.connection`, absent sur iOS) : rien ne se prépare d'avance,
+  et une vidéo attend un toucher si la personne n'a pas choisi de mode.
+- Mesuré sur un lien de 3 Mbit/s, trois étapes de 6 s tirées d'une vidéo de 2 min : 8,8 Mo et 0,9 à
+  1,2 s d'attente par étape avant ; 3,5 Mo (les seules secondes utiles) et 50 ms aux étapes 2 et 3
+  avec la vidéo des étapes.
+
 ## 5. Compatibilité et pilotage
 
 - **Feature toggles** servis par `GET /api/config` (variables d'environnement du serveur web). Sans

@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -18,6 +18,9 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   draftHistory: true,
   // L'assistant d'édition en bulle dans l'aperçu.
   previewAgent: true,
+  // Les vidéos au poste : un seul lecteur d'une étape à l'autre (rien ne se recharge), et la vidéo
+  // des étapes, montée après la publication sans la retenir (peu de données).
+  stepReel: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -33,4 +36,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   liveEditing: false,
   draftHistory: false,
   previewAgent: false,
+  stepReel: false,
 }

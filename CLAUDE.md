@@ -41,6 +41,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`src/lib/model/checkpoints.ts`) : au plus un par 10 minutes de modification, avant l'assistant, une
   régénération ou un retour, sans doublon ni copie de la version publiée, 20 par instruction. Après
   chaque enregistrement, le cache de l'instruction suit (`cacheDraft`).
+- **Vidéos au poste** (toggle `stepReel`) : un seul lecteur gardé d'une étape à l'autre, la vidéo ne
+  se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la publication
+  sans jamais la retenir (`src/lib/media/reel.ts`). En novembre 2026, la route de montage répond 500
+  en QA : le poste lit alors la vidéo d'origine.
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Interface** : français du Québec et anglais, par les dictionnaires typés de `src/lib/i18n`
@@ -129,7 +133,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   facturation dès son écriture (skill `billing`). Restent ouverts sans débit, leur coût compté dans
   les opérations qui les déclenchent : la génération d'image (`ai:generate_image`, dans
   `illustrate` et `translate_image`), la transcription des notes (`files:transcribe`) et le traitement des vidéos
-  (`files:process*`, dans les générations). Restent aussi ouverts, sans débit à la minute, la
+  (`files:process*`, dans les générations) et le montage de la vidéo des étapes
+  (`files/videos/compose`, un par publication où un extrait a changé). Restent aussi ouverts, sans débit à la minute, la
   lecture à voix haute et l'assistant vocal, tous deux par la voix en direct (`ai:live`). La lecture
   (`LiveSpeaker`, `src/lib/liveSpeech.ts`) est ouverte à tous, liens publics compris. L'assistant
   est réservé au plan Usine par la feature `voice_assistant`, et sur un lien public au poste qui l'a

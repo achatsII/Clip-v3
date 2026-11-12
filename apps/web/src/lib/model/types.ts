@@ -88,7 +88,7 @@ interface MediaCommon {
 export type StepMedia = MediaCommon &
   (
     | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame }
-    | { kind: 'video'; url: string; sourceId?: string; start: number; end: number; posterUrl?: string }
+    | { kind: 'video'; url: string; sourceId?: string; start: number; end: number; posterUrl?: string; clip?: ReelClip }
     | { kind: 'document'; url: string; sourceId?: string; page?: number; pageImageUrl?: string; name?: string }
     /**
      * Un schéma généré par l'IA : une page HTML autonome (SVG, dessin, vue 3D), affichée dans un
@@ -96,6 +96,21 @@ export type StepMedia = MediaCommon &
      */
     | { kind: 'html'; url: string; html: string; title?: string; sourceId?: string }
   )
+
+/**
+ * Où se trouve l'extrait dans « la vidéo des étapes » : une seule vidéo courte, montée par la
+ * passerelle avec les extraits de toutes les étapes, dans l'ordre. Le poste ne télécharge que ces
+ * secondes, et un seul lecteur passe d'une étape à l'autre. `src`, `start` et `end` disent ce qui a
+ * été coupé : si l'extrait change ensuite, ce repère ne vaut plus (on relit la vidéo d'origine).
+ */
+export interface ReelClip {
+  url: string
+  /** Le début de l'extrait dans la vidéo des étapes, en secondes. */
+  at: number
+  src: string
+  start: number
+  end: number
+}
 
 /**
  * Comment l'étape montre ses médias : un à la fois (le premier, les autres au choix), côte à côte

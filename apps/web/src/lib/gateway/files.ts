@@ -164,6 +164,21 @@ export function filesApi(client: GatewayClient) {
       return { url: res.url, sizeBytes: res.metadata?.processedSize ?? null, durationSec: res.metadata?.duration ?? null }
     },
 
+    /**
+     * Une vidéo montée à partir d'extraits, dans l'ordre (spec §2.8.15, route au pluriel) : la
+     * vidéo des étapes. Synchrone ; `mute` retire le son (une source sans piste son peut faire
+     * échouer le montage).
+     */
+    async composeVideo(segments: Array<{ videoUrl: string; start: number; end: number }>, opts: { mute?: boolean } = {}): Promise<string> {
+      const res = await client.call<{ success?: boolean; result?: { url?: string } }>('/api/v1/files/videos/compose', {
+        method: 'POST',
+        body: { segments: segments.map((s) => ({ videoUrl: s.videoUrl, startTime: s.start, endTime: s.end, ...(opts.mute ? { mute: true } : {}) })), options: { resolution: '720p' } },
+        timeoutMs: 15 * 60_000,
+      })
+      if (!res.result?.url) throw new ApiError(messages().common.errors.videoOptimize, 500, res)
+      return res.result.url
+    },
+
     /** Captures d'images d'une vidéo à des instants donnés (secondes). */
     async screenshots(videoUrl: string, shots: Array<{ name: string; atSec: number }>): Promise<Record<string, string>> {
       if (!shots.length) return {}

@@ -1,10 +1,12 @@
 'use client'
 
 import { Check, FileText, Hand, Maximize2, Pause, Play, Repeat, Repeat1, RotateCcw, Volume2, VolumeX } from 'lucide-react'
-import { createContext, useContext, useEffect, useId, useMemo, useReducer, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { annotationsMarkup } from '@/lib/annotations/markup'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { isFresh } from '@/lib/annotations/fresh'
+import { playable } from '@/lib/media/reel'
+import { useMediaPlayback } from '@/lib/media/videoPool'
 import { VIDEO_MODES, setVideoMode, type VideoMode } from '@/lib/media/videoMode'
 import type { Annotation, StepMedia } from '@/lib/model/types'
 import { cn, formatClock } from '@/lib/util/cn'
@@ -117,6 +119,28 @@ export function VideoSegment({
 }) {
   const labels = useMediaLabels()
   const ref = useRef<HTMLVideoElement>(null)
+  // Au lecteur d'instruction, un lecteur gardé d'une étape à l'autre (videoPool.ts) : il saute au bon
+  // moment sans rien recharger. Ailleurs (et pour une tuile), le sien.
+  const { pool } = useMediaPlayback()
+  const pooled = !!pool && !bare
+  const host = useRef<HTMLDivElement>(null)
+  const toggleRef = useRef<() => void>(() => undefined)
+  useLayoutEffect(() => {
+    if (!pooled || !pool || !host.current) return
+    const v = pool.acquire(url, start)
+    v.className = 'h-full w-full object-contain'
+    const onClick = () => toggleRef.current()
+    v.addEventListener('click', onClick)
+    host.current.appendChild(v)
+    ref.current = v
+    return () => {
+      v.removeEventListener('click', onClick)
+      v.remove()
+      pool.release(v)
+      if (ref.current === v) ref.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- le début ne sert qu'à créer le lecteur ; ensuite il saute seul
+  }, [pooled, pool, url])
   const [playing, setPlaying] = useState(false)
   const [ended, setEnded] = useState(false)
   const [muted, setMuted] = useState(true)
@@ -139,8 +163,15 @@ export function VideoSegment({
     const play = () => {
       v.play()?.catch(() => setPlaying(false))
     }
+    // Un lecteur gardé qui arrive d'une autre étape repart au début de celle-ci, même si l'endroit où
+    // il était tombe dans cet extrait.
+    const seg = `${url}#${start}-${end}`
+    let jump = v.dataset.seg !== seg
+    v.dataset.seg = seg
     const onMeta = () => {
-      if (v.currentTime < start - 0.3 || v.currentTime > end) v.currentTime = start
+      const off = jump ? Math.abs(v.currentTime - start) > 0.05 : v.currentTime < start - 0.3 || v.currentTime > end
+      jump = false
+      if (off) v.currentTime = start
       if (auto && v.paused) play()
     }
     const onTime = () => {
@@ -195,13 +226,40 @@ export function VideoSegment({
     }
   }
 
+  toggleRef.current = toggle
+  // Le lecteur gardé : son préchargement, son image d'attente et son son suivent l'étape.
+  useEffect(() => {
+    const v = ref.current
+    if (!pooled || !v) return
+    v.preload = auto ? 'auto' : 'metadata'
+    if (poster) v.poster = poster
+    else v.removeAttribute('poster')
+  }, [pooled, auto, poster, url])
+  useEffect(() => {
+    if (pooled && ref.current) ref.current.muted = muted
+  }, [pooled, muted])
+  // Une vidéo qui quitte l'écran arrête de télécharger : détachée, elle continuerait sinon en
+  // arrière-plan jusqu'à ce que le navigateur la jette. (Un lecteur gardé, lui, reste prêt.)
+  useEffect(() => {
+    const v = ref.current
+    if (pooled || !v) return
+    return () => {
+      setTimeout(() => {
+        if (v.isConnected) return
+        v.pause()
+        v.removeAttribute('src')
+        v.load()
+      }, 0)
+    }
+  }, [pooled])
+
   const len = Math.max(0.1, end - start)
   const pct = Math.min(100, Math.max(0, ((t - start) / len) * 100))
   const btn = big ? 'h-14 w-14' : 'h-11 w-11'
 
   return (
     <div className={cn('group relative h-full w-full overflow-hidden bg-black', className)}>
-      <video ref={ref} src={src} poster={poster} muted={muted} playsInline preload={auto ? 'auto' : 'metadata'} className="h-full w-full object-contain" onClick={toggle} />
+      {pooled ? <div ref={host} className="h-full w-full" /> : <video ref={ref} src={src} poster={poster} muted={muted} playsInline preload={auto ? 'auto' : 'metadata'} className="h-full w-full object-contain" onClick={toggle} />}
       {!playing && (
         <button type="button" onClick={toggle} aria-label={ended ? labels.replayClip : labels.playClip} className="absolute inset-0 m-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-md">
           {ended ? <RotateCcw className="h-9 w-9" /> : <Play className="ml-1 h-10 w-10 fill-current" />}
@@ -291,8 +349,13 @@ export function DocumentPage({ media, className }: { media: Extract<StepMedia, {
 }
 
 export function MediaView({ media, className, big, autoPlay, videoMode, modeControl, bare }: { media: StepMedia; className?: string; big?: boolean; autoPlay?: boolean; videoMode?: VideoMode; modeControl?: boolean; bare?: boolean }) {
+  const { reel } = useMediaPlayback()
   if (media.kind === 'image') return <AnnotatedImage src={media.url} annotations={media.annotations} alt={media.alt} className={className} />
-  if (media.kind === 'video') return <VideoSegment url={media.url} start={media.start} end={media.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} mode={videoMode} modeControl={modeControl} bare={bare} />
+  if (media.kind === 'video') {
+    // Au lecteur d'instruction : l'extrait dans la vidéo des étapes, s'il est à jour (reel.ts).
+    const p = playable(media, reel)
+    return <VideoSegment url={p.url} start={p.start} end={p.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} mode={videoMode} modeControl={modeControl} bare={bare} />
+  }
   if (media.kind === 'html') return <HtmlMedia html={media.html} title={media.title} className={className} />
   return <DocumentPage media={media} className={className} />
 }

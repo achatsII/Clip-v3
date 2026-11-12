@@ -45,6 +45,9 @@ import { layoutOf } from '@/lib/model/media'
 import { VoiceAssistant } from './VoiceAssistant'
 import { Input } from '@/components/ui/Field'
 import { DictationLanguage } from '@/lib/media/dictation'
+import { playable } from '@/lib/media/reel'
+import { MediaPlaybackProvider, slowConnection, VideoPool } from '@/lib/media/videoPool'
+import { useToggle } from '@/lib/toggles'
 
 export interface PlayerDeps {
   data: DataApi
@@ -153,6 +156,22 @@ export function Player(props: PlayerProps) {
   }, [preview, deps.data, instructionId, stationId, version, source])
 
   const step: Step | undefined = index >= 0 && index < total ? content.steps[index] : undefined
+
+  // Les vidéos : un lecteur gardé d'une étape à l'autre, et la vidéo des étapes (toggle `stepReel`).
+  // L'étape suivante se prépare pendant qu'on lit celle-ci, sauf sur une connexion lente.
+  const reel = useToggle('stepReel')
+  const pool = useMemo(() => new VideoPool(3), [])
+  useEffect(() => () => pool.dispose(), [pool])
+  // Le toggle coupe aussi les lecteurs gardés : chaque étape reprend alors son propre lecteur.
+  const playback = useMemo(() => ({ pool: reel ? pool : null, reel }), [pool, reel])
+  useEffect(() => {
+    // Toggle coupé : aucun lecteur gardé, donc rien à préparer (il ne servirait à personne).
+    if (!reel || slowConnection()) return
+    const next = content.steps[index + 1]?.media[0]
+    if (next?.kind !== 'video') return
+    const p = playable(next, reel)
+    pool.warm(p.url, p.start)
+  }, [index, content.steps, reel, pool])
 
   // L'aperçu qu'on modifie : on va à l'étape demandée, et on dit laquelle est affichée.
   useEffect(() => {
@@ -468,7 +487,9 @@ export function Player(props: PlayerProps) {
   // Au poste, la dictée (retour, question) suit la langue choisie par l'opérateur.
   return (
     <DictationLanguage lang={lang}>
-      <MediaLabelsProvider value={t.media}>{player}</MediaLabelsProvider>
+      <MediaPlaybackProvider value={playback}>
+        <MediaLabelsProvider value={t.media}>{player}</MediaLabelsProvider>
+      </MediaPlaybackProvider>
     </DictationLanguage>
   )
 }

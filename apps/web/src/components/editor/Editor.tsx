@@ -81,6 +81,7 @@ import { StageEditor } from './StageEditor'
 import { StepEditor } from './StepEditor'
 import { StepList } from './StepList'
 import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
+import { attachReel, carryClips } from '@/lib/media/reel'
 import { LiveBadge } from './LiveBadge'
 import { UndoButtons, UndoPill } from './UndoControls'
 
@@ -94,7 +95,7 @@ function newStep(): Step {
 
 export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>; stations: Doc<Station>[]; onRegenerate: () => void }) {
   const session = useSession()
-  const { data, org, role, profile, displayName, can } = session
+  const { data, org, role, profile, displayName, can, files } = session
   const actor = useMemo(() => ({ id: profile.userId, name: displayName }), [profile.userId, displayName])
   const qc = useQueryClient()
   const toast = useToast()
@@ -114,6 +115,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [selected, setSelected] = useState<string | null>(params.get('etape') ?? instr.draft?.steps[0]?.id ?? null)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [publishing, setPublishing] = useState(false)
+  const reelToggle = useToggle('stepReel')
   const [celebrate, setCelebrate] = useState(false)
   const [dialog, setDialog] = useState<null | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks'>(null)
   const [comment, setComment] = useState('')
@@ -455,8 +457,17 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setPublishing(true)
     try {
       await flush()
-      const current = { ...doc, json_data: { ...docRef.current.json_data, draft: latest.current, stationIds } }
-      const n = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous: published.data?.json_data.content ?? null })
+      // La vidéo des étapes (au poste, on ne télécharge que les secondes utiles) : les extraits
+      // inchangés y gardent leur place ; si un extrait a changé, elle se monte après la publication,
+      // sans la retenir, et le poste lit la vidéo d'origine d'ici là.
+      const previous = published.data?.json_data.content ?? null
+      const draft = reelToggle ? carryClips(latest.current, previous) : latest.current
+      const current = { ...doc, json_data: { ...docRef.current.json_data, draft, stationIds } }
+      const { number: n, publishedId } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous })
+      if (reelToggle)
+        void attachReel(files, data, { publishedId, version: n }, draft).then((ok) => {
+          if (ok) void qc.invalidateQueries({ queryKey: ['published', doc._id] })
+        })
       setCelebrate(true)
       setTimeout(() => setCelebrate(false), 2800)
       toast.success(tp.toasts.published(n), stationIds.length ? tp.toasts.visibleNow : tp.toasts.addStation, { label: tp.toasts.view, onClick: () => router.push(`/instructions/${doc._id}/lire`) })

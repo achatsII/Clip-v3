@@ -80,7 +80,7 @@ export function needsApproval(org: OrgSettings, actorRole: string): boolean {
 
 /**
  * Publie le brouillon : version immuable, document public remplacé, instruction à jour.
- * Rend le numéro de la nouvelle version.
+ * Rend le numéro de la nouvelle version et le document public.
  */
 export async function publishInstruction(
   data: DataApi,
@@ -88,7 +88,7 @@ export async function publishInstruction(
   org: OrgSettings,
   actor: Actor,
   opts: { approvedBy?: Actor | null; previous?: InstructionContent | null } = {},
-): Promise<number> {
+): Promise<{ number: number; publishedId: string }> {
   const instr = doc.json_data
   const content = instr.draft
   if (!content || !content.steps.length) throw new Error(messages().instructions.errors.publishWithoutSteps)
@@ -138,7 +138,7 @@ export async function publishInstruction(
     updatedBy: actor.id,
     updatedByName: actor.name,
   })
-  return number
+  return { number, publishedId }
 }
 
 export async function requestReview(data: DataApi, doc: Doc<Instruction>, org: OrgSettings, actor: Actor, note?: string) {
