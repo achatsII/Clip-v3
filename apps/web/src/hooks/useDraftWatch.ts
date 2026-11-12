@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { T } from '@/lib/model/repo'
 import { deviceId, useRealtimeState } from '@/lib/realtime/client'
-import { remoteChange, WATCH_MS, WATCH_WINDOW_MS, type WrittenBy } from '@/lib/realtime/watch'
+import { remoteChange, WATCH_LIVE_MS, WATCH_MS, WATCH_WINDOW_MS, type WrittenBy } from '@/lib/realtime/watch'
 
 /**
  * Suit une instruction quand le direct ne passe pas (voir `src/lib/realtime/watch.ts`) : relue
@@ -45,10 +45,10 @@ export function useDraftWatch(opts: {
   }, [data, id])
 
   useEffect(() => {
-    if (!active) return
-    const timer = setInterval(() => void check(), WATCH_MS)
+    if (!enabled) return
+    const timer = setInterval(() => void check(), active ? WATCH_MS : WATCH_LIVE_MS)
     return () => clearInterval(timer)
-  }, [active, check])
+  }, [enabled, active, check])
 
   // Le direct qui revient après une coupure : une annonce a pu se perdre entre-temps.
   const was = useRef(rt)

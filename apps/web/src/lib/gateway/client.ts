@@ -88,6 +88,10 @@ export function createGatewayClient(source: TokenSource): GatewayClient {
         headers: h,
         body: form ?? (body !== undefined ? JSON.stringify(body) : undefined),
         signal: controller.signal,
+        // Toujours la version du serveur : le navigateur gardait une copie d'une lecture (une
+        // instruction ouverte, relue toutes les 8 s ou à l'annonce d'un autre appareil) et la
+        // resservait au lieu du brouillon modifié ailleurs. L'app garde elle-même ce qu'il faut.
+        cache: 'no-store',
       })
     } catch (e) {
       if (controller.signal.aborted) {
@@ -249,6 +253,8 @@ export async function publicCall<T>(endpoint: string, options: Omit<CallOptions,
       method,
       headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers },
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      // Au poste aussi, la dernière version publiée, jamais une copie gardée par le navigateur.
+      cache: 'no-store',
     })
   } catch (e) {
     throw new ApiError('Pas de connexion au serveur', 0, String(e), 'network')

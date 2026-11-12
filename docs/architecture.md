@@ -278,6 +278,12 @@ instruction.
   on revient à l'écran, l'éditeur vérifie une fois s'il a manqué quelque chose (`useDraftWatch`).
   L'annotateur envoie chaque marque au brouillon dès qu'elle est posée (quitter sans enregistrer
   remet celles d'avant) : l'autre appareil la voit apparaître sans attendre « Enregistrer ».
+  Toute lecture de la Gateway passe `cache: 'no-store'` : le navigateur resservait une copie gardée
+  d'une instruction (l'instruction ouverte, la relecture, la lecture après une annonce) au lieu du
+  brouillon modifié ailleurs. Le direct se rebranche seul : jeton de la Gateway rafraîchi quand il a
+  expiré (onglet resté ouvert), canal rebranché quand la connexion revient, nouvel essai toutes les
+  30 s tant qu'il est coupé ; le témoin dit au survol pourquoi il ne passe pas. Direct branché,
+  l'éditeur vérifie quand même toutes les 20 s (l'autre appareil a pu perdre le sien).
 - **Le diagnostic** : `GET /api/realtime/status` demande un vrai jeton à Ably avec les droits de
   l'app ; `ok: false` avec `code` 40101 veut dire une clé mal copiée, 40160 des droits insuffisants
   (la clé doit pouvoir publier, écouter et voir la présence sur `clip:org:*`).

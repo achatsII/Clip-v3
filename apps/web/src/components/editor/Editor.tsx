@@ -341,7 +341,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     enabled: liveToggle,
     known: () => knownAt.current,
     idle: () => !timer.current && saveStateRef.current !== 'saving',
-    onRemote: (row) => void pullRemote({ byName: row.updatedByName, device: row.updatedVia ?? 'web' }),
+    onRemote: (row) => void pullRemote({ byName: row.updatedByName, device: row.updatedVia ?? 'web', at: row.updatedAt }),
   })
   // L'étape changée ailleurs reste encadrée quelques secondes.
   useEffect(() => {

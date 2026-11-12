@@ -21,14 +21,22 @@ const listeners = new Set<(e: RealtimeEvent) => void>()
  */
 export type RealtimeState = 'off' | 'connecting' | 'live' | 'down'
 let state: RealtimeState = 'off'
+/** Pourquoi le direct ne passe pas (message technique, montré au survol du témoin). */
+let reason = ''
 const stateListeners = new Set<() => void>()
 
 export function setRealtimeState(next: RealtimeState, why?: unknown) {
-  if (next === 'down' && state !== 'down') console.warn('[CLIP] Temps réel indisponible', why ?? '')
+  if (next === 'down') {
+    const text = why instanceof Error ? why.message : typeof why === 'string' ? why : (why as { message?: string } | undefined)?.message ?? ''
+    if (state !== 'down') console.warn('[CLIP] Temps réel indisponible', why ?? '')
+    reason = text
+  }
   if (state === next) return
   state = next
   stateListeners.forEach((fn) => fn())
 }
+
+export const realtimeReason = () => reason
 
 export function useRealtimeState(): RealtimeState {
   return useSyncExternalStore(
@@ -77,10 +85,17 @@ function flushPending() {
   for (const e of events) void channel.publish('event', e).catch(() => pending.set(`${e.type}:${e.id}`, e))
 }
 
+/** Un canal resté en échec ou suspendu, la connexion revenue : on le rebranche (Ably ne le fait pas seul). */
+function ensureAttached() {
+  if (!channel || client?.connection.state !== 'connected') return
+  if (channel.state !== 'attached' && channel.state !== 'attaching') void channel.attach().catch((e: unknown) => setRealtimeState('down', e))
+}
+
 /** Revenir à l'écran, ou au réseau : on se reconnecte tout de suite, sans attendre le prochain essai (15 à 30 s). */
 export function wakeRealtime() {
   const st = client?.connection.state
   if (client && st && st !== 'connected' && st !== 'connecting' && st !== 'closing') client.connection.connect()
+  else ensureAttached()
 }
 if (typeof window !== 'undefined') {
   const wake = () => document.visibilityState === 'visible' && wakeRealtime()
@@ -88,9 +103,17 @@ if (typeof window !== 'undefined') {
   window.addEventListener('online', wake)
   window.addEventListener('focus', wake)
   window.addEventListener('pageshow', wake)
+  // Coupé et à l'écran : on réessaie aussi de soi-même, une connexion en échec ne revenant pas seule.
+  setInterval(() => {
+    if (state === 'down') wake()
+  }, 30_000)
 }
 
-export function connectRealtime(orgId: string, getToken: () => string | null): Promise<RealtimeChannel | null> {
+/**
+ * `refresh` : rafraîchit la session de la Gateway (un onglet resté ouvert longtemps a un jeton
+ * expiré ; sans lui, le direct ne pouvait plus se rebrancher).
+ */
+export function connectRealtime(orgId: string, getToken: () => string | null, refresh?: () => Promise<boolean>): Promise<RealtimeChannel | null> {
   if (channel && org === orgId) return Promise.resolve(channel)
   if (connecting && org === orgId) return connecting
   disconnectRealtime()
@@ -102,11 +125,19 @@ export function connectRealtime(orgId: string, getToken: () => string | null): P
         // Ses propres messages ne reviennent pas à l'appareil qui les envoie.
         echoMessages: false,
         authCallback: (_params, callback) => {
-          const token = getToken()
-          if (!token) return callback('Connexion requise', null)
-          fetch('/api/realtime/token', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
-            .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`jeton ${r.status}`))))
-            .then((tokenRequest) => callback(null, tokenRequest), (e: unknown) => callback(e instanceof Error ? e.message : 'jeton', null))
+          const ask = (token: string | null) => (token ? fetch('/api/realtime/token', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }) : Promise.resolve(null))
+          void (async () => {
+            try {
+              let res = await ask(getToken())
+              // Jeton de la Gateway expiré (onglet resté ouvert, ordinateur en veille) : rafraîchi une fois.
+              if ((!res || res.status === 401) && refresh && (await refresh())) res = await ask(getToken())
+              if (!res) return callback('Connexion requise', null)
+              if (!res.ok) return callback(`jeton ${res.status}`, null)
+              callback(null, await res.json())
+            } catch (e) {
+              callback(e instanceof Error ? e.message : 'jeton', null)
+            }
+          })()
         },
       })
       // L'état de la connexion, pour le dire à l'écran (le canal branché, lui, se confirme à l'abonnement).
@@ -115,6 +146,7 @@ export function connectRealtime(orgId: string, getToken: () => string | null): P
         else if (change.current === 'suspended' || change.current === 'failed') setRealtimeState('down', change.reason?.message ?? change.current)
         else if (change.current === 'connected') {
           if (channel?.state === 'attached') setRealtimeState('live')
+          else ensureAttached()
           flushPending()
         }
       })

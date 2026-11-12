@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { useToast } from '@/components/ui/Toast'
 import { useMessages } from '@/lib/i18n'
-import { getAccessToken } from '@/lib/gateway/client'
+import { getAccessToken, refreshSession } from '@/lib/gateway/client'
 import { connectRealtime, deviceId, disconnectRealtime, dispatchRealtime, setRealtimeState } from '@/lib/realtime/client'
 import { isRealtimeEvent, refreshFor } from '@/lib/realtime/events'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
@@ -38,7 +38,7 @@ export function RealtimeBridge() {
     if (!available || !orgId) return
     let off = () => undefined as void
     let alive = true
-    void connectRealtime(orgId, getAccessToken).then((channel) => {
+    void connectRealtime(orgId, getAccessToken, refreshSession).then((channel) => {
       if (!channel || !alive) return
       const onEvent = (m: { data?: unknown }) => {
         if (!isRealtimeEvent(m.data)) return

@@ -9,7 +9,7 @@ import { AnnotationLayer } from '@/components/media/MediaView'
 import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
 import { useDraftWatch } from '@/hooks/useDraftWatch'
 import { deviceId, setRealtimeState } from '@/lib/realtime/client'
-import { remoteChange, WATCH_MS } from '@/lib/realtime/watch'
+import { remoteChange, WATCH_LIVE_MS, WATCH_MS } from '@/lib/realtime/watch'
 import type { Annotation } from '@/lib/model/types'
 
 beforeEach(() => {
@@ -75,14 +75,19 @@ describe('suivre ce qui change sur un autre appareil', () => {
     expect(busy).not.toHaveBeenCalled()
   })
 
-  it('le direct branché : aucune relecture, les annonces arrivent seules', async () => {
+  it('le direct branché : pas de relecture rapprochée ; une vérification lente au cas où l’autre appareil ne peut plus annoncer', async () => {
     setRealtimeState('live')
+    filter.mockResolvedValue([])
     const onRemote = vi.fn()
     mount(<Watch known="x" onRemote={onRemote} />)
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(WATCH_MS * 3)
+      await vi.advanceTimersByTimeAsync(WATCH_MS * 2)
     })
     expect(filter).not.toHaveBeenCalled()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(WATCH_LIVE_MS - WATCH_MS * 2)
+    })
+    expect(filter).toHaveBeenCalledTimes(1)
   })
 })
 

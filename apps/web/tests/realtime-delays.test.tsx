@@ -7,17 +7,21 @@ const ably = vi.hoisted(() => {
   const published: unknown[] = []
   const handlers: Array<(c: { current: string }) => void> = []
   const connection = { state: 'connected', on: (fn: (c: { current: string }) => void) => handlers.push(fn), connect: vi.fn() }
-  const channel = { state: 'attached', on: () => undefined, publish: vi.fn(async (_n: string, e: unknown) => void published.push(e)) }
+  const channel = { state: 'attached', on: () => undefined, attach: vi.fn(async () => undefined), publish: vi.fn(async (_n: string, e: unknown) => void published.push(e)) }
   const go = (state: string) => {
     connection.state = state
     handlers.forEach((fn) => fn({ current: state }))
   }
-  return { published, connection, channel, go }
+  const options: { authCallback?: (p: unknown, cb: (err: unknown, token: unknown) => void) => void } = {}
+  return { published, connection, channel, go, options }
 })
 vi.mock('ably', () => ({
   Realtime: class {
     connection = ably.connection
     channels = { get: () => ably.channel }
+    constructor(o: typeof ably.options) {
+      Object.assign(ably.options, o)
+    }
     close() {}
   },
 }))
@@ -35,8 +39,37 @@ afterEach(() => {
   disconnectRealtime()
   ably.published.length = 0
   ably.channel.publish.mockClear()
+  ably.channel.attach.mockClear()
+  ably.channel.state = 'attached'
   ably.connection.connect.mockClear()
   ably.connection.state = 'connected'
+  vi.unstubAllGlobals()
+})
+
+describe('le direct se rebranche seul', () => {
+  it('onglet resté ouvert, jeton de la Gateway expiré : on le rafraîchit et le direct revient', async () => {
+    let token = 'vieux'
+    const refresh = vi.fn(async () => {
+      token = 'neuf'
+      return true
+    })
+    const fetch = vi.fn(async (_u: string, init: { headers: Record<string, string> }) =>
+      init.headers.Authorization === 'Bearer neuf' ? new Response(JSON.stringify({ keyName: 'k' }), { status: 200 }) : new Response('', { status: 401 }),
+    )
+    vi.stubGlobal('fetch', fetch)
+    await connectRealtime('org1', () => token, refresh)
+    const got = await new Promise<{ err: unknown; tok: unknown }>((resolve) => ably.options.authCallback!({}, (err, tok) => resolve({ err, tok })))
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(got).toEqual({ err: null, tok: { keyName: 'k' } })
+  })
+
+  it('la connexion revient mais le canal est resté en échec : on le rebranche', async () => {
+    await connectRealtime('org1', () => 'jeton')
+    ably.channel.state = 'failed'
+    ably.go('disconnected')
+    ably.go('connected')
+    expect(ably.channel.attach).toHaveBeenCalled()
+  })
 })
 
 describe('une annonce ne se perd pas pendant que la connexion revient', () => {
@@ -114,5 +147,15 @@ describe('une annonce manquée se rattrape', () => {
     await act(async () => void window.dispatchEvent(new Event('focus')))
     expect(filter).toHaveBeenCalledTimes(1)
     expect(onRemote).toHaveBeenCalled()
+  })
+})
+
+describe('les lectures ne viennent jamais du cache du navigateur', () => {
+  it('une instruction relue est toujours celle du serveur (cache: no-store)', async () => {
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ success: true, result: null }), { status: 200 }))
+    vi.stubGlobal('fetch', fetch)
+    const { createGatewayClient } = await import('@/lib/gateway/client')
+    await createGatewayClient({ getToken: () => 'jeton', refresh: async () => false, onAuthFailure: () => undefined }).call('/api/v1/data/clip_instruction/one/i1')
+    expect((fetch.mock.calls[0] as unknown[])[1]).toMatchObject({ cache: 'no-store' })
   })
 })
