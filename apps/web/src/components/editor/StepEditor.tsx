@@ -18,7 +18,7 @@ import { ApiError } from '@/lib/gateway/client'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { WARNINGS } from '@/lib/model/catalog'
 import { LAYOUTS, layoutOf } from '@/lib/model/media'
-import type { InstructionContent, Source, Step, StepMedia, WarningLevel } from '@/lib/model/types'
+import type { Annotation, InstructionContent, Source, Step, StepMedia, WarningLevel } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
 import { Annotator } from './Annotator'
 import { ASSIST_ACTIONS, useStepAssist } from './StepAssist'
@@ -131,6 +131,12 @@ export function StepEditor({
   }
 
   const set = (patch: Partial<Step>) => onChange({ ...step, ...patch })
+  /** Les marques de la photo annotée : au brouillon, sans rien réécrire si rien n'a changé. */
+  const setAnnotations = (annotations: Annotation[]) => {
+    const m = annotating !== null ? step.media[annotating] : undefined
+    if (!m || m.kind !== 'image' || JSON.stringify(m.annotations ?? []) === JSON.stringify(annotations)) return
+    set({ media: step.media.map((x, i) => (i === annotating && x.kind === 'image' ? { ...x, annotations } : x)) })
+  }
   const setMediaAt = (i: number, patch: Partial<Pick<StepMedia, 'caption' | 'verdict'>>) => set({ media: step.media.map((m, j) => (j === i ? ({ ...m, ...patch } as StepMedia) : m)) })
 
   async function makeVisual() {
@@ -401,7 +407,8 @@ export function StepEditor({
           src={step.media[annotating].url}
           step={step}
           value={(step.media[annotating] as Extract<StepMedia, { kind: 'image' }>).annotations ?? []}
-          onSave={(annotations) => set({ media: step.media.map((m, i) => (i === annotating && m.kind === 'image' ? { ...m, annotations } : m)) })}
+          onSave={setAnnotations}
+          onLive={setAnnotations}
         />
       )}
       {assist.element}

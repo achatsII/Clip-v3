@@ -39,6 +39,7 @@ import { AI_COSTS } from '@/lib/billing/catalog'
 import { BILLING_V2 } from '@/lib/config'
 import { useMessages } from '@/lib/i18n'
 import { uid } from '@/lib/model/repo'
+import { readPref, writePref } from '@/lib/prefs'
 import type { Annotation, AnnotationColor, AnnotationSize, AnnotationType, Step } from '@/lib/model/types'
 import { IDENTITY, clampView, isZoomed, pinchView, zoomAround, type View } from '@/lib/ui/zoom'
 import { cn } from '@/lib/util/cn'
@@ -108,16 +109,43 @@ function IconGlyph({ name, color = '#fff', className }: { name: string; color?: 
  * - annuler, rétablir et la sélection restent toujours visibles ; l'IA est en tête des outils ;
  * - au clavier : Ctrl+Z, Ctrl+Maj+Z, Suppr, Ctrl+D, flèches, [ et ], Échap, une lettre par outil.
  */
-export function Annotator({ open, onClose, src, step, value, onSave }: { open: boolean; onClose: () => void; src: string; step: Step; value: Annotation[]; onSave: (a: Annotation[]) => void }) {
-  if (!open || typeof document === 'undefined') return null
-  return createPortal(<AnnotatorScreen onClose={onClose} src={src} step={step} value={value} onSave={onSave} />, document.body)
+type AnnotatorProps = {
+  onClose: () => void
+  src: string
+  step: Step
+  value: Annotation[]
+  onSave: (a: Annotation[]) => void
+  /**
+   * Chaque marque posée, déplacée ou retirée part tout de suite au brouillon : l'autre appareil la
+   * voit apparaître sans attendre « Enregistrer ». Quitter sans enregistrer remet les marques d'avant.
+   */
+  onLive?: (a: Annotation[]) => void
 }
 
-function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () => void; src: string; step: Step; value: Annotation[]; onSave: (a: Annotation[]) => void }) {
+export function Annotator({ open, ...props }: AnnotatorProps & { open: boolean }) {
+  if (!open || typeof document === 'undefined') return null
+  return createPortal(<AnnotatorScreen {...props} />, document.body)
+}
+
+/** Le dernier outil de dessin et son style, retenus sur l'appareil. */
+const LAST_STYLE = 'clip_pref_annot_style'
+type LastStyle = { tool?: AnnotationType; color?: AnnotationColor; size?: AnnotationSize; icon?: string; dashed?: boolean; filled?: boolean }
+function readLastStyle(): LastStyle {
+  try {
+    const v = JSON.parse(readPref(LAST_STYLE) ?? '{}') as LastStyle
+    return v && typeof v === 'object' ? v : {}
+  } catch {
+    return {}
+  }
+}
+
+function AnnotatorScreen({ onClose, src, step, value, onSave, onLive }: AnnotatorProps) {
   const { ai } = useSession()
   const toast = useToast()
   const t = useMessages()
   const initial = useMemo(() => value.map(sanitizeAnnotation).filter((a): a is Annotation => !!a), [value])
+  // Les marques à l'ouverture : ce que « quitter sans enregistrer » remet.
+  const original = useRef(initial)
   const [history, setHistory] = useState<{ stack: Annotation[][]; index: number }>({ stack: [initial], index: 0 })
   const items = history.stack[history.index]
   const [live, setLiveState] = useState<Annotation[] | null>(null)
@@ -127,12 +155,31 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
     setLiveState(next)
   }
   const shown = live ?? items
-  const [tool, setTool] = useState<Tool>('pen')
-  const [color, setColor] = useState<AnnotationColor>('red')
-  const [size, setSize] = useState<AnnotationSize>('m')
-  const [icon, setIcon] = useState<AnnotationIconKey>('danger')
-  const [dashed, setDashed] = useState(false)
-  const [filled, setFilled] = useState(false)
+  // À l'ouverture : la sélection si la photo a déjà des marques (on vient les ajuster) ; sinon le
+  // dernier outil de dessin, avec sa couleur et sa taille (la flèche la première fois).
+  const last = useMemo(readLastStyle, [])
+  const [tool, setTool] = useState<Tool>(() => (initial.length ? 'select' : last.tool && DRAW_TOOLS.some((d) => d.value === last.tool) ? last.tool : 'arrow'))
+  const [color, setColor] = useState<AnnotationColor>(() => (last.color && last.color in ANNOTATION_COLORS ? last.color : 'red'))
+  const [size, setSize] = useState<AnnotationSize>(() => (last.size && SIZES.includes(last.size) ? last.size : 'm'))
+  const [icon, setIcon] = useState<AnnotationIconKey>(() => ((ANNOTATION_ICON_KEYS as readonly string[]).includes(last.icon ?? '') ? (last.icon as AnnotationIconKey) : 'danger'))
+  const [dashed, setDashed] = useState(!!last.dashed)
+  const [filled, setFilled] = useState(!!last.filled)
+  const drawTool = useRef<AnnotationType | undefined>(tool === 'select' ? last.tool : tool)
+  if (tool !== 'select') drawTool.current = tool
+  useEffect(() => {
+    writePref(LAST_STYLE, JSON.stringify({ tool: drawTool.current, color, size, icon, dashed, filled }))
+  }, [tool, color, size, icon, dashed, filled])
+  // Chaque changement retenu part au brouillon (pas ceux en cours de tracé, ni l'ouverture).
+  const onLiveRef = useRef(onLive)
+  onLiveRef.current = onLive
+  const opened = useRef(false)
+  useEffect(() => {
+    if (!opened.current) {
+      opened.current = true
+      return
+    }
+    onLiveRef.current?.(items)
+  }, [items])
   const [selected, setSelected] = useState<string | null>(null)
   const [textEdit, setTextEdit] = useState<{ id?: string; x: number; y: number; value: string } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -172,10 +219,15 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
     setSelected(null)
   }
 
+  /** Quitter sans enregistrer : les marques d'avant reviennent (au brouillon aussi, si elles étaient parties). */
+  const leave = useCallback(() => {
+    onLiveRef.current?.(original.current)
+    onClose()
+  }, [onClose])
   const cancel = useCallback(() => {
     if (dirty) setConfirmQuit(true)
-    else onClose()
-  }, [dirty, onClose])
+    else leave()
+  }, [dirty, leave])
 
   // Page figée sous l'éditeur.
   useEffect(() => {
@@ -702,7 +754,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave }: { onClose: () =>
           <button type="button" onClick={() => setConfirmQuit(false)} className="btn-press h-11 rounded-2xl px-3 text-sm font-black text-white/80 hover:bg-white/10">
             {t.editorTools.annotator.stay}
           </button>
-          <button type="button" onClick={onClose} className="btn-press h-11 rounded-2xl bg-rose-500 px-4 text-sm font-black text-white">
+          <button type="button" onClick={leave} className="btn-press h-11 rounded-2xl bg-rose-500 px-4 text-sm font-black text-white">
             {t.editorTools.annotator.leave}
           </button>
         </div>

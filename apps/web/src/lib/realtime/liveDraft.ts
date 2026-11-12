@@ -23,3 +23,23 @@ export function followStep(changed: string[] | undefined, content: InstructionCo
   const ids = new Set(content.steps.map((s) => s.id))
   return (changed ?? []).find((id) => ids.has(id)) ?? null
 }
+
+/**
+ * Relit un document jusqu'à avoir la version annoncée (`at`, son `updatedAt`), un peu plus tard à
+ * chaque fois (`waits`, en ms) : juste après un enregistrement, la Gateway peut encore rendre
+ * l'ancienne version. Rend la dernière lecture, même si la version n'est jamais venue.
+ */
+export async function readVersion<D extends { json_data: { updatedAt?: string } }>(
+  read: () => Promise<D | null>,
+  at: string | undefined,
+  waits: number[],
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<D | null> {
+  let doc = await read()
+  for (const wait of waits) {
+    if (!at || !doc || (doc.json_data.updatedAt ?? '') >= at) break
+    await sleep(wait)
+    doc = await read()
+  }
+  return doc
+}

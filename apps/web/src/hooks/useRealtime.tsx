@@ -12,6 +12,9 @@ import { isRealtimeEvent, refreshFor } from '@/lib/realtime/events'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
 import { qk } from './queries'
 
+/** Les relectures d'une instruction après l'annonce de son brouillon. */
+const RELOOK_MS = [1500, 4000]
+
 /**
  * Posé une fois dans la coquille de l'app : écoute le canal de l'usine et relit aussitôt ce qui a
  * changé ailleurs (une création qui commence, avance ou finit sur le téléphone). Sans temps réel
@@ -56,6 +59,12 @@ export function RealtimeBridge() {
           if (key === 'creations') void qc.invalidateQueries({ queryKey: qk.creations })
           else if (key === 'instructions') void qc.invalidateQueries({ queryKey: qk.instructions })
           else void qc.invalidateQueries({ queryKey: qk.instruction(key.slice('instruction:'.length)) })
+        }
+        // La Gateway peut rendre l'ancienne version un court instant après l'enregistrement : le
+        // lecteur ouvert sur l'instruction se relit encore un peu après, pour ne rien manquer.
+        if (m.data.type === 'draft') {
+          const key = qk.instruction(m.data.id)
+          for (const wait of RELOOK_MS) setTimeout(() => void qc.invalidateQueries({ queryKey: key }), wait)
         }
       }
       // Le canal branché (ou refusé) se dit à l'écran : le témoin du direct, la relecture de secours.

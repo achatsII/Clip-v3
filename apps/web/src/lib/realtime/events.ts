@@ -25,6 +25,8 @@ export type DraftEvent = {
   steps?: string[]
   /** L'appareil qui l'envoie (une même personne peut en avoir deux). */
   from: string
+  /** La version enregistrée (`updatedAt`) : l'appareil qui la reçoit relit jusqu'à l'avoir. */
+  at?: string
 }
 
 export type RealtimeEvent = CreationEvent | DraftEvent
@@ -48,6 +50,6 @@ export function isRealtimeEvent(v: unknown): v is RealtimeEvent {
   const e = v as Record<string, unknown> | null
   if (!e || typeof e !== 'object' || typeof e.id !== 'string') return false
   if (e.type === 'creation') return typeof e.phase === 'string' && ['start', 'stage', 'done', 'failed'].includes(e.phase)
-  if (e.type === 'draft') return (e.device === 'app' || e.device === 'web') && typeof e.from === 'string' && (e.steps === undefined || (Array.isArray(e.steps) && e.steps.every((x) => typeof x === 'string')))
+  if (e.type === 'draft') return (e.device === 'app' || e.device === 'web') && typeof e.from === 'string' && (e.at === undefined || typeof e.at === 'string') && (e.steps === undefined || (Array.isArray(e.steps) && e.steps.every((x) => typeof x === 'string')))
   return false
 }

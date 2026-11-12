@@ -64,6 +64,31 @@ export function dispatchRealtime(e: RealtimeEvent): void {
 let channel: RealtimeChannel | null = null
 let connecting: Promise<RealtimeChannel | null> | null = null
 let org: string | null = null
+/**
+ * Les annonces faites pendant que la connexion se rétablit (téléphone sorti de veille, retour de
+ * l'appareil photo) : gardées, la dernière par instruction, et envoyées dès qu'elle revient.
+ */
+const pending = new Map<string, RealtimeEvent>()
+
+function flushPending() {
+  if (!channel || client?.connection.state !== 'connected') return
+  const events = [...pending.values()]
+  pending.clear()
+  for (const e of events) void channel.publish('event', e).catch(() => pending.set(`${e.type}:${e.id}`, e))
+}
+
+/** Revenir à l'écran, ou au réseau : on se reconnecte tout de suite, sans attendre le prochain essai (15 à 30 s). */
+export function wakeRealtime() {
+  const st = client?.connection.state
+  if (client && st && st !== 'connected' && st !== 'connecting' && st !== 'closing') client.connection.connect()
+}
+if (typeof window !== 'undefined') {
+  const wake = () => document.visibilityState === 'visible' && wakeRealtime()
+  document.addEventListener('visibilitychange', wake)
+  window.addEventListener('online', wake)
+  window.addEventListener('focus', wake)
+  window.addEventListener('pageshow', wake)
+}
 
 export function connectRealtime(orgId: string, getToken: () => string | null): Promise<RealtimeChannel | null> {
   if (channel && org === orgId) return Promise.resolve(channel)
@@ -88,7 +113,10 @@ export function connectRealtime(orgId: string, getToken: () => string | null): P
       client.connection.on((change) => {
         if (change.current === 'connecting' || change.current === 'disconnected') setRealtimeState('connecting')
         else if (change.current === 'suspended' || change.current === 'failed') setRealtimeState('down', change.reason?.message ?? change.current)
-        else if (change.current === 'connected' && channel?.state === 'attached') setRealtimeState('live')
+        else if (change.current === 'connected') {
+          if (channel?.state === 'attached') setRealtimeState('live')
+          flushPending()
+        }
       })
       channel = client.channels.get(orgChannel(orgId))
       channel.on((change) => {
@@ -107,10 +135,22 @@ export function connectRealtime(orgId: string, getToken: () => string | null): P
   return connecting
 }
 
-/** Dit aux autres appareils de l'usine ce qui vient de changer ; sans connexion, ne fait rien. */
+/**
+ * Dit aux autres appareils de l'usine ce qui vient de changer. Sans connexion pour l'instant,
+ * l'annonce attend qu'elle revienne (et on la rappelle tout de suite) ; sans temps réel, rien.
+ */
 export function publishRealtime(event: RealtimeEvent): void {
-  if (!channel) return
-  void channel.publish('event', event).catch(() => undefined)
+  if (!channel || !client) return
+  const key = `${event.type}:${event.id}`
+  if (client.connection.state !== 'connected') {
+    pending.set(key, event)
+    wakeRealtime()
+    return
+  }
+  void channel.publish('event', event).catch(() => {
+    pending.set(key, event)
+    wakeRealtime()
+  })
 }
 
 export function disconnectRealtime(): void {
@@ -122,5 +162,6 @@ export function disconnectRealtime(): void {
   client = null
   channel = null
   org = null
+  pending.clear()
   setRealtimeState('off')
 }

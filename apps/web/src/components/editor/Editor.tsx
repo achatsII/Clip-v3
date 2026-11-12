@@ -51,7 +51,7 @@ import { useBilling, useEntitlement, useGate, useLimit } from '@/lib/billing/sta
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
 import { inNativeShell } from '@/lib/bridge/native'
 import { deviceId, onRealtime, publishRealtime, useRealtimeState, writtenBy } from '@/lib/realtime/client'
-import { changedSteps, followStep, remoteDraftAction } from '@/lib/realtime/liveDraft'
+import { changedSteps, followStep, readVersion, remoteDraftAction } from '@/lib/realtime/liveDraft'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
 import { diffSteps } from '@/lib/model/diff'
@@ -87,7 +87,9 @@ import { UndoButtons, UndoPill } from './UndoControls'
 
 type SaveState = 'saved' | 'saving' | 'error'
 /** Ce qu'un autre appareil annonce d'un brouillon enregistré. */
-type DraftNotice = { byName?: string; device: 'app' | 'web'; steps?: string[] }
+type DraftNotice = { byName?: string; device: 'app' | 'web'; steps?: string[]; at?: string }
+/** Les relectures d'un brouillon annoncé que la Gateway ne rend pas encore. */
+const RELOOK_MS = [500, 1200, 2500, 5000]
 
 function newStep(): Step {
   return { id: uid('st_'), title: '', text: '', keyPoints: [], warning: null, media: [] }
@@ -195,7 +197,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       cacheDraft(qc, doc._id, saved)
       setSaveState('saved')
       // Les autres appareils ouverts sur cette instruction suivent : l'étape changée en premier.
-      if (liveRef.current) publishRealtime({ type: 'draft', id: doc._id, title: saved.title, userId: actor.id, byName: actor.name, device: inNativeShell() ? 'app' : 'web', steps: changedSteps(lastSaved.current, saved), from: deviceId })
+      if (liveRef.current) publishRealtime({ type: 'draft', id: doc._id, title: saved.title, userId: actor.id, byName: actor.name, device: inNativeShell() ? 'app' : 'web', steps: changedSteps(lastSaved.current, saved), from: deviceId, at })
       lastSaved.current = saved
     } catch {
       setSaveState('error')
@@ -280,7 +282,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       }
       pulling.current = true
       try {
-        const fresh = await data.get<Instruction>(T.instruction, doc._id)
+        // Lue trop tôt, la Gateway rend encore l'ancienne version : on relit, un peu plus tard chaque fois.
+        const fresh = await readVersion(() => data.get<Instruction>(T.instruction, doc._id), e.at, RELOOK_MS)
         const draft = fresh?.json_data.draft
         if (!draft) return
         // La personne a commencé à modifier pendant la lecture : on ne reprend rien.
@@ -329,7 +332,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   useEffect(() => {
     if (!liveToggle || !realtime) return
     return onRealtime((e) => {
-      if (e.type === 'draft' && e.id === doc._id) void pullRemote({ byName: e.byName, device: e.device, steps: e.steps })
+      if (e.type === 'draft' && e.id === doc._id) void pullRemote({ byName: e.byName, device: e.device, steps: e.steps, at: e.at })
     })
   }, [liveToggle, realtime, doc._id, pullRemote])
   // Le direct ne passe pas (réseau, jeton) : l'écran se relit seul toutes les 8 s, s'il n'y a rien en cours ici.

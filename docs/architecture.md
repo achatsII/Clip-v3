@@ -270,6 +270,14 @@ instruction.
   minuscule des instructions modifiées depuis peu (date et appareil seulement), et l'instruction
   entière seulement si un autre appareil l'a changée. Chaque enregistrement d'un brouillon écrit
   l'appareil qui l'a fait (`updatedFrom`, `updatedVia`).
+  Pour que le direct le reste : l'annonce porte la version enregistrée (`at`), et l'écran qui la
+  reçoit relit jusqu'à l'avoir (`readVersion` : la Gateway peut rendre l'ancienne un court instant) ;
+  une annonce faite pendant que la connexion se rétablit (téléphone sorti de veille, retour de
+  l'appareil photo) attend et part dès qu'elle revient, et revenir à l'écran relance la connexion
+  tout de suite (`src/lib/realtime/client.ts`) ; quand le direct revient après une coupure, et quand
+  on revient à l'écran, l'éditeur vérifie une fois s'il a manqué quelque chose (`useDraftWatch`).
+  L'annotateur envoie chaque marque au brouillon dès qu'elle est posée (quitter sans enregistrer
+  remet celles d'avant) : l'autre appareil la voit apparaître sans attendre « Enregistrer ».
 - **Le diagnostic** : `GET /api/realtime/status` demande un vrai jeton à Ably avec les droits de
   l'app ; `ok: false` avec `code` 40101 veut dire une clé mal copiée, 40160 des droits insuffisants
   (la clé doit pouvoir publier, écouter et voir la présence sur `clip:org:*`).
@@ -317,7 +325,9 @@ icône, flou ; traits et formes en **pointillé**, cercle et cadre **remplis** (
 Une étiquette reste toujours dans l'image : la légende d'une forme va dessous, au-dessus quand la
 forme touche le bas, dedans quand elle prend toute la hauteur, et près d'un bord elle glisse vers
 l'intérieur (`keepInside`). Dans l'annotateur, la barre des options garde sa hauteur : l'image ne
-bouge pas quand une marque se choisit ou se lâche.
+bouge pas quand une marque se choisit ou se lâche. Il s'ouvre sur la Sélection quand la photo a déjà
+des marques (on vient les ajuster), sinon sur le dernier outil de dessin, avec sa couleur, sa taille
+et son style, retenus sur l'appareil (la flèche la première fois).
 
 ### Les médias d'une étape
 
