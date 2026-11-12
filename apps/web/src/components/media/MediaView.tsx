@@ -186,15 +186,8 @@ export function VideoSegment({
     const play = () => {
       v.play()?.catch(() => setPlaying(false))
     }
-    // Un lecteur gardé qui arrive d'une autre étape repart au début de celle-ci, même si l'endroit où
-    // il était tombe dans cet extrait.
-    const seg = `${url}#${start}-${end}`
-    let jump = v.dataset.seg !== seg
-    v.dataset.seg = seg
     const onMeta = () => {
-      const off = jump ? Math.abs(v.currentTime - start) > 0.05 : v.currentTime < start - 0.3 || v.currentTime > end
-      jump = false
-      if (off) v.currentTime = start
+      if (v.currentTime < start - 0.3 || v.currentTime > end) v.currentTime = start
       if (auto && v.paused) play()
     }
     const onTime = () => {
@@ -261,20 +254,6 @@ export function VideoSegment({
   useEffect(() => {
     if (pooled && ref.current) ref.current.muted = muted
   }, [pooled, muted])
-  // Une vidéo qui quitte l'écran arrête de télécharger : détachée, elle continuerait sinon en
-  // arrière-plan jusqu'à ce que le navigateur la jette. (Un lecteur gardé, lui, reste prêt.)
-  useEffect(() => {
-    const v = ref.current
-    if (pooled || !v) return
-    return () => {
-      setTimeout(() => {
-        if (v.isConnected) return
-        v.pause()
-        v.removeAttribute('src')
-        v.load()
-      }, 0)
-    }
-  }, [pooled])
 
   const len = Math.max(0.1, end - start)
   const pct = Math.min(100, Math.max(0, ((t - start) / len) * 100))

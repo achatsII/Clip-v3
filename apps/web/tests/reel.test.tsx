@@ -156,44 +156,6 @@ describe('un lecteur gardé d’une étape à l’autre', () => {
     expect(pool.acquire('https://x/suivante.mp4').getAttribute('src')).toBe('https://x/suivante.mp4#t=6')
   })
 
-  it('un lecteur repris d’une autre étape repart au début de la sienne, même si l’endroit où il était y tombe ; changer de mode ne le déplace pas', () => {
-    const pool = new VideoPool(3)
-    const wrap = (start: number, end: number, mode: 'loop' | 'tap' = 'loop') => (
-      <MediaPlaybackProvider value={{ pool, reel: false }}>
-        <VideoSegment key={start} url={SRC} start={start} end={end} mode={mode} />
-      </MediaPlaybackProvider>
-    )
-    const { container, rerender } = render(wrap(0, 6))
-    const v = container.querySelector('video')!
-    Object.defineProperty(v, 'readyState', { configurable: true, get: () => 4 })
-    v.currentTime = 3
-    // Étape suivante, extrait de 2 s à 8 s de la même vidéo : on était à 3 s, on repart à 2 s.
-    act(() => rerender(wrap(2, 8)))
-    expect(container.querySelector('video')).toBe(v)
-    expect(v.currentTime).toBe(2)
-    v.currentTime = 5
-    act(() => rerender(wrap(2, 8, 'tap')))
-    expect(v.currentTime).toBe(5)
-  })
-
-  it('ailleurs, une vidéo qui quitte l’écran arrête de télécharger ; une qui reste n’est pas touchée', async () => {
-    const { container, unmount } = render(<VideoSegment url={SRC} start={4} end={10} />)
-    const v = container.querySelector('video')!
-    expect(v.getAttribute('src')).toBe(`${SRC}#t=4`)
-    // En mode strict, React simule un démontage : la vidéo, restée à l'écran, ne doit pas s'arrêter.
-    const kept = render(
-      <StrictMode>
-        <VideoSegment url="https://x/reste.mp4" start={0} end={5} />
-      </StrictMode>,
-    ).container.querySelector('video')!
-    unmount()
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 5))
-    })
-    expect(v.getAttribute('src')).toBeNull()
-    expect(kept.getAttribute('src')).toBe('https://x/reste.mp4#t=0')
-  })
-
   it('au lecteur d’instruction, une étape qui suit dans la même vidéo réutilise le même élément vidéo', () => {
     const pool = new VideoPool(3)
     const wrap = (start: number, end: number) => (
