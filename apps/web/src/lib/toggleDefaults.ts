@@ -20,8 +20,8 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   previewAgent: true,
   // Les vidéos au poste : un seul lecteur d'une étape à l'autre (rien ne se recharge), et la vidéo
   // des étapes, montée après la publication sans la retenir (peu de données).
-  // Éteint (novembre 2026) : le lecteur gardé ralentissait les vidéos et l'image tirée d'une vidéo.
-  stepReel: false,
+  // Les vidéos au poste : un seul lecteur d'une étape à l'autre (rien ne se recharge).
+  stepReel: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */

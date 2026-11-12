@@ -41,7 +41,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`src/lib/model/checkpoints.ts`) : au plus un par 10 minutes de modification, avant l'assistant, une
   régénération ou un retour, sans doublon ni copie de la version publiée, 20 par instruction. Après
   chaque enregistrement, le cache de l'instruction suit (`cacheDraft`).
-- **Vidéos au poste** (toggle `stepReel`, éteint depuis novembre 2026 : il ralentissait les vidéos et l’image tirée d’une vidéo ; lecture comme avant) : un seul lecteur gardé d'une étape à l'autre, la vidéo ne
+- **Vidéos au poste** (toggle `stepReel`, allumé ; les vidéos de l'éditeur gardent chacune leur lecteur) : un seul lecteur gardé d'une étape à l'autre, la vidéo ne
   se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la publication
   sans jamais la retenir (`src/lib/media/reel.ts`). En novembre 2026, la route de montage répond 500
   en QA : le poste lit alors la vidéo d'origine.
