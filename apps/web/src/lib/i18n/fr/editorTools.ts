@@ -144,6 +144,7 @@ export const editorTools = {
       layoutFocus: (step: number) => `Étape ${nb(step)} : un média à la fois`,
       media: (step: number, media: number, parts: string[]) => `Étape ${nb(step)}, média ${nb(media)} : ${parts.join(', ') || 'mis à jour'}`,
       mediaRemoved: (step: number, media: number) => `Étape ${nb(step)} : média ${nb(media)} retiré`,
+      mediaUsed: (step: number, what: string) => `Étape ${nb(step)} : ${what.toLowerCase()} tiré des sources`,
       marksCleared: (step: number) => `Étape ${nb(step)} : marques retirées de la photo`,
       marksAdded: (step: number, marks: number) => `Étape ${nb(step)} : ${nb(marks)} marque${marks > 1 ? 's' : ''} sur la photo`,
       visualAdded: (step: number, title: string) => `Étape ${nb(step)} : schéma « ${title} » ajouté`,
@@ -179,9 +180,15 @@ export const editorTools = {
       setLayout: (step: string) => `${step} : je change la disposition…`,
       setMedia: (step: string) => `${step} : je qualifie le média…`,
       removeMedia: (step: string) => `${step} : je retire un média…`,
+      useMedia: (step: string) => `${step} : je prends le bon moment dans les sources…`,
+      look: 'Je revois les sources…',
     },
     /** Une action ratée : ce qu’elle faisait, et pourquoi. */
     opFailed: (action: string, why: string) => `${action} — ${why}`,
+    /** Revoir les sources d'origine : seulement quand la demande l'exige. */
+    looking: (sources: string, duration: string | null) => `Je revois ${sources}${duration ? ` (${duration} de vidéo)` : ''}…`,
+    looked: (sources: string) => `Sources revues : ${sources}`,
+    lookTooBig: 'Ces sources sont trop longues à revoir d’un coup : dites-moi l’étape ou le moment à regarder.',
     errors: {
       unknown: 'échec',
       noAnswer: 'L’assistant n’a pas pu répondre. Réessayez.',
@@ -192,6 +199,7 @@ export const editorTools = {
       needsAi: 'Cette opération demande l’IA',
       marksOnImage: 'Les marques se posent sur une photo ou une image',
       noReferencePhoto: 'Pas de photo de référence : demandez plutôt un schéma',
+      sourceNotFound: (ref: string) => `Source introuvable (${ref})`,
     },
   },
 

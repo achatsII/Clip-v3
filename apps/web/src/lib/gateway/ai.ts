@@ -25,6 +25,9 @@ export const AI_OPERATIONS = [
   'standard_agent',
   'edit_agent',
   'visual',
+  'look_s',
+  'look_m',
+  'look_l',
 ] as const
 export type AiOperation = (typeof AI_OPERATIONS)[number]
 

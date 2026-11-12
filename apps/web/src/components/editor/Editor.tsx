@@ -646,7 +646,22 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         </section>
       </div>
 
-      {!readOnly && <AgentPanel content={content} setContent={update} focusStepId={step?.id ?? null} onFocus={focusStep} onWorking={setAgentStep} onOpenChange={setAgentOpen} request={agentRequest} />}
+      {!readOnly && (
+        <AgentPanel
+          content={content}
+          setContent={update}
+          focusStepId={step?.id ?? null}
+          onFocus={focusStep}
+          onWorking={setAgentStep}
+          onOpenChange={setAgentOpen}
+          request={agentRequest}
+          sources={sources}
+          onSourcesChange={(next) => {
+            setSources(next)
+            void data.patch(T.instruction, doc._id, { sources: next })
+          }}
+        />
+      )}
 
       <ShareDialog open={dialog === 'share'} onClose={() => setDialog(null)} doc={doc} onLinked={refresh} />
       <HistoryDialog

@@ -7,13 +7,15 @@ import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
 import { Input } from '@/components/ui/Field'
 import { errorText } from '@/components/ui/States'
-import { agentBusy, askAgent, runAgentOps, type AgentLogEntry, type VoiceTurnResult } from '@/lib/ai/agent'
+import { agentBusy, agentTurn, runAgentOps, type AgentLogEntry, type VoiceTurnResult } from '@/lib/ai/agent'
 import { suggestEdits } from '@/lib/ai/suggest'
+import { AI_COSTS } from '@/lib/billing/catalog'
 import { useEntitlement, useGate } from '@/lib/billing/state'
+import { BILLING_V2 } from '@/lib/config'
 import { useMessages } from '@/lib/i18n'
-import type { InstructionContent } from '@/lib/model/types'
+import type { InstructionContent, Source } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
-import { cn } from '@/lib/util/cn'
+import { cn, formatDuration } from '@/lib/util/cn'
 import { LiveEditVoice } from './LiveEditVoice'
 
 interface Message {
@@ -50,6 +52,8 @@ export function AgentPanel({
   onWorking,
   onOpenChange,
   request,
+  sources,
+  onSourcesChange,
 }: {
   content: InstructionContent
   setContent: (c: InstructionContent) => void
@@ -62,8 +66,12 @@ export function AgentPanel({
   onOpenChange?: (open: boolean) => void
   /** Une demande à traiter tout de suite, envoyée par l'éditeur. */
   request?: AgentRequest | null
+  /** Les sources d'origine (S1, S2…) : l'assistant les lit, et les revoit seulement si la demande l'exige. */
+  sources?: Source[]
+  /** Les sources après une revue (URI Gemini rafraîchies), à garder dans l'instruction. */
+  onSourcesChange?: (sources: Source[]) => void
 }) {
-  const { ai, org } = useSession()
+  const { ai, org, files } = useSession()
   const t = useMessages()
   const [open, setOpen] = useState(false)
   const [minimized, setMinimized] = useState(false)
@@ -119,17 +127,40 @@ export function AgentPanel({
     const failed: string[] = []
     setMessages((list) => [...list, { id: userId, role: 'user', text: via === 'voice' ? `🎙 ${ask}` : ask }, { id: agentId, role: 'agent', text: '', working: true }])
     try {
-      const turn = await askAgent(ai, org.json_data, liveContent.current, focusStepId, ask, history.current)
+      const ta = t.editorTools.agent
+      let looked: string | null = null
+      const turn = await agentTurn({
+        ai,
+        files,
+        org: org.json_data,
+        content: liveContent.current,
+        focusStepId,
+        request: ask,
+        history: history.current,
+        sources,
+        // Revoir les sources : une action visible dans la conversation, avec ce qu'on revoit.
+        onLook: (info) => {
+          looked = info.sourceIds.join(', ')
+          patch(agentId, (m) => ({
+            actions: [...(m.actions ?? []), { key: -1, label: `${ta.looking(looked!, info.videoSec > 0 ? formatDuration(info.videoSec) : null)}${BILLING_V2 ? ` · ${t.billing.credits(AI_COSTS[info.operation])}` : ''}`, stepId: null, state: 'working' as const }],
+          }))
+        },
+        onSources: onSourcesChange,
+      })
+      if (looked) patch(agentId, (m) => ({ actions: (m.actions ?? []).map((a) => (a.key === -1 ? { ...a, label: ta.looked(looked!), state: 'done' as const } : a)) }))
       history.current.push({ role: 'user', content: ask }, { role: 'assistant', content: turn.reply })
       setAgentSuggestions(turn.suggestions.length ? turn.suggestions : null)
       patch(agentId, { text: turn.reply })
       if (turn.operations.length) {
         const before = liveContent.current
-        patch(agentId, { before, actions: [] })
+        // La revue des sources, s'il y en a eu une, reste en tête des actions.
+        patch(agentId, (m) => ({ before, actions: (m.actions ?? []).filter((a) => a.key === -1) }))
         // Au téléphone, on laisse voir l'étape qui change (la conversation vocale reste ouverte).
         if (via === 'text' && window.matchMedia('(max-width: 1023px)').matches) setMinimized(true)
         await runAgentOps(turn.operations, {
           ai,
+          sources,
+          files,
           get: () => liveContent.current,
           set: (c) => {
             liveContent.current = c

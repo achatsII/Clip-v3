@@ -137,6 +137,20 @@ répondues disparaissent. Cocher une question la règle sans la répondre.
 
 ### L'assistant d'édition (`src/lib/ai/agent.ts`, `AgentPanel`)
 
+**Revoir les médias, seulement quand il le faut** (`agentTurn`). Chaque tour lit d'abord le texte
+(`edit_agent`) : l'instruction, et les sources d'origine en une ligne chacune, avec en entier les
+notes écrites et les transcriptions des notes vocales (du texte, presque gratuit). Une tâche simple
+s'arrête là. Si la demande ne peut pas se faire sans voir ou entendre une source (une valeur dite
+ou montrée absente du texte, un geste ou un moment à retrouver, ce que montre une photo),
+l'assistant rend une seule opération `look` (sources, question). L'app prépare alors ces sources
+(URI Gemini encore valides réutilisées, sinon téléversées de nouveau, puis gardées dans
+l'instruction) et fait un deuxième tour avec elles, la vidéo en basse définition. Ce tour est
+facturé selon leur taille, avec les seuils de la génération (`look_s`, `look_m`, `look_l`). La
+conversation montre la revue (« Je revois S1 (2 min 20 s de vidéo) »), avec son coût si la
+facturation est allumée. Des sources trop longues ne se revoient pas d'un coup : l'assistant demande
+l'étape ou le moment. `use_media` met à une étape un extrait, une image figée (tirée de la vidéo),
+une photo ou une page tirés d'une source.
+
 - La personne demande (texte, ou dictée au micro du champ) ; l'IA (`edit_agent`) reçoit l'instruction
   avec l'**identifiant** de chaque étape et la liste de ses médias, l'étape regardée et l'historique de
   l'échange, et rend `{ reply, operations, suggestions }` en JSON strict.

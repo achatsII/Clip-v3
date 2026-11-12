@@ -89,6 +89,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   | `standard_agent` | Rédiger le standard de rédaction à partir d'une description | 5 |
   | `edit_agent` | Un échange avec l'assistant d'édition (il rend les modifications à faire) | 20 |
   | `visual` | Schéma généré : une page HTML autonome (SVG, dessin, vue 3D) | 60 |
+  | `look_s` | L'assistant d'édition revoit des sources d'origine (peu de médias), seulement si la demande l'exige | 60 |
+  | `look_m` | Revoir des sources moyennes | 120 |
+  | `look_l` | Revoir beaucoup de médias | 300 |
 
   La taille d'une génération ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) se décide sur
   la durée des vidéos et des notes vocales, le nombre de photos et de pages ; au-delà de la plus grande

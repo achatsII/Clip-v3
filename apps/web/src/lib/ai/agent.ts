@@ -4,6 +4,12 @@
  * à l'étape, la modifie, passe à la suivante. Ce qui demande de voir une photo ou de dessiner part
  * à une IA spécialisée (annotate, illustrate, visual), chacune facturée à son prix.
  *
+ * Revoir les médias, seulement quand il le faut : l'assistant lit d'abord le texte (les notes écrites
+ * et les transcriptions des notes vocales comprises, presque gratuites). S'il ne peut pas faire la
+ * demande sans voir ou entendre une source, il rend une seule opération `look` ; l'app lui joint
+ * alors ces sources pour un deuxième tour (vidéo en basse définition), facturé selon leur taille
+ * (`look_s`, `look_m`, `look_l`). Une tâche simple ne coûte jamais ce deuxième tour.
+ *
  * Les étapes se désignent par leur identifiant, jamais par leur numéro : une étape ajoutée,
  * retirée ou déplacée plus haut dans la liste ne fait pas viser la mauvaise.
  *
@@ -11,19 +17,21 @@
  * le contenu dans celle de l'instruction (`content.language`). Les consignes données au modèle
  * restent en français ; ce que l'app montre (actions, erreurs) se lit dans le dictionnaire.
  */
-import type { AiApi } from '../gateway/ai'
+import type { AiApi, AiOperation, AskFile } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
 import { getLang, messages } from '../i18n'
 import { PPE } from '../model/catalog'
 import { layoutOf, mediaLabel } from '../model/media'
 import { uid } from '../model/repo'
-import type { Annotation, InstructionContent, OrgSettings, Step, StepLayout, StepMedia, WarningLevel } from '../model/types'
+import type { FilesApi } from '../gateway/files'
+import type { Annotation, InstructionContent, OrgSettings, Source, Step, StepLayout, StepMedia, WarningLevel } from '../model/types'
 import { annotateImage, createVisual, illustrationPrompt } from './assist'
-import { warningFrom } from './normalize'
+import { enrichMedia, generationTier, measureSources, prepareForAi } from './generate'
+import { resolveMedia, warningFrom } from './normalize'
 import { standardBlock } from './prompts'
 import type { LiveTool } from './useLiveVoice'
 
-export const AGENT_OPS = ['set_instruction', 'add_step', 'update_step', 'delete_step', 'move_step', 'annotate', 'clear_annotations', 'illustrate', 'visual', 'set_layout', 'set_media', 'remove_media'] as const
+export const AGENT_OPS = ['set_instruction', 'add_step', 'update_step', 'delete_step', 'move_step', 'annotate', 'clear_annotations', 'illustrate', 'visual', 'set_layout', 'set_media', 'remove_media', 'use_media', 'look'] as const
 export type AgentOpName = (typeof AGENT_OPS)[number]
 
 export interface AgentOp {
@@ -50,6 +58,18 @@ export interface AgentOp {
   ppe?: string[]
   tools?: string[]
   safety?: string[]
+  /** look : les sources à revoir (S1, S2…), le moins possible. */
+  sources?: string[]
+  /** look : ce qu'il faut y trouver. */
+  question?: string
+  /** use_media : la source d'où prendre le média (S1…). */
+  source?: string
+  /** use_media, vidéo : un extrait (start, end, en secondes) ou une image figée (at). */
+  start?: number
+  end?: number
+  at?: number
+  /** use_media, document : la page. */
+  page?: number
 }
 
 export interface AgentTurn {
@@ -103,6 +123,13 @@ export const agentSchema = (ui: string) => ({
           ppe: strList(`set_instruction : les EPI, parmi ces clés : ${Object.keys(PPE).join(', ')}`),
           tools: strList('set_instruction : les outils'),
           safety: strList('set_instruction : les mises en garde générales'),
+          sources: strList('look : les sources à revoir (S1, S2…), le moins possible'),
+          question: str('look : ce qu’il faut trouver dans ces sources'),
+          source: str('use_media : la source d’où prendre le média (S1…)'),
+          start: { type: 'number', description: 'use_media, vidéo : début de l’extrait, en secondes' },
+          end: { type: 'number', description: 'use_media, vidéo : fin de l’extrait, en secondes' },
+          at: { type: 'number', description: 'use_media, vidéo : l’instant d’une image figée, en secondes (à la place d’un extrait)' },
+          page: { type: 'number', description: 'use_media, document : la page, 1 = première' },
         },
         required: ['op'],
       },
@@ -119,6 +146,9 @@ export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, la
 - Une étape = une action. Respecte le standard de l’usine ci-dessous (ton, nombre de mots).
 - Désigne une étape par son identifiant entre crochets. Une étape que tu ajoutes reçoit un id (n1, n2…) que tu réutilises plus bas. Les opérations s’appliquent dans l’ordre donné.
 - Tu ne vois pas les photos. Pour marquer quelque chose sur une photo : annotate, avec une demande précise (quoi, cercle, cadre ou flèche, couleur, texte à écrire) ; un autre modèle, qui voit la photo, place les marques. annotate ne vise qu’un média photo ou image.
+- Les sources d’origine (S1, S2…) sont listées sous l’instruction ; les notes écrites et les transcriptions des notes vocales y sont en entier : lis-les d’abord.
+- Revoir des sources (look) coûte du temps et des crédits : seulement quand la demande ne peut pas se faire sans voir ou entendre une source — une valeur dite ou montrée qui n’est pas dans le texte, un geste ou un moment à retrouver, un meilleur moment de vidéo à choisir, ce que montre une photo. Jamais pour reformuler, raccourcir, réordonner, traduire ou ajouter une mise en garde. Pour revoir : UNE opération look, seule, avec sources (le moins possible) et question ; l’app te joint ces sources et tu fais alors la demande.
+- Mettre à une étape un média tiré d’une source : use_media, avec source et, pour une vidéo, start et end (un extrait) ou at (une image figée) ; avec media, il remplace ce média de l’étape, sinon il s’ajoute.
 - Un dessin explicatif (vue de face, coupe, plan, 3D) : visual. Une illustration à partir de la photo de l’étape : illustrate (seulement si l’étape a une photo).
 - Montrer ce qu’il faut faire et ne pas faire : set_media avec verdict do ou dont, puis set_layout compare.
 - Mise en garde : danger (blessure possible), caution (erreur ou bris possible), info.
@@ -139,7 +169,37 @@ function mediaLine(m: StepMedia, i: number): string {
   return bits.join(', ')
 }
 
-export function agentPrompt(content: InstructionContent, focusStepId: string | null, request: string): string {
+/** Une durée pour le modèle : « 3 min 20 s ». */
+const durationText = (sec?: number) => (!sec || sec <= 0 ? 'durée inconnue' : sec >= 60 ? `${Math.floor(sec / 60)} min ${String(Math.round(sec % 60)).padStart(2, '0')} s` : `${Math.round(sec)} s`)
+
+/**
+ * Les sources d'origine, telles que l'assistant les lit : une ligne chacune (S1, S2… dans l'ordre de
+ * l'instruction), et en entier les notes écrites et les transcriptions des notes vocales, du texte
+ * presque gratuit (au plus ~5 000 caractères en tout).
+ */
+export function sourcesBlock(sources: Source[]): string {
+  let budget = 5000
+  const excerpt = (text: string) => {
+    const t = text.replace(/\s+/g, ' ').trim()
+    const cut = t.slice(0, Math.max(0, Math.min(1500, budget)))
+    budget -= cut.length
+    return cut.length < t.length ? `${cut}…` : cut
+  }
+  return sources
+    .map((src, i) => {
+      const id = `S${i + 1}`
+      const name = src.originalName ?? src.name
+      if (src.kind === 'video') return `${id} — vidéo, ${durationText(src.durationSec)}${name ? `, « ${name} »` : ''}`
+      if (src.kind === 'photo') return `${id} — photo${name ? ` « ${name} »` : ''}${src.text ? `, légende : « ${excerpt(src.text)} »` : ''}`
+      if (src.kind === 'document') return `${id} — document${name ? ` « ${name} »` : ''}${src.pageCount ? `, ${src.pageCount} pages` : ''}`
+      if (src.kind === 'audio') return `${id} — note vocale, ${durationText(src.durationSec)}${src.text ? `, transcription : « ${excerpt(src.text)} »` : ''}`
+      if (src.kind === 'note' && src.text) return `${id} — note écrite : « ${excerpt(src.text)} »`
+      return `${id} — ${src.kind}`
+    })
+    .join('\n')
+}
+
+export function agentPrompt(content: InstructionContent, focusStepId: string | null, request: string, sources: Source[] = []): string {
   const lines = [`TITRE : ${content.title}`, `RÉSUMÉ : ${content.summary}`]
   if (content.equipment) lines.push(`ÉQUIPEMENT : ${content.equipment}`)
   lines.push(`EPI : ${content.ppe.join(', ') || 'aucun'}`)
@@ -152,6 +212,7 @@ export function agentPrompt(content: InstructionContent, focusStepId: string | n
   })
   const focus = focusStepId ? content.steps.findIndex((s) => s.id === focusStepId) : -1
   if (focus >= 0) lines.push(`\nLa personne regarde l’étape ${focus + 1} [${focusStepId}] : « cette étape » désigne celle-là.`)
+  if (sources.length) lines.push(`\nSOURCES D’ORIGINE :\n${sourcesBlock(sources)}`)
   lines.push(`\nDEMANDE : ${request}`)
   return lines.join('\n')
 }
@@ -164,30 +225,106 @@ export async function askAgent(
   focusStepId: string | null,
   request: string,
   history: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+  opts: {
+    /** Les sources d'origine de l'instruction, dans leur ordre (S1, S2…). */
+    sources?: Source[]
+    /** Le deuxième tour : les sources demandées, jointes, et la question posée. */
+    look?: { operation: AiOperation; files: AskFile[]; lines: string[]; question: string }
+  } = {},
 ): Promise<AgentTurn> {
   const ui = getLang()
+  const look = opts.look
+  const system = agentSystem(org, { ui, content: contentLang(content) })
   const res = await ai.ask<AgentTurn>(
-    'edit_agent',
+    look ? look.operation : 'edit_agent',
     {
       provider: 'google',
       level: 'mid',
       thinking: 'enabled',
       effort: 'low',
-      system_instruction: agentSystem(org, { ui, content: contentLang(content) }),
-      prompt: agentPrompt(content, focusStepId, request),
+      system_instruction: look ? `${system}\n\nLES SOURCES DEMANDÉES SONT JOINTES : appuie-toi sur ce que tu vois et entends pour faire la demande. N’utilise plus look.` : system,
+      prompt: look ? `${agentPrompt(content, focusStepId, request, opts.sources)}\n\nSOURCES JOINTES :\n${look.lines.join('\n')}\nCE QU’IL FAUT Y TROUVER : ${look.question}` : agentPrompt(content, focusStepId, request, opts.sources),
       json_schema: agentSchema(ui),
       history: history.slice(-8),
       maxOutputTokens: 16000,
+      ...(look ? { files: look.files, mediaResolution: 'low' as const } : {}),
     },
-    { scope: 'agent', timeoutMs: 120_000 },
+    { scope: look ? 'agent-look' : 'agent', timeoutMs: look ? 240_000 : 120_000 },
   )
   const j = res.json
   if (!j || typeof j.reply !== 'string') throw new ApiError(messages().editorTools.agent.errors.noAnswer, 502)
   return {
     reply: j.reply.trim(),
-    operations: (Array.isArray(j.operations) ? j.operations : []).filter((o) => o && (AGENT_OPS as readonly string[]).includes(o.op)).slice(0, 40),
+    operations: (Array.isArray(j.operations) ? j.operations : [])
+      .filter((o) => o && (AGENT_OPS as readonly string[]).includes(o.op))
+      // Au deuxième tour, plus de look : les médias sont déjà là.
+      .filter((o) => !look || o.op !== 'look')
+      .slice(0, 40),
     suggestions: (Array.isArray(j.suggestions) ? j.suggestions : []).map((s) => String(s).trim()).filter(Boolean).slice(0, 4),
   }
+}
+
+/** La taille de ce qu'on revoit décide du prix, comme pour une génération (mêmes seuils). */
+export function lookTier(sources: Source[]): { op: 'look_s' | 'look_m' | 'look_l'; tooBig: boolean } {
+  const g = generationTier(sources)
+  return { op: g.op === 'generate_s' ? 'look_s' : g.op === 'generate_m' ? 'look_m' : 'look_l', tooBig: g.tooBig }
+}
+
+/** Ce qu'un tour avec revue des médias annonce à l'écran : les sources revues et leur taille. */
+export interface LookInfo {
+  sourceIds: string[]
+  operation: AiOperation
+  videoSec: number
+}
+
+/**
+ * Un tour de l'assistant, avec revue des médias seulement s'il la demande. Le premier tour lit le
+ * texte (`edit_agent`). S'il rend une opération `look`, l'app prépare les sources demandées (URI
+ * Gemini encore valides réutilisées, sinon téléversées de nouveau) et fait un deuxième tour avec
+ * elles, facturé selon leur taille. Les sources rafraîchies remontent par `onSources`.
+ */
+export async function agentTurn(input: {
+  ai: AiApi
+  files: FilesApi
+  org: Pick<OrgSettings, 'standard' | 'learnings'>
+  content: InstructionContent
+  focusStepId: string | null
+  request: string
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>
+  sources?: Source[]
+  onLook?: (info: LookInfo) => void
+  onSources?: (sources: Source[]) => void
+}): Promise<AgentTurn> {
+  const sources = input.sources ?? []
+  const first = await askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, { sources })
+  const lookOp = first.operations.find((o) => o.op === 'look')
+  const operations = first.operations.filter((o) => o.op !== 'look')
+  if (!lookOp) return first
+  // Les sources demandées, dans l'ordre de l'instruction ; une demande sans source valable ne revoit rien.
+  const wanted = new Set((lookOp.sources ?? []).map((x) => String(x).trim().toUpperCase()))
+  const picked = sources.map((src, i) => ({ src, id: `S${i + 1}` })).filter((x) => wanted.has(x.id) && (x.src.url || x.src.text))
+  if (!picked.length) return { ...first, operations }
+  const tier = lookTier(picked.map((x) => x.src))
+  if (tier.tooBig) return { reply: messages().editorTools.agent.lookTooBig, operations: [], suggestions: first.suggestions }
+  input.onLook?.({ sourceIds: picked.map((x) => x.id), operation: tier.op, videoSec: measureSources(picked.map((x) => x.src)).videoSec })
+  const prepared = await prepareForAi(
+    picked.map((x) => x.src),
+    input.files,
+  )
+  // Les URI Gemini neuves se gardent : une autre revue dans les 48 h ne téléverse rien.
+  if (prepared.sources.some((src, k) => src.geminiFileUri !== picked[k].src.geminiFileUri)) {
+    const byId = new Map(prepared.sources.map((src, k) => [picked[k].src.id, src]))
+    input.onSources?.(sources.map((src) => byId.get(src.id) ?? src))
+  }
+  // prepareForAi numérote S1, S2… dans le sous-ensemble : on remet les numéros de l'instruction.
+  const lines = prepared.lines.map((l) => {
+    const k = Number(l.id.slice(1)) - 1
+    return l.line.replace(/^S\d+/, picked[k]?.id ?? l.id)
+  })
+  return askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, {
+    sources,
+    look: { operation: tier.op, files: prepared.askFiles, lines, question: lookOp.question?.trim() || input.request },
+  })
 }
 
 // ——— Appliquer les opérations ———
@@ -343,6 +480,8 @@ export function describeOp(content: InstructionContent, op: AgentOp, ids: IdMap)
     set_layout: w.setLayout(n),
     set_media: w.setMedia(n),
     remove_media: w.removeMedia(n),
+    use_media: w.useMedia(n),
+    look: w.look,
   }
   return { label: text[op.op], stepId }
 }
@@ -363,6 +502,10 @@ export interface AgentRunContext {
   log: (entry: AgentLogEntry) => void
   /** Un temps pour voir chaque changement ; nul dans les tests. */
   pause?: (ms: number) => Promise<void>
+  /** Les sources d'origine (S1, S2…), pour use_media. */
+  sources?: Source[]
+  /** Pour tirer une image figée d'une vidéo (use_media avec at). */
+  files?: FilesApi
 }
 
 const MAX_MEDIA = 6
@@ -398,6 +541,34 @@ async function applyAiOp(ctx: AgentRunContext, op: AgentOp, ids: IdMap): Promise
   return { content: withStep(latest, at.index, { ...at.step, media: [...at.step.media, { kind: 'image' as const, url, generated: true }].slice(-MAX_MEDIA) }), label: messages().editorTools.agent.done.illustrationAdded(at.index + 1), stepId: step.id }
 }
 
+/**
+ * use_media : met à une étape un média tiré d'une source d'origine — un extrait ou une image figée
+ * d'une vidéo, une photo, la page d'un document. Avec `media`, il remplace ce média de l'étape.
+ */
+async function applyUseMedia(ctx: AgentRunContext, op: AgentOp, ids: IdMap): Promise<OpResult> {
+  const t = messages().editorTools.agent
+  const sources = ctx.sources ?? []
+  const byId = new Map(sources.map((src, i) => [`S${i + 1}`, src]))
+  let media = resolveMedia({ source: op.source, start: op.start, end: op.end, at: op.at, page: op.page }, byId)
+  if (!media) throw new AgentOpError(t.errors.sourceNotFound(op.source ?? '?'))
+  // Une image figée se tire de la vidéo ; sans moyen de la tirer, l'extrait autour de l'instant.
+  if (media.kind === 'image' && media.frame && !media.url) {
+    const f = media.frame
+    const fallback: StepMedia = { kind: 'video', url: f.videoUrl, sourceId: media.sourceId, start: f.start, end: f.end }
+    if (ctx.files) {
+      const files = ctx.files
+      const draft: InstructionContent = { ...ctx.get(), steps: [{ id: 'tmp', title: '', text: '', keyPoints: [], warning: null, media: [media] }] }
+      const done = await enrichMedia(draft, files, async (png, name) => (await files.upload(png, name, 'pages')).url).catch(() => null)
+      media = done?.steps[0]?.media[0] ?? fallback
+    } else media = fallback
+  }
+  const latest = ctx.get()
+  const { step, index } = stepOf(latest, ids, op.step)
+  const replace = op.media && op.media >= 1 && op.media <= step.media.length ? op.media - 1 : -1
+  const list = replace >= 0 ? step.media.map((m, j) => (j === replace ? media! : m)) : [...step.media, media].slice(-MAX_MEDIA)
+  return { content: withStep(latest, index, { ...step, media: list }), label: t.done.mediaUsed(index + 1, mediaLabel(media)), stepId: step.id }
+}
+
 const AI_OPS = new Set<AgentOpName>(['annotate', 'visual', 'illustrate'])
 
 /** Applique les opérations une à une, en montrant chacune. Une opération ratée n'arrête pas les autres. */
@@ -412,7 +583,7 @@ export async function runAgentOps(ops: AgentOp[], ctx: AgentRunContext): Promise
     ctx.log({ key, label: before.label, stepId: before.stepId, state: 'working' })
     await pause(250)
     try {
-      const r = AI_OPS.has(op.op) ? await applyAiOp(ctx, op, ids) : applyOp(ctx.get(), op, ids)
+      const r = op.op === 'use_media' ? await applyUseMedia(ctx, op, ids) : AI_OPS.has(op.op) ? await applyAiOp(ctx, op, ids) : applyOp(ctx.get(), op, ids)
       ctx.set(r.content)
       ctx.focus(r.stepId)
       ctx.log({ key, label: r.label, stepId: r.stepId, state: 'done' })

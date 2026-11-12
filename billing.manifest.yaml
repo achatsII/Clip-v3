@@ -187,3 +187,9 @@ ai_operations:
   - { key: edit_agent, capability: assistant.ask, feature: ai_credits, credits: 20, provider: google, level: mid }
   # Un schéma généré : une page HTML autonome (SVG, dessin, vue 3D).
   - { key: visual, capability: assistant.ask, feature: ai_credits, credits: 60, provider: google, level: mid }
+  # L'assistant d'édition revoit des sources d'origine, seulement quand la demande l'exige : un
+  # deuxième tour avec les médias joints (vidéo en basse définition, réponse courte). Une opération
+  # par taille, mêmes seuils que la génération ; environ 40 % du prix d'une génération de même taille.
+  - { key: look_s, capability: assistant.ask, feature: ai_credits, credits: 60, provider: google, level: mid }
+  - { key: look_m, capability: assistant.ask, feature: ai_credits, credits: 120, provider: google, level: mid }
+  - { key: look_l, capability: assistant.ask, feature: ai_credits, credits: 300, provider: google, level: mid }

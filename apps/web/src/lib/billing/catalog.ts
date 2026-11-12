@@ -20,6 +20,9 @@ export const AI_COSTS: Record<AiOperation, number> = {
   standard_agent: 5,
   edit_agent: 20,
   visual: 60,
+  look_s: 60,
+  look_m: 120,
+  look_l: 300,
 }
 
 export type FeatureKey =
