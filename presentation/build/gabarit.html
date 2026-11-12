@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{DECK_TITLE}}</title>
+
+<style>
+  /* ─── SlideFabrik contract layer — do not rename these selectors ─────────── */
+  :root {
+    --sf-design-w: 1200px;   /* the canvas the design was authored at */
+    --sf-design-h: 1200px;
+    --sf-scale: 0.9;         /* min(refW/designW, refH/designH) */
+    --sf-ref-ar: 1;          /* refW / refH of the chosen ratio — letterboxing, standalone only */
+    --sf-bg: #0B1020;        /* deck background; must NOT live on #presentation-container */
+  }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--sf-bg);
+  }
+
+  /* SlideFabrik forces this to 100vw/100vh, transparent, transform:none.
+     Never style it beyond layout. */
+  #presentation-container {
+    position: relative;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+  }
+
+  /* The stage. Full-bleed by default — inside the app, scaling happens outside
+     the iframe and anything here would fight it. `.sf-live` (standalone only)
+     turns it into a centred box of the ratio's aspect, black around it. */
+  #sf-stage { position: absolute; inset: 0; overflow: hidden; }
+
+  html.sf-live body { background: #000; }
+  html.sf-live #sf-stage {
+    inset: 0; margin: auto;
+    width:  min(100vw, calc(100vh * var(--sf-ref-ar)));
+    height: min(100vh, calc(100vw / var(--sf-ref-ar)));
+    background: var(--sf-bg);
+  }
+
+  /* Hide inactive slides with `display` — opacity/visibility are force-overridden. */
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    place-items: center;
+    overflow: hidden;
+    background: var(--sf-bg);
+  }
+  .slide.active { display: grid; }
+
+  /* The fixed design canvas. The scale lives HERE and nowhere else. */
+  .sf-canvas {
+    position: relative;
+    width: var(--sf-design-w);
+    height: var(--sf-design-h);
+    transform: scale(var(--sf-scale));
+    transform-origin: center center;
+    overflow: hidden;
+  }
+
+  /* ─── Presenter chrome ────────────────────────────────────────────────────
+     HIDDEN BY DEFAULT. Only the gate script's `.sf-live` reveals it, so a
+     detection miss costs a toolbar rather than baking one into a PDF export.
+     No class here may contain `slide`, `controls`, `slide-number` or `deck`.
+     ──────────────────────────────────────────────────────────────────────── */
+  #sf-ui { display: none; }
+  /* Pinned locally so the chrome measures the same whatever the pasted design CSS
+     does — a design shipping `* { box-sizing: border-box }` (or not) would
+     otherwise change every pill and tile by the width of its borders. */
+  html.sf-live #sf-ui, html.sf-live #sf-ui * { box-sizing: border-box; }
+  html.sf-live #sf-ui {
+    display: block;
+    position: absolute; inset: 0; z-index: 90;
+    pointer-events: none;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    transition: opacity .4s ease;
+  }
+  html.sf-live #sf-ui.sf-idle:not(.sf-open) { opacity: 0; }
+
+  .sf-zone {
+    position: absolute; top: 25%; height: 50%; width: 10%;
+    border: 0; background: transparent; cursor: pointer;
+    pointer-events: auto; opacity: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .15s ease, background .15s ease;
+  }
+  .sf-zone:hover, .sf-zone:focus-visible { opacity: 1; background: rgba(255,255,255,.05); }
+  .sf-zone[data-sf-dir="prev"] { left: 0;  border-radius: 0 24px 24px 0; }
+  .sf-zone[data-sf-dir="next"] { right: 0; border-radius: 24px 0 0 24px; }
+  .sf-zone span {
+    width: 48px; height: 48px; border-radius: 999px;
+    background: rgba(0,0,0,.45); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; line-height: 1; backdrop-filter: blur(4px);
+  }
+
+  /* z-index above .sf-grid: the overlay must not bury the button that opened it. */
+  .sf-bar {
+    position: absolute; top: 16px; right: 16px; z-index: 2;
+    display: flex; align-items: center; gap: 8px; pointer-events: auto;
+  }
+  .sf-btn, .sf-count {
+    height: 40px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.5);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+  }
+  .sf-btn { width: 40px; font-size: 16px; cursor: pointer; }
+  .sf-btn:hover { background: rgba(0,0,0,.8); }
+  .sf-count {
+    padding: 0 14px; font-size: 12px; font-weight: 600;
+    /* The " / N" after the span is an anonymous flex item, and flex trims its
+       leading whitespace — the counter would read "1/ 5". The markup shape is
+       fixed by SlideFabrik's rewrite, so the space has to be preserved here. */
+    white-space: pre;
+    letter-spacing: .08em; font-variant-numeric: tabular-nums;
+  }
+
+  .sf-prog { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: rgba(255,255,255,.12); }
+  .sf-prog i { display: block; height: 100%; width: 0; background: rgba(255,255,255,.75); transition: width .3s ease; }
+
+  /* auto-FIT (not auto-fill) with a capped track: three tiles centre across the
+     screen instead of huddling in the corner of empty 200px tracks, and forty
+     tiles still wrap sanely. */
+  .sf-grid {
+    position: absolute; inset: 0; display: none; z-index: 1;
+    background: rgba(0,0,0,.92); padding: 72px 48px; gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 260px));
+    justify-content: center; align-content: start;
+    overflow: auto; pointer-events: auto;
+  }
+  html.sf-live #sf-ui.sf-open .sf-grid { display: grid; }
+  .sf-tile {
+    border: 1px solid rgba(255,255,255,.18); border-radius: 12px;
+    background: rgba(255,255,255,.04); color: #fff;
+    padding: 16px; min-height: 96px; gap: 10px; cursor: pointer; text-align: left;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .sf-tile:hover { background: rgba(255,255,255,.1); }
+  .sf-tile.sf-on { border-color: #fff; background: rgba(255,255,255,.16); }
+  .sf-tile b { font-size: 11px; letter-spacing: .14em; opacity: .55; }
+  .sf-tile span { font-size: 14px; line-height: 1.35; }
+
+  /* ─── Design CSS ─────────────────────────────────────────────────────────
+     Paste the source design's stylesheet below, unchanged.
+     Reserved names you must NOT use: any class containing `slide` (other than
+     the slide root), `controls`, `slide-number`, `deck`, `deck-container`,
+     `presentation-container`, `presentation-container-main`, or any `sf-*` above.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* {{DESIGN_CSS}} */
+</style>
+
+<script id="sf-autofit">
+/* Recomputes --sf-scale from the live stage size, so the deck survives a later
+   ratio change in the app and letterboxes correctly standalone. Deliberately free
+   of any `currentSlide` assignment: the editor replaces the FIRST script block
+   containing one, and this must survive. */
+(function () {
+  var W = 1200, H = 1200;  /* keep in sync with --sf-design-w / --sf-design-h */
+  function fit() {
+    var stage = document.getElementById('sf-stage');
+    var w = stage ? stage.clientWidth  : 0;
+    var h = stage ? stage.clientHeight : 0;
+    if (!w || !h) { w = window.innerWidth; h = window.innerHeight; }
+    document.documentElement.style.setProperty('--sf-scale', String(Math.min(w / W, h / H)));
+  }
+  window.addEventListener('resize', fit);
+  document.addEventListener('DOMContentLoaded', function () {
+    fit();
+    var stage = document.getElementById('sf-stage');
+    if (stage && window.ResizeObserver) { new ResizeObserver(fit).observe(stage); }
+  });
+  fit();
+})();
+</script>
+</head>
+
+<body>
+<div id="presentation-container">
+<div id="sf-stage">
+
+<!-- SLIDE 1: COUVERTURE -->
+<div class="slide" id="slide-1" data-sf-label="COUVERTURE">
+  <div class="sf-canvas">
+    <!-- {{SLIDE_1_MARKUP}} -->
+  </div>
+</div>
+
+<!-- SLIDE 2: VUE GLOBALE USINE 1 -->
+<div class="slide" id="slide-2" data-sf-label="VUE GLOBALE USINE 1">
+  <div class="sf-canvas">
+    <!-- {{SLIDE_2_MARKUP}} -->
+  </div>
+</div>
+
+</div>
+
+<!-- Presenter chrome. Lives in the master shell (after the last slide), ships
+     hidden, and is revealed only by the gate script at the end of this body. -->
+<div id="sf-ui" aria-hidden="true">
+  <button class="sf-zone" data-sf-dir="prev" aria-label="Slide precedente"><span>&#8249;</span></button>
+  <button class="sf-zone" data-sf-dir="next" aria-label="Slide suivante"><span>&#8250;</span></button>
+  <div class="sf-bar">
+    <div class="sf-count"><span id="current-slide-num">1</span> / 2</div>
+    <button class="sf-btn" data-sf-act="grid" aria-label="Vue d ensemble">&#9638;</button>
+    <button class="sf-btn" data-sf-act="full" aria-label="Plein ecran">&#9974;</button>
+  </div>
+  <div class="sf-prog"><i></i></div>
+  <div class="sf-grid" aria-label="Slides"></div>
+</div>
+
+</div>
+
+<script>
+/* Navigation. ALL of it lives in this one block, and this block must contain
+   `currentSlide = <digits>` so the editor can swap it out wholesale.
+   updateSlide / nextSlide / prevSlide / goToSlide must stay top-level function
+   declarations — the presentation bridge looks them up by name. */
+/* `var`, not `let`: a root-level `let` is not a property of window, and the
+   presentation bridge looks these up by name. With `let` the deck navigates in
+   the editor and dies in fullscreen only — after you have finished checking. */
+var currentSlide = 1;
+var totalSlides = 2;   /* {{TOTAL_SLIDES}} — must equal the number of SLIDE comments */
+
+function updateSlide() {
+  var slides = document.querySelectorAll('.slide');
+  for (var i = 0; i < slides.length; i++) {
+    slides[i].classList.toggle('active', i === currentSlide - 1);
+  }
+  /* Guarded: sfSyncUi is declared in a later block, so it does not exist yet on
+     the initial call during parse. */
+  if (typeof sfSyncUi === 'function') sfSyncUi();
+}
+function nextSlide() { if (currentSlide < totalSlides) { currentSlide++; updateSlide(); } }
+function prevSlide() { if (currentSlide > 1) { currentSlide--; updateSlide(); } }
+
+/* 0-BASED, on purpose: SlideFabrik's presenter bridge calls goToSlide(index - 1). */
+function goToSlide(i) {
+  var n = i + 1;
+  if (n >= 1 && n <= totalSlides && n !== currentSlide) { currentSlide = n; updateSlide(); }
+}
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') nextSlide();
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') prevSlide();
+});
+
+updateSlide();
+</script>
+
+<script id="sf-presenter">
+/* Standalone presenter. MUST stay the last script in <body>: SlideFabrik appends
+   its marker style just before </head>, so a <head> script would run too early and
+   report "standalone" inside the app. MUST stay out of the nav block, which is
+   deleted in single-slide rendering. Contains no `<` + `div` substring — the
+   importer counts those raw strings when finding the end of a slide. */
+function sfSyncUi() {
+  var ui = document.getElementById('sf-ui');
+  if (!ui || !document.documentElement.classList.contains('sf-live')) return;
+  /* Long-hand on purpose: transform 3 treats a colon after these two names as if
+     it were an assignment, so a ternary here becomes a SyntaxError that kills the
+     whole block — fullscreen only. Note this comment carefully avoids writing the
+     pattern out: a match inside a COMMENT also makes transform 2 delete the block. */
+  var n = 1, t = 1;
+  if (typeof currentSlide === 'number') n = currentSlide;
+  if (typeof totalSlides === 'number') t = totalSlides;
+
+  var num = document.getElementById('current-slide-num');
+  if (num) num.textContent = String(n);
+
+  var bar = ui.querySelector('.sf-prog i');
+  if (bar) bar.style.width = (t > 1 ? ((n - 1) / (t - 1)) * 100 : 100) + '%';
+
+  var tiles = ui.querySelectorAll('.sf-tile');
+  for (var i = 0; i < tiles.length; i++) tiles[i].classList.toggle('sf-on', i === n - 1);
+
+  try { history.replaceState(null, '', '#' + n); } catch (e) {}
+}
+
+(function () {
+  /* ── The gate ── */
+  if (document.getElementById('sf-fullbleed-fix')) return;  /* inside SlideFabrik */
+  if (window.self !== window.top) return;                   /* embedded elsewhere */
+
+  var ui = document.getElementById('sf-ui');
+  if (!ui) return;
+  document.documentElement.classList.add('sf-live');
+  ui.setAttribute('aria-hidden', 'false');
+
+  /* ── Overview tiles: createElement only, labels not clones (see the skill) ── */
+  var slides = document.querySelectorAll('.slide');
+  var grid = ui.querySelector('.sf-grid');
+  for (var i = 0; i < slides.length; i++) {
+    (function (idx) {
+      var tile = document.createElement('button');
+      tile.className = 'sf-tile';
+      var num = document.createElement('b');
+      num.textContent = ('0' + (idx + 1)).slice(-2);
+      var lab = document.createElement('span');
+      lab.textContent = slides[idx].getAttribute('data-sf-label') || ('Slide ' + (idx + 1));
+      tile.appendChild(num);
+      tile.appendChild(lab);
+      tile.addEventListener('click', function () { goToSlide(idx); ui.classList.remove('sf-open'); });
+      grid.appendChild(tile);
+    })(i);
+  }
+
+  function toggleFull() {
+    var el = document.documentElement;
+    var on = document.fullscreenElement || document.webkitFullscreenElement;
+    var fn = on ? (document.exitFullscreen || document.webkitExitFullscreen)
+                : (el.requestFullscreen || el.webkitRequestFullscreen);
+    if (!fn) return;
+    try { fn.call(on ? document : el); } catch (e) {}
+  }
+
+  /* blur() after each click so a focused button does not eat the Space key. */
+  function on(sel, fn) {
+    var el = ui.querySelector(sel);
+    if (el) el.addEventListener('click', function () { this.blur(); fn(); });
+  }
+  on('[data-sf-dir="prev"]', prevSlide);
+  on('[data-sf-dir="next"]', nextSlide);
+  on('[data-sf-act="grid"]', function () { ui.classList.toggle('sf-open'); });
+  on('[data-sf-act="full"]', toggleFull);
+
+  /* Arrows and Space are already handled by the nav block — extras only here. */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Home') goToSlide(0);
+    else if (e.key === 'End') goToSlide(totalSlides - 1);
+    else if (e.key === 'f' || e.key === 'F') toggleFull();
+    else if (e.key === 'o' || e.key === 'O') ui.classList.toggle('sf-open');
+    else if (e.key === 'Escape') ui.classList.remove('sf-open');
+    else return;
+    e.preventDefault();
+  });
+
+  /* 75 px threshold — the same minSwipeDistance the app uses. */
+  var x0 = null;
+  document.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0;
+    x0 = null;
+    if (Math.abs(dx) < 75) return;
+    if (dx < 0) nextSlide(); else prevSlide();
+  }, { passive: true });
+
+  var idle;
+  function wake() {
+    ui.classList.remove('sf-idle');
+    clearTimeout(idle);
+    idle = setTimeout(function () { ui.classList.add('sf-idle'); }, 2500);
+  }
+  document.addEventListener('mousemove', wake);
+  document.addEventListener('keydown', wake);
+  document.addEventListener('touchstart', wake, { passive: true });
+  wake();
+
+  /* Deep link: ?slide=3 or #3 */
+  var q = new URLSearchParams(window.location.search).get('slide');
+  var h = (window.location.hash || '').replace('#', '');
+  var start = parseInt(q || h, 10);
+  if (start >= 1 && start <= totalSlides) goToSlide(start - 1);
+
+  sfSyncUi();
+})();
+</script>
+</body>
+</html>
