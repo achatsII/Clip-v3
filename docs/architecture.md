@@ -262,6 +262,14 @@ instruction.
   charge l'autre version. Le lecteur ouvert sur l'instruction se relit aussi. Vos propres
   modifications sur un autre appareil vous sont proposées (« Ouvrir ») quand cet écran est ailleurs
   dans l'app, une fois par instruction toutes les dix minutes ; jamais celles des autres.
+  L'écran qui suit va à l'étape changée, l'encadre quelques secondes (« En direct : modifiée sur
+  l'app mobile ») et une marque qui vient d'arriver clignote en apparaissant
+  (`src/lib/annotations/fresh.ts`). Un témoin dit où en est le direct (`LiveBadge`) : vert quand
+  il est branché ; ambre quand il ne passe pas (réseau qui bloque, jeton refusé), et l'écran se
+  relit alors seul toutes les 8 s (`useDraftWatch`, `src/lib/realtime/watch.ts`) : une lecture
+  minuscule des instructions modifiées depuis peu (date et appareil seulement), et l'instruction
+  entière seulement si un autre appareil l'a changée. Chaque enregistrement d'un brouillon écrit
+  l'appareil qui l'a fait (`updatedFrom`, `updatedVia`).
 - **Le diagnostic** : `GET /api/realtime/status` demande un vrai jeton à Ably avec les droits de
   l'app ; `ok: false` avec `code` 40101 veut dire une clé mal copiée, 40160 des droits insuffisants
   (la clé doit pouvoir publier, écouter et voir la présence sur `clip:org:*`).

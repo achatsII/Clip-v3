@@ -279,6 +279,27 @@ html[data-kb='open'] .kb-fit {
   background-size: 300% 300%;
   animation: creating-flow 7s ease-in-out infinite;
 }
+/* Une marque qui vient d'arriver (assistant, autre appareil) : elle clignote deux fois, en brillant. */
+@keyframes mark-in {
+  0% {
+    opacity: 0;
+  }
+  20%,
+  60% {
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
+  }
+  40% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+  }
+}
+@utility mark-in {
+  animation: mark-in 1.6s ease-out both;
+}
 @utility creating-sweep {
   &::after {
     content: '';

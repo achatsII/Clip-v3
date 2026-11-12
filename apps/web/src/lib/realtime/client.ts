@@ -6,13 +6,48 @@
  * connexion, publier ne fait rien : la relecture à intervalle prend le relais.
  */
 import type { Realtime, RealtimeChannel } from 'ably'
+import { useSyncExternalStore } from 'react'
+import { inNativeShell } from '../bridge/native'
 import { orgChannel, type RealtimeEvent } from './events'
 
 let client: Realtime | null = null
 const listeners = new Set<(e: RealtimeEvent) => void>()
 
+/**
+ * Où en est le direct sur cet appareil : `live` quand le canal de l'usine est branché (on reçoit et
+ * on envoie) ; `connecting` en route ; `down` quand il ne passe pas (jeton refusé, réseau qui
+ * bloque) ; `off` sans temps réel. Les écrans s'en servent pour le dire, et pour se relire seuls
+ * quand le direct ne passe pas.
+ */
+export type RealtimeState = 'off' | 'connecting' | 'live' | 'down'
+let state: RealtimeState = 'off'
+const stateListeners = new Set<() => void>()
+
+export function setRealtimeState(next: RealtimeState, why?: unknown) {
+  if (next === 'down' && state !== 'down') console.warn('[CLIP] Temps réel indisponible', why ?? '')
+  if (state === next) return
+  state = next
+  stateListeners.forEach((fn) => fn())
+}
+
+export function useRealtimeState(): RealtimeState {
+  return useSyncExternalStore(
+    (fn) => {
+      stateListeners.add(fn)
+      return () => {
+        stateListeners.delete(fn)
+      }
+    },
+    () => state,
+    () => 'off',
+  )
+}
+
 /** Cet onglet, pour les autres : deux appareils d'une même personne ne se confondent pas. */
 export const deviceId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `d-${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+/** Ce que chaque enregistrement d'un brouillon écrit pour les autres écrans : la date, et l'appareil qui écrit. */
+export const writtenBy = (at: string) => ({ updatedAt: at, updatedFrom: deviceId, updatedVia: inNativeShell() ? ('app' as const) : ('web' as const) })
 
 /** S'abonne à ce qui arrive des autres appareils (reçu par `RealtimeBridge`). */
 export function onRealtime(fn: (e: RealtimeEvent) => void): () => void {
@@ -35,6 +70,7 @@ export function connectRealtime(orgId: string, getToken: () => string | null): P
   if (connecting && org === orgId) return connecting
   disconnectRealtime()
   org = orgId
+  setRealtimeState('connecting')
   connecting = import('ably')
     .then(({ Realtime }) => {
       client = new Realtime({
@@ -48,10 +84,23 @@ export function connectRealtime(orgId: string, getToken: () => string | null): P
             .then((tokenRequest) => callback(null, tokenRequest), (e: unknown) => callback(e instanceof Error ? e.message : 'jeton', null))
         },
       })
+      // L'état de la connexion, pour le dire à l'écran (le canal branché, lui, se confirme à l'abonnement).
+      client.connection.on((change) => {
+        if (change.current === 'connecting' || change.current === 'disconnected') setRealtimeState('connecting')
+        else if (change.current === 'suspended' || change.current === 'failed') setRealtimeState('down', change.reason?.message ?? change.current)
+        else if (change.current === 'connected' && channel?.state === 'attached') setRealtimeState('live')
+      })
       channel = client.channels.get(orgChannel(orgId))
+      channel.on((change) => {
+        if (change.current === 'attached') setRealtimeState('live')
+        else if (change.current === 'failed' || change.current === 'suspended') setRealtimeState('down', change.reason?.message ?? change.current)
+      })
       return channel
     })
-    .catch(() => null)
+    .catch((e: unknown) => {
+      setRealtimeState('down', e)
+      return null
+    })
     .finally(() => {
       connecting = null
     })
@@ -73,4 +122,5 @@ export function disconnectRealtime(): void {
   client = null
   channel = null
   org = null
+  setRealtimeState('off')
 }

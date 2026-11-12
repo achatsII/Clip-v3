@@ -45,6 +45,15 @@ export const editor = {
       redoTitle: (mac: boolean) => `Rétablir (${mac ? '⇧⌘Z' : 'Ctrl+Maj+Z'})`,
       history: 'Voir l’historique des modifications',
     },
+    /** Le témoin du direct : ce qui change sur un autre appareil s'affiche-t-il ici ? */
+    liveBadge: {
+      on: 'En direct',
+      onHint: 'Ce qui change sur un autre appareil s’affiche ici aussitôt.',
+      connecting: 'Connexion au direct…',
+      connectingHint: 'Le direct se branche. En attendant, l’écran se relit seul.',
+      polling: 'Relu toutes les 8 s',
+      pollingHint: 'Le direct ne passe pas sur ce réseau : l’écran se relit seul toutes les 8 secondes.',
+    },
     backToList: 'Instructions',
     header: {
       publishedBadge: (version: number) => `Publiée · v${num(version)}`,

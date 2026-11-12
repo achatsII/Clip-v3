@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowDown, ArrowUp, Clock, Copy, Film, Image as ImageIcon, ImagePlus, Pencil, Plus, Shapes, Sparkles, Trash2, Wand2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Clock, Copy, Film, Image as ImageIcon, ImagePlus, Pencil, Plus, Radio, Shapes, Sparkles, Trash2, Wand2, X } from 'lucide-react'
 import { useState } from 'react'
 import { AiCost } from '@/components/billing/AiCost'
 import { DictateButton } from '@/components/capture/DictateButton'
@@ -55,6 +55,7 @@ export function StepEditor({
   onSourceAdded,
   highlight,
   agentWorking,
+  remoteNote,
   section = 'all',
 }: {
   content: InstructionContent
@@ -71,6 +72,8 @@ export function StepEditor({
   highlight?: string | null
   /** L'assistant d'édition modifie cette étape en ce moment. */
   agentWorking?: boolean
+  /** Un autre appareil vient de changer cette étape : on le dit, et l'étape s'encadre. */
+  remoteNote?: string | null
   /** « media » : seulement les réglages du média (vue « comme au poste », dans une fenêtre). */
   section?: 'all' | 'media'
 }) {
@@ -147,7 +150,12 @@ export function StepEditor({
   }
 
   return (
-    <div className={cn(section === 'media' ? '' : 'glass-panel rounded-[32px] p-4 transition-shadow sm:p-6', section === 'all' && highlight && 'ring-4 ring-amber-300/60', section === 'all' && agentWorking && 'ring-4 ring-violet-400/70')}>
+    <div className={cn(section === 'media' ? '' : 'glass-panel rounded-[32px] p-4 transition-shadow sm:p-6', section === 'all' && highlight && 'ring-4 ring-amber-300/60', section === 'all' && agentWorking && 'ring-4 ring-violet-400/70', section === 'all' && remoteNote && 'ring-4 ring-sky-400/80')}>
+      {section === 'all' && remoteNote && !agentWorking && (
+        <p className="animate-pop-in mb-3 flex items-center gap-2 rounded-2xl bg-sky-50 px-3 py-2 text-sm font-black text-sky-700 dark:bg-sky-500/15 dark:text-sky-200" role="status">
+          <Radio className="h-4 w-4 animate-pulse" /> {remoteNote}
+        </p>
+      )}
       {section === 'all' && agentWorking && (
         <p className="mb-3 flex items-center gap-2 rounded-2xl bg-violet-50 px-3 py-2 text-sm font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
           <Sparkles className="h-4 w-4 animate-pulse" /> {t.editor.step.assistantWorking}

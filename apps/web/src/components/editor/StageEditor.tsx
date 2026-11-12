@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Copy, History, ImagePlus, Loader2, MoreHorizontal, Plus, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Copy, History, ImagePlus, Loader2, MoreHorizontal, Plus, Radio, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { StepMediaArea } from '@/components/player/StepMediaArea'
 import { AutoTextarea } from '@/components/ui/Field'
@@ -52,6 +52,10 @@ export interface StageEditorProps {
   saveLabel?: ReactNode
   /** Annuler et rétablir (dans l'en-tête, sur ordinateur). */
   history?: DraftHistory
+  /** Le témoin du direct, dans l'en-tête. */
+  badge?: ReactNode
+  /** Un autre appareil vient de changer cette étape : on le dit, et l'étape s'encadre. */
+  remoteNote?: string | null
   /** Ouvre l'historique : versions publiées et points de retour du brouillon. */
   onHistory?: () => void
   onChange: (s: Step) => void
@@ -182,6 +186,11 @@ function StageText({ p }: { p: Inner }) {
   const keyPoints = step.keyPoints ?? []
   return (
     <>
+      {p.remoteNote && !p.agentWorking && (
+        <p className="animate-pop-in flex items-center gap-2 rounded-2xl bg-sky-50 px-4 py-2 text-sm font-black text-sky-700 dark:bg-sky-500/15 dark:text-sky-200" role="status">
+          <Radio className="h-4 w-4 animate-pulse" /> {p.remoteNote}
+        </p>
+      )}
       {p.agentWorking && (
         <p className="flex items-center gap-2 rounded-2xl bg-violet-50 px-4 py-2 text-sm font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
           <Sparkles className="h-4 w-4 animate-pulse" /> {t.editor.step.assistantWorking}
@@ -283,6 +292,7 @@ function StageCanvas(p: Inner) {
             <p className="truncate text-sm font-black text-slate-900 dark:text-white">{content.title}</p>
             {p.saveLabel && <p className="truncate text-xs font-bold text-slate-400">{p.saveLabel}</p>}
           </div>
+          {p.badge}
           {!readOnly && p.history && <UndoButtons history={p.history} className="shrink-0" />}
           <StepNav p={p} className="w-[min(420px,34vw)]" />
           {!readOnly && (
@@ -298,7 +308,7 @@ function StageCanvas(p: Inner) {
         </div>
       </header>
 
-      <div key={step.id} className={cn('animate-fade-in flex min-h-0 flex-1', p.agentWorking && 'ring-4 ring-violet-400/70 ring-inset')}>
+      <div key={step.id} className={cn('animate-fade-in flex min-h-0 flex-1', p.agentWorking && 'ring-4 ring-violet-400/70 ring-inset', p.remoteNote && !p.agentWorking && 'ring-4 ring-sky-400/80 ring-inset')}>
         {hasMedia && (
           <div className="relative min-w-0 flex-[1.5] bg-slate-900">
             <StepMediaArea step={step} labels={t.editor.mediaArea} />
@@ -364,7 +374,7 @@ function StagePhone(p: Inner) {
         )}
       </div>
 
-      <div className={cn('glass-panel overflow-hidden rounded-[32px] p-0 transition-shadow', p.agentWorking && 'ring-4 ring-violet-400/70')}>
+      <div className={cn('glass-panel overflow-hidden rounded-[32px] p-0 transition-shadow', p.agentWorking && 'ring-4 ring-violet-400/70', p.remoteNote && !p.agentWorking && 'ring-4 ring-sky-400/80')}>
         {/* Le média, comme au poste */}
         <div className="relative h-[42dvh] bg-slate-900 sm:h-[50dvh]">
           {step.media.length ? (

@@ -5,17 +5,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Player, type PlayerProps } from '@/components/player/Player'
 import { useSession } from '@/components/providers/Session'
 import { useToast } from '@/components/ui/Toast'
-import { cacheDraft, cacheInstruction } from '@/hooks/queries'
+import { cacheDraft, cacheInstruction, qk } from '@/hooks/queries'
+import { useDraftWatch } from '@/hooks/useDraftWatch'
 import { useDraftHistory } from '@/hooks/useDraftHistory'
 import { inNativeShell } from '@/lib/bridge/native'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
-import { T } from '@/lib/model/repo'
+import { nowIso, T } from '@/lib/model/repo'
 import { saveDraft } from '@/lib/model/service'
 import type { Instruction, InstructionContent, Source } from '@/lib/model/types'
-import { deviceId, publishRealtime } from '@/lib/realtime/client'
+import { deviceId, publishRealtime, writtenBy } from '@/lib/realtime/client'
 import { changedSteps, followStep } from '@/lib/realtime/liveDraft'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
+import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
 import { AgentBubble, AgentPanel } from './AgentPanel'
 
 type PreviewPlayerProps = Omit<PlayerProps, 'content' | 'focus' | 'onStepChange' | 'frameClassName'>
@@ -45,6 +47,8 @@ export function PreviewEditing({ doc, player }: { doc: Doc<Instruction>; player:
   const docRef = useRef(doc)
   docRef.current = doc
   const agentBusy = useRef(false)
+  /** La date du dernier brouillon connu ici : la relecture de secours s'y compare. */
+  const knownAt = useRef<string | null>(doc.json_data.updatedAt ?? null)
   const [focus, setFocus] = useState<{ stepId: string; key: number } | null>(null)
   const [stepId, setStepId] = useState<string | null>(null)
   const [agentOpen, setAgentOpen] = useState(false)
@@ -57,7 +61,9 @@ export function PreviewEditing({ doc, player }: { doc: Doc<Instruction>; player:
     }
     const saved = latest.current
     try {
-      await saveDraft(data, doc._id, docRef.current.json_data, saved, actor)
+      const at = nowIso()
+      await saveDraft(data, doc._id, docRef.current.json_data, saved, actor, writtenBy(at))
+      knownAt.current = at
       cacheDraft(qc, doc._id, saved)
       // L'éditeur ouvert ailleurs (l'ordinateur derrière soi) suit, à l'étape changée.
       if (live) publishRealtime({ type: 'draft', id: doc._id, title: saved.title, userId: actor.id, byName: actor.name, device: inNativeShell() ? 'app' : 'web', steps: changedSteps(lastSaved.current, saved), from: deviceId })
@@ -104,17 +110,28 @@ export function PreviewEditing({ doc, player }: { doc: Doc<Instruction>; player:
       clearTimeout(timer.current)
       const draft = latest.current
       cacheDraft(qc, doc._id, draft)
-      void saveDraft(data, doc._id, docRef.current.json_data, draft, actor).catch(() => undefined)
+      void saveDraft(data, doc._id, docRef.current.json_data, draft, actor, writtenBy(nowIso())).catch(() => undefined)
     },
     [data, doc._id, actor, qc],
   )
 
+  // Le direct ne passe pas : l'aperçu se relit seul toutes les 8 s (le temps réel, lui, relit l'instruction).
+  useDraftWatch({
+    id: doc._id,
+    enabled: liveToggle,
+    known: () => knownAt.current,
+    idle: () => !timer.current && !agentBusy.current,
+    onRemote: () => void qc.invalidateQueries({ queryKey: qk.instruction(doc._id) }),
+  })
+
   // Le brouillon relu, modifié sur un autre appareil : on le montre, sauf si quelque chose attend ici.
   const remoteDraft = doc.json_data.draft
   useEffect(() => {
+    knownAt.current = doc.json_data.updatedAt ?? knownAt.current
     if (!remoteDraft || timer.current || agentBusy.current) return
     if (JSON.stringify(remoteDraft) === JSON.stringify(latest.current)) return
     const changed = changedSteps(latest.current, remoteDraft)
+    markFresh(newAnnotationIds(latest.current, remoteDraft))
     latest.current = remoteDraft
     lastSaved.current = remoteDraft
     setContent(remoteDraft)

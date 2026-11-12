@@ -289,6 +289,9 @@ export interface Instruction {
   authorName: string
   updatedBy?: string
   updatedByName?: string
+  /** L'appareil (onglet) qui a écrit le brouillon, et lequel : l'écran ouvert ailleurs suit ses changements. */
+  updatedFrom?: string
+  updatedVia?: 'app' | 'web'
   createdAt: string
   updatedAt: string
   /** Lien public direct (uuid d'un lien de redirection). */

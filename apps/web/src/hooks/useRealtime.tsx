@@ -7,7 +7,7 @@ import { useSession } from '@/components/providers/Session'
 import { useToast } from '@/components/ui/Toast'
 import { useMessages } from '@/lib/i18n'
 import { getAccessToken } from '@/lib/gateway/client'
-import { connectRealtime, deviceId, disconnectRealtime, dispatchRealtime } from '@/lib/realtime/client'
+import { connectRealtime, deviceId, disconnectRealtime, dispatchRealtime, setRealtimeState } from '@/lib/realtime/client'
 import { isRealtimeEvent, refreshFor } from '@/lib/realtime/events'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
 import { qk } from './queries'
@@ -58,7 +58,11 @@ export function RealtimeBridge() {
           else void qc.invalidateQueries({ queryKey: qk.instruction(key.slice('instruction:'.length)) })
         }
       }
-      void channel.subscribe('event', onEvent)
+      // Le canal branché (ou refusé) se dit à l'écran : le témoin du direct, la relecture de secours.
+      channel.subscribe('event', onEvent).then(
+        () => setRealtimeState('live'),
+        (e: unknown) => setRealtimeState('down', e),
+      )
       off = () => channel.unsubscribe('event', onEvent)
     })
     return () => {

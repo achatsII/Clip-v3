@@ -45,11 +45,12 @@ import { Badge } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { cacheDraft, cacheInstruction, qk, useFeedback, useInstructions } from '@/hooks/queries'
 import { useDraftHistory } from '@/hooks/useDraftHistory'
+import { useDraftWatch } from '@/hooks/useDraftWatch'
 import { LockBadge } from '@/components/billing/Billing'
 import { useBilling, useEntitlement, useGate, useLimit } from '@/lib/billing/state'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
 import { inNativeShell } from '@/lib/bridge/native'
-import { deviceId, onRealtime, publishRealtime } from '@/lib/realtime/client'
+import { deviceId, onRealtime, publishRealtime, useRealtimeState, writtenBy } from '@/lib/realtime/client'
 import { changedSteps, followStep, remoteDraftAction } from '@/lib/realtime/liveDraft'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
@@ -79,6 +80,8 @@ import { QuestionsDialog, type QuestionAnswer } from './QuestionsDialog'
 import { StageEditor } from './StageEditor'
 import { StepEditor } from './StepEditor'
 import { StepList } from './StepList'
+import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
+import { LiveBadge } from './LiveBadge'
 import { UndoButtons, UndoPill } from './UndoControls'
 
 type SaveState = 'saved' | 'saving' | 'error'
@@ -98,6 +101,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const confirm = useConfirm()
   const t = useMessages()
   const tp = t.editor.page
+  const tpRef = useRef(tp)
+  tpRef.current = tp
   const router = useRouter()
   const params = useSearchParams()
   const instr = doc.json_data
@@ -142,9 +147,16 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   // L'édition en direct : le dernier brouillon enregistré (ici ou reçu), pour dire ce qui change.
   const realtime = useRealtimeAvailable()
   const liveToggle = useToggle('liveEditing')
+  // Annoncer ses changements : qui peut modifier, avec le temps réel. Suivre ceux des autres : tout
+  // le monde, par le temps réel, ou en se relisant seul quand il ne passe pas (`useDraftWatch`).
   const live = realtime && liveToggle && !readOnly
   const liveRef = useRef(live)
   liveRef.current = live
+  const realtimeState = useRealtimeState()
+  /** La date du dernier brouillon que cet écran connaît (écrit ici ou repris) : la relecture de secours s'y compare. */
+  const knownAt = useRef<string | null>(instr.updatedAt ?? null)
+  /** L'étape qu'un autre appareil vient de changer : encadrée quelques secondes. */
+  const [flash, setFlash] = useState<{ stepId: string; note: string } | null>(null)
   const lastSaved = useRef<InstructionContent>(instr.draft!)
   const saveStateRef = useRef<SaveState>('saved')
   saveStateRef.current = saveState
@@ -174,7 +186,9 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setSaveState('saving')
     try {
       const saved = latest.current
-      await saveDraft(data, doc._id, docRef.current.json_data, saved, actor)
+      const at = nowIso()
+      await saveDraft(data, doc._id, docRef.current.json_data, saved, actor, writtenBy(at))
+      knownAt.current = at
       // Revenir ici (depuis l'aperçu, la liste) montre ce brouillon, pas celui de la première lecture.
       cacheDraft(qc, doc._id, saved)
       setSaveState('saved')
@@ -231,7 +245,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         clearTimeout(timer.current)
         const draft = latest.current
         cacheDraft(qc, doc._id, draft)
-        void saveDraft(data, doc._id, docRef.current.json_data, draft, actor).catch(() => undefined)
+        void saveDraft(data, doc._id, docRef.current.json_data, draft, actor, writtenBy(nowIso())).catch(() => undefined)
       }
     },
     [data, doc._id, actor, qc],
@@ -276,6 +290,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           clearTimeout(timer.current)
           timer.current = null
         }
+        knownAt.current = fresh!.json_data.updatedAt ?? knownAt.current
+        // Rien de changé à l'écran (un autre champ, ou un écho) : on ne dit rien.
+        if (JSON.stringify(draft) === JSON.stringify(latest.current)) return
+        const changed = changedSteps(latest.current, draft)
+        // Une flèche ajoutée ailleurs clignote en apparaissant, même si l'écran change d'étape pour la montrer.
+        markFresh(newAnnotationIds(latest.current, draft))
         latest.current = draft
         lastSaved.current = draft
         setContent(draft)
@@ -284,8 +304,14 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         resetHistory()
         setSources(fresh!.json_data.sources)
         setStationIds(fresh!.json_data.stationIds)
-        const to = followStep(e.steps, draft)
-        if (to) setSelected(to)
+        // L'écran va à l'étape changée et l'encadre : on voit la flèche apparaître, le texte changer.
+        const to = followStep(changed.length ? changed : e.steps, draft)
+        const note = tpRef.current.live.updated(e.device, e.byName)
+        if (to) {
+          setSelected(to)
+          setFlash({ stepId: to, note })
+          requestAnimationFrame(() => document.getElementById('step-editor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
+        }
         setRemote({ byName: e.byName, device: e.device, conflict: false, at: Date.now() })
       } catch {
         /* la prochaine annonce, ou un rechargement, rattrapera */
@@ -299,11 +325,25 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     [data, doc._id, resetHistory],
   )
   useEffect(() => {
-    if (!live) return
+    if (!liveToggle || !realtime) return
     return onRealtime((e) => {
       if (e.type === 'draft' && e.id === doc._id) void pullRemote({ byName: e.byName, device: e.device, steps: e.steps })
     })
-  }, [live, doc._id, pullRemote])
+  }, [liveToggle, realtime, doc._id, pullRemote])
+  // Le direct ne passe pas (réseau, jeton) : l'écran se relit seul toutes les 8 s, s'il n'y a rien en cours ici.
+  useDraftWatch({
+    id: doc._id,
+    enabled: liveToggle,
+    known: () => knownAt.current,
+    idle: () => !timer.current && saveStateRef.current !== 'saving',
+    onRemote: (row) => void pullRemote({ byName: row.updatedByName, device: row.updatedVia ?? 'web' }),
+  })
+  // L'étape changée ailleurs reste encadrée quelques secondes.
+  useEffect(() => {
+    if (!flash) return
+    const t = setTimeout(() => setFlash(null), 4500)
+    return () => clearTimeout(t)
+  }, [flash])
   // L'avis « modifiée en direct » s'efface de lui-même ; un conflit reste jusqu'au choix.
   useEffect(() => {
     if (!remote || remote.conflict) return
@@ -537,6 +577,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           <ArrowLeft className="h-4 w-4" /> {tp.backToList}
         </Link>
         <div className="flex min-w-0 items-center gap-1">
+          {liveToggle && <LiveBadge state={realtimeState} />}
           <UndoButtons history={history} className="max-lg:hidden" />
           {/* L'état de l'enregistrement mène à l'historique : on y retrouve les états d'avant. */}
           <button
@@ -796,6 +837,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               agentWorking={agentStep === step.id}
               agentOpen={agentOpen}
               saveLabel={saveLabel}
+              badge={liveToggle ? <LiveBadge state={realtimeState} /> : null}
+              remoteNote={flash?.stepId === step.id ? flash.note : null}
               history={history}
               onHistory={() => setDialog('history')}
               onChange={setStep}
@@ -817,6 +860,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
             <StepEditor
               key={step.id}
               agentWorking={agentStep === step.id}
+              remoteNote={flash?.stepId === step.id ? flash.note : null}
               content={content}
               step={step}
               index={idx}

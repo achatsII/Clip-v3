@@ -42,6 +42,14 @@ export const editor: typeof Fr = {
       redoTitle: (mac: boolean) => `Redo (${mac ? '⇧⌘Z' : 'Ctrl+Shift+Z'})`,
       history: 'See the change history',
     },
+    liveBadge: {
+      on: 'Live',
+      onHint: 'Changes made on another device show up here right away.',
+      connecting: 'Connecting live…',
+      connectingHint: 'Live is connecting. Meanwhile, this screen refreshes itself.',
+      polling: 'Refreshed every 8 s',
+      pollingHint: 'Live isn’t getting through on this network: this screen refreshes itself every 8 seconds.',
+    },
     backToList: 'Instructions',
     header: {
       publishedBadge: (version: number) => `Published · v${num(version)}`,

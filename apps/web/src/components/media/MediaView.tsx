@@ -1,9 +1,10 @@
 'use client'
 
 import { Check, FileText, Hand, Maximize2, Pause, Play, Repeat, Repeat1, RotateCcw, Volume2, VolumeX } from 'lucide-react'
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useId, useMemo, useReducer, useRef, useState } from 'react'
 import { annotationsMarkup } from '@/lib/annotations/markup'
 import { useMessages, type Messages } from '@/lib/i18n'
+import { isFresh } from '@/lib/annotations/fresh'
 import { VIDEO_MODES, setVideoMode, type VideoMode } from '@/lib/media/videoMode'
 import type { Annotation, StepMedia } from '@/lib/model/types'
 import { cn, formatClock } from '@/lib/util/cn'
@@ -27,9 +28,31 @@ export function useMediaLabels(): MediaLabels {
  */
 export function AnnotationLayer({ annotations, className, ratio }: { annotations: Annotation[]; className?: string; ratio?: number | null }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
-  const html = useMemo(() => annotationsMarkup(annotations, { ratio: ratio ?? 1, idPrefix: `an${id}` }), [annotations, ratio, id])
+  // Les marques déjà là au premier affichage ne bougent pas ; une marque qui arrive ensuite (une
+  // flèche ajoutée par l'assistant, ou sur un autre appareil) clignote un instant pour se faire voir.
+  const known = useRef<Set<string> | null>(null)
+  if (known.current === null) known.current = new Set(annotations.filter((a) => !isFresh(a.id)).map((a) => a.id))
+  const [, settle] = useReducer((n: number) => n + 1, 0)
+  const fresh = annotations.filter((a) => !known.current!.has(a.id))
+  const steady = fresh.length ? annotations.filter((a) => known.current!.has(a.id)) : annotations
+  const freshKey = fresh.map((a) => a.id).join(',')
+  useEffect(() => {
+    if (!freshKey) return
+    const t = setTimeout(() => {
+      freshKey.split(',').forEach((x) => known.current!.add(x))
+      settle()
+    }, 2200)
+    return () => clearTimeout(t)
+  }, [freshKey])
+  const html = useMemo(() => annotationsMarkup(steady, { ratio: ratio ?? 1, idPrefix: `an${id}` }), [steady, ratio, id])
+  const freshHtml = useMemo(() => (fresh.length ? annotationsMarkup(fresh, { ratio: ratio ?? 1, idPrefix: `af${id}` }) : ''), [freshKey, ratio, id]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!annotations.length) return null
-  return <div className={cn('pointer-events-none absolute inset-0 [container-type:inline-size]', className)} dangerouslySetInnerHTML={{ __html: html }} />
+  return (
+    <>
+      {steady.length > 0 && <div className={cn('pointer-events-none absolute inset-0 [container-type:inline-size]', className)} dangerouslySetInnerHTML={{ __html: html }} />}
+      {freshHtml && <div key={freshKey} className={cn('mark-in pointer-events-none absolute inset-0 [container-type:inline-size]', className)} dangerouslySetInnerHTML={{ __html: freshHtml }} />}
+    </>
+  )
 }
 
 /** Image aux proportions réelles, avec ses annotations, contenue dans la boîte parente. */
