@@ -21,15 +21,19 @@ const listeners = new Set<(e: RealtimeEvent) => void>()
  */
 export type RealtimeState = 'off' | 'connecting' | 'live' | 'down'
 let state: RealtimeState = 'off'
-/** Pourquoi le direct ne passe pas (message technique, montré au survol du témoin). */
+/** Pourquoi le direct ne passe pas (message technique d'Ably et son code), montré par le témoin. */
 let reason = ''
+/** Le direct a-t-il pu démarrer sur cet appareil : temps réel offert par le serveur, usine connue. */
+let startInfo: { available: boolean; hasOrg: boolean } | null = null
 const stateListeners = new Set<() => void>()
 
 export function setRealtimeState(next: RealtimeState, why?: unknown) {
   if (next === 'down') {
-    const text = why instanceof Error ? why.message : typeof why === 'string' ? why : (why as { message?: string } | undefined)?.message ?? ''
+    const w = why as { message?: string; code?: number; statusCode?: number } | string | undefined
+    const text = typeof w === 'string' ? w : w?.message ?? ''
+    const code = typeof w === 'object' && w?.code ? ` (${w.code}${w.statusCode ? `/${w.statusCode}` : ''})` : ''
     if (state !== 'down') console.warn('[CLIP] Temps réel indisponible', why ?? '')
-    reason = text
+    reason = `${text}${code}`.trim()
   }
   if (state === next) return
   state = next
@@ -37,6 +41,16 @@ export function setRealtimeState(next: RealtimeState, why?: unknown) {
 }
 
 export const realtimeReason = () => reason
+export const realtimeStart = () => startInfo
+export function noteRealtimeStart(info: { available: boolean; hasOrg: boolean }) {
+  startInfo = info
+}
+
+/** « Reconnecter » au témoin : relance la connexion, ou la démarre si elle n'a pas pu l'être. */
+export function retryRealtime() {
+  if (client) wakeRealtime()
+  else if (typeof window !== 'undefined') window.dispatchEvent(new Event('clip:realtime-retry'))
+}
 
 export function useRealtimeState(): RealtimeState {
   return useSyncExternalStore(

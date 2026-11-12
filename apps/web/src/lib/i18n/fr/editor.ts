@@ -53,6 +53,13 @@ export const editor = {
       connectingHint: 'Le direct se branche. En attendant, l’écran se relit seul.',
       polling: 'Relu toutes les 8 s',
       pollingHint: 'Le direct ne passe pas sur ce réseau : l’écran se relit seul toutes les 8 secondes.',
+      /** Ce qui bloque, dans la fenêtre du témoin. */
+      reason: 'Raison :',
+      reconnect: 'Reconnecter',
+      notOffered: 'le temps réel n’est pas offert par le serveur.',
+      noOrg: 'l’usine de ce compte n’est pas connue sur cet appareil.',
+      notStarted: 'le direct n’a pas encore démarré sur cet appareil.',
+      unknown: 'inconnue.',
     },
     backToList: 'Instructions',
     header: {

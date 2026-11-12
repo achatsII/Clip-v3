@@ -2,12 +2,12 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { useToast } from '@/components/ui/Toast'
 import { useMessages } from '@/lib/i18n'
 import { getAccessToken, refreshSession } from '@/lib/gateway/client'
-import { connectRealtime, deviceId, disconnectRealtime, dispatchRealtime, setRealtimeState } from '@/lib/realtime/client'
+import { connectRealtime, deviceId, disconnectRealtime, dispatchRealtime, noteRealtimeStart, setRealtimeState } from '@/lib/realtime/client'
 import { isRealtimeEvent, refreshFor } from '@/lib/realtime/events'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
 import { qk } from './queries'
@@ -33,8 +33,16 @@ export function RealtimeBridge() {
   const here = useRef({ pathname: '', userId: profile.userId, liveEditing, t, toast, router })
   here.current = { pathname: usePathname(), userId: profile.userId, liveEditing, t, toast, router }
   const offered = useRef(new Map<string, number>())
+  // « Reconnecter » au témoin, quand le direct n'a pas pu démarrer.
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    const again = () => setAttempt((n) => n + 1)
+    window.addEventListener('clip:realtime-retry', again)
+    return () => window.removeEventListener('clip:realtime-retry', again)
+  }, [])
 
   useEffect(() => {
+    noteRealtimeStart({ available, hasOrg: !!orgId })
     if (!available || !orgId) return
     let off = () => undefined as void
     let alive = true
@@ -78,7 +86,7 @@ export function RealtimeBridge() {
       alive = false
       off()
     }
-  }, [available, orgId, qc])
+  }, [available, orgId, qc, attempt])
 
   // Quitter l'app (déconnexion) ferme la connexion.
   useEffect(() => () => disconnectRealtime(), [])

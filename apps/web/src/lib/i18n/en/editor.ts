@@ -49,6 +49,12 @@ export const editor: typeof Fr = {
       connectingHint: 'Live is connecting. Meanwhile, this screen refreshes itself.',
       polling: 'Refreshed every 8 s',
       pollingHint: 'Live isn’t getting through on this network: this screen refreshes itself every 8 seconds.',
+      reason: 'Reason:',
+      reconnect: 'Reconnect',
+      notOffered: 'live updates aren’t offered by the server.',
+      noOrg: 'this account’s plant isn’t known on this device.',
+      notStarted: 'live hasn’t started on this device yet.',
+      unknown: 'unknown.',
     },
     backToList: 'Instructions',
     header: {
