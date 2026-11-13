@@ -27,8 +27,13 @@ python3 <skill>/scripts/apercu.py plan.json
 La musique (`musique.json`) a été commandée une fois puis calée (`musique.py cale`) ; `musique.py plan --ecrire` et
 `cale` remettent la voix seule dans `timeline.json` : relancer `sfx-cues.mjs` et `sfx-mix.py` ensuite.
 
-Avant l'export MP4 : `bash clips-webm.sh export` (clips en 1920 × 1080), et remettre les grandes photos de
-`clips/assets/hq/` (ou les refaire depuis `inputs/gen/`).
+Exporter le MP4 (pleine qualité : 1920 × 1080, flou de mouvement, voix + musique + effets sonores) :
+
+```bash
+bash scripts/medias.sh export                       # clips 1080p, photos pleine résolution (clips/assets/hq, inputs/gen)
+python3 <skill>/scripts/export.py plan.json --demande "<la demande d'export>"   # → out/video-finale.mp4 et .srt
+bash scripts/medias.sh apercu                       # remet les médias légers de l'aperçu (artefact ≤ 16 Mo)
+```
 
 Photos et clips générés par IA : usine, personnes et données illustratives. La date d'échéance n'apparaît
 que dans le deck (fonction pas encore dans l'app).
