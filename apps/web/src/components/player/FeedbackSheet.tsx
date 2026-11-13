@@ -24,6 +24,7 @@ export function FeedbackSheet({
   data,
   files,
   base,
+  operatorName,
 }: {
   open: boolean
   onClose: () => void
@@ -32,10 +33,13 @@ export function FeedbackSheet({
   data: DataApi
   files: FilesApi | null
   base: Omit<Feedback, 'createdAt' | 'status' | 'kind' | 'comment' | 'photoUrl' | 'authorName'>
+  /** La personne identifiée au poste : son nom signe le retour. */
+  operatorName?: string
 }) {
   const [kind, setKind] = useState<FeedbackKind | null>(null)
   const [comment, setComment] = useState('')
   const [name, setName] = useState(() => {
+    if (operatorName) return operatorName
     try {
       return localStorage.getItem('clip_pref_operator_name') ?? ''
     } catch {

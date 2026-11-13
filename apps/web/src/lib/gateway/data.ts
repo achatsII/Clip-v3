@@ -7,7 +7,7 @@
  */
 import { APP_DATA_IDENTIFIER, SHARED_APP } from '../config'
 import { ApiError, GatewayClient } from './client'
-import { messages } from '@/lib/i18n'
+import { messages } from '@/lib/i18n/core'
 
 export interface Doc<T> {
   _id: string

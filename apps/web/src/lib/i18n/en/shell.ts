@@ -10,6 +10,7 @@ export const shell: typeof Fr = {
     stations: 'Stations',
     feedback: 'Feedback',
     stats: 'Statistics',
+    team: 'Team',
     import: 'Import documents',
     billing: 'Plan and credits',
     settings: 'Settings',

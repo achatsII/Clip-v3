@@ -6,7 +6,7 @@
  * déconnexion qui garde les préférences d'affichage (`ui_theme`).
  */
 import { APP_IDENTIFIER, GATEWAY_URL } from '../config'
-import { messages } from '@/lib/i18n'
+import { messages } from '@/lib/i18n/core'
 
 export class ApiError extends Error {
   status: number

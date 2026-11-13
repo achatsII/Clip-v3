@@ -3,7 +3,7 @@
  * dans le dictionnaire de la langue de l'outil (`i18n/<langue>/catalog.ts`) : chaque libellé se lit
  * au moment où on l'affiche, dans la langue choisie.
  */
-import { getLang, locale, messages } from '@/lib/i18n'
+import { getLang, locale, messages } from '@/lib/i18n/core'
 import type { CategoryKey, EnergyType, FeedbackKind, InstructionKind, MemberRole, WarningLevel } from './types'
 
 const words = () => messages().catalog

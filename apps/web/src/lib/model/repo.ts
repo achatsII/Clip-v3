@@ -3,7 +3,7 @@
  * connecté, ou celui d'un lien public (jeton guest à portée limitée).
  */
 import type { DataApi, Doc } from '../gateway/data'
-import { contentLanguage, messages, messagesIn } from '../i18n'
+import { contentLanguage, messages, messagesIn } from '../i18n/core'
 import type {
   Feedback,
   Instruction,
@@ -27,6 +27,12 @@ export const T = {
   importJob: 'clip_import',
   /** Les points de retour du brouillon (historique des modifications non publiées). */
   checkpoint: 'clip_checkpoint',
+  /** Les personnes qui travaillent aux postes, sans compte : un nom et un code à 4 chiffres. */
+  operator: 'clip_operator',
+  /** Le travail fait au poste : qui, quand, les valeurs relevées et les photos de preuve. */
+  execution: 'clip_execution',
+  /** Les réponses aux questions de compréhension d'une instruction (formation). */
+  training: 'clip_training',
 } as const
 
 export const nowIso = () => new Date().toISOString()

@@ -45,6 +45,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la publication
   sans jamais la retenir (`src/lib/media/reel.ts`). En novembre 2026, la route de montage répond 500
   en QA : le poste lit alors la vidéo d'origine.
+- **Qui est à la tablette** (toggle `operators`) : l'opérateur n'a pas de compte, un nom et un code à
+  4 chiffres (page `/equipe`, `clip_operator`, `src/lib/model/operators.ts`). Le code se donne et se
+  vérifie au serveur (`/api/operators/pin`, `/api/operators/verify`, `src/lib/server/operators.ts`) ;
+  la base n'en garde qu'une empreinte HMAC (clé `CLIP_PIN_SECRET`, sinon dérivée de `ABLY_KEY`). La
+  portée d'un lien est figée à sa création : elle porte une version (`LINK_SCOPE_VERSION`), et un
+  vieux lien se met à jour sans réimprimer le QR (`linkFollow`).
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le
@@ -68,6 +74,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - La coquille doit rester autonome : la publication Expo Go ne copie que `apps/mobile`. Aucun import
   hors de ce dossier ; après un changement de `packages/bridge`, `cd apps/mobile && npm run sync-bridge`
   (un test de la coquille échoue sinon).
+- Une route du serveur (`src/app/api`) ne tire jamais `@/lib/i18n` : ses hooks React font échouer la
+  build. Ce qu'une route peut atteindre (`gateway/client`, `gateway/data`, `model/repo`,
+  `model/catalog`) importe `@/lib/i18n/core`.
 - Les enveloppes des routes Data ne sont pas uniformes (`result` sur `/one`, `count` sur `/count`) :
   passer par `dataApi`.
 - La valeur interne d'un crédit d'IA, en argent, ne s'écrit nulle part dans le dépôt (code, docs,

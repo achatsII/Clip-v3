@@ -8,6 +8,7 @@ export const shell = {
     stations: 'Postes',
     feedback: 'Retours',
     stats: 'Statistiques',
+    team: 'Équipe',
     import: 'Importer des documents',
     billing: 'Abonnement et crédits',
     settings: 'Réglages',

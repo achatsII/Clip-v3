@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -28,6 +28,8 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   deleteAccount: true,
   // La relecture périodique des instructions publiées (« à revoir dans 1 an »).
   renewal: true,
+  // Qui travaille au poste : l'équipe (sans compte), son code à 4 chiffres, et « Qui êtes-vous ? » à la tablette.
+  operators: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -48,4 +50,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   aiConsent: false,
   deleteAccount: false,
   renewal: false,
+  operators: false,
 }

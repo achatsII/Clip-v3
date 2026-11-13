@@ -1,7 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Copy, ExternalLink, Lock, Mic, QrCode, RefreshCw, Tablet, Trash2 } from 'lucide-react'
+import { ArrowLeft, Copy, ExternalLink, Lock, Mic, QrCode, RefreshCw, Tablet, Trash2, UserRound } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
@@ -22,6 +22,7 @@ import { useMessages } from '@/lib/i18n'
 import { insertDictation } from '@/lib/media/dictation'
 import { nowIso, T } from '@/lib/model/repo'
 import type { Station } from '@/lib/model/types'
+import { LINK_SCOPE_VERSION } from '@/lib/model/linkScope'
 import { copyText, createShareLink, linkUrl } from '@/lib/share'
 import { useToggle } from '@/lib/toggles'
 import { formatDate } from '@/lib/util/cn'
@@ -37,6 +38,7 @@ export default function StationPage() {
   const stations = useStations()
   const instructions = useInstructions()
   const voiceToggle = useToggle('voiceAssistant')
+  const operatorsOn = useToggle('operators')
   const voice = useEntitlement('voice_assistant')
   const gate = useGate()
   const [busy, setBusy] = useState(false)
@@ -63,7 +65,8 @@ export default function StationPage() {
     setBusy(true)
     try {
       const link = await createShareLink('station', id, { mode, assistant: withAssistant })
-      await patch({ linkId: link.id, linkMode: mode, linkCreatedAt: nowIso() })
+      // Un nouveau code remplace l'ancien pour de bon : les anciens liens ne suivent plus.
+      await patch({ linkId: link.id, linkMode: mode, linkCreatedAt: nowIso(), linkVersion: LINK_SCOPE_VERSION, linkAssistant: withAssistant, linkFollow: [] })
       toast.success(s.linkId ? w.qrReplaced : w.qrCreated, s.linkId ? w.qrReplacedHint : w.qrCreatedHint)
     } catch (e) {
       toast.error(w.qrFailed, errorText(e))
@@ -71,6 +74,23 @@ export default function StationPage() {
       setBusy(false)
     }
   }
+
+  /** Met le lien à jour (nouvelle portée) : la tablette et les codes QR imprimés suivent le nouveau. */
+  async function upgradeLink() {
+    if (!s.linkId) return
+    setBusy(true)
+    try {
+      const withAssistant = s.linkAssistant ?? assistant
+      const link = await createShareLink('station', id, { mode: s.linkMode ?? 'focus', assistant: withAssistant })
+      await patch({ linkId: link.id, linkCreatedAt: nowIso(), linkVersion: LINK_SCOPE_VERSION, linkAssistant: withAssistant, linkFollow: [...(s.linkFollow ?? []), s.linkId] })
+      toast.success(w.upgraded, w.upgradedHint)
+    } catch (e) {
+      toast.error(w.qrFailed, errorText(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const outdated = operatorsOn && canWrite && !!s.linkId && (s.linkVersion ?? 1) < LINK_SCOPE_VERSION
 
   return (
     <div className="space-y-6">
@@ -112,6 +132,17 @@ export default function StationPage() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <Panel>
           <h2 className="mb-4 text-lg font-black tracking-tight">{w.qrTitle}</h2>
+          {outdated && (
+            <div className="mb-4 flex flex-col gap-2 rounded-2xl bg-amber-50 p-3 sm:flex-row sm:items-center dark:bg-amber-500/10">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-black text-amber-900 dark:text-amber-100">{w.upgradeTitle}</p>
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{w.upgradeHint}</p>
+              </div>
+              <Button size="sm" loading={busy} icon={<RefreshCw className="h-4 w-4" />} onClick={() => void upgradeLink()}>
+                {w.upgrade}
+              </Button>
+            </div>
+          )}
           {url ? (
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
               <Qr value={url} size={200} />
@@ -151,6 +182,20 @@ export default function StationPage() {
                 <ChoiceTile selected={false} onClick={() => makeLink('focus', assistant)} title={w.focusTitle} description={w.focusDescription} />
                 <ChoiceTile selected={false} onClick={() => makeLink('only', assistant)} icon={<Lock className="h-5 w-5" />} title={w.onlyTitle} description={w.onlyDescription} />
               </div>
+            </div>
+          )}
+          {canWrite && operatorsOn && (
+            <div className="mt-5 border-t border-slate-900/5 pt-4 dark:border-white/5">
+              <Switch
+                checked={!!s.askOperator}
+                onChange={(v) => void patch({ askOperator: v })}
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    <UserRound className="h-4 w-4" /> {w.askOperator}
+                  </span>
+                }
+                description={w.askOperatorDescription}
+              />
             </div>
           )}
           {canWrite && voiceToggle && (

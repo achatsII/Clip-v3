@@ -55,6 +55,9 @@ document et filtré à chaque lecture). Le jour où l'identifiant `clip-v3` exis
 | `clip_event` | une consultation ou une réalisation | type, instruction, poste, durée, source |
 | `clip_import` | un lot d'import de documents | fichiers et leur état |
 | `clip_checkpoint` | un point de retour du brouillon (modifications enregistrées, pas publiées) | instruction, contenu complet, raison, empreinte, auteur, date |
+| `clip_operator` | une personne de l'équipe au poste, sans compte | nom, empreinte de son code (`pinHash`, jamais le code), quart, équipe, postes habituels, actif |
+| `clip_execution` | réservé : le travail fait au poste (étape 3 du plan) | — |
+| `clip_training` | réservé : les réponses d'une formation (étape 6 du plan) | — |
 
 Le contenu publié est séparé du brouillon : un lien public ne lit que `clip_published` (et ce qu'il
 faut pour signaler un retour), jamais les brouillons.
@@ -79,6 +82,18 @@ poste qui l'a demandé. Un lien créé avant porte encore `ai:tts` : la voix de 
 Régénérer un lien invalide l'ancien dans l'app (la page vérifie que l'uuid est bien le lien courant
 du poste). La Gateway n'a pas de route de révocation : un jeton déjà émis reste valable jusqu'à son
 expiration, ce que l'écran d'administration dit clairement.
+
+**La portée d'un lien ne change plus après sa création** (la Gateway n'a pas de route pour la
+modifier). Elle porte donc une version (`LINK_SCOPE_VERSION`, `src/lib/model/linkScope.ts`), rangée sur
+le poste (`linkVersion`). La version 2 ajoute, pour un lien de poste seulement, la lecture des
+personnes actives de l'équipe (`clip_operator`) : le lien d'une instruction peut sortir de l'usine,
+il ne montre jamais l'équipe. Tout lien peut aussi insérer le travail fait et les réponses de
+formation (`clip_execution`, `clip_training`), ouverts d'avance pour ne pas refaire les liens à
+l'étape suivante. Un poste au
+lien plus ancien affiche « Mettre à jour le lien » : un nouveau lien est créé, et l'ancien est rangé
+dans `linkFollow`. Une tablette ou un QR déjà imprimé qui ouvre l'ancien lien est envoyé sur le
+nouveau (`location.replace`) : rien à réimprimer. « Remplacer » (lien compromis) vide `linkFollow` :
+l'ancien lien ne mène plus nulle part.
 
 ## 3. Le pont natif
 
@@ -362,6 +377,37 @@ repousse aussi. Rien ne bloque l'opérateur.
   Données ; on écrit son courriel pour confirmer, puis `DELETE /api/v1/auth/user/delete` révoque les
   sessions et efface le compte. Les instructions de l'usine restent à l'équipe.
 
+### Qui est à la tablette (toggle `operators`, `src/lib/model/operators.ts`)
+
+L'opérateur n'a toujours pas de compte : une personne de l'équipe, c'est un nom et un code à
+4 chiffres. Le poste qui le demande (« Demander qui travaille », sur la page du poste) ouvre
+« Qui êtes-vous ? » : on touche son nom (ceux du poste d'abord), puis on tape son code sur un grand
+pavé. Ensuite, chaque consultation, réalisation et retour porte `operatorId` et `operatorName`
+(« Marc a fait le cadenassage hier à 14 h »). Personne ne touche la tablette pendant 30 minutes :
+elle redemande. « Changer de personne » est toujours en haut de l'écran.
+
+- **La page Équipe** (`/equipe`, administrateurs) : ajouter des personnes en collant une liste (une
+  par ligne, une colonne d'Excel), modifier (nom, quart, équipe, postes habituels), retirer (la fiche
+  reste, `active: false`, pour l'historique). Chacune reçoit son code dès l'ajout ; les codes
+  s'affichent **une seule fois**, avec une feuille à imprimer et à découper
+  (`src/lib/pdf/codesSheet.ts`). « Nouveau code » remplace l'ancien.
+- **Le code ne quitte jamais le serveur en clair, sauf vers l'administrateur qui le donne.**
+  `POST /api/operators/pin` (jeton de l'utilisateur, droit d'écrire les postes) tire le code au
+  hasard (jamais 0000, 1234, 1111…), en garde l'empreinte HMAC-SHA256 liée à la personne
+  (`pinHash`, préfixée de l'identifiant de la clé) et rend le code une fois. La clé vient de
+  `CLIP_PIN_SECRET` s'il existe, sinon elle est dérivée de `ABLY_KEY` (HKDF) ; sans l'une ni l'autre,
+  la route répond `unavailable` et la tablette laisse continuer sans nom. Les listes ne lisent jamais
+  `pinHash` (projection), et une empreinte lue par un jeton invité ne sert à rien sans la clé du
+  serveur.
+- **La vérification** (`POST /api/operators/verify`) se fait au serveur : il échange lui-même le
+  lien du poste, lit la fiche avec le jeton invité, compare le code et rend une session signée
+  (12 h au plus) pour ce lien. Cinq erreurs de suite bloquent ce nom à ce poste pendant 10 minutes.
+  Ce blocage vit dans la mémoire du serveur (chaque instance a la sienne) : il freine un essai au
+  hasard. Le code dit qui travaille, il ne protège pas des données : un lien de poste ouvre déjà
+  les instructions publiées sans nom.
+- **Le travail ne s'arrête jamais** : lien d'avant la version 2, serveur sans clé ou équipe vide, la
+  tablette propose « Continuer sans me nommer ».
+
 ### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
 
 L'aperçu (`/instructions/{id}/lire?apercu=1`) montre le brouillon tel qu'au poste. Pour qui peut
@@ -456,6 +502,10 @@ instructions publiées, et les compare au plafond lu dans l'état.
   pas administratrice y arrive aussi depuis la fenêtre des refus, avec le plan conseillé déjà choisi.
 
 ## 7. Les langues de l'outil (`src/lib/i18n`)
+
+Le cœur (`src/lib/i18n/core.ts` : langue courante, `messages()`, `locale()`) n'a pas de React : les
+routes du serveur peuvent l'atteindre (elles parlent français). `src/lib/i18n` y ajoute les hooks
+(`useMessages()`, `useLang()`), réservés aux composants.
 
 L'outil parle français et anglais ; une autre langue s'ajoute sans toucher aux écrans.
 

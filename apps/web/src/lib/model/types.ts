@@ -397,12 +397,46 @@ export interface Station {
   /** `focus` : ses instructions d'abord, les autres à un geste ; `only` : seulement les siennes. */
   linkMode?: 'focus' | 'only'
   linkCreatedAt?: string | null
+  /** La version de la portée du lien (`LINK_SCOPE_VERSION`) : un lien plus ancien se met à jour. */
+  linkVersion?: number
+  /** Les anciens liens qui suivent le lien courant (mis à jour, pas révoqués) : un code QR imprimé reste bon. */
+  linkFollow?: string[]
+  /** Le lien ouvre-t-il l'assistant vocal ? (gardé pour le mettre à jour sans le perdre) */
+  linkAssistant?: boolean
+  /** Au poste, demander qui travaille (nom et code à 4 chiffres) avant d'ouvrir une instruction. */
+  askOperator?: boolean
   createdAt: string
+}
+
+/** Les quarts de travail, pour regrouper les personnes. */
+export type Shift = 'jour' | 'soir' | 'nuit' | 'fds' | 'rotation'
+
+/**
+ * Une personne qui travaille aux postes, sans compte : son nom, et l'empreinte de son code à
+ * 4 chiffres (jamais le code lui-même, `src/lib/server/operators.ts`).
+ */
+export interface Operator {
+  name: string
+  pinHash?: string | null
+  /** Quand le code a été donné (pour dire « code donné le… »). */
+  pinSetAt?: string | null
+  team?: string
+  shift?: Shift | null
+  /** Les postes où elle travaille d'habitude : son nom y vient en premier. */
+  stationIds: string[]
+  active: boolean
+  createdAt: string
+}
+
+/** Qui travaillait au poste, sur un événement, un retour ou une exécution. */
+export interface OperatorRef {
+  operatorId?: string | null
+  operatorName?: string | null
 }
 
 export type FeedbackKind = 'unclear' | 'error' | 'danger' | 'idea' | 'praise'
 
-export interface Feedback {
+export interface Feedback extends OperatorRef {
   instructionId: string
   publishedId?: string
   version?: number | null
@@ -424,7 +458,7 @@ export interface Feedback {
 
 export type EventType = 'view' | 'complete' | 'scan' | 'ai'
 
-export interface UsageEvent {
+export interface UsageEvent extends OperatorRef {
   type: EventType
   instructionId?: string | null
   stationId?: string | null

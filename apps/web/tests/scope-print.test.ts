@@ -5,13 +5,16 @@ import { buildScope, permissionsFor } from '@/lib/server/scope'
 
 describe('portée des liens publics', () => {
   const id = '68791cc877718aec114d43ec'
-  it('poste « ce poste d’abord » : son poste en lecture, toutes les instructions publiées de CLIP, retours et événements en insertion', () => {
+  it('poste « ce poste d’abord » : son poste en lecture, toutes les instructions publiées de CLIP, retours et événements en insertion, les noms des personnes, le travail fait et les réponses', () => {
     const s = buildScope('station', id, { mode: 'focus', sharedApp: true, slug: 'clip-v3' })
     expect(s.resources).toEqual([
       { data_type: 'clip_station', filter: { _id: id }, actions: ['read'] },
       { data_type: 'clip_published', filter: { 'json_data.app_identifier': 'clip-v3' }, actions: ['read'] },
       { data_type: 'clip_feedback', actions: ['insert'] },
       { data_type: 'clip_event', actions: ['insert'] },
+      { data_type: 'clip_operator', filter: { 'json_data.active': true, 'json_data.app_identifier': 'clip-v3' }, actions: ['read'] },
+      { data_type: 'clip_execution', actions: ['insert'] },
+      { data_type: 'clip_training', actions: ['insert'] },
     ])
   })
   it('poste « seulement ce poste » : les instructions publiées de ce poste seulement', () => {
@@ -20,7 +23,8 @@ describe('portée des liens publics', () => {
   })
   it('instruction : cette instruction publiée seulement, jamais les brouillons', () => {
     const s = buildScope('instruction', id, { sharedApp: false, slug: 'clip-v3' })
-    expect(s.resources.map((r) => r.data_type)).toEqual(['clip_published', 'clip_feedback', 'clip_event'])
+    // Les noms de l'équipe restent à la tablette du poste : un lien d'instruction peut sortir de l'usine.
+    expect(s.resources.map((r) => r.data_type)).toEqual(['clip_published', 'clip_feedback', 'clip_event', 'clip_execution', 'clip_training'])
     expect(s.resources[0].filter).toEqual({ 'json_data.instructionId': id })
     expect(JSON.stringify(s)).not.toContain('clip_instruction')
   })

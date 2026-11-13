@@ -86,6 +86,8 @@ export interface PlayerProps {
    * étapes, à droite de « Suivant », pour ne rien cacher de l'étape ; ailleurs, il flotte.
    */
   accessory?: ReactNode
+  /** Qui travaille au poste (« Qui êtes-vous ? ») : il signe ce qu'il fait ici. */
+  operator?: { id: string; name: string } | null
 }
 
 function deviceId(): string {
@@ -102,7 +104,8 @@ function deviceId(): string {
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator } = props
+  const who = { operatorId: operator?.id ?? null, operatorName: operator?.name ?? null }
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
     try {
@@ -157,8 +160,9 @@ export function Player(props: PlayerProps) {
 
   useEffect(() => {
     if (preview) return
-    logUsage(deps.data, { type: 'view', instructionId, stationId: stationId ?? null, version: version ?? null, source, deviceId: deviceId() })
-  }, [preview, deps.data, instructionId, stationId, version, source])
+    logUsage(deps.data, { type: 'view', instructionId, stationId: stationId ?? null, version: version ?? null, source, deviceId: deviceId(), ...who })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preview, deps.data, instructionId, stationId, version, source, operator?.id])
 
   const step: Step | undefined = index >= 0 && index < total ? content.steps[index] : undefined
 
@@ -212,12 +216,12 @@ export function Player(props: PlayerProps) {
       haptic('light')
       speaker?.stop()
       if (clamped === total && !preview) {
-        logUsage(deps.data, { type: 'complete', instructionId, stationId: stationId ?? null, version: version ?? null, source, deviceId: deviceId(), durationSec: Math.round((Date.now() - startedAt.current) / 1000) })
+        logUsage(deps.data, { type: 'complete', instructionId, stationId: stationId ?? null, version: version ?? null, source, deviceId: deviceId(), durationSec: Math.round((Date.now() - startedAt.current) / 1000), operatorId: operator?.id ?? null, operatorName: operator?.name ?? null })
         haptic('success')
       }
       if (autoRead && clamped >= 0 && clamped < total) speakStep(content.steps[clamped])
     },
-    [total, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source],
+    [total, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator],
   )
 
   useEffect(() => {
@@ -440,7 +444,9 @@ export function Player(props: PlayerProps) {
             instructionTitle: props.content.title,
             source,
             stationId: stationId ?? null,
+            ...who,
           }}
+          operatorName={operator?.name}
         />
       )}
 

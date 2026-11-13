@@ -4,6 +4,25 @@ export const publicLinks = {
   deadLink: 'Ce lien ne fonctionne plus',
   /** La tablette d’un poste (code QR du poste). */
   kiosk: {
+    /** « Qui êtes-vous ? » : le nom, puis le code à 4 chiffres. */
+    who: {
+      title: 'Qui êtes-vous ?',
+      hint: 'Touchez votre nom, puis tapez votre code.',
+      others: 'Autres personnes',
+      pinTitle: (name: string) => `Bonjour ${name}`,
+      pinHint: 'Tapez votre code à 4 chiffres.',
+      notMe: 'Ce n’est pas moi',
+      erase: 'Effacer',
+      checking: 'Vérification…',
+      wrong: 'Code incorrect. Réessayez.',
+      locked: 'Trop d’essais. Réessayez dans quelques minutes, ou demandez à votre superviseur.',
+      noPin: 'Vous n’avez pas encore de code : demandez-le à votre superviseur.',
+      unavailable: 'L’identification ne répond pas. Vous pouvez continuer sans vous identifier.',
+      outdated: 'Ce poste doit être mis à jour par un responsable pour identifier les personnes.',
+      continueWithout: 'Continuer sans m’identifier',
+      empty: 'Personne n’est inscrit à ce poste. Demandez à votre superviseur de vous ajouter.',
+      change: 'Changer de personne',
+    },
     deadLinkHint: 'Le code QR a peut-être été remplacé. Demandez le nouveau code à votre superviseur.',
     replacedHint: 'Le code QR de ce poste a été remplacé. Demandez le nouveau code à votre superviseur.',
     station: 'Poste',

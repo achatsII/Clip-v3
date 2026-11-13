@@ -16,6 +16,7 @@ import {
   ScanLine,
   Settings,
   Upload,
+  Users,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -63,6 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [scanOpen, setScanOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const deleteToggle = useToggle('deleteAccount')
+  const operatorsOn = useToggle('operators')
 
   const feedbackCount = useQuery({
     queryKey: ['feedback-count'],
@@ -75,6 +77,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { href: '/accueil', label: t.shell.nav.home, icon: <Home className="h-5 w-5" />, show: true },
     { href: '/instructions', label: t.shell.nav.instructions, icon: <BookOpen className="h-5 w-5" />, show: true },
     { href: '/postes', label: t.shell.nav.stations, icon: <MapPin className="h-5 w-5" />, show: can('stations') },
+    { href: '/equipe', label: t.shell.nav.team, icon: <Users className="h-5 w-5" />, show: operatorsOn && can('stations', 'write') },
     { href: '/retours', label: t.shell.nav.feedback, icon: <MessageSquareWarning className="h-5 w-5" />, badge: feedbackCount.data || undefined, show: can('feedback', 'write') },
     { href: '/statistiques', label: t.shell.nav.stats, icon: <BarChart3 className="h-5 w-5" />, show: can('stats') },
   ].filter((n) => n.show)
