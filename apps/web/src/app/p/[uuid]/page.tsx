@@ -66,6 +66,8 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
   const canIdentify = !!link.scope?.resources.some((r) => r.data_type === T.operator && r.actions.includes('read'))
   // Un lien d'avant la version 2 ne peut pas écrire le travail fait : on relève quand même, sans trace.
   const canRecord = !!link.scope?.resources.some((r) => r.data_type === T.execution && r.actions.includes('insert'))
+  // La formation validée au poste, au nom de la personne qui s'est nommée (toggle `training`).
+  const canTrain = !!link.scope?.resources.some((r) => r.data_type === T.training && r.actions.includes('insert'))
   const [who, setWho] = useState<StationSession | null>(() => loadStationSession(uuid))
   const [skipped, setSkipped] = useState(false)
   // Personne n'y touche pendant 30 minutes : la tablette redemande qui travaille.
@@ -134,6 +136,7 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
         allowQuestions={link.permissions.includes('assistant:ask')}
         operator={who?.operator ?? null}
         canRecord={canRecord}
+        canTrain={canTrain}
         notifyLink={uuid}
       />
     )

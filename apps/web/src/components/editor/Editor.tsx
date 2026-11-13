@@ -14,6 +14,7 @@ import {
   Eye,
   FileDown,
   FileJson,
+  GraduationCap,
   History,
   Info,
   Languages,
@@ -32,7 +33,7 @@ import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Confetti } from '@/components/ui/Celebrate'
 import { useConfirm } from '@/components/ui/Confirm'
-import { Input, Label, Segmented, Textarea } from '@/components/ui/Field'
+import { Input, Label, Segmented, Switch, Textarea } from '@/components/ui/Field'
 import type { MenuItem } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
@@ -78,6 +79,8 @@ import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
 import { LockoutEditor } from './LockoutEditor'
 import { MetaCard, StationPicker } from './MetaCard'
 import { QuestionsDialog, type QuestionAnswer } from './QuestionsDialog'
+import { QuizDialog } from './QuizDialog'
+import { cleanQuiz } from '@/lib/model/training'
 import { StageEditor } from './StageEditor'
 import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
 import { attachReel, carryClips } from '@/lib/media/reel'
@@ -124,7 +127,10 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [renewMonths, setRenewMonths] = useState<number | null>(() => renewalMonthsOf(instr, org.json_data))
   const [renewedAt, setRenewedAt] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(false)
-  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks'>(null)
+  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz'>(null)
+  // La formation (toggle `training`) : les questions, et « il faut se re-former » à la publication.
+  const trainingToggle = useToggle('training')
+  const [retrain, setRetrain] = useState(false)
   const [comment, setComment] = useState('')
   const [rating, setRating] = useState(instr.generation?.rating ?? null)
   const [ratingComment, setRatingComment] = useState<string | null>(null)
@@ -440,8 +446,10 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     if (!stationIds.length) n.push(tp.notes.noStation)
     if (questions.length) n.push(tp.notes.questions(questions.length))
     if (content.kind === 'lockout' && content.lockout?.energyPoints.some((e) => !e.isolationDevice || !e.verification)) n.push(tp.notes.lockoutIncomplete)
+    const quizGaps = trainingToggle && content.quiz?.length ? content.quiz.length - cleanQuiz(content.quiz).length : 0
+    if (quizGaps > 0) n.push(t.training.incomplete(quizGaps))
     return n
-  }, [steps, stationIds, questions, content, tp])
+  }, [steps, stationIds, questions, content, tp, t, trainingToggle])
 
   async function doPublish(approvedBy?: { id: string; name: string }, approvals?: { list: Array<{ group: string; byName: string; at: string }>; line: string }) {
     setPublishing(true)
@@ -456,7 +464,10 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       const renewal = renewalToggle ? renewalFrom(renewMonths, nowIso(), actor.name) : undefined
       // La personne qui avait demandé l'approbation : avertie de la publication.
       const requester = docRef.current.json_data.review?.requestedBy
-      const { number: n, publishedId } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous, renewal, approvals: approvals ?? null })
+      // La formation : les questions qui seront posées, et si les formations d'avant cette version tombent.
+      const training = trainingToggle ? { questions: cleanQuiz(draft.quiz).length, retrain: retrain || !!docRef.current.json_data.review?.retrain } : null
+      const { number: n, publishedId } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous, renewal, approvals: approvals ?? null, training })
+      setRetrain(false)
       if (notifyOn && requester && requester !== actor.id) void notifyEvent({ kind: 'published', instructionId: doc._id, to: [requester] })
       if (reelToggle)
         void attachReel(files, data, { publishedId, version: n }, draft).then((ok) => {
@@ -479,7 +490,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setPublishing(true)
     try {
       await flush()
-      await requestReview(data, { ...doc, json_data: { ...docRef.current.json_data, stationIds } }, org.json_data, actor, comment)
+      await requestReview(data, { ...doc, json_data: { ...docRef.current.json_data, stationIds } }, org.json_data, actor, comment, trainingToggle && retrain)
       if (notifyOn) void notifyEvent({ kind: 'review', instructionId: doc._id })
       toast.success(tp.toasts.reviewSent, tp.toasts.reviewSentDetail)
       setDialog(null)
@@ -570,6 +581,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const gate = useGate()
   const { openPaywall } = useBilling()
 
+  // « Il faut se re-former » : seulement pour une nouvelle version d'une instruction qui a des questions.
+  const askRetrain = trainingToggle && !!instr.publishedVersion && !!content.quiz?.length
   const askPublish = () => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog(approval ? 'review' : 'checks') }) : setDialog(approval ? 'review' : 'checks'))
   const primary = (compact: boolean) =>
     readOnly ? null : inReview ? (
@@ -600,6 +613,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     { label: tp.menu.test, icon: <Eye className="h-4 w-4" />, onClick: () => router.push(`/instructions/${doc._id}/lire?apercu=1`) },
     { label: tp.menu.share, icon: <Share2 className="h-4 w-4" />, onClick: () => setDialog('share') },
     { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle, hint: translations === 'locked' ? <LockBadge /> : undefined },
+    // Les questions de formation : préparées par l'IA, retouchées ici (toggle `training`).
+    { label: t.training.menu, icon: <GraduationCap className="h-4 w-4" />, onClick: () => setDialog('quiz'), hidden: !trainingToggle || (readOnly && !content.quiz?.length), hint: content.quiz?.length ? <span className="text-xs font-black text-slate-400 tabular-nums">{content.quiz.length}</span> : undefined },
     { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history'), divider: true },
     // Le travail fait avec cette instruction : ses relevés, ses écarts (toggle `records`).
     { label: t.records.openForInstruction, icon: <ClipboardCheck className="h-4 w-4" />, onClick: () => router.push(`/registre?instruction=${doc._id}`), hidden: !recordsToggle || !hasChecks(content.steps) || !can('feedback') },
@@ -705,6 +720,11 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
             <div className="min-w-0 flex-1">
               <p className="text-sm font-black text-amber-900 dark:text-amber-200">{tp.review.requested(instr.review.requestedByName, timeAgo(instr.review.requestedAt))}</p>
               {instr.review.note && <p className="text-sm font-medium text-amber-800 dark:text-amber-300">{tp.review.quote(instr.review.note)}</p>}
+              {trainingToggle && instr.review.retrain && (
+                <p className="mt-1 flex items-center gap-1.5 text-xs font-black text-amber-800 dark:text-amber-200">
+                  <GraduationCap className="h-3.5 w-3.5" /> {t.training.retrainAsked}
+                </p>
+              )}
               {signing.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5" aria-label={tp.review.signatures}>
                   {signing.map(({ group, signature, stale }) => (
@@ -853,6 +873,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         }}
       />
       <UndoPill history={history} />
+      <QuizDialog open={dialog === 'quiz'} onClose={() => setDialog(null)} content={content} ai={session.ai} readOnly={readOnly} published={!!instr.publishedVersion} onChange={(quiz) => update({ ...content, quiz })} />
       <TranslateDialog open={dialog === 'translate'} onClose={() => setDialog(null)} content={content} onTranslated={(lang, translated) => update({ ...content, translations: { ...(content.translations ?? {}), [lang]: translated } })} />
 
       <Modal
@@ -881,6 +902,11 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
             <Label>{tp.renewal.label}</Label>
             <Segmented size="sm" value={String(renewMonths)} onChange={(v) => setRenewMonths(v === 'null' ? null : Number(v))} options={RENEWAL_CHOICES.map((m) => ({ value: String(m), label: t.instructions.renewal.choice(m) }))} />
             <p className="mt-1.5 text-xs font-bold text-slate-400">{tp.renewal.hint}</p>
+          </div>
+        )}
+        {askRetrain && (
+          <div className="mt-3">
+            <Switch checked={retrain} onChange={setRetrain} label={t.training.retrain} description={t.training.retrainHint} />
           </div>
         )}
         {notes.length > 0 && (
@@ -937,6 +963,11 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       >
         <p className="mb-3 font-medium text-slate-600 dark:text-slate-300">{groups.length ? tp.review.signaturesIntro : tp.review.intro}</p>
         <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={tp.review.notePlaceholder} />
+        {askRetrain && (
+          <div className="mt-3">
+            <Switch checked={retrain} onChange={setRetrain} label={t.training.retrain} description={t.training.retrainHint} />
+          </div>
+        )}
         {notes.length > 0 && <p className="mt-3 text-sm font-bold text-amber-700">{notes.join(' ')}</p>}
       </Modal>
       <Modal

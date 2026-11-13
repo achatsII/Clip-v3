@@ -159,6 +159,7 @@ export const instructions = {
     ppe: 'EPI modifiés',
     safety: 'mises en garde modifiées',
     lockout: 'points de cadenassage modifiés',
+    quiz: 'questions de formation modifiées',
     formatting: 'Mise en forme.',
     /** Les changements à la suite, en une phrase. */
     sentence: (parts: string[]) => {

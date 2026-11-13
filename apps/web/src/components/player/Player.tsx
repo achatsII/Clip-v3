@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   CloudOff,
   ChevronDown,
+  GraduationCap,
   Clock,
   Languages,
   Layers,
@@ -38,6 +39,7 @@ import type { FilesApi } from '@/lib/gateway/files'
 import { ENERGY, LANGUAGES, PPE, textDir, WARNINGS } from '@/lib/model/catalog'
 import { firstIncomplete, hasChecks, type Answers, type CheckAnswer } from '@/lib/model/checks'
 import { buildExecution, flushExecutions, saveExecution } from '@/lib/model/executions'
+import { buildTraining, cleanQuiz, flushTrainings, saveTraining } from '@/lib/model/training'
 import { notifyEvent } from '@/lib/notify'
 import { logUsage } from '@/lib/model/repo'
 import { sectionGroups } from '@/lib/model/sections'
@@ -47,6 +49,7 @@ import { LiveSpeaker, stepSpeech } from '@/lib/liveSpeech'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { FeedbackSheet } from './FeedbackSheet'
 import { StepChecks } from './StepChecks'
+import { QuizRunner } from './QuizRunner'
 import { rangeText, strings, type PlayerStrings } from './i18n'
 import { StepMediaArea } from './StepMediaArea'
 import { layoutOf } from '@/lib/model/media'
@@ -103,6 +106,11 @@ export interface PlayerProps {
   recorder?: { id: string; name: string } | null
   /** Le lien du poste ou de l'instruction : un danger ou un écart y avertit les bonnes personnes (toggle `notify`). */
   notifyLink?: string
+  /**
+   * La formation validée s'écrit (`clip_training`) : la page le permet. Au poste, seulement au nom
+   * d'une personne de l'équipe (« Qui êtes-vous ? ») ; l'aperçu fait un essai sans rien écrire.
+   */
+  canTrain?: boolean
 }
 
 function deviceId(): string {
@@ -119,7 +127,7 @@ function deviceId(): string {
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false } = props
   const who = { operatorId: operator?.id ?? null, operatorName: operator?.name ?? null }
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
@@ -160,6 +168,15 @@ export function Player(props: PlayerProps) {
   const notifyOn = useToggle('notify')
   const notifyVia = notifyOn && !preview ? (notifyLink ? { link: notifyLink } : source === 'app' ? {} : null) : null
   const answerCheck = useCallback((id: string, a: CheckAnswer) => setAnswers((prev) => ({ ...prev, [id]: a })), [])
+  // La formation (toggle `training`) : à la fin, une personne nommée valide ce qu'elle a compris.
+  const trainingOn = useToggle('training')
+  const quiz = useMemo(() => cleanQuiz(content.quiz), [content.quiz])
+  const offerTraining = trainingOn && quiz.length > 0 && (!!preview || (!!operator && canTrain))
+  const [quizOpen, setQuizOpen] = useState(false)
+  const [trained, setTrained] = useState(false)
+  useEffect(() => {
+    if (trainingOn && canTrain && !preview) void flushTrainings(deps.data)
+  }, [trainingOn, canTrain, preview, deps.data])
   // Une trace restée dans l'appareil (réseau coupé) repart dès qu'une instruction s'ouvre.
   useEffect(() => {
     if (recordsOn && canRecord && !preview) void flushExecutions(deps.data)
@@ -331,7 +348,7 @@ export function Player(props: PlayerProps) {
 
   const player = (
     <div className={cn('fixed inset-0 z-50 flex flex-col bg-slate-50 dark:bg-slate-950', frameClassName)} role="application" aria-label={content.title}>
-      <Confetti show={index === total} />
+      <Confetti show={index === total && !quizOpen} />
       {/* En-tête */}
       <header className="pt-safe glass-nav z-10 border-b">
         <div className="flex h-16 items-center gap-2 px-3 sm:px-5">
@@ -400,17 +417,42 @@ export function Player(props: PlayerProps) {
           </div>
         ) : index === -1 ? (
           <Intro content={content} t={t} onStart={() => go(0)} />
+        ) : index >= total && quizOpen ? (
+          <div dir={textDir(lang)} className="h-full">
+            <QuizRunner
+              quiz={quiz}
+              t={t.training}
+              name={operator?.name}
+              onPassed={async (choices) => {
+                if (preview) return null
+                // La trace, dans la langue d'origine de l'instruction ; les réponses se rattachent aux ids.
+                const tr = buildTraining(quiz, choices, { instructionId, instructionTitle: props.content.title, version: version ?? null, stationId: stationId ?? null, language: lang, source, operatorId: operator?.id ?? null, operatorName: operator?.name ?? null })
+                return saveTraining(deps.data, tr)
+              }}
+              onReread={() => {
+                setQuizOpen(false)
+                go(0)
+              }}
+              onClose={() => {
+                setQuizOpen(false)
+                setTrained(true)
+              }}
+            />
+          </div>
         ) : index >= total ? (
           <Done
             t={t}
             rated={rated}
             onRate={(v) => setRated(v)}
             record={record}
+            training={offerTraining ? { count: quiz.length, done: trained } : null}
+            onTrain={() => setQuizOpen(true)}
             onRestart={() => {
               startedAt.current = Date.now()
               setAnswers({})
               setNudge(0)
               setRecord(null)
+              setTrained(false)
               go(-1)
             }}
             onReport={() => setFeedbackOpen(true)}
@@ -728,7 +770,7 @@ function Intro({ content, t, onStart }: { content: InstructionContent; t: Return
   )
 }
 
-function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, preview, record }: { t: ReturnType<typeof strings>; rated: 'up' | 'down' | null; onRate: (v: 'up' | 'down') => void; onRestart: () => void; onReport: () => void; onExit?: () => void; exitLabel?: string; preview?: boolean; record?: { state: 'saved' | 'queued'; deviations: number } | null }) {
+function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, preview, record, training, onTrain }: { t: ReturnType<typeof strings>; rated: 'up' | 'down' | null; onRate: (v: 'up' | 'down') => void; onRestart: () => void; onReport: () => void; onExit?: () => void; exitLabel?: string; preview?: boolean; record?: { state: 'saved' | 'queued'; deviations: number } | null; training?: { count: number; done: boolean } | null; onTrain: () => void }) {
   return (
     <div className="mx-auto flex min-h-full max-w-xl flex-col items-center justify-center gap-6 p-8 text-center">
       <span className="animate-pop-in flex h-28 w-28 items-center justify-center rounded-[36px] bg-gradient-to-br from-[#2EE59D] to-[#18c480] text-white shadow-[0_20px_40px_rgba(24,196,128,0.35)]">
@@ -751,6 +793,24 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
           )}
         </div>
       )}
+      {/* La formation : valider ce qu'on a compris, en quelques questions. */}
+      {training &&
+        (training.done ? (
+          <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2 text-base font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+            <GraduationCap className="h-5 w-5" /> {t.training.passed}
+          </p>
+        ) : (
+          <button type="button" onClick={onTrain} className="btn-press flex w-full items-center gap-4 rounded-[28px] bg-primary-soft p-4 text-left">
+            <span className="bg-gradient-accent shadow-accent flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white">
+              <GraduationCap className="h-7 w-7" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-xl font-black text-slate-900 dark:text-white">{t.training.start}</span>
+              <span className="block text-base font-bold text-slate-600 dark:text-slate-300">{t.training.startHint(training.count)}</span>
+            </span>
+            <ArrowRight className="h-6 w-6 shrink-0 text-[var(--primary)]" />
+          </button>
+        ))}
       {!preview && (
         <div className="w-full">
           <p className="label-caps mb-3 text-slate-500">{t.howWasIt}</p>

@@ -197,3 +197,5 @@ ai_operations:
   - { key: look_s, capability: assistant.ask, feature: ai_credits, credits: 60, provider: google, level: mid }
   - { key: look_m, capability: assistant.ask, feature: ai_credits, credits: 120, provider: google, level: mid }
   - { key: look_l, capability: assistant.ask, feature: ai_credits, credits: 300, provider: google, level: mid }
+  # Les questions de formation d'une instruction (3 à 5) : lire l'instruction et écrire les questions.
+  - { key: quiz, capability: assistant.ask, feature: ai_credits, credits: 10, provider: google, level: mid }

@@ -222,6 +222,43 @@ export interface InstructionContent {
   lockout?: LockoutData | null
   language: string
   translations?: Record<string, TranslatedContent>
+  /** Les questions de formation (toggle `training`) : vérifier qu'on a compris, en quelques questions. */
+  quiz?: QuizQuestion[]
+}
+
+/** Une question de formation : quelques choix courts, un seul bon, et pourquoi. */
+export interface QuizQuestion {
+  id: string
+  question: string
+  /** 2 à 4 choix. */
+  choices: string[]
+  /** Le bon choix (son rang). */
+  answer: number
+  /** Pourquoi c'est la bonne réponse, montré après la réponse. */
+  why?: string
+  /** L'étape dont parle la question. */
+  stepId?: string | null
+}
+
+/**
+ * Une formation validée (ou non) au poste (`clip_training`) : qui, sur quelle version de quelle
+ * instruction, sa note et ses réponses. Écrite une fois ; la matrice de compétences la lit.
+ */
+export interface Training extends OperatorRef {
+  instructionId: string
+  instructionTitle: string
+  version: number | null
+  stationId: string | null
+  /** De 0 à 1. */
+  score: number
+  passed: boolean
+  answers: Array<{ questionId: string; choice: number; correct: boolean }>
+  at: string
+  language: string
+  source: 'kiosk' | 'link' | 'app'
+  /** La personne connectée, quand ce n'est pas une personne de l'équipe nommée à la tablette. */
+  userId?: string | null
+  userName?: string | null
 }
 
 /**
@@ -248,6 +285,8 @@ export interface TranslatedContent {
   tools?: string[]
   equipment?: string
   lockout?: LockoutTranslation
+  /** Les questions de formation dans cette langue (par id). */
+  quiz?: Array<{ id: string; question?: string; choices?: string[]; why?: string }>
   /** Quand la traduction a été faite, et si les images avec du texte ont été refaites. */
   translatedAt?: string
   images?: boolean
@@ -307,6 +346,8 @@ export interface ReviewRequest {
   changesRequested?: { by: string; byName: string; at: string; comment: string } | null
   /** Approbation à plusieurs : la signature de chaque groupe, pour le contenu signé. */
   signatures?: Signature[]
+  /** Un changement important : à la publication, les formations d'avant ne comptent plus (toggle `training`). */
+  retrain?: boolean
 }
 
 /** Un groupe qui signe les instructions (« Qualité », « Chef d'atelier ») et ceux qui le représentent. */
@@ -380,6 +421,10 @@ export interface Instruction {
   shareLinkId?: string | null
   /** La relecture périodique (« à revoir dans 1 an ») ; absente avant la première publication. */
   renewal?: Renewal | null
+  /** Le nombre de questions de formation de la version publiée. */
+  publishedQuiz?: number
+  /** Les formations d'avant cette version ne comptent plus : un changement important demande de se re-former. */
+  trainingVersion?: number | null
   /** Copies légères pour les listes (évite de lire le brouillon complet). */
   coverUrl?: string | null
   stepCount?: number

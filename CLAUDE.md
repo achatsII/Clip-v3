@@ -64,6 +64,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   scellé par le serveur (`src/lib/server/keys.ts`) et recopié sur chaque poste (`notifySeal`).
   Chaque personne tient sa fiche `clip_contact` (courriel, langue, téléphones). Le push sur le
   téléphone (`push.register`, expo-notifications) demande une build EAS.
+- **Formation** (toggle `training`) : 3 à 5 questions par instruction, préparées par l'IA (`quiz`,
+  `src/lib/ai/quiz.ts`) et retouchées par l'auteur ; elles vivent dans le brouillon et se traduisent
+  avec lui. Au poste, une personne nommée les passe à la fin ; réussie à 80 %, la trace s'écrit dans
+  `clip_training` (`src/lib/model/training.ts`). La matrice (Équipe › Compétences) croise personnes
+  et postes ; « Il faut se re-former » à la publication (`trainingVersion`) fait tomber les
+  formations d'avant. Pas un LMS (`VISION.md`).
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le
@@ -131,6 +137,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   | `look_s` | L'assistant d'édition revoit des sources d'origine (peu de médias), seulement si la demande l'exige | 60 |
   | `look_m` | Revoir des sources moyennes | 120 |
   | `look_l` | Revoir beaucoup de médias | 300 |
+  | `quiz` | Préparer les questions de formation d'une instruction (3 à 5) | 10 |
 
   La taille d'une génération ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) se décide sur
   la durée des vidéos et des notes vocales, le nombre de photos et de pages ; au-delà de la plus grande

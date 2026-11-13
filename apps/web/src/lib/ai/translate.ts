@@ -148,7 +148,26 @@ export function contentSegments(content: InstructionContent): { segments: Segmen
       if (hasLetter(c.label)) segments.push({ id: `check:${s.id}:${c.id}`, text: c.label })
       for (const o of c.options ?? []) if (hasLetter(o.label)) segments.push({ id: `check:${s.id}:${c.id}:${o.id}`, text: o.label })
     }
+  // Les questions de formation : l'énoncé, chaque choix (le bon garde son rang) et le pourquoi.
+  for (const q of content.quiz ?? []) {
+    if (hasLetter(q.question)) segments.push({ id: `quiz:${q.id}:q`, text: q.question })
+    q.choices.forEach((c, i) => hasLetter(c) && segments.push({ id: `quiz:${q.id}:c:${i}`, text: c }))
+    if (hasLetter(q.why)) segments.push({ id: `quiz:${q.id}:why`, text: q.why })
+  }
   return { segments, visuals }
+}
+
+/** Les questions de formation dans la langue traduite ; rien si aucun texte n'a été traduit. */
+export function quizFrom(quiz: InstructionContent['quiz'], map: Map<string, string>): TranslatedContent['quiz'] {
+  const out = (quiz ?? []).flatMap((q) => {
+    const question = map.get(`quiz:${q.id}:q`)
+    const choices = q.choices.map((c, i) => map.get(`quiz:${q.id}:c:${i}`) ?? c)
+    const anyChoice = q.choices.some((_, i) => map.has(`quiz:${q.id}:c:${i}`))
+    const why = map.get(`quiz:${q.id}:why`)
+    if (!question && !anyChoice && !why) return []
+    return [{ id: q.id, ...(question ? { question } : {}), ...(anyChoice ? { choices } : {}), ...(why ? { why } : {}) }]
+  })
+  return out.length ? out : undefined
 }
 
 /** Les relevés d'une étape dans la langue traduite ; rien si aucun texte n'a été traduit. */
@@ -214,6 +233,7 @@ export function buildTranslation(content: InstructionContent, j: TranslationJson
         })),
       }
     : undefined
+  const quiz = quizFrom(content.quiz, map)
   return {
     title: j.title,
     summary: j.summary,
@@ -222,6 +242,7 @@ export function buildTranslation(content: InstructionContent, j: TranslationJson
     ...(content.tools.length ? { tools: content.tools.map((x, i) => map.get(`tool:${i}`) ?? x) } : {}),
     ...(map.get('equipment') ? { equipment: map.get('equipment') } : {}),
     ...(lockout ? { lockout } : {}),
+    ...(quiz ? { quiz } : {}),
     translatedAt: nowIso(),
   }
 }

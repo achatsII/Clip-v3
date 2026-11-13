@@ -8,6 +8,7 @@ import type { Messages } from '../i18n/core'
 import { answered, verdict, type Answers } from './checks'
 import { nowIso, T } from './repo'
 import type { Execution, ExecutionAnswer, InstructionContent } from './types'
+import { outbox } from '../util/outbox'
 
 export type ExecutionMeta = Omit<Execution, 'answers' | 'deviations' | 'instructionTitle' | 'finishedAt'> & { finishedAt?: string }
 
@@ -41,70 +42,22 @@ export function buildExecution(content: InstructionContent, answers: Answers, me
 
 /* ───────────────────────── L'attente dans l'appareil ───────────────────────── */
 
-const QUEUE = 'clip_exec_queue'
-/** Au plus 50 traces en attente, gardées 30 jours. */
-const MAX_QUEUED = 50
-const KEEP_MS = 30 * 86400_000
-
-function readQueue(): Execution[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(QUEUE) ?? '[]') as unknown
-    return Array.isArray(raw) ? (raw as Execution[]) : []
-  } catch {
-    return []
-  }
-}
-
-function writeQueue(list: Execution[], now = Date.now()) {
-  try {
-    const kept = list.filter((e) => now - Date.parse(e.finishedAt) < KEEP_MS).slice(-MAX_QUEUED)
-    if (kept.length) localStorage.setItem(QUEUE, JSON.stringify(kept))
-    else localStorage.removeItem(QUEUE)
-  } catch {
-    /* sans stockage, la trace ne peut pas attendre */
-  }
-}
+/** Au plus 50 traces en attente, gardées 30 jours ; une trace se reconnaît à son instruction, sa fin et son appareil. */
+const queue = outbox<Execution, DataApi>({
+  storageKey: 'clip_exec_queue',
+  send: (e, data) => data.insert<Execution>(T.execution, e, e.instructionTitle),
+  at: (e) => e.finishedAt,
+  keyOf: (e) => `${e.instructionId}|${e.finishedAt}|${e.deviceId ?? ''}`,
+})
 
 /** Le nombre de traces qui attendent dans cet appareil. */
-export const pendingExecutions = (): number => readQueue().length
+export const pendingExecutions = (): number => queue.pending()
 
 /** Écrit la trace ; si elle ne part pas, elle attend dans l'appareil. */
-export async function saveExecution(data: DataApi, e: Execution): Promise<'saved' | 'queued'> {
-  try {
-    await data.insert<Execution>(T.execution, e, e.instructionTitle)
-    return 'saved'
-  } catch {
-    writeQueue([...readQueue(), e])
-    return 'queued'
-  }
-}
-
-/** Une trace se reconnaît à son instruction, sa fin et son appareil (elle passe par du JSON). */
-const keyOf = (e: Execution) => `${e.instructionId}|${e.finishedAt}|${e.deviceId ?? ''}`
-
-let flushing: Promise<number> | null = null
+export const saveExecution = (data: DataApi, e: Execution): Promise<'saved' | 'queued'> => queue.save(e, data)
 
 /** Renvoie les traces en attente ; rend le nombre parti. Une seule reprise à la fois. */
-export function flushExecutions(data: DataApi): Promise<number> {
-  if (flushing) return flushing
-  flushing = (async () => {
-    const sent = new Set<string>()
-    for (const e of readQueue()) {
-      try {
-        await data.insert<Execution>(T.execution, e, e.instructionTitle)
-        sent.add(keyOf(e))
-      } catch {
-        /* elle attend la prochaine fois */
-      }
-    }
-    // Relue à la fin : ce qui s'est ajouté pendant l'envoi reste dans la file.
-    if (sent.size) writeQueue(readQueue().filter((e) => !sent.has(keyOf(e))))
-    return sent.size
-  })().finally(() => {
-    flushing = null
-  })
-  return flushing
-}
+export const flushExecutions = (data: DataApi): Promise<number> => queue.flush(data)
 
 /* ───────────────────────── Le registre ───────────────────────── */
 

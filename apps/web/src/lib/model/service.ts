@@ -82,7 +82,14 @@ export async function publishInstruction(
   doc: Doc<Instruction>,
   org: OrgSettings,
   actor: Actor,
-  opts: { approvedBy?: Actor | null; previous?: InstructionContent | null; renewal?: Renewal | null; approvals?: { list: NonNullable<Version['approvals']>; line: string } | null } = {},
+  opts: {
+    approvedBy?: Actor | null
+    previous?: InstructionContent | null
+    renewal?: Renewal | null
+    approvals?: { list: NonNullable<Version['approvals']>; line: string } | null
+    /** La formation (toggle `training`) : combien de questions sont publiées, et faut-il se re-former. */
+    training?: { questions: number; retrain: boolean } | null
+  } = {},
 ): Promise<{ number: number; publishedId: string }> {
   const instr = doc.json_data
   const content = instr.draft
@@ -133,6 +140,8 @@ export async function publishInstruction(
     review: null,
     // Publier repousse la relecture périodique (toggle `renewal`).
     ...(opts.renewal !== undefined ? { renewal: opts.renewal } : {}),
+    // La matrice de compétences lit ces deux champs : une formation d'avant `trainingVersion` est à refaire.
+    ...(opts.training ? { publishedQuiz: opts.training.questions, ...(opts.training.retrain ? { trainingVersion: number } : {}) } : {}),
     updatedAt: publishedAt,
     updatedBy: actor.id,
     updatedByName: actor.name,
@@ -145,7 +154,7 @@ export async function confirmRenewal(data: DataApi, id: string, renewal: Renewal
   await data.patch(T.instruction, id, { renewal })
 }
 
-export async function requestReview(data: DataApi, doc: Doc<Instruction>, org: OrgSettings, actor: Actor, note?: string) {
+export async function requestReview(data: DataApi, doc: Doc<Instruction>, org: OrgSettings, actor: Actor, note?: string, retrain?: boolean) {
   await data.patch(T.instruction, doc._id, {
     status: 'review',
     review: {
@@ -157,6 +166,7 @@ export async function requestReview(data: DataApi, doc: Doc<Instruction>, org: O
       note: note?.trim() || null,
       changesRequested: null,
       signatures: [],
+      ...(retrain ? { retrain: true } : {}),
     },
     updatedAt: nowIso(),
   })

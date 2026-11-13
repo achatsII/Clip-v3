@@ -24,6 +24,7 @@ export const AI_COSTS: Record<AiOperation, number> = {
   look_s: 60,
   look_m: 120,
   look_l: 300,
+  quiz: 10,
 }
 
 export type FeatureKey =

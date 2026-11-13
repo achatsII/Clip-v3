@@ -2,6 +2,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { KeyRound, MoreHorizontal, Pencil, Printer, Search, Trash2, UserPlus, Users } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -12,6 +13,7 @@ import { Modal } from '@/components/ui/Modal'
 import { EmptyState, ErrorState, errorText, SkeletonRows } from '@/components/ui/States'
 import { PageHeader } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
+import { SkillsMatrix } from '@/components/team/SkillsMatrix'
 import { useStations } from '@/hooks/queries'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
@@ -34,10 +36,16 @@ const KEY = ['operators'] as const
  * imprimer), et elles se nomment à la tablette avant de commencer.
  */
 export default function TeamPage() {
-  const t = useMessages().team
+  const words = useMessages()
+  const t = words.team
   const { data, can } = useSession()
   const config = usePublicConfig()
   const on = config.data?.toggles.operators ?? FALLBACK_TOGGLES.operators
+  // La matrice de compétences (toggle `training`) : un onglet, avec son lien (`?vue=competences`).
+  const trainingOn = config.data?.toggles.training ?? FALLBACK_TOGGLES.training
+  const params = useSearchParams()
+  const router = useRouter()
+  const view: 'people' | 'skills' = trainingOn && params.get('vue') === 'competences' ? 'skills' : 'people'
   const qc = useQueryClient()
   const toast = useToast()
   const confirm = useConfirm()
@@ -58,7 +66,8 @@ export default function TeamPage() {
 
   const refresh = () => void qc.invalidateQueries({ queryKey: KEY })
   const q = normalizeText(query.trim())
-  const list = (ops.data ?? []).filter((o) => !q || normalizeText(`${o.json_data.name} ${o.json_data.team ?? ''}`).includes(q))
+  const matches = (o: Doc<Operator>) => !q || normalizeText(`${o.json_data.name} ${o.json_data.team ?? ''}`).includes(q)
+  const list = (ops.data ?? []).filter(matches)
 
   async function newCode(o: Doc<Operator>) {
     setBusy(o._id)
@@ -96,6 +105,21 @@ export default function TeamPage() {
         }
       />
 
+      {trainingOn && !!ops.data?.length && (
+        <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto pb-1" role="tablist">
+          {(
+            [
+              ['people', words.training.people, '/equipe'],
+              ['skills', words.training.matrix, '/equipe?vue=competences'],
+            ] as const
+          ).map(([v, label, href]) => (
+            <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => router.replace(href, { scroll: false })} className={cn('btn-press h-11 shrink-0 rounded-2xl px-4 text-sm font-black', view === v ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card')}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {(ops.data?.length ?? 0) > 8 && (
         <div className="glass-panel mb-4 flex items-center gap-3 rounded-[24px] px-4">
           <Search className="h-5 w-5 shrink-0 text-slate-400" />
@@ -118,6 +142,8 @@ export default function TeamPage() {
             </Button>
           }
         />
+      ) : view === 'skills' ? (
+        <SkillsMatrix operators={ops.data} query={matches} />
       ) : (
         <>
           <p className="label-caps mb-2 px-1 text-slate-500">{t.count(ops.data.length)}</p>

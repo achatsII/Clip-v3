@@ -141,6 +141,7 @@ export const instructions: typeof Fr = {
     ppe: 'PPE changed',
     safety: 'warnings changed',
     lockout: 'lockout points changed',
+    quiz: 'training questions changed',
     formatting: 'Formatting only.',
     sentence: (parts: string[]) => {
       const text = parts.join(', ')

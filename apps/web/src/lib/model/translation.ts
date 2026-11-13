@@ -3,7 +3,7 @@
  * appliquées au contenu, médias compris. Fonctions pures, partagées par le lecteur et l'assistant.
  */
 import { hashText } from '../util/hash'
-import type { Check, EnergyPoint, InstructionContent, LockoutData, MediaTranslation, StepMedia, TranslatedContent } from './types'
+import type { Check, EnergyPoint, InstructionContent, LockoutData, MediaTranslation, QuizQuestion, StepMedia, TranslatedContent } from './types'
 
 /**
  * Ce qui nomme un média : son adresse (et l'extrait ou la page), ou l'empreinte d'un schéma. Une
@@ -87,7 +87,20 @@ export function localized(content: InstructionContent, lang: string): Instructio
         ...(s.checks ? { checks: localizeChecks(s.checks, x.checks) } : {}),
       }
     }),
+    ...(content.quiz ? { quiz: localizeQuiz(content.quiz, t.quiz) } : {}),
   }
+}
+
+/** Les questions de formation dans la langue choisie ; le bon choix garde son rang. */
+function localizeQuiz(quiz: QuizQuestion[], t: TranslatedContent['quiz']): QuizQuestion[] {
+  if (!t?.length) return quiz
+  const byId = new Map(t.map((q) => [q.id, q]))
+  return quiz.map((q) => {
+    const x = byId.get(q.id)
+    if (!x) return q
+    const choices = x.choices?.length === q.choices.length ? q.choices.map((c, i) => x.choices![i] || c) : q.choices
+    return { ...q, question: x.question || q.question, choices, ...(q.why ? { why: x.why || q.why } : {}) }
+  })
 }
 
 /** Les relevés dans la langue choisie : libellés et choix ; les ids, limites et unités ne changent pas. */

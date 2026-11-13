@@ -30,6 +30,7 @@ export const AI_OPERATIONS = [
   'look_s',
   'look_m',
   'look_l',
+  'quiz',
 ] as const
 export type AiOperation = (typeof AI_OPERATIONS)[number]
 

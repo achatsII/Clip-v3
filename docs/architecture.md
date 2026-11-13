@@ -57,7 +57,7 @@ document et filtré à chaque lecture). Le jour où l'identifiant `clip-v3` exis
 | `clip_checkpoint` | un point de retour du brouillon (modifications enregistrées, pas publiées) | instruction, contenu complet, raison, empreinte, auteur, date |
 | `clip_operator` | une personne de l'équipe au poste, sans compte | nom, empreinte de son code (`pinHash`, jamais le code), quart, équipe, postes habituels, actif |
 | `clip_execution` | le travail fait au poste, écrit une fois à la fin d'une instruction qui a des relevés | instruction, version, poste, qui (personne de l'équipe ou connectée), début et fin, chaque réponse (valeur, limites, verdict, note d'écart), nombre d'écarts |
-| `clip_training` | réservé : les réponses d'une formation (étape 6 du plan) | — |
+| `clip_training` | une formation validée au poste, écrite une fois quand la personne réussit | instruction, version, poste, qui (personne de l'équipe), note, chaque réponse (question, choix, juste ou non), langue, date |
 | `clip_contact` | comment joindre une personne, tenu par son app | personne, nom, courriel, langue, jetons push de ses téléphones, courriel oui/non, téléphone oui/non |
 
 Le contenu publié est séparé du brouillon : un lien public ne lit que `clip_published` (et ce qu'il
@@ -483,6 +483,34 @@ n'importe quel approbateur). À plusieurs, même un approbateur demande les sign
 - **Rien ne bloque** : un avertissement part sans attendre le travail, et son échec ne se voit pas
   au poste. Le push demande la build qui contient `expo-notifications` (pas une mise à jour à
   distance seule).
+
+### La formation et la matrice de compétences (toggle `training`, `src/lib/model/training.ts`)
+
+Pas un LMS : on vérifie qu'une personne a compris une instruction, et on garde qui est formé, à
+quel poste.
+
+- **Les questions** (`InstructionContent.quiz`, 2 à 4 choix, une bonne réponse, un « pourquoi ») :
+  l'IA en prépare 3 à 5 sur ce qui compte (mises en garde, valeurs, ordre des gestes, points clés),
+  par l'opération `quiz` (`src/lib/ai/quiz.ts`), et l'auteur les retouche dans « … › Questions de
+  formation » (`QuizDialog`). Elles vivent dans le brouillon : enregistrées, annulables, signées et
+  traduites avec lui (énoncé, choix et pourquoi ; le bon choix garde son rang), et publiées avec la
+  version. `cleanQuiz` rend sûr ce qui vient de l'IA comme de l'auteur : une question incomplète
+  n'est pas posée, et la publication le signale.
+- **Au poste** : à l'écran « Terminé », une personne nommée (« Qui êtes-vous ? ») touche « Valider
+  ma formation » (`QuizRunner`) : une question à la fois, la bonne réponse et son pourquoi tout de
+  suite. Réussie à 80 % (`PASS_RATIO`), la trace s'écrit dans `clip_training`, au nom de la
+  personne et dans la langue lue ; sans réseau, elle attend dans l'appareil (`src/lib/util/outbox.ts`,
+  la même file que les relevés). Ratée, on relit l'instruction ou on réessaie, sans trace. Le lien
+  d'une instruction ne sait pas qui lit : il n'offre pas la formation. L'aperçu la fait essayer
+  sans rien écrire.
+- **La publication** dit combien de questions sont publiées (`Instruction.publishedQuiz`) et, sur
+  « Il faut se re-former » (un changement important, choisi en publiant ou en demandant
+  l'approbation, `review.retrain`), la version à partir de laquelle une formation compte
+  (`trainingVersion`). Sans ce choix, une formation reste bonne d'une version à l'autre.
+- **La matrice** (Équipe › Compétences, `?vue=competences`, `buildMatrix`) : les personnes en
+  lignes, en colonnes les postes où une instruction publiée a des questions. Une case : formée à
+  tout, en partie, pas formée ou à refaire ; touchée, elle nomme les instructions qui manquent. Le
+  compte des formations à faire et « Seulement les écarts » mènent aux personnes à former.
 
 ### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
 

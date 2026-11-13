@@ -121,8 +121,9 @@ instructions publiées sont réellement consultées au plancher semaine après s
 
 - Un traitement de texte à la Word (mise en page libre) : la structure est imposée, c'est elle qui
   rend les instructions lisibles au plancher.
-- Un LMS complet (cours, examens, certifications) : on trace la consultation et la réalisation,
-  pas plus.
+- Un LMS complet (cours, parcours, examens certifiants, rappels de formation) : on vérifie la
+  compréhension d'une instruction en quelques questions, à la fin, au poste, et on garde la trace
+  de qui est formé, à quel poste (la matrice de la page Équipe) ; pas plus.
 - Un MES ou un ERP (ordres de fabrication, temps de cycle) : on se branche sur leurs numéros
   (codes, étiquettes, QR), on ne les remplace pas.
 - Un logiciel qualité complet (cartes de contrôle, SPC, non-conformités et actions correctives) : à
