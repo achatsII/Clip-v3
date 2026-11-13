@@ -22,7 +22,7 @@ import { allow, deliver, exchangeLink, recipientsOf, serviceToken, type Message,
 
 export const dynamic = 'force-dynamic'
 
-const KINDS: NotifyKind[] = ['review', 'changes', 'published', 'danger', 'deviation', 'test']
+const KINDS: NotifyKind[] = ['review', 'changes', 'published', 'danger', 'deviation', 'request', 'test']
 const OBJECT_ID = /^[0-9a-f]{24}$/i
 
 interface Body {
@@ -86,6 +86,14 @@ export async function POST(req: NextRequest) {
     if (!n[kind]) return none('off')
     const message: Message = { kind, instruction: clip(body.instruction, 120), who: clip(body.who, 80) || caller.name, text: clip(body.text, 280), url: where(kind === 'danger' ? '/retours' : '/registre?ecarts=1') }
     return NextResponse.json({ sent: 1, ...(await deliver(service, recipientsOf(n.recipients, caller.userId), message)) })
+  }
+
+  // Une demande à l'administrateur (conseiller d'achat) : les administrateurs de l'usine. `text` dit
+  // la fonction voulue, `instruction` ce qui l'ouvrirait (un plan, un module).
+  if (kind === 'request') {
+    const admins = Object.entries(caller.org.json_data.members).filter(([, m]) => m.role === 'admin').map(([id]) => id)
+    const message: Message = { kind, instruction: clip(body.instruction, 120), who: caller.name, text: clip(body.text, 160), url: where('/reglages/abonnement') }
+    return NextResponse.json({ sent: 1, ...(await deliver(service, recipientsOf(admins, caller.userId), message)) })
   }
 
   // Une instruction : lue avec le jeton de la personne, pour savoir qui avertir.

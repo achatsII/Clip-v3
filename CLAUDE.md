@@ -122,6 +122,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - La grille (manifeste) : Gratuit (1 rédacteur, 3 publiées, 1 poste, 300 crédits) · Solo 49 $/mois (1, 30,
   5, 2 500) · Équipe 299 $/mois, mis en avant (5 rédacteurs, illimitées, 25 postes, 12 000) · Usine
   899 $/mois (15, illimitées, 100, 40 000) · Entreprise sur devis, hors manifeste. Annuel = 10 mois.
+- Les modules en option (`kind: addon`), sur le web seulement, avec Équipe ou Usine, 14 jours offerts :
+  Académie (feature `academy`, 149 $ avec Équipe, 449 $ avec Usine) et Relevés (`records_plus`, 99 $ et
+  299 $). Un module par plan de base (`academie_equipe`…) ; l'app ne propose que celui de son plan
+  (`MODULES`, `src/lib/billing/catalog.ts`, comparé au manifeste par le test). Le rattachement au plan de
+  base n'a pas de champ documenté : la simulation de `billing-publish` le confirme. Un module se montre
+  et se vend seulement une fois bâti (toggles `academy`, `recordsPlus`, éteints jusque-là).
 - Ce qui se facture : `ai_credits`, une banque de crédits d'IA par mois · `published_instructions`,
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,
@@ -201,6 +207,16 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   chiffres de la page Statistiques (`src/lib/stats/adoption.ts`) et propose, au choix, un plan avec
   son prix, jamais dans la coquille. Il passe par le feature toggle `valueReport` et la feature
   `adoption_stats`.
+- Le conseiller d'achat (toggle `salesAdvisor`, `src/lib/billing/advisor.ts`, carte `OfferCard` de
+  l'accueil seulement : jamais au poste ni pendant une tâche) : une offre à la fois, tirée de l'usage
+  (une limite pleine ou à 80 % dès deux unités, une fonction fermée essayée deux fois en 30 jours, un
+  module que l'usage appelle : 10 formations ou 30 relevés en 30 jours). Une nouvelle au plus par
+  semaine ; « Plus tard » la range 30 jours, et deux semaines sans réponse aussi. La mémoire est
+  par personne et par appareil (`advisorStore.ts`) ; chaque offre montrée, ouverte, rangée ou
+  demandée se note dans `clip_event` (`type: 'offer'`). Qui ne peut pas acheter « Demande à
+  l'administrateur » (`clip_request`, une par personne et par fonction sur 30 jours) : la demande
+  paraît dans « À voir » des administrateurs jusqu'à ce que l'usine ait la fonction, et part par
+  courriel ou sur le téléphone si l'usine avertit (`/api/notify`, `request`).
 - **Dans l'app mobile, on vend dans le magasin** (posture `in_app_purchase`, décidée pour garder la
   vision : le champion s'abonne seul dans l'App Store). Solo, Équipe et Usine se vendent sur iOS et
   Android par RevenueCat (projet `clip-v3`), jamais par Stripe.

@@ -7,6 +7,7 @@ import { ArrowRight, Check, CheckCircle2, ClipboardCheck, EyeOff, Flame, MapPin,
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo } from 'react'
+import { OfferCard } from '@/components/billing/Advisor'
 import { CreditPill, LowBalanceBanner } from '@/components/billing/Billing'
 import { CreationList } from '@/components/CreationList'
 import { InstructionRow } from '@/components/InstructionCard'
@@ -173,6 +174,9 @@ export default function HomePage() {
       )}
 
       {canCreate && <CreationList />}
+
+      {/* Le conseiller d'achat : de temps en temps, l'offre qui sert l'usine (une à la fois). */}
+      <OfferCard />
 
       {/* La mise en route se cache d'un geste, et revient de la petite pastille. */}
       {role === 'admin' && setupDone < setup.length && setupHidden && (

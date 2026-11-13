@@ -20,6 +20,10 @@ export const notify = {
     title: (station: string) => `Écart relevé${station ? ` au poste ${station}` : ''}`,
     body: (instruction: string, who: string, text: string) => [instruction, who ? `par ${who}` : '', text].filter(Boolean).join(' · '),
   },
+  request: {
+    title: (who: string, what: string) => `${who} aimerait : ${what}`,
+    body: (target: string) => (target ? `Pour l’ouvrir : ${target}. Tout se règle dans Abonnement et crédits.` : 'Tout se règle dans Abonnement et crédits.'),
+  },
   test: {
     title: 'Essai des avertissements CLIP',
     body: 'Les avertissements arrivent bien jusqu’à vous.',

@@ -175,6 +175,65 @@ export const billing = {
       unresolved: 'L’achat n’est pas possible pour ce compte. Écrivez au soutien de CLIP.',
     },
   },
+  /** Les modules en option (Académie, Relevés), à ajouter à Équipe ou à Usine. */
+  modules: {
+    title: 'Modules',
+    subtitle: 'À ajouter à Équipe ou à Usine, quand l’usine en a besoin.',
+    eyebrow: 'Module',
+    trial: (days: number) => `${fmt(days)} jours offerts`,
+    tryFree: (days: number) => `Essayer ${fmt(days)} jours`,
+    add: (name: string) => `Ajouter ${name}`,
+    /** Sous l’essai : « Puis 1 490 $ / an ». */
+    after: (price: string) => `Puis ${price}`,
+    active: 'Actif',
+    withPlans: 'S’ajoute à Équipe ou à Usine',
+    /** Pourquoi la fenêtre s’ouvre pour un module que le plan ne reçoit pas. */
+    needsPlan: (name: string, plan: string) => `Le module ${name} s’ajoute au plan ${plan}.`,
+    notOnSale: 'Ce module ne s’achète pas encore.',
+    academy: {
+      name: 'Académie',
+      pitch: 'Former chaque personne et la garder qualifiée, poste par poste.',
+      points: ['Un parcours de formation par poste, prêt d’avance', 'Revalidation et rappels avant l’échéance', 'Validation pratique par le superviseur', 'Couverture par quart et registre pour l’audit'],
+    },
+    records: {
+      name: 'Relevés',
+      pitch: 'Des données fiables du plancher, sans papier.',
+      points: ['Listes de vérification et mesures répétées', 'Tendances et limites de chaque mesure', 'Export pour la qualité et l’audit', 'Numéro de lot, photos et écart autorisé'],
+    },
+  },
+  /** Le conseiller d’achat : de temps en temps, l’offre qui sert l’usine (à l’accueil). */
+  advisor: {
+    eyebrow: 'Pour votre usine',
+    see: 'Voir l’offre',
+    later: 'Plus tard',
+    limitTitle: {
+      stations: 'Vos postes se remplissent',
+      editors: 'Votre équipe grandit',
+      published_instructions: 'Votre bibliothèque grandit',
+    },
+    /** « 5 postes sur 5 : la limite est atteinte. Équipe : 25 postes. » */
+    limitFull: (outOf: string, offer: string) => `${outOf} : la limite est atteinte. ${offer}.`,
+    limitNear: (outOf: string, offer: string) => `${outOf}. ${offer}.`,
+    /** Une fonction fermée essayée plusieurs fois ce mois-ci. */
+    tried: (n: number, plan: string) => `Essayé ${fmt(n)} fois ce mois-ci : c’est compris dans ${plan}.`,
+    triedModule: (n: number, module: string, trial: string) => `Essayé ${fmt(n)} fois ce mois-ci : c’est le module ${module}${trial ? `, ${trial}` : ''}.`,
+    triedModulePlan: (n: number, module: string, plan: string) => `Essayé ${fmt(n)} fois ce mois-ci : le module ${module} s’ajoute au plan ${plan}.`,
+    creditsTitle: 'Vos crédits IA s’épuisent',
+    credits: (n: number, offer: string) => `Épuisés ${fmt(n)} fois ce mois-ci. ${offer}.`,
+    /** Un module que l’usage appelle. */
+    academyTitle: 'Vos formations prennent de l’ampleur',
+    academy: (n: number, trial: string) => `${fmt(n)} formations validées ce mois-ci. L’Académie suit les revalidations et la couverture de chaque quart${trial ? ` : ${trial}` : ''}.`,
+    recordsTitle: 'Vos relevés s’accumulent',
+    records: (n: number, trial: string) => `${fmt(n)} relevés ce mois-ci. Le module Relevés montre leurs tendances et les exporte pour la qualité${trial ? ` : ${trial}` : ''}.`,
+  },
+  /** Demander à l’administrateur, quand on ne peut pas acheter soi-même. */
+  request: {
+    ask: 'Demander à l’administrateur',
+    sent: 'Demande envoyée',
+    sentHint: 'Votre administrateur la verra dans « À voir ».',
+    already: 'Déjà demandé : votre administrateur le voit dans « À voir ».',
+    failed: 'La demande n’est pas partie',
+  },
   /** La page Abonnement. */
   subscription: {
     title: 'Abonnement',

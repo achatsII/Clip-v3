@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Bell, ClipboardCheck, MessageSquare, ShieldAlert, Stamp } from 'lucide-react'
+import { Bell, ClipboardCheck, Gem, MessageSquare, ShieldAlert, Stamp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
@@ -11,7 +11,9 @@ import { useFeedback, useInboxInstructions } from '@/hooks/queries'
 import { ensureContact } from '@/lib/notify'
 import { useLang, useMessages } from '@/lib/i18n'
 import { signingGroups } from '@/lib/model/approvals'
+import { useBilling } from '@/lib/billing/state'
 import { listExecutions } from '@/lib/model/executions'
+import { recentRequests } from '@/lib/model/requests'
 import { buildInbox, unseenCount, type InboxItem, type InboxKind } from '@/lib/model/inbox'
 import { useToggle } from '@/lib/toggles'
 import { cn, timeAgo } from '@/lib/util/cn'
@@ -21,12 +23,14 @@ const ICONS: Record<InboxKind, ReactNode> = {
   changes: <MessageSquare className="h-5 w-5" />,
   danger: <ShieldAlert className="h-5 w-5" />,
   deviation: <ClipboardCheck className="h-5 w-5" />,
+  request: <Gem className="h-5 w-5" />,
 }
 const TONES: Record<InboxKind, string> = {
   review: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200',
   changes: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200',
   danger: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200',
   deviation: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200',
+  request: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200',
 }
 
 /** Ce qui a été vu, par personne et par appareil : sans visite, la dernière semaine compte. */
@@ -41,7 +45,7 @@ function readSeen(userId: string): string {
 
 /** Les éléments « À voir » de la personne, et ce qui est nouveau depuis sa dernière visite. */
 export function useInbox() {
-  const { profile, org, can, data } = useSession()
+  const { profile, org, can, data, role } = useSession()
   const on = useToggle('notify')
   const recordsOn = useToggle('records')
   const multiOn = useToggle('multiApproval')
@@ -56,6 +60,11 @@ export function useInbox() {
     enabled: on && recordsOn && canFeedback,
     refetchInterval: 120_000,
   })
+  // Les demandes à l'administrateur (conseiller d'achat) : seulement pour qui achète.
+  const advisorOn = useToggle('salesAdvisor')
+  const billing = useBilling()
+  const buyer = role === 'admin' && billing.enabled && advisorOn
+  const requests = useQuery({ queryKey: ['requests'], queryFn: () => recentRequests(data), enabled: on && buyer, refetchInterval: 300_000 })
   const [seenAt, setSeenAt] = useState(() => readSeen(profile.userId))
   const items = useMemo(
     () =>
@@ -66,10 +75,12 @@ export function useInbox() {
             feedback: canFeedback ? (feedback.data ?? []) : [],
             executions: executions.data ?? [],
             groups: signingGroups(org.json_data, multiOn),
-            can: { approve: can('approve', 'write'), feedback: canFeedback },
+            can: { approve: can('approve', 'write'), feedback: canFeedback, buy: buyer },
+            requests: requests.data ?? [],
+            granted: billing.state?.features,
           })
         : [],
-    [on, profile.userId, instructions.data, feedback.data, executions.data, org.json_data, multiOn, can, canFeedback],
+    [on, profile.userId, instructions.data, feedback.data, executions.data, org.json_data, multiOn, can, canFeedback, buyer, requests.data, billing.state?.features],
   )
   const markSeen = () => {
     const now = new Date().toISOString()

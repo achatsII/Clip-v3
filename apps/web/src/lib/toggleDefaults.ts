@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -40,6 +40,12 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   training: true,
   // Les blocs communs : des étapes rédigées une fois, réutilisées dans plusieurs instructions.
   sharedBlocks: true,
+  // Le conseiller d'achat : de temps en temps, l'offre qui sert l'usine (accueil seulement), et la
+  // demande à l'administrateur quand on ne peut pas acheter soi-même.
+  salesAdvisor: true,
+  // Les modules en option, montrés et vendus seulement une fois bâtis : l'Académie, les Relevés avancés.
+  academy: false,
+  recordsPlus: false,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -66,4 +72,7 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   notify: false,
   training: false,
   sharedBlocks: false,
+  salesAdvisor: false,
+  academy: false,
+  recordsPlus: false,
 }

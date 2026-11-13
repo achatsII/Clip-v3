@@ -3,11 +3,13 @@
  * écrire de plus. Une instruction à approuver ou à signer, des changements demandés sur la sienne,
  * un danger signalé au poste, un écart relevé. Le plus récent d'abord.
  */
+import { FEATURE_LABELS, featureLabel, type FeatureKey } from '../billing/catalog'
+import { messages } from '../i18n/core'
 import type { Doc } from '../gateway/data'
 import { canSign } from './approvals'
-import type { ApprovalGroup, Execution, Feedback, Instruction } from './types'
+import type { ApprovalGroup, Execution, Feedback, Instruction, UpgradeRequest } from './types'
 
-export type InboxKind = 'review' | 'changes' | 'danger' | 'deviation'
+export type InboxKind = 'review' | 'changes' | 'danger' | 'deviation' | 'request'
 
 export interface InboxItem {
   id: string
@@ -28,7 +30,11 @@ export interface InboxInput {
   executions: Doc<Execution>[]
   /** Les groupes qui signent (approbation à plusieurs), sinon vide. */
   groups: ApprovalGroup[]
-  can: { approve: boolean; feedback: boolean }
+  can: { approve: boolean; feedback: boolean; buy?: boolean }
+  /** Les demandes à l'administrateur des 30 derniers jours (conseiller d'achat). */
+  requests?: Doc<UpgradeRequest>[]
+  /** Ce que l'usine a déjà (l'état de facturation) : une demande comblée disparaît. */
+  granted?: Record<string, boolean>
 }
 
 export function buildInbox(x: InboxInput): InboxItem[] {
@@ -57,6 +63,23 @@ export function buildInbox(x: InboxInput): InboxItem[] {
       if (!e.deviations) continue
       const first = e.answers.find((a) => a.ok === false)
       items.push({ id: `deviation:${d._id}`, kind: 'deviation', title: e.instructionTitle, who: e.operatorName ?? e.userName ?? null, text: first ? first.label : null, at: e.finishedAt, href: `/registre?ecarts=1` })
+    }
+  }
+  // Les demandes à l'administrateur : une ligne par fonction, tant que l'usine ne l'a pas.
+  if (x.can.buy) {
+    const byFeature = new Map<string, Array<Doc<UpgradeRequest>>>()
+    for (const d of x.requests ?? []) {
+      if (x.granted?.[d.json_data.feature]) continue
+      byFeature.set(d.json_data.feature, [...(byFeature.get(d.json_data.feature) ?? []), d])
+    }
+    for (const [feature, docs] of byFeature) {
+      const latest = docs.reduce((a, b) => (b.json_data.at > a.json_data.at ? b : a))
+      const names = [...new Set(docs.map((d) => d.json_data.byName))]
+      const label = feature in FEATURE_LABELS ? featureLabel(feature as FeatureKey) : feature
+      // Ce qui l'ouvrirait (« Avec Usine ») ; rien quand c'est le module lui-même.
+      const target = latest.json_data.targetName
+      const text = target && !label.startsWith(target) ? messages().inbox.comesWith(target) : null
+      items.push({ id: `request:${feature}:${latest.json_data.at}`, kind: 'request', title: label, who: names.slice(0, 3).join(', '), text, at: latest.json_data.at, href: '/reglages/abonnement' })
     }
   }
   return items.sort((a, b) => b.at.localeCompare(a.at))

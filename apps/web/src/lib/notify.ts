@@ -9,7 +9,7 @@ import { nowIso, T } from './model/repo'
 import type { Contact } from './model/types'
 
 export interface NotifyEvent {
-  kind: 'review' | 'changes' | 'published' | 'danger' | 'deviation' | 'test'
+  kind: 'review' | 'changes' | 'published' | 'danger' | 'deviation' | 'request' | 'test'
   instructionId?: string
   /** Une publication : la personne qui avait demandé l'approbation. */
   to?: string[]

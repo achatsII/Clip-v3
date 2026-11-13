@@ -12,7 +12,9 @@ export const inbox: typeof Fr = {
     changes: 'Changes requested',
     danger: 'Danger reported',
     deviation: 'Deviation recorded',
+    request: 'Requested',
   },
   by: (name: string) => `by ${name}`,
+  comesWith: (name: string) => `With ${name}`,
   isNew: 'New',
 }

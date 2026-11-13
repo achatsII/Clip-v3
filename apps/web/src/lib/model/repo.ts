@@ -34,6 +34,8 @@ export const T = {
   contact: 'clip_contact',
   /** Les réponses aux questions de compréhension d'une instruction (formation). */
   training: 'clip_training',
+  /** Les demandes à l'administrateur : une fonction que quelqu'un voudrait (conseiller d'achat). */
+  request: 'clip_request',
 } as const
 
 export const nowIso = () => new Date().toISOString()

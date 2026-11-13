@@ -21,6 +21,10 @@ export const notify: typeof Fr = {
     title: (station: string) => `Deviation recorded${station ? ` at ${station}` : ''}`,
     body: (instruction: string, who: string, text: string) => [instruction, who ? `by ${who}` : '', text].filter(Boolean).join(' · '),
   },
+  request: {
+    title: (who: string, what: string) => `${who} would like: ${what}`,
+    body: (target: string) => (target ? `It comes with ${target}. Everything is in Subscription and credits.` : 'Everything is in Subscription and credits.'),
+  },
   test: {
     title: 'CLIP alerts test',
     body: 'Alerts are reaching you.',

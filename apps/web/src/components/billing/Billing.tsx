@@ -9,19 +9,19 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
-import { creditsReason, planFor, renewalText } from '@/lib/billing/advice'
-import { FEATURE_LABELS, FEATURE_ORDER, PLAN_PITCH, featureLabel, featureUnit, isLimitFeature, type FeatureKey } from '@/lib/billing/catalog'
+import { creditsReason, moduleOffer, planFor, renewalText } from '@/lib/billing/advice'
+import { FEATURE_LABELS, FEATURE_ORDER, PLAN_PITCH, featureLabel, featureUnit, isLimitFeature, moduleOf, type FeatureKey } from '@/lib/billing/catalog'
+import { formatPrice } from '@/lib/billing/format'
 import { BillingError, creditsOf, limitOf, type BillingClient, type PublicPlan } from '@/lib/billing/client'
 import { limitReason } from '@/lib/billing/usage'
 import { useBilling, useEntitlement } from '@/lib/billing/state'
-import { locale, messages, num, useMessages } from '@/lib/i18n'
+import { messages, num, useMessages } from '@/lib/i18n'
 import { useToggle } from '@/lib/toggles'
+import { AskAdmin, MODULE_ICONS, useModules } from './Modules'
 import { devicePlatform, StoreBuy } from './Store'
 import { cn, formatDate, plural } from '@/lib/util/cn'
 
-export function formatPrice(cents: number, currency: string) {
-  return new Intl.NumberFormat(locale(), { style: 'currency', currency, minimumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100)
-}
+export { formatPrice } from '@/lib/billing/format'
 
 /** Une ligne de ce que donne un plan, en mots (jamais une clé brute). */
 export function entitlementLines(plan: PublicPlan): string[] {
@@ -162,21 +162,33 @@ export function Paywall({ client }: { client: BillingClient }) {
   const plans = usePlans(client)
   const [interval, setInterval] = useState<'monthly' | 'yearly'>('yearly')
   const [busy, setBusy] = useState(false)
+  const modulesOn = useModules()
+  const advisorOn = useToggle('salesAdvisor')
   if (!paywall) return null
   const feature = (paywall.feature ?? (paywall.refusal?.featureKey as FeatureKey | undefined)) || undefined
   const refusedCredits = paywall.refusal?.code === 'insufficient_credits'
   const credits = refusedCredits || feature === 'ai_credits'
-  const plan = plans.data ? planFor(plans.data.plans, state, credits ? 'ai_credits' : feature, paywall.refusal?.upgradePlan) : null
   const inShell = !!nativeEnv()
+  // Un module (Académie, Relevés) : son essai si le plan le reçoit, sinon le plan qui le reçoit. Un
+  // module ne se vend pas dans les magasins : dans l'app, rien à acheter pour lui.
+  const mod = credits ? null : moduleOf(feature)
+  const shownModule = mod && modulesOn.some((m) => m.key === mod.key) ? mod : null
+  const mo = shownModule && plans.data ? moduleOffer(plans.data.plans, state, shownModule, paywall.refusal?.upgradeAddon) : null
+  const addon = inShell ? null : (mo?.addon ?? null)
+  const plan = plans.data ? (shownModule ? (mo?.plan ?? null) : planFor(plans.data.plans, state, credits ? 'ai_credits' : feature, paywall.refusal?.upgradePlan)) : null
+  /** Ce qui s'achète : le module, sinon le plan. */
+  const offer = addon ?? plan
+  const mt = shownModule ? t.billing.modules[shownModule.key] : null
   const platform = devicePlatform()
   const isAdmin = role === 'admin'
   const c = creditsOf(state, 'ai_credits')
   // Une limite comptée par l'app : on dit ce que le plan permet et où l'on en est.
   const limitKey = !credits && isLimitFeature(feature) ? feature : null
   const limit = limitKey ? limitOf(state, limitKey, paywall.used) : null
-  const price = plan?.prices.find((p) => p.interval === interval) ?? plan?.prices[0]
-  const monthly = plan?.prices.find((p) => p.interval === 'monthly')
-  const yearly = plan?.prices.find((p) => p.interval === 'yearly')
+  const price = offer?.prices.find((p) => p.interval === interval) ?? offer?.prices[0]
+  const monthly = offer?.prices.find((p) => p.interval === 'monthly')
+  const yearly = offer?.prices.find((p) => p.interval === 'yearly')
+  const trialDays = addon?.trial_days ?? 0
   const saving = monthly && yearly ? Math.round(100 - (yearly.amount_cents / (monthly.amount_cents * 12)) * 100) : 0
   const w = t.billing.paywall
 
@@ -186,7 +198,9 @@ export function Paywall({ client }: { client: BillingClient }) {
       : t.billing.aiCredits
     : limitKey
       ? t.billing.limits.title[limitKey]
-      : feature && FEATURE_LABELS[feature]
+      : mt
+        ? mt.name
+        : feature && FEATURE_LABELS[feature]
         ? featureLabel(feature)
         : w.unlockMore
   const why = credits
@@ -195,14 +209,18 @@ export function Paywall({ client }: { client: BillingClient }) {
       ? w.suspended
       : limitKey && limit
         ? limitReason(limitKey, limit.limit, paywall.used)
-        : w.notInPlan
+        : mt && shownModule
+          ? addon || !plan
+            ? mt.pitch
+            : t.billing.modules.needsPlan(mt.name, plan.name)
+          : w.notInPlan
 
   async function buy() {
-    if (!plan || !price || price.interval === 'one_time') return
+    if (!offer || !price || price.interval === 'one_time') return
     setBusy(true)
     try {
       const back = window.location.href
-      const url = await client.checkout(plan.code, price.interval, { success: back, cancel: back })
+      const url = await client.checkout(offer.code, price.interval, { success: back, cancel: back })
       window.location.assign(url)
     } catch (e) {
       if (e instanceof BillingError && e.status === 403) toast.error(t.billing.checkout.adminOnly, t.billing.checkout.askToUpgrade)
@@ -224,6 +242,32 @@ export function Paywall({ client }: { client: BillingClient }) {
       <p className="font-medium text-slate-600 dark:text-slate-300">{why}</p>
       {plans.isLoading ? (
         <div className="skeleton mt-5 h-48 rounded-[28px]" />
+      ) : addon && mt && shownModule ? (
+        // Un module : sa propre couleur (l'accent), ce qu'il donne, l'essai puis le prix.
+        <div className="bg-gradient-accent shadow-accent relative mt-5 overflow-hidden rounded-[28px] p-6 text-white">
+          <span className="grid-pattern absolute inset-0 opacity-50" />
+          <div className="relative">
+            <p className="label-caps flex items-center gap-1.5 opacity-80">
+              {t.billing.modules.eyebrow} · {mt.name}
+            </p>
+            <p className="flex items-center gap-2 text-3xl font-black tracking-tighter">
+              {MODULE_ICONS[shownModule.key]} {trialDays > 0 ? t.billing.modules.trial(trialDays) : mt.name}
+            </p>
+            <ul className="mt-4 space-y-1.5">
+              {mt.points.map((l) => (
+                <li key={l} className="flex items-center gap-2 text-sm font-bold">
+                  <Check className="h-4 w-4 shrink-0" /> {l}
+                </li>
+              ))}
+            </ul>
+            {price && (
+              <p className={cn('mt-4 font-black tabular-nums', trialDays > 0 ? 'text-lg' : 'text-2xl')}>
+                {trialDays > 0 ? t.billing.modules.after(`${formatPrice(price.amount_cents, price.currency)} ${price.interval === 'yearly' ? t.billing.perYear : t.billing.perMonth}`) : formatPrice(price.amount_cents, price.currency)}
+                {trialDays === 0 && <span className="text-sm font-bold opacity-80"> {price.interval === 'yearly' ? t.billing.perYear : t.billing.perMonth}</span>}
+              </p>
+            )}
+          </div>
+        </div>
       ) : plan ? (
         <div className="bg-gradient-primary shadow-primary relative mt-5 overflow-hidden rounded-[28px] p-6 text-white">
           <span className="grid-pattern absolute inset-0 opacity-50" />
@@ -246,12 +290,14 @@ export function Paywall({ client }: { client: BillingClient }) {
             )}
           </div>
         </div>
+      ) : shownModule && inShell ? (
+        <p className="mt-4 font-bold text-slate-500">{t.billing.managedByAdmin}</p>
       ) : credits && plans.data ? (
         <p className="mt-4 font-bold text-slate-500">{renewalText(c)}</p>
       ) : (
         <p className="mt-4 font-bold text-slate-500">{w.seePlansPage}</p>
       )}
-      {plan && monthly && yearly && (!inShell || platform) && (
+      {offer && monthly && yearly && (!inShell || platform) && (
         <div className="mt-4 flex justify-center gap-2">
           {(['monthly', 'yearly'] as const).map((iv) => (
             <button key={iv} type="button" onClick={() => setInterval(iv)} className={cn('btn-press h-10 rounded-xl px-4 text-sm font-black', interval === iv ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card')}>
@@ -262,7 +308,17 @@ export function Paywall({ client }: { client: BillingClient }) {
         </div>
       )}
       <div className="mt-6 flex flex-col gap-2">
-        {!plan ? null : inShell && platform ? (
+        {addon && mt && shownModule ? (
+          isAdmin ? (
+            <Button variant="primary" size="lg" block loading={busy} onClick={buy}>
+              {trialDays > 0 ? t.billing.modules.tryFree(trialDays) : t.billing.modules.add(mt.name)}
+            </Button>
+          ) : advisorOn ? (
+            <AskAdmin primary feature={shownModule.feature} targetName={mt.name} offerId={`module:${shownModule.key}`} />
+          ) : (
+            <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{t.billing.subscription.askAdmin}</p>
+          )
+        ) : !plan ? null : inShell && platform ? (
           // Dans l'app : l'achat dans le magasin, s'il est permis ; sinon une phrase, sans lien ni prix.
           <StoreBuy
             client={client}
@@ -284,7 +340,12 @@ export function Paywall({ client }: { client: BillingClient }) {
           </Button>
         ) : (
           <>
-            <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{w.askAdmin(plan.name)}</p>
+            {/* Qui n'achète pas le demande en un geste (conseiller d'achat) ; sinon, la phrase. */}
+            {advisorOn && feature ? (
+              <AskAdmin primary feature={feature} targetName={plan.name} />
+            ) : (
+              <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{w.askAdmin(plan.name)}</p>
+            )}
             {reportOn && can('stats') && stats !== 'locked' && (
               <Link href={`/statistiques/dossier?plan=${encodeURIComponent(plan.code)}`} onClick={closePaywall} className="btn-press glass-card flex h-12 items-center justify-center gap-2 rounded-full text-sm font-black">
                 <FileText className="h-4 w-4" /> {w.valueReport}

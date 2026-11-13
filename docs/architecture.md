@@ -673,6 +673,35 @@ instructions publiées, et les compare au plafond lu dans l'état.
   le plan à proposer, ou aucun ; le prix vient de `/api/v2/billing/plans`. Une personne qui n'est
   pas administratrice y arrive aussi depuis la fenêtre des refus, avec le plan conseillé déjà choisi.
 
+**Les modules en option** (`kind: addon` au manifeste). L'Académie et les Relevés s'ajoutent à Équipe
+ou à Usine, sur le web seulement (un module ne se vend pas dans les magasins), avec 14 jours offerts
+une fois par organisation. Leur prix suit le plan de base : un module par plan de base
+(`academie_equipe`, `academie_usine`…), et l'app ne propose que celui de son plan (`MODULES`,
+`addonFor`). La page Abonnement a sa section « Modules » ; la fenêtre des refus d'une feature de
+module propose son essai (`moduleOffer`, le module désigné par `upgrade_hint.addon_code` d'abord) ou,
+sur Gratuit et Solo, le plan qui le reçoit. Les prix se lisent toujours à la plateforme. Un module se
+montre et se vend seulement une fois bâti (toggles `academy`, `recordsPlus`).
+
+**Le conseiller d'achat** (toggle `salesAdvisor`, `src/lib/billing/advisor.ts`). De temps en temps,
+l'offre qui sert vraiment l'usine, sur une carte de l'accueil (`OfferCard`), jamais au poste ni
+pendant une capture ou une publication.
+
+- **Les offres possibles** (`candidates`), de la plus pressante à la moins pressante : une limite
+  atteinte, puis à 80 % (à partir de deux unités : un seul rédacteur sur Solo, c'est le plan) ; une
+  fonction fermée essayée deux fois en 30 jours (un refus de la plateforme, un verrou touché, les
+  crédits épuisés) ; un module que l'usage appelle (10 formations validées ou 30 relevés en 30 jours,
+  si le plan le reçoit). Chacune a de quoi s'acheter (`planFor`, `moduleOffer`).
+- **Rarement** (`pickOffer`) : une offre à la fois, qui reste tant qu'elle sert ; une nouvelle au
+  plus par semaine ; « Plus tard » la range 30 jours, et deux semaines sans réponse aussi. Les comptes
+  sont lus avant de choisir, pour qu'une offre montrée ne disparaisse pas pendant un chargement.
+- **« Voir l'offre »** ouvre la fenêtre d'achat habituelle (`source: 'advisor'`) : le paiement pour
+  l'administrateur, le magasin dans l'app (plans seulement), sinon « Demander à l'administrateur ».
+- **La demande à l'administrateur** (`clip_request`, `src/lib/model/requests.ts`) : une par personne
+  et par fonction sur 30 jours. « À voir » la montre aux administrateurs, une ligne par fonction
+  (« Avec Usine »), jusqu'à ce que l'usine l'ait ; l'avis part par `/api/notify` (`request`).
+- **La mesure** : chaque offre montrée, ouverte, rangée ou demandée se note dans `clip_event`
+  (`type: 'offer'`, `offer`, `action`), à côté des statistiques sans les fausser.
+
 ## 7. Les langues de l'outil (`src/lib/i18n`)
 
 Le cœur (`src/lib/i18n/core.ts` : langue courante, `messages()`, `locale()`) n'a pas de React : les

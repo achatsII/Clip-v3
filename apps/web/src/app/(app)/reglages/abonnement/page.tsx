@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { billingClient } from '@/components/billing/BillingRoot'
 import { entitlementLines, formatPrice, usePlans } from '@/components/billing/Billing'
 import { canBuyInStore, devicePlatform, StoreAccount, StoreBuy } from '@/components/billing/Store'
+import { ModuleCard, useModules } from '@/components/billing/Modules'
 import { UsageMeter, useUsage } from '@/components/billing/Usage'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -45,6 +46,8 @@ function Subscription() {
   const c = creditsOf(state, 'ai_credits')
   const usage = useUsage()
   const limited = LIMIT_FEATURES.filter((k) => usage[k] && usage[k].limit !== null)
+  // Les modules en option : sur le web (un module ne se vend pas dans les magasins), une fois bâtis.
+  const modules = useModules()
 
   async function buy(code: string) {
     setBusy(code)
@@ -193,6 +196,20 @@ function Subscription() {
         )}
         {inShell && !canBuyInStore() && <p className="mt-4 text-sm font-bold text-slate-500">{t.billing.managedByAdmin}</p>}
       </section>
+
+      {!inShell && modules.length > 0 && plans.data && (
+        <section>
+          <div className="mb-4">
+            <h2 className="text-xl font-black tracking-tight">{t.billing.modules.title}</h2>
+            <p className="text-sm font-bold text-slate-500">{t.billing.modules.subtitle}</p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            {modules.map((m) => (
+              <ModuleCard key={m.key} m={m} plans={plans.data!.plans} state={state} interval={interval} isAdmin={isAdmin} busy={!!busy && Object.values(m.addons).includes(busy)} onBuy={(code) => void buy(code)} />
+            ))}
+          </div>
+        </section>
+      )}
       {!inShell && <p className="text-sm font-medium text-slate-500">{w.enterprise}</p>}
     </div>
   )

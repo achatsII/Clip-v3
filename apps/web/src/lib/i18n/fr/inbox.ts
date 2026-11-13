@@ -11,7 +11,10 @@ export const inbox = {
     changes: 'Changements demandés',
     danger: 'Danger signalé',
     deviation: 'Écart relevé',
+    request: 'Demandé',
   },
   by: (name: string) => `par ${name}`,
+  /** Une demande à l’administrateur : ce qui ouvrirait la fonction. */
+  comesWith: (name: string) => `Avec ${name}`,
   isNew: 'Nouveau',
 }

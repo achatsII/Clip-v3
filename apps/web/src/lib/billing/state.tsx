@@ -8,6 +8,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { BILLING_V2 } from '../config'
 import { onRefusal, onSettled, type Refusal } from './bus'
+import { recordTry } from './advisorStore'
 import { limitOf, type BillingClient, type BillingState, type LimitStatus } from './client'
 import type { FeatureKey } from './catalog'
 
@@ -18,6 +19,8 @@ export interface PaywallRequest {
   used?: number
   /** L'action à relancer après l'achat (la saisie est gardée par l'écran). */
   retry?: () => void
+  /** Ouverte par le conseiller d'achat (accueil), et non par un refus. */
+  source?: 'advisor'
 }
 
 interface BillingContextValue {
@@ -28,6 +31,8 @@ interface BillingContextValue {
   paywall: PaywallRequest | null
   openPaywall: (r: PaywallRequest) => void
   closePaywall: () => void
+  /** Une fonction fermée vient d'être essayée : le conseiller d'achat s'en souvient. */
+  noteTry: (feature: string) => void
 }
 
 const Ctx = createContext<BillingContextValue>({
@@ -38,6 +43,7 @@ const Ctx = createContext<BillingContextValue>({
   paywall: null,
   openPaywall: () => undefined,
   closePaywall: () => undefined,
+  noteTry: () => undefined,
 })
 
 const QUIET_MS = 4000
@@ -82,6 +88,7 @@ export function BillingProvider({ client, session, enabled = BILLING_V2, childre
       const now = Date.now()
       if (now - lastRefusal.current < QUIET_MS) return
       lastRefusal.current = now
+      if (session && refusal.featureKey) recordTry(session, refusal.featureKey)
       setPaywall({ refusal })
     })
     return () => {
@@ -89,11 +96,11 @@ export function BillingProvider({ client, session, enabled = BILLING_V2, childre
       offSettled()
       offRefusal()
     }
-  }, [enabled, refresh])
+  }, [enabled, refresh, session])
 
   const value = useMemo<BillingContextValue>(
-    () => ({ enabled, state, loading, refresh, paywall, openPaywall: setPaywall, closePaywall: () => setPaywall(null) }),
-    [enabled, state, loading, refresh, paywall],
+    () => ({ enabled, state, loading, refresh, paywall, openPaywall: setPaywall, closePaywall: () => setPaywall(null), noteTry: (feature: string) => session && recordTry(session, feature) }),
+    [enabled, state, loading, refresh, paywall, session],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
@@ -122,14 +129,18 @@ export function useLimit(featureKey: FeatureKey, used: number | undefined): Limi
 
 /** Ouvre la fonction si elle est incluse, sinon le paywall (avec l'action à relancer). */
 export function useGate() {
-  const { openPaywall, refresh } = useBilling()
+  const { openPaywall, refresh, noteTry } = useBilling()
   return useCallback(
     (entitlement: Entitlement, feature: FeatureKey, action: () => void) => {
       if (entitlement === 'off' || entitlement === 'open') return action()
-      if (entitlement === 'locked') return openPaywall({ feature, retry: action })
+      const locked = () => {
+        noteTry(feature)
+        openPaywall({ feature, retry: action })
+      }
+      if (entitlement === 'locked') return locked()
       // Pas encore lu : on relit, puis on décide ; illisible, on ne sert pas la fonction.
-      void refresh().then((fresh) => (fresh?.features[feature] === true ? action() : openPaywall({ feature, retry: action })))
+      void refresh().then((fresh) => (fresh?.features[feature] === true ? action() : locked()))
     },
-    [openPaywall, refresh],
+    [openPaywall, refresh, noteTry],
   )
 }

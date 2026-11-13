@@ -45,7 +45,7 @@ export async function serviceToken(sealed: string | null | undefined, org: strin
   return { token: r.token, email: canEmail(r.ex) }
 }
 
-export type NotifyKind = 'review' | 'changes' | 'published' | 'danger' | 'deviation' | 'test'
+export type NotifyKind = 'review' | 'changes' | 'published' | 'danger' | 'deviation' | 'request' | 'test'
 
 export interface Message {
   kind: NotifyKind
@@ -78,7 +78,9 @@ export function compose(m: Message, lang: string): { title: string; body: string
             ? [t.danger.title(station), t.danger.body(instruction, who, text)]
             : m.kind === 'deviation'
               ? [t.deviation.title(station), t.deviation.body(instruction, who, text)]
-              : [t.test.title, t.test.body]
+              : m.kind === 'request'
+                ? [t.request.title(who, text), t.request.body(instruction)]
+                : [t.test.title, t.test.body]
   const html = `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#0f172a;max-width:520px"><h2 style="margin:0 0 8px;font-size:20px">${esc(title)}</h2><p style="margin:0 0 18px;font-size:15px;color:#334155">${esc(body)}</p><a href="${esc(m.url)}" style="display:inline-block;background:#0078FF;color:#fff;text-decoration:none;font-weight:800;padding:12px 20px;border-radius:999px">${esc(t.open)}</a><p style="margin:24px 0 0;font-size:12px;color:#94a3b8">${esc(t.footer)}</p></div>`
   return { title, body, html }
 }

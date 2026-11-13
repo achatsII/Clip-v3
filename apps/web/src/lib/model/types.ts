@@ -596,7 +596,7 @@ export interface Feedback extends OperatorRef {
   createdAt: string
 }
 
-export type EventType = 'view' | 'complete' | 'scan' | 'ai'
+export type EventType = 'view' | 'complete' | 'scan' | 'ai' | 'offer'
 
 export interface UsageEvent extends OperatorRef {
   type: EventType
@@ -610,6 +610,23 @@ export interface UsageEvent extends OperatorRef {
   model?: string | null
   tokens?: number | null
   userId?: string | null
+  /** Une offre du conseiller d'achat (`type: 'offer'`) : laquelle, et ce que la personne en a fait. */
+  offer?: string | null
+  action?: 'shown' | 'open' | 'later' | 'ask' | null
+  at: string
+}
+
+/**
+ * Une demande à l'administrateur (`clip_request`, conseiller d'achat) : une personne qui ne peut pas
+ * acheter voudrait une fonction. « À voir » la montre aux administrateurs 30 jours, ou jusqu'à ce
+ * que l'usine l'ait.
+ */
+export interface UpgradeRequest {
+  feature: string
+  /** Ce qui l'ouvrirait, pour le dire : le nom d'un plan ou d'un module. */
+  targetName: string | null
+  byId: string
+  byName: string
   at: string
 }
 

@@ -5,6 +5,7 @@
  */
 import { getLang, messages } from '@/lib/i18n'
 import type { AiOperation } from '../gateway/ai'
+import type { ToggleName } from '../toggleDefaults'
 
 export const AI_COSTS: Record<AiOperation, number> = {
   generate_s: 150,
@@ -40,6 +41,8 @@ export type FeatureKey =
   | 'brand_kit'
   | 'full_export'
   | 'shared_blocks'
+  | 'academy'
+  | 'records_plus'
 
 /** Les features qui plafonnent une quantité détenue (`kind: limit` au manifeste) : l'app les compte. */
 export const LIMIT_FEATURES = ['published_instructions', 'stations', 'editors'] as const satisfies readonly FeatureKey[]
@@ -67,6 +70,8 @@ export const FEATURE_LABELS: Record<FeatureKey, FeatureLabel> = {
   brand_kit: { fr: 'Logo et couleurs de l’usine, PDF sans mention CLIP', en: 'Plant logo and colors, PDFs without CLIP branding' },
   full_export: { fr: 'Export complet de toutes les instructions', en: 'Full export of all instructions' },
   shared_blocks: { fr: 'Blocs communs : des étapes rédigées une fois, à jour partout', en: 'Shared blocks: steps written once, up to date everywhere' },
+  academy: { fr: 'Académie', en: 'Academy' },
+  records_plus: { fr: 'Relevés avancés', en: 'Advanced records' },
 }
 
 /** Le libellé d'une feature dans la langue de l'outil ; l'anglais pour une langue que le catalogue n'a pas encore. */
@@ -95,6 +100,8 @@ export const FEATURE_ORDER: FeatureKey[] = [
   'brand_kit',
   'shared_blocks',
   'full_export',
+  'academy',
+  'records_plus',
 ]
 
 /** Phrase de présentation de chaque plan (le manifeste n'a pas de champ de description). */
@@ -106,4 +113,33 @@ export const PLAN_PITCH: Record<string, string> = Object.defineProperties(
 
 /** Le plan mis en avant sur la page des plans. */
 export const FEATURED_PLAN = 'equipe'
+
+/* ───────────────────────── Les modules en option ───────────────────────── */
+
+export type ModuleKey = 'academy' | 'records'
+
+export interface ModuleDef {
+  key: ModuleKey
+  /** La feature que le module ouvre. */
+  feature: FeatureKey
+  /** Le feature toggle de l'app : un module se montre et se vend seulement une fois bâti. */
+  toggle: ToggleName
+  /** Le module à acheter selon le plan de base (le prix suit le plan) ; un plan absent ne le reçoit pas. */
+  addons: Partial<Record<string, string>>
+}
+
+/** Les modules (`kind: addon` au manifeste, un par plan de base : un test les compare). */
+export const MODULES: readonly ModuleDef[] = [
+  { key: 'academy', feature: 'academy', toggle: 'academy', addons: { equipe: 'academie_equipe', usine: 'academie_usine' } },
+  { key: 'records', feature: 'records_plus', toggle: 'recordsPlus', addons: { equipe: 'releves_equipe', usine: 'releves_usine' } },
+]
+
+/** Le module qui ouvre cette feature, s'il y en a un. */
+export const moduleOf = (feature: string | null | undefined): ModuleDef | null => MODULES.find((m) => m.feature === feature) ?? null
+
+/** Le code du module à acheter avec ce plan de base ; null si le plan ne le reçoit pas. */
+export const addonFor = (m: ModuleDef, planCode: string | null | undefined): string | null => (planCode && m.addons[planCode]) || null
+
+/** Les plans de base qui reçoivent ce module (« avec Équipe ou Usine »). */
+export const plansFor = (m: ModuleDef): string[] => Object.keys(m.addons)
 

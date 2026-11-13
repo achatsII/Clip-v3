@@ -8,6 +8,8 @@ export interface Refusal {
   reason: string | null
   featureKey: string | null
   upgradePlan: string | null
+  /** Le module qui ouvrirait la fonction, quand la plateforme le dit. */
+  upgradeAddon: string | null
 }
 
 const REFUSAL_CODES = new Set(['insufficient_credits', 'capacity_exceeded', 'not_entitled', 'subscription_inactive', 'subscription_suspended'])
@@ -45,13 +47,14 @@ export function refusalFrom(status: number, body: unknown): Refusal | null {
   const b = body as Record<string, unknown>
   const code = typeof b.code === 'string' ? b.code : null
   if (!code || !REFUSAL_CODES.has(code)) return null
-  const hint = b.upgrade_hint as { plan_code?: unknown } | null | undefined
+  const hint = b.upgrade_hint as { plan_code?: unknown; addon_code?: unknown } | null | undefined
   return {
     status,
     code,
     reason: typeof b.reason === 'string' ? b.reason : null,
     featureKey: typeof b.feature_key === 'string' ? b.feature_key : null,
     upgradePlan: typeof hint?.plan_code === 'string' ? hint.plan_code : null,
+    upgradeAddon: typeof hint?.addon_code === 'string' ? hint.addon_code : null,
   }
 }
 
