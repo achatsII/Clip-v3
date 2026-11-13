@@ -834,7 +834,7 @@ instructions publiées, et les compare au plafond lu dans l'état.
 **Les modules en option** (`kind: addon` au manifeste). L'Académie et les Relevés s'ajoutent à Équipe
 ou à Usine, sur le web seulement (un module ne se vend pas dans les magasins), avec 14 jours offerts
 une fois par organisation. Leur prix suit le plan de base : un module par plan de base
-(`academie_equipe`, `academie_usine`…), et l'app ne propose que celui de son plan (`MODULES`,
+(`academie-equipe`, `academie-usine`…), et l'app ne propose que celui de son plan (`MODULES`,
 `addonFor`). La page Abonnement a sa section « Modules » ; la fenêtre des refus d'une feature de
 module propose son essai (`moduleOffer`, le module désigné par `upgrade_hint.addon_code` d'abord) ou,
 sur Gratuit et Solo, le plan qui le reçoit. Les prix se lisent toujours à la plateforme. Un module se

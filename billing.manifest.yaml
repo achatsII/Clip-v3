@@ -184,15 +184,17 @@ plans:
   # chaque personne qualifiée) et les Relevés (des données fiables du plancher). Sur le web seulement :
   # un module ne se vend pas dans les magasins. 14 jours offerts, une fois par organisation. Annuel =
   # 10 mois. Son prix suit le plan de base (Usine : trois fois Équipe, comme ses postes et ses
-  # rédacteurs) : un module par plan de base, <module>_<plan>. Le manifeste n'a pas de champ documenté
+  # rédacteurs) : un module par plan de base, <module>-<plan> (un code ne prend que des traits d'union),
+  # une fois par abonnement (max_quantity: 1). Le manifeste n'a pas de champ documenté
   # pour ce rattachement : l'app ne propose que le module de son plan (MODULES, dans
   # src/lib/billing/catalog.ts). La simulation de billing-publish le confirme avant la publication.
-  - code: academie_equipe
+  - code: academie-equipe
     kind: addon
     name: Académie
     version: 1
     status: active
     trial_days: 14
+    max_quantity: 1
     availability: { channels: [web], audience: personal }
     prices:
       - { interval: monthly, currency: CAD, amount_cents: 14900 }
@@ -200,12 +202,13 @@ plans:
     entitlements:
       features: { academy: true }
 
-  - code: academie_usine
+  - code: academie-usine
     kind: addon
     name: Académie
     version: 1
     status: active
     trial_days: 14
+    max_quantity: 1
     availability: { channels: [web], audience: personal }
     prices:
       - { interval: monthly, currency: CAD, amount_cents: 44900 }
@@ -213,12 +216,13 @@ plans:
     entitlements:
       features: { academy: true }
 
-  - code: releves_equipe
+  - code: releves-equipe
     kind: addon
     name: Relevés
     version: 1
     status: active
     trial_days: 14
+    max_quantity: 1
     availability: { channels: [web], audience: personal }
     prices:
       - { interval: monthly, currency: CAD, amount_cents: 9900 }
@@ -226,12 +230,13 @@ plans:
     entitlements:
       features: { records_plus: true }
 
-  - code: releves_usine
+  - code: releves-usine
     kind: addon
     name: Relevés
     version: 1
     status: active
     trial_days: 14
+    max_quantity: 1
     availability: { channels: [web], audience: personal }
     prices:
       - { interval: monthly, currency: CAD, amount_cents: 29900 }

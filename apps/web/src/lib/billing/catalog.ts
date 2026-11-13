@@ -132,8 +132,8 @@ export interface ModuleDef {
 
 /** Les modules (`kind: addon` au manifeste, un par plan de base : un test les compare). */
 export const MODULES: readonly ModuleDef[] = [
-  { key: 'academy', feature: 'academy', toggle: 'academy', addons: { equipe: 'academie_equipe', usine: 'academie_usine' } },
-  { key: 'records', feature: 'records_plus', toggle: 'recordsPlus', addons: { equipe: 'releves_equipe', usine: 'releves_usine' } },
+  { key: 'academy', feature: 'academy', toggle: 'academy', addons: { equipe: 'academie-equipe', usine: 'academie-usine' } },
+  { key: 'records', feature: 'records_plus', toggle: 'recordsPlus', addons: { equipe: 'releves-equipe', usine: 'releves-usine' } },
 ]
 
 /** Le module qui ouvre cette feature, s'il y en a un. */
