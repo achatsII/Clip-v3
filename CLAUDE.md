@@ -157,7 +157,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   899 $/mois (15, illimitées, 100, 40 000) · Entreprise sur devis, hors manifeste. Annuel = 10 mois.
 - Les modules en option (`kind: addon`), sur le web seulement, avec Équipe ou Usine, 14 jours offerts :
   Académie (feature `academy`, 149 $ avec Équipe, 449 $ avec Usine) et Relevés (`records_plus`, 99 $ et
-  299 $). Un module par plan de base (`academie_equipe`…) ; l'app ne propose que celui de son plan
+  299 $). Un module par plan de base (`academie-equipe`…) ; l'app ne propose que celui de son plan
   (`MODULES`, `src/lib/billing/catalog.ts`, comparé au manifeste par le test). Le rattachement au plan de
   base n'a pas de champ documenté : la simulation de `billing-publish` le confirme. Un module se montre
   et se vend seulement une fois bâti (toggles `academy` et `recordsPlus`, allumés : les deux le sont).

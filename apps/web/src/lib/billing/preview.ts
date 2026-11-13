@@ -49,10 +49,10 @@ export const PREVIEW_PLANS: readonly PublicPlan[] = [
   base('solo', 'Solo', cad(4900, 49000), { adoption_stats: true }, { published_instructions: 30, stations: 5, editors: 1 }, 2500),
   base('equipe', 'Équipe', cad(29900, 299000), { translations: true, adoption_stats: true, approvals: true, brand_kit: true, shared_blocks: true }, { published_instructions: null, stations: 25, editors: 5 }, 12000),
   base('usine', 'Usine', cad(89900, 899000), { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true }, { published_instructions: null, stations: 100, editors: 15 }, 40000),
-  addon('academie_equipe', 'Académie', cad(14900, 149000), 'academy'),
-  addon('academie_usine', 'Académie', cad(44900, 449000), 'academy'),
-  addon('releves_equipe', 'Relevés', cad(9900, 99000), 'records_plus'),
-  addon('releves_usine', 'Relevés', cad(29900, 299000), 'records_plus'),
+  addon('academie-equipe', 'Académie', cad(14900, 149000), 'academy'),
+  addon('academie-usine', 'Académie', cad(44900, 449000), 'academy'),
+  addon('releves-equipe', 'Relevés', cad(9900, 99000), 'records_plus'),
+  addon('releves-usine', 'Relevés', cad(29900, 299000), 'records_plus'),
 ]
 
 /* ───────────────────────── Ce que l'usine aurait (dans cet appareil) ───────────────────────── */
