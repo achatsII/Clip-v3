@@ -251,6 +251,10 @@ export const billing: typeof Fr = {
     choose: (plan: string) => `Choose ${plan}`,
     askAdmin: 'Ask your administrator',
     enterprise: 'Need several plants, single sign-on or a contract? Write to us: we’ll tailor an Enterprise plan for you.',
+    intent: {
+      label: 'The plan you chose on our site',
+      continue: 'Continue to payment',
+    },
   },
   errors: {
     signedOut: 'No user signed in',

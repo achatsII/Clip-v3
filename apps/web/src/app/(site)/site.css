@@ -1,0 +1,245 @@
+/*
+ * Le site public : ce que les utilitaires de Tailwind et le verre de globals.css ne couvrent pas.
+ * Mêmes jetons que l'app (--primary, --gradient-primary, --gradient-accent…). Chaque classe commence
+ * par « site- ». Écrire seulement backdrop-filter (voir globals.css). Ce fichier n'est dans aucune couche :
+ * ses règles l'emportent sur un utilitaire de Tailwind posé sur le même élément, quelle que soit sa
+ * spécificité ; une propriété réglée ici ne se règle donc pas aussi en classe.
+ */
+
+/* ───────── Départ vers l'app (script de garde) : le contenu se cache, le logo reste ───────── */
+.site-leaving-mark {
+  display: none;
+}
+html.site-leaving .site-root {
+  visibility: hidden;
+}
+html.site-leaving .site-leaving-mark {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ───────── Texte en dégradé ───────── */
+.site-gradient-text {
+  background-image: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.site-ai-text {
+  background-image: var(--gradient-accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.site-danger-text {
+  background-image: linear-gradient(135deg, #ff2b5e 0%, #ff6b00 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ───────── Menus (API Popover : fermeture au clic dehors et par Échap, sans script) ───────── */
+.site-popover {
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  overflow: visible;
+}
+.site-menu {
+  position: fixed;
+  top: 76px;
+  left: 50%;
+  width: min(760px, calc(100vw - 32px));
+  translate: -50% 0;
+  background: transparent;
+}
+/* Le menu du téléphone couvre l'écran : un verre presque opaque, pour qu'il se lise d'un coup d'œil. */
+.site-sheet {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgb(248 250 252 / 0.95);
+  backdrop-filter: blur(24px) saturate(1.4);
+}
+.dark .site-sheet {
+  background: rgb(2 6 23 / 0.94);
+}
+.site-popover:popover-open {
+  animation: site-pop 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.site-popover::backdrop {
+  background: rgba(15, 23, 42, 0.18);
+}
+.site-sheet::backdrop {
+  background: transparent;
+}
+/* Seulement la position : une opacité animée ferait du menu une « racine de fond » (backdrop root),
+   et le flou du verre qu'il contient ne verrait plus la page. */
+@keyframes site-pop {
+  from {
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ───────── Apparitions au défilement : animations liées au défilement, aucun script ─────────
+   Sans prise en charge, ou avec la réduction des mouvements, tout est simplement visible. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .site-reveal {
+      animation: site-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+}
+@media print {
+  .site-reveal {
+    animation: none !important;
+  }
+}
+@keyframes site-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ───────── Questions fréquentes (details/summary) ───────── */
+.site-faq summary {
+  list-style: none;
+  cursor: pointer;
+}
+.site-faq summary::-webkit-details-marker {
+  display: none;
+}
+.site-faq details[open] .site-faq-icon {
+  transform: rotate(45deg);
+}
+.site-faq-icon {
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ───────── Mensuel ou annuel : les deux prix sont dans la page, un seul se montre ───────── */
+[data-interval='month'] .site-when-year,
+[data-interval='year'] .site-when-month {
+  display: none !important;
+}
+
+/* ───────── Le cadre d'appareil des boucles : un reflet de verre sur le bord ───────── */
+.site-frame {
+  position: relative;
+  isolation: isolate;
+}
+.site-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 38%);
+  mix-blend-mode: soft-light;
+}
+
+/* ───────── Le halo derrière le héros ───────── */
+.site-halo {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: min(1100px, 120vw);
+  aspect-ratio: 16 / 9;
+  translate: -50% 0;
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, rgba(var(--primary-rgb), 0.28), rgba(var(--primary-rgb), 0) 70%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+.dark .site-halo {
+  background: radial-gradient(closest-side, rgba(var(--primary-rgb), 0.22), rgba(var(--primary-rgb), 0) 70%);
+}
+
+/* ───────── L'onde de la lecture à voix haute (démo du poste) ───────── */
+@keyframes site-wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.site-wave i {
+  display: block;
+  width: 4px;
+  height: 18px;
+  border-radius: 3px;
+  background: currentColor;
+  transform-origin: 50% 100%;
+  animation: site-wave 0.9s ease-in-out infinite;
+}
+.site-wave i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.site-wave i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.site-wave i:nth-child(4) {
+  animation-delay: 0.45s;
+}
+
+/* ───────── Le trait qui se dessine (démo d'annotation) ───────── */
+@keyframes site-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.site-draw {
+  stroke-dasharray: var(--len, 700);
+  stroke-dashoffset: var(--len, 700);
+  animation: site-draw 0.7s cubic-bezier(0.16, 1, 0.3, 1) var(--delay, 0s) forwards;
+}
+@keyframes site-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.site-pop-in {
+  opacity: 0;
+  animation: site-fade-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) var(--delay, 0s) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-draw {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+  .site-pop-in {
+    opacity: 1;
+    animation: none;
+  }
+  .site-wave i {
+    animation: none;
+  }
+}
