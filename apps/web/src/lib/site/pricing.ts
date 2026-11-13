@@ -6,7 +6,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { parse } from 'yaml'
-import { FEATURED_PLAN, type FeatureKey } from '@/lib/billing/catalog'
+import { FEATURED_PLAN, MODULES, type FeatureKey } from '@/lib/billing/catalog'
 import type { PlanInterval } from '@/lib/billing/intent'
 import { SITE_LOCALE, type SiteLang } from './lang'
 
@@ -65,7 +65,7 @@ export interface SiteModule {
   code: string
   name: string
   feature: FeatureKey
-  /** Le forfait de base auquel ce module s'ajoute (convention du manifeste : `<module>_<forfait>`). */
+  /** Le forfait de base auquel ce module s'ajoute : celui que l'app propose pour ce code (`MODULES`). */
   basePlan: string
   trialDays: number
   prices: SitePrice[]
@@ -106,7 +106,8 @@ export function catalogFromManifest(m: RawManifest): SiteCatalog {
     .filter((p) => p.kind === 'addon')
     .flatMap((p) => {
       const feature = Object.entries(p.entitlements.features ?? {}).find(([, on]) => on)?.[0] as FeatureKey | undefined
-      const basePlan = p.code.slice(p.code.lastIndexOf('_') + 1)
+      // le forfait de base vient de la table de l'app (MODULES), pas du code : un code ne se découpe pas
+      const basePlan = MODULES.flatMap((m) => Object.entries(m.addons)).find(([, code]) => code === p.code)?.[0] ?? ''
       if (!feature || !baseCodes.has(basePlan)) return []
       return [{ code: p.code, name: p.name, feature, basePlan, trialDays: p.trial_days ?? 0, prices: prices(p.prices) }]
     })
