@@ -38,9 +38,11 @@ export const publicLinks = {
     showOtherStations: 'Voir les instructions des autres postes',
     otherStations: 'Autres postes',
     nothingElse: 'Rien d’autre à afficher.',
+    results: 'Résultats',
+    more: 'Voir plus',
     onlyThisStation: 'Cette tablette montre seulement les instructions de ce poste.',
     /** Sous le titre d’une carte : le nombre d’étapes et la durée, s’il y en a une. */
-    cardMeta: (steps: number, minutes?: number | null) => `${steps.toLocaleString('fr-CA')} étape${steps > 1 ? 's' : ''}${minutes ? ` · ${minutes.toLocaleString('fr-CA')} min` : ''}`,
+    cardMeta: (steps: number, minutes?: number | null) => [steps ? `${steps.toLocaleString('fr-CA')} étape${steps > 1 ? 's' : ''}` : '', minutes ? `${minutes.toLocaleString('fr-CA')} min` : ''].filter(Boolean).join(' · '),
   },
   /** Le lien direct vers une instruction. */
   shared: {

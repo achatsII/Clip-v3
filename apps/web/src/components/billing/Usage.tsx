@@ -3,7 +3,7 @@
 import { Gauge } from 'lucide-react'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
-import { useInstructions, useStations } from '@/hooks/queries'
+import { usePublishedCount, useStations } from '@/hooks/queries'
 import { planFor } from '@/lib/billing/advice'
 import type { LimitFeature } from '@/lib/billing/catalog'
 import type { LimitStatus } from '@/lib/billing/client'
@@ -18,10 +18,10 @@ import { billingClient } from './BillingRoot'
 export function useUsage(): Record<LimitFeature, LimitStatus | null> {
   const { org } = useSession()
   const stations = useStations()
-  const instructions = useInstructions()
+  const publishedCount = usePublishedCount()
   const stationLimit = useLimit('stations', stations.data?.length)
   const editorLimit = useLimit('editors', countEditors(org.json_data.members))
-  const publishLimit = useLimit('published_instructions', instructions.data?.filter((d) => d.json_data.publishedVersion).length)
+  const publishLimit = useLimit('published_instructions', publishedCount.data)
   return { stations: stationLimit, editors: editorLimit, published_instructions: publishLimit }
 }
 

@@ -38,8 +38,10 @@ export const publicLinks: typeof Fr = {
     showOtherStations: 'See instructions from other stations',
     otherStations: 'Other stations',
     nothingElse: 'Nothing else to show.',
+    results: 'Results',
+    more: 'Show more',
     onlyThisStation: 'This tablet only shows this station’s instructions.',
-    cardMeta: (steps: number, minutes?: number | null) => `${steps.toLocaleString('en-CA')} step${steps !== 1 ? 's' : ''}${minutes ? ` · ${minutes.toLocaleString('en-CA')} min` : ''}`,
+    cardMeta: (steps: number, minutes?: number | null) => [steps ? `${steps.toLocaleString('en-CA')} step${steps !== 1 ? 's' : ''}` : '', minutes ? `${minutes.toLocaleString('en-CA')} min` : ''].filter(Boolean).join(' · '),
   },
   shared: {
     deadLinkHint: 'Ask the person who sent it to you for a new link.',

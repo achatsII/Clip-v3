@@ -1,5 +1,6 @@
 'use client'
 
+import { SectorList } from '@/components/PlacePicker'
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Copy, ExternalLink, Lock, Mic, QrCode, RefreshCw, Tablet, Trash2, UserRound } from 'lucide-react'
 import Link from 'next/link'
@@ -16,7 +17,7 @@ import { MicButton } from '@/components/ui/MicButton'
 import { EmptyState, ErrorState, Skeleton, errorText } from '@/components/ui/States'
 import { Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
-import { qk, useInstructions, useStations } from '@/hooks/queries'
+import { qk, useStationInstructions, useStations } from '@/hooks/queries'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { useMessages } from '@/lib/i18n'
 import { insertDictation } from '@/lib/media/dictation'
@@ -36,7 +37,7 @@ export default function StationPage() {
   const toast = useToast()
   const confirm = useConfirm()
   const stations = useStations()
-  const instructions = useInstructions()
+  const instructions = useStationInstructions(id)
   const voiceToggle = useToggle('voiceAssistant')
   const operatorsOn = useToggle('operators')
   const voice = useEntitlement('voice_assistant')
@@ -54,7 +55,7 @@ export default function StationPage() {
   const s = station.json_data
   const w = t.stations.detail
   const url = s.linkId ? linkUrl('station', s.linkId) : null
-  const linked = (instructions.data ?? []).filter((d) => d.json_data.stationIds.includes(id))
+  const linked = instructions.data ?? []
 
   async function patch(p: Partial<Station>) {
     await data.patch(T.station, id, p as Record<string, unknown>)
@@ -236,7 +237,8 @@ export default function StationPage() {
             </div>
             <div>
               <Label htmlFor="area">{w.area}</Label>
-              <Input id="area" defaultValue={s.area} readOnly={!canWrite} onBlur={(e) => e.target.value !== (s.area ?? '') && void patch({ area: e.target.value.trim() || undefined })} />
+              <Input id="area" list="sectors" defaultValue={s.area} readOnly={!canWrite} onBlur={(e) => e.target.value !== (s.area ?? '') && void patch({ area: e.target.value.trim() || undefined })} />
+              <SectorList stations={stations.data ?? []} />
             </div>
           </div>
         </Panel>

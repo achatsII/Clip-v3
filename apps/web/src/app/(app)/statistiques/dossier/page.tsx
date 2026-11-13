@@ -11,7 +11,7 @@ import { useSession } from '@/components/providers/Session'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { Segmented } from '@/components/ui/Field'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
-import { useFeedback, useInstructions, useStations } from '@/hooks/queries'
+import { useFeedback, useStatsIndex, useStations } from '@/hooks/queries'
 import { useAdoption } from '@/hooks/useAdoption'
 import { callNative, hasCapability, nativeEnv } from '@/lib/bridge/native'
 import { planFor } from '@/lib/billing/advice'
@@ -65,7 +65,7 @@ function Report() {
   const params = useSearchParams()
   const { enabled, state } = useBilling()
   const { events, stats, since } = useAdoption(DAYS)
-  const instructions = useInstructions()
+  const instructions = useStatsIndex(since)
   const stations = useStations()
   const feedback = useFeedback()
   const usage = useUsage()

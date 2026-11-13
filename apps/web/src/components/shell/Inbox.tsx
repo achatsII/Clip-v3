@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/States'
-import { useFeedback, useInstructions } from '@/hooks/queries'
+import { useFeedback, useInboxInstructions } from '@/hooks/queries'
 import { ensureContact } from '@/lib/notify'
 import { useLang, useMessages } from '@/lib/i18n'
 import { signingGroups } from '@/lib/model/approvals'
@@ -45,7 +45,8 @@ export function useInbox() {
   const on = useToggle('notify')
   const recordsOn = useToggle('records')
   const multiOn = useToggle('multiApproval')
-  const instructions = useInstructions()
+  // Seulement ce que « À voir » regarde : à approuver, et mes instructions où l'on demande des changements.
+  const instructions = useInboxInstructions(on)
   const canFeedback = can('feedback', 'write')
   const feedback = useFeedback({ 'json_data.status': { $eq: 'new' }, 'json_data.kind': { $eq: 'danger' } }, ['feedback', 'danger-new'])
   const since = useMemo(() => new Date(Date.now() - 14 * 86400_000).toISOString(), [])

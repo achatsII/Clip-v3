@@ -24,7 +24,9 @@ describe('le lien de service scellé', () => {
     expect(unseal(s, NOTIFY_PURPOSE)).toEqual({ link: 'abc123def', org: 'o1' })
     expect(unseal(s, 'autre-usage')).toBeNull()
     const parts = s.split('.')
-    const tampered = [parts[0], parts[1], parts[2].slice(0, -2) + (parts[2].endsWith('A') ? 'B' : 'A') + parts[2].slice(-1), parts[3]].join('.')
+    // Un caractère vraiment changé (l'avant-dernier : le dernier ne porte parfois que du remplissage).
+    const c = parts[2].at(-2)
+    const tampered = [parts[0], parts[1], parts[2].slice(0, -2) + (c === 'A' ? 'B' : 'A') + parts[2].slice(-1), parts[3]].join('.')
     expect(unseal(tampered, NOTIFY_PURPOSE)).toBeNull()
     expect(unseal('n’importe quoi', NOTIFY_PURPOSE)).toBeNull()
   })

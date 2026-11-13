@@ -4,9 +4,10 @@ export const instructions = {
   list: {
     title: 'Instructions',
     count: (shown: number, total: number) => `${shown.toLocaleString('fr-CA')} sur ${total.toLocaleString('fr-CA')}`,
+    total: (n: number) => (n > 1 ? `${n.toLocaleString('fr-CA')} instructions` : n === 1 ? '1 instruction' : 'Aucune instruction'),
     import: 'Importer',
     new: 'Nouvelle',
-    searchPlaceholder: 'Chercher un titre, un poste, un numéro de pièce…',
+    searchPlaceholder: 'Chercher un titre, un numéro, un poste, un mot d’une étape…',
     search: 'Chercher',
     searchByVoice: 'Chercher en parlant',
     clear: 'Effacer',
@@ -20,6 +21,18 @@ export const instructions = {
     noMatchTitle: 'Rien ne correspond',
     noMatchText: 'Essayez un autre mot, ou retirez un filtre.',
     showAll: 'Tout afficher',
+    more: 'Voir plus',
+    loadingMore: 'Chargement…',
+    /** « Où ? » : un secteur (les postes regroupés) ou un poste. */
+    place: {
+      all: 'Tous les lieux',
+      title: 'Où ?',
+      search: 'Chercher un secteur ou un poste',
+      everywhere: 'Partout',
+      sector: (n: number) => `${n.toLocaleString('fr-CA')} poste${n > 1 ? 's' : ''}`,
+      noSector: 'Sans secteur',
+      none: 'Aucun secteur ni poste ne correspond.',
+    },
   },
   /** Les tuiles et les lignes de la bibliothèque. */
   /** La relecture périodique : « à revoir dans 1 an ». */

@@ -79,6 +79,7 @@ export default function PrintPage() {
     const latest = versions.data?.[0]?.json_data
     return buildPrintHtml(content, {
       branding: { orgName: session.org.json_data.name, logoUrl: session.org.json_data.logoUrl, color: session.org.json_data.color },
+      number: doc.json_data.number ?? null,
       version: usePublished ? published.data!.json_data.version : null,
       publishedAt: usePublished ? published.data!.json_data.publishedAt : null,
       approvedByName: usePublished ? latest?.approvedByName ?? null : null,

@@ -13,7 +13,7 @@ export const stations = {
     searchByVoice: 'Chercher en parlant',
     emptyTitle: 'Ajoutez votre premier poste',
     emptyDescription: 'Un poste, une machine ou une zone : ses instructions s’ouvrent d’un coup de code QR, ou sur la tablette qui y est installée.',
-    noArea: 'Sans zone',
+    noArea: 'Sans secteur',
     /** Le nombre d'instructions publiées du poste, en abrégé. */
     instructionCount: (n: number) => `${n.toLocaleString('fr-CA')} instr.`,
     uncovered: 'À couvrir',
@@ -31,7 +31,7 @@ export const stations = {
     code: 'Code',
     codePlaceholder: 'M-1234',
     kind: 'Type',
-    area: 'Zone ou ligne',
+    area: 'Secteur (zone ou ligne)',
     areaPlaceholder: 'Usinage, Assemblage, Ligne 2…',
   },
   /** La page d'un poste : son code QR, la tablette, ses détails, ses instructions. */
@@ -79,7 +79,7 @@ export const stations = {
     qrFailed: 'Le code QR n’a pas pu être créé',
     details: 'Détails',
     code: 'Code',
-    area: 'Zone ou ligne',
+    area: 'Secteur (zone ou ligne)',
     instructions: (n: number) => `Instructions de ce poste (${n.toLocaleString('fr-CA')})`,
     noInstructionsTitle: 'Aucune instruction pour ce poste',
     noInstructionsDescription: 'Dans une instruction, ajoutez ce poste dans sa fiche : elle apparaîtra ici et sur la tablette.',

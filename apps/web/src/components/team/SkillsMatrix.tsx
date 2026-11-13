@@ -7,7 +7,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/ui/States'
-import { useInstructions, useStations } from '@/hooks/queries'
+import { useStations, useTrainingCatalog } from '@/hooks/queries'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
 import { buildMatrix, listTrainings, type CellState, type MatrixCell } from '@/lib/model/training'
@@ -47,7 +47,8 @@ export function SkillsMatrix({ operators, query }: { operators: Doc<Operator>[];
   const t = useMessages().training
   const { data } = useSession()
   const stations = useStations()
-  const instructions = useInstructions()
+  // Seulement les instructions publiées qui ont des questions.
+  const instructions = useTrainingCatalog()
   const trainings = useQuery({ queryKey: TRAININGS_KEY, queryFn: () => listTrainings(data) })
   const [onlyGaps, setOnlyGaps] = useState(false)
   const [open, setOpen] = useState<{ person: string; station: string; cell: MatrixCell } | null>(null)

@@ -115,16 +115,6 @@ export async function listStations(data: DataApi): Promise<Doc<Station>[]> {
 
 /* ───────────────────────── Instructions ───────────────────────── */
 
-const LIST_PROJECTION = { 'json_data.draft': 0, 'json_data.sources': 0 } as const
-
-export async function listInstructions(data: DataApi, filter?: Record<string, unknown>, limit = 500): Promise<Doc<Instruction>[]> {
-  return data.filter<Instruction>(T.instruction, {
-    filter: { 'json_data.status': { $ne: 'archived' }, ...(filter ?? {}) },
-    projection: LIST_PROJECTION,
-    sort: { 'json_data.updatedAt': -1 },
-    limit,
-  })
-}
 
 export function emptyContent(partial: Partial<InstructionContent> = {}): InstructionContent {
   // Le titre par défaut s'écrit dans la langue du contenu.
@@ -172,22 +162,7 @@ export async function findPublished(data: DataApi, instructionId: string): Promi
   return docs[0] ?? null
 }
 
-export async function listPublishedForStation(data: DataApi, stationId: string): Promise<Doc<Published>[]> {
-  return data.filter<Published>(T.published, {
-    filter: { 'json_data.stationIds': { $eq: stationId } },
-    projection: { 'json_data.content.translations': 0 },
-    sort: { 'json_data.content.title': 1 },
-    limit: 300,
-  })
-}
 
-export async function listAllPublished(data: DataApi, limit = 500): Promise<Doc<Published>[]> {
-  return data.filter<Published>(T.published, {
-    projection: { 'json_data.content.translations': 0 },
-    sort: { 'json_data.content.title': 1 },
-    limit,
-  })
-}
 
 /* ───────────────────────── Retours et événements ───────────────────────── */
 

@@ -9,6 +9,7 @@ import { summarizeChanges } from './diff'
 import { coverOf, emptyContent, findPublished, nowIso, T } from './repo'
 import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Renewal, Signature, Source, Version } from './types'
 import { reuseSource } from './library'
+import { allocateNumbers, instructionSearchText, publishedCard } from './search'
 
 export interface Actor {
   id: string
@@ -43,6 +44,7 @@ export async function createInstruction(data: DataApi, actor: Actor, init: Parti
     sourceCount: init.sources?.length ?? 0,
     ...init,
   }
+  json.searchText = instructionSearchText(json, json.draft)
   return data.insert<Instruction>(T.instruction, json, json.title)
 }
 
@@ -63,6 +65,8 @@ export async function saveDraft(data: DataApi, id: string, instr: Instruction, d
     updatedAt: nowIso(),
     updatedBy: actor.id,
     updatedByName: actor.name,
+    // L'index de recherche suit le brouillon (la recherche se fait au serveur).
+    searchText: instructionSearchText({ number: instr.number, intent: instr.intent }, draft),
     ...extra,
   }
   if (instr.status === 'published' || instr.publishedVersion) patch.dirty = true
@@ -90,13 +94,15 @@ export async function publishInstruction(
     /** La formation (toggle `training`) : combien de questions sont publiées, et faut-il se re-former. */
     training?: { questions: number; retrain: boolean } | null
   } = {},
-): Promise<{ number: number; publishedId: string }> {
+): Promise<{ number: number; publishedId: string; docNumber: string | null }> {
   const instr = doc.json_data
   const content = instr.draft
   if (!content || !content.steps.length) throw new Error(messages().instructions.errors.publishWithoutSteps)
   const number = (instr.publishedVersion ?? 0) + 1
   const publishedAt = nowIso()
   const previous = opts.previous ?? null
+  // Le numéro de document se donne à la première publication, et reste ensuite.
+  const docNumber = instr.number || (await allocateNumbers(data, 1).catch(() => []))[0] || null
 
   const version: Version = {
     instructionId: doc._id,
@@ -114,7 +120,17 @@ export async function publishInstruction(
   }
   await data.insert<Version>(T.version, version, `${content.title} — v${number}`)
 
-  const pub: Published = { instructionId: doc._id, version: number, content, stationIds: instr.stationIds, branding: brandingOf(org), publishedAt }
+  const pub: Published = {
+    instructionId: doc._id,
+    version: number,
+    content,
+    stationIds: instr.stationIds,
+    branding: brandingOf(org),
+    publishedAt,
+    // La fiche et l'index : la liste d'un poste et sa recherche ne lisent pas le contenu.
+    card: publishedCard(content, docNumber),
+    searchText: instructionSearchText({ number: docNumber }, content),
+  }
   let publishedId = instr.publishedId
   if (publishedId) {
     const existing = await data.get<Published>(T.published, publishedId)
@@ -136,6 +152,7 @@ export async function publishInstruction(
     publishedVersion: number,
     publishedId,
     publishedAt,
+    ...(docNumber && docNumber !== instr.number ? { number: docNumber, searchText: instructionSearchText({ number: docNumber, intent: instr.intent }, content) } : {}),
     dirty: false,
     review: null,
     // Publier repousse la relecture périodique (toggle `renewal`).
@@ -146,7 +163,7 @@ export async function publishInstruction(
     updatedBy: actor.id,
     updatedByName: actor.name,
   })
-  return { number, publishedId }
+  return { number, publishedId, docNumber }
 }
 
 /** « Toujours bonne » : la relecture est faite, la prochaine est repoussée ; pas de nouvelle version. */

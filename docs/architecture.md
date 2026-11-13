@@ -484,6 +484,39 @@ n'importe quel approbateur). À plusieurs, même un approbateur demande les sign
   au poste. Le push demande la build qui contient `expo-notifications` (pas une mise à jour à
   distance seule).
 
+### Retrouver parmi des milliers d'instructions (`src/lib/model/search.ts`)
+
+Aucun écran ne lit la bibliothèque entière : à des milliers d'instructions, ce serait des mégaoctets
+à chaque rafraîchissement, sur la tablette comme au bureau.
+
+- **L'index** (`Instruction.searchText`) : numéro, titre, étiquettes, équipement, résumé, et pour
+  chaque étape sa section, son titre, son texte et ses points clés, en minuscules et sans accents,
+  chaque mot une fois (4 000 caractères au plus). Il se tient à la création (`createInstruction`), à
+  chaque enregistrement du brouillon (`saveDraft`) et à la publication. Les instructions d'avant
+  l'index le reçoivent en arrière-plan quand une personne qui écrit ouvre la liste (`backfillIndex`,
+  par petits lots), avec leur numéro et la fiche de leur version publiée.
+- **La recherche** se fait au serveur : chaque mot doit se trouver dans l'index (`$regex`), dans le
+  titre (une instruction pas encore indexée) ou nommer un poste de l'instruction ; les mots se
+  découpent comme l'index. Filtres : statut, catégorie, lieu, « pour moi ». Une page de 30, la
+  suivante strictement avant la dernière ligne vue (`updatedAt`) ; « Voir plus » et le défilement
+  la chargent. Le compte s'affiche en tête (« 42 sur 1 284 »). Le filtre reste dans la profondeur
+  permise par la Gateway (5 niveaux) : `dataApi` met à plat un `$and` de premier niveau.
+- **Les secteurs** : la zone ou ligne d'un poste (`Station.area`) regroupe les postes. Le filtre
+  « Où ? » choisit un secteur (tous ses postes) ou un poste ; le champ propose les secteurs déjà
+  nommés.
+- **Le numéro de document** (`Instruction.number`, « IT-0042 ») se donne à la première publication
+  (`allocateNumbers` : le compteur de l'usine, `numbering`, relu juste avant ; un numéro déjà pris est
+  sauté) et reste ensuite. Le préfixe se règle dans Réglages › Usine. Il paraît sur les cartes, sous
+  le titre dans l'éditeur, en tête de l'impression et sur la fiche au poste.
+- **Les écrans demandent ce qu'il leur faut** (`src/hooks/queries.ts`, toutes les clés sous
+  `instructions`) : un compte (limite du plan), la file de « À voir », les petites listes de
+  l'accueil, la couverture des postes (`distinct`), le nombre par poste, les instructions d'un poste,
+  le catalogue de la formation, les champs des statistiques, l'export page après page.
+- **Au poste** : la liste ne lit que la fiche de chaque version publiée (`Published.card` : titre,
+  catégorie, couverture, étapes, durée, numéro, langues), écrite à la publication ; l'instruction
+  complète, traductions comprises, se lit à l'ouverture. « Tout voir » et la recherche (deux lettres
+  et plus) cherchent au serveur, dans la portée du lien, une page à la fois.
+
 ### La formation et la matrice de compétences (toggle `training`, `src/lib/model/training.ts`)
 
 Pas un LMS : on vérifie qu'une personne a compris une instruction, et on garde qui est formé, à

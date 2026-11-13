@@ -98,7 +98,11 @@ export function InstructionTile({ doc, stationNames }: { doc: Doc<Instruction>; 
       <span className="glass-card flex items-center gap-2 rounded-none border-0 px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400">
         <MapPin className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{stationNames.length ? stationNames.join(', ') : t.noStation}</span>
-        <span className="ml-auto shrink-0">{i.stepCount ? `${t.steps(i.stepCount)} · ` : ''}{timeAgo(i.updatedAt)}</span>
+        <span className="ml-auto shrink-0">
+          {i.number && <span className="font-black text-slate-600 tabular-nums dark:text-slate-300">{i.number} · </span>}
+          {i.stepCount ? `${t.steps(i.stepCount)} · ` : ''}
+          {timeAgo(i.updatedAt)}
+        </span>
       </span>
     </Link>
   )
@@ -118,7 +122,7 @@ export function InstructionRow({ doc, stationNames }: { doc: Doc<Instruction>; s
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{i.title}</span>
         <span className={cn('block truncate text-xs font-bold', stage ? 'text-[var(--primary-strong)] dark:text-sky-300' : 'text-slate-500')}>
-          {stage ?? `${cat.label} · ${stationNames.length ? stationNames.join(', ') : t.noStation} · ${timeAgo(i.updatedAt)}`}
+          {stage ?? [i.number, cat.label, stationNames.length ? stationNames.join(', ') : t.noStation, timeAgo(i.updatedAt)].filter(Boolean).join(' · ')}
         </span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-1">

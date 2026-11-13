@@ -38,7 +38,7 @@ import type { MenuItem } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { cacheDraft, cacheInstruction, qk, useFeedback, useInstructions } from '@/hooks/queries'
+import { cacheDraft, cacheInstruction, qk, useFeedback, usePublishedCount } from '@/hooks/queries'
 import { useDraftHistory } from '@/hooks/useDraftHistory'
 import { useDraftWatch } from '@/hooks/useDraftWatch'
 import { LockBadge } from '@/components/billing/Billing'
@@ -182,7 +182,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     enabled: !!instr.publishedId,
   })
   const feedback = useFeedback({ 'json_data.instructionId': { $eq: doc._id }, 'json_data.status': { $eq: 'new' } }, qk.feedbackFor(doc._id))
-  const instructions = useInstructions()
+  const publishedCount = usePublishedCount()
   const feedbackByStep = useMemo(() => {
     const m: Record<string, number> = {}
     for (const f of feedback.data ?? []) if (f.json_data.stepId) m[f.json_data.stepId] = (m[f.json_data.stepId] ?? 0) + 1
@@ -466,7 +466,9 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       const requester = docRef.current.json_data.review?.requestedBy
       // La formation : les questions qui seront posées, et si les formations d'avant cette version tombent.
       const training = trainingToggle ? { questions: cleanQuiz(draft.quiz).length, retrain: retrain || !!docRef.current.json_data.review?.retrain } : null
-      const { number: n, publishedId } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous, renewal, approvals: approvals ?? null, training })
+      const { number: n, publishedId, docNumber } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous, renewal, approvals: approvals ?? null, training })
+      // Le numéro de document, tout de suite dans le cache : le prochain enregistrement l'indexe.
+      if (docNumber) cacheInstruction(qc, doc._id, { number: docNumber })
       setRetrain(false)
       if (notifyOn && requester && requester !== actor.id) void notifyEvent({ kind: 'published', instructionId: doc._id, to: [requester] })
       if (reelToggle)
@@ -574,7 +576,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const mySigns = groupsToSign(signing, profile.userId, canApprove)
   const lastSignature = signing.length > 0 && signing.filter((x) => !x.signature).length === mySigns.length
   // Limite d'instructions publiées : une instruction déjà publiée se republie toujours.
-  const publishLimit = useLimit('published_instructions', instructions.data?.filter((d) => d.json_data.publishedVersion).length)
+  const publishLimit = useLimit('published_instructions', publishedCount.data)
   const blockedByLimit = !instr.publishedVersion && !!publishLimit?.reached
   const translations = useEntitlement('translations')
   const translateToggle = useToggle('translations')
@@ -604,7 +606,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     )
 
   // Sous le titre : où en est l'instruction, et l'enregistrement.
-  const publication = inReview ? tp.status.review : !instr.publishedVersion ? tp.status.draft : isDirty ? tp.status.unpublished : tp.status.published(instr.publishedVersion)
+  const publication = `${instr.number ? `${instr.number} · ` : ''}${inReview ? tp.status.review : !instr.publishedVersion ? tp.status.draft : isDirty ? tp.status.unpublished : tp.status.published(instr.publishedVersion)}`
   const status = liveLabel ?? (saveState === 'saved' ? `${publication} · ${saveLabel}` : saveLabel)
 
   // Tout ce qui touche l'instruction entière, rangé dans son « … ».

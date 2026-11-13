@@ -22,7 +22,8 @@ import { useToast } from '@/components/ui/Toast'
 import { BILLING_V2, APP_IDENTIFIER, GATEWAY_URL } from '@/lib/config'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { compressImage } from '@/lib/media/image'
-import { listInstructions, listVersions } from '@/lib/model/repo'
+import { listVersions } from '@/lib/model/repo'
+import { cleanPrefix, DEFAULT_PREFIX, everyInstruction, formatNumber } from '@/lib/model/search'
 import { applyBrandColor } from '@/lib/theme'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { cn } from '@/lib/util/cn'
@@ -132,6 +133,7 @@ function PlantTab() {
             <p className="mt-1.5 text-xs font-bold text-slate-400">{t.renewalHint}</p>
           </div>
         )}
+        <NumberingField />
       </Panel>
       <Panel>
         <h2 className="mb-1 flex items-center gap-2 text-xl font-black tracking-tight">{t.brandTitle} {brand === 'locked' && <LockBadge />}</h2>
@@ -242,7 +244,8 @@ function DataTab() {
   async function exportAll() {
     setBusy(true)
     try {
-      const list = await listInstructions(data, undefined, 2000)
+      // Toutes, page après page : l'export reste complet avec des milliers d'instructions.
+      const list = await everyInstruction(data)
       const full = await Promise.all(list.map((d) => data.get(`clip_instruction`, d._id)))
       const versions = await Promise.all(list.map((d) => listVersions(data, d._id).catch(() => [])))
       const payload = {
@@ -277,6 +280,32 @@ function DataTab() {
         <h2 className="mb-2 text-lg font-black tracking-tight">{t.connection}</h2>
         <p className="text-sm font-medium text-slate-500">{t.gateway(GATEWAY_URL.replace('https://', ''), APP_IDENTIFIER)}</p>
       </Panel>
+    </div>
+  )
+}
+
+/** Le préfixe des numéros de document (« IT » → IT-0001, IT-0002…) ; le compteur ne change pas. */
+function NumberingField() {
+  const { org, updateOrg, can } = useSession()
+  const words = useMessages()
+  const t = words.settings.plant
+  const toast = useToast()
+  const current = org.json_data.numbering?.prefix || DEFAULT_PREFIX
+  const [prefix, setPrefix] = useState(current)
+  const clean = cleanPrefix(prefix)
+  const canWrite = can('settings', 'write')
+  return (
+    <div className="mt-5">
+      <Label htmlFor="org-prefix">{t.numbering}</Label>
+      <div className="flex gap-2">
+        <Input id="org-prefix" dictation={false} value={prefix} readOnly={!canWrite} maxLength={6} onChange={(e) => setPrefix(e.target.value.toUpperCase())} className="font-black tracking-widest uppercase" />
+        {canWrite && (
+          <Button variant="primary" disabled={clean === current} onClick={() => void updateOrg({ 'numbering.prefix': clean }).then(() => toast.success(t.numberingSaved))}>
+            {words.common.save}
+          </Button>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs font-bold text-slate-400">{t.numberingHint(formatNumber(clean, org.json_data.numbering?.next || 1))}</p>
     </div>
   )
 }

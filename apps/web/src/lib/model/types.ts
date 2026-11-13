@@ -421,6 +421,13 @@ export interface Instruction {
   shareLinkId?: string | null
   /** La relecture périodique (« à revoir dans 1 an ») ; absente avant la première publication. */
   renewal?: Renewal | null
+  /** Le numéro de document (« IT-0042 »), donné à la première publication et gardé ensuite. */
+  number?: string | null
+  /**
+   * L'index de recherche : numéro, titre, étiquettes, équipement, étapes, en minuscules et sans
+   * accents (`src/lib/model/search.ts`). Tenu à chaque enregistrement ; la recherche se fait au serveur.
+   */
+  searchText?: string
   /** Le nombre de questions de formation de la version publiée. */
   publishedQuiz?: number
   /** Les formations d'avant cette version ne comptent plus : un changement important demande de se re-former. */
@@ -485,6 +492,23 @@ export interface Published {
   publishedAt: string
   /** Lecture à voix haute déjà produite, par étape et par langue (`${stepId}:${lang}`). */
   audio?: Record<string, string>
+  /** Ce que la liste d'un poste affiche, sans charger le contenu (écrit à la publication). */
+  card?: PublishedCard
+  /** L'index de recherche de la version publiée (les liens publics cherchent au serveur). */
+  searchText?: string
+}
+
+/** La fiche légère d'une instruction publiée : la liste d'un poste ne lit qu'elle. */
+export interface PublishedCard {
+  title: string
+  category: CategoryKey
+  kind: InstructionKind
+  cover: string | null
+  stepCount: number
+  durationMin?: number | null
+  number?: string | null
+  /** Les langues offertes : celle d'origine, puis les traductions. */
+  languages: string[]
 }
 
 export type StationKind = 'poste' | 'equipement' | 'zone'
@@ -655,6 +679,8 @@ export interface Renewal {
 
 export interface OrgSettings {
   name: string
+  /** La numérotation des documents : un préfixe (« IT ») et le prochain numéro. */
+  numbering?: { prefix: string; next: number }
   logoUrl?: string | null
   color?: string | null
   /**

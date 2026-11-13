@@ -64,6 +64,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   scellé par le serveur (`src/lib/server/keys.ts`) et recopié sur chaque poste (`notifySeal`).
   Chaque personne tient sa fiche `clip_contact` (courriel, langue, téléphones). Le push sur le
   téléphone (`push.register`, expo-notifications) demande une build EAS.
+- **Des milliers d'instructions** : aucun écran ne lit toute la bibliothèque. Chaque instruction porte
+  un index (`searchText`, tenu par `createInstruction`, `saveDraft` et la publication) et la recherche
+  se fait au serveur, une page à la fois (`src/lib/model/search.ts`, hooks de `src/hooks/queries.ts`
+  sous la clé `instructions`). Les postes se regroupent en secteurs (`Station.area`) ; le numéro de
+  document (`number`, « IT-0042 ») se donne à la première publication. Au poste, la liste lit la
+  fiche des versions publiées (`Published.card`) ; l'instruction complète se lit à l'ouverture.
 - **Formation** (toggle `training`) : 3 à 5 questions par instruction, préparées par l'IA (`quiz`,
   `src/lib/ai/quiz.ts`) et retouchées par l'auteur ; elles vivent dans le brouillon et se traduisent
   avec lui. Au poste, une personne nommée les passe à la fin ; réussie à 80 %, la trace s'écrit dans

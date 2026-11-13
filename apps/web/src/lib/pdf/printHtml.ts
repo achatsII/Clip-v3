@@ -62,6 +62,8 @@ function stepMediaBlock(s: Step, ratios: Record<string, number> | undefined, key
 
 export interface PrintMeta {
   branding: Branding
+  /** Le numéro de document (« IT-0042 »), en tête de la ligne. */
+  number?: string | null
   version: number | null
   publishedAt?: string | null
   approvedByName?: string | null
@@ -178,7 +180,7 @@ ${meta.draft ? `<div class="draft">${t.draft}</div>` : ''}
   <div class="t">
     <div class="eyebrow">${esc(meta.branding.orgName)} · ${esc(cat.kinds[content.kind].label)} · ${esc((cat.categories as Record<string, { label: string }>)[content.category]?.label ?? '')}</div>
     <h1>${esc(content.title)}</h1>
-    <div class="meta">${meta.version ? t.version(meta.version, esc(date)) : t.printedOn(esc(date))}${meta.approvedByName ? ` · ${t.approvedBy(esc(meta.approvedByName))}` : ''}${meta.stationNames.length ? ` · ${t.stations(meta.stationNames.map(esc).join(', '))}` : ''}${content.durationMin ? ` · ${t.minutes(content.durationMin)}` : ''}${content.frequency ? ` · ${esc(content.frequency)}` : ''}</div>
+    <div class="meta">${meta.number ? `<b>${esc(meta.number)}</b> · ` : ''}${meta.version ? t.version(meta.version, esc(date)) : t.printedOn(esc(date))}${meta.approvedByName ? ` · ${t.approvedBy(esc(meta.approvedByName))}` : ''}${meta.stationNames.length ? ` · ${t.stations(meta.stationNames.map(esc).join(', '))}` : ''}${content.durationMin ? ` · ${t.minutes(content.durationMin)}` : ''}${content.frequency ? ` · ${esc(content.frequency)}` : ''}</div>
     ${content.summary ? `<p class="text">${esc(content.summary)}</p>` : ''}
   </div>
   ${meta.qrSvg ? `<div class="qr">${meta.qrSvg}<div>${t.upToDate}</div></div>` : ''}
