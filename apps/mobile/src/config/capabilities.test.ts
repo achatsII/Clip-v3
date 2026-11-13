@@ -27,6 +27,17 @@ describe('capabilitiesFor', () => {
   })
 })
 
+describe('les avertissements sur le téléphone', () => {
+  it('ne s’annoncent qu’avec le module (hors Expo Go) et le toggle `notify` allumé ; jamais en repli', () => {
+    const on = { toggles: { notify: true } } as unknown as PublicConfig
+    const off = { toggles: { notify: false } } as unknown as PublicConfig
+    expect(capabilitiesFor(on, { push: true })).toContain('push.register')
+    expect(capabilitiesFor(on, { push: false })).not.toContain('push.register')
+    expect(capabilitiesFor(off, { push: true })).not.toContain('push.register')
+    expect(capabilitiesFor(null, { push: true })).not.toContain('push.register')
+  })
+})
+
 describe('reprise des médias après un rechargement de la page', () => {
   it('media.pending reste annoncé, même capture native coupée : un média déjà pris doit pouvoir partir', () => {
     expect(capabilitiesFor(null)).toContain('media.pending')

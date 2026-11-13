@@ -5,6 +5,7 @@
  * en boucle dès l'affichage, une seule fois dès l'affichage, ou seulement quand on touche Lecture.
  */
 import { useSyncExternalStore } from 'react'
+import { slowConnection } from './videoPool'
 
 export type VideoMode = 'loop' | 'once' | 'tap'
 
@@ -17,10 +18,12 @@ const listeners = new Set<() => void>()
 export function readVideoMode(): VideoMode {
   try {
     const v = localStorage.getItem(KEY)
-    return v === 'once' || v === 'tap' ? v : 'loop'
+    if (v === 'once' || v === 'tap' || v === 'loop') return v
   } catch {
-    return 'loop'
+    /* appareil sans stockage */
   }
+  // Rien de choisi : sur une connexion lente ou en économie de données, la vidéo attend un toucher.
+  return slowConnection() ? 'tap' : 'loop'
 }
 
 export function setVideoMode(mode: VideoMode) {

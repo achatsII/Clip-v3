@@ -1,10 +1,12 @@
 'use client'
 
 import { Check, FileText, Hand, Maximize2, Pause, Play, Repeat, Repeat1, RotateCcw, Volume2, VolumeX } from 'lucide-react'
-import { createContext, useContext, useEffect, useId, useMemo, useReducer, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { annotationsMarkup } from '@/lib/annotations/markup'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { isFresh } from '@/lib/annotations/fresh'
+import { playable } from '@/lib/media/reel'
+import { useMediaPlayback } from '@/lib/media/videoPool'
 import { VIDEO_MODES, setVideoMode, type VideoMode } from '@/lib/media/videoMode'
 import type { Annotation, StepMedia } from '@/lib/model/types'
 import { cn, formatClock } from '@/lib/util/cn'
@@ -26,14 +28,15 @@ export function useMediaLabels(): MediaLabels {
  * Les annotations par-dessus une image (coordonnées relatives, de 0 à 1). Le dessin est celui du
  * PDF (src/lib/annotations/markup.ts) ; les tailles suivent la largeur de l'image (`cqw`).
  */
-export function AnnotationLayer({ annotations, className, ratio }: { annotations: Annotation[]; className?: string; ratio?: number | null }) {
+export function AnnotationLayer({ annotations, className, ratio, blink = true }: { annotations: Annotation[]; className?: string; ratio?: number | null; blink?: boolean }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   // Les marques déjà là au premier affichage ne bougent pas ; une marque qui arrive ensuite (une
   // flèche ajoutée par l'assistant, ou sur un autre appareil) clignote un instant pour se faire voir.
+  // Pas dans l'annotateur (`blink` faux) : ce qu'on y trace s'affiche tel quel, tout de suite.
   const known = useRef<Set<string> | null>(null)
   if (known.current === null) known.current = new Set(annotations.filter((a) => !isFresh(a.id)).map((a) => a.id))
   const [, settle] = useReducer((n: number) => n + 1, 0)
-  const fresh = annotations.filter((a) => !known.current!.has(a.id))
+  const fresh = blink ? annotations.filter((a) => !known.current!.has(a.id)) : []
   const steady = fresh.length ? annotations.filter((a) => known.current!.has(a.id)) : annotations
   const freshKey = fresh.map((a) => a.id).join(',')
   useEffect(() => {
@@ -45,7 +48,9 @@ export function AnnotationLayer({ annotations, className, ratio }: { annotations
     return () => clearTimeout(t)
   }, [freshKey])
   const html = useMemo(() => annotationsMarkup(steady, { ratio: ratio ?? 1, idPrefix: `an${id}` }), [steady, ratio, id])
-  const freshHtml = useMemo(() => (fresh.length ? annotationsMarkup(fresh, { ratio: ratio ?? 1, idPrefix: `af${id}` }) : ''), [freshKey, ratio, id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Une marque qui clignote suit quand même ce qui la change (sa légende, sa taille).
+  const freshSig = fresh.length ? JSON.stringify(fresh) : ''
+  const freshHtml = useMemo(() => (fresh.length ? annotationsMarkup(fresh, { ratio: ratio ?? 1, idPrefix: `af${id}` }) : ''), [freshSig, ratio, id]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!annotations.length) return null
   return (
     <>
@@ -56,8 +61,28 @@ export function AnnotationLayer({ annotations, className, ratio }: { annotations
 }
 
 /** Image aux proportions réelles, avec ses annotations, contenue dans la boîte parente. */
-export function AnnotatedImage({ src, annotations = [], alt = '', className, fit = 'contain', children }: { src: string; annotations?: Annotation[]; alt?: string; className?: string; fit?: 'contain' | 'cover'; children?: React.ReactNode }) {
+export function AnnotatedImage({ src, annotations = [], alt = '', className, fit = 'contain', blink, children }: { src: string; annotations?: Annotation[]; alt?: string; className?: string; fit?: 'contain' | 'cover'; blink?: boolean; children?: React.ReactNode }) {
   const [ratio, setRatio] = useState<number | null>(null)
+  const outer = useRef<HTMLDivElement>(null)
+  // Le cadre suit exactement l'image affichée : toute la largeur, sauf si la hauteur manque ; alors
+  // toute la hauteur. Les annotations, posées en proportion de ce cadre, tombent au même endroit de
+  // la photo dans l'annotateur, au poste, côte à côte (à faire / à éviter) et au PDF.
+  const [bound, setBound] = useState<{ w: number; h: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = outer.current
+    if (fit === 'cover' || !el || !ratio) return
+    const measure = () => {
+      const cw = el.clientWidth
+      const ch = el.clientHeight
+      const w = ch * ratio
+      // La hauteur manque : l'image se règle sur la hauteur. Sinon, la largeur suit le conteneur.
+      setBound((b) => (cw && ch && w < cw - 0.5 ? (b && Math.abs(b.w - w) < 0.5 && Math.abs(b.h - ch) < 0.5 ? b : { w, h: ch }) : null))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ratio, fit])
   if (fit === 'cover') {
     return (
       <div className={cn('relative h-full w-full overflow-hidden', className)}>
@@ -67,8 +92,8 @@ export function AnnotatedImage({ src, annotations = [], alt = '', className, fit
     )
   }
   return (
-    <div className={cn('flex h-full w-full items-center justify-center', className)}>
-      <div className="relative max-h-full max-w-full" style={ratio ? { aspectRatio: String(ratio), height: ratio < 1.2 ? '100%' : undefined, width: ratio >= 1.2 ? '100%' : undefined } : undefined}>
+    <div ref={outer} className={cn('flex h-full w-full items-center justify-center', className)}>
+      <div className="relative max-h-full max-w-full shrink-0" style={bound ? { width: bound.w, height: bound.h } : ratio ? { aspectRatio: String(ratio), width: '100%' } : undefined}>
         <img
           src={src}
           alt={alt}
@@ -76,7 +101,7 @@ export function AnnotatedImage({ src, annotations = [], alt = '', className, fit
           onLoad={(e) => setRatio(e.currentTarget.naturalWidth / Math.max(1, e.currentTarget.naturalHeight))}
           className="block h-full max-h-full w-full max-w-full rounded-[inherit] object-contain select-none"
         />
-        <AnnotationLayer annotations={annotations} ratio={ratio} />
+        <AnnotationLayer annotations={annotations} ratio={ratio} blink={blink} />
         {children}
       </div>
     </div>
@@ -117,6 +142,28 @@ export function VideoSegment({
 }) {
   const labels = useMediaLabels()
   const ref = useRef<HTMLVideoElement>(null)
+  // Au lecteur d'instruction, un lecteur gardé d'une étape à l'autre (videoPool.ts) : il saute au bon
+  // moment sans rien recharger. Ailleurs (et pour une tuile), le sien.
+  const { pool } = useMediaPlayback()
+  const pooled = !!pool && !bare
+  const host = useRef<HTMLDivElement>(null)
+  const toggleRef = useRef<() => void>(() => undefined)
+  useLayoutEffect(() => {
+    if (!pooled || !pool || !host.current) return
+    const v = pool.acquire(url, start)
+    v.className = 'h-full w-full object-contain'
+    const onClick = () => toggleRef.current()
+    v.addEventListener('click', onClick)
+    host.current.appendChild(v)
+    ref.current = v
+    return () => {
+      v.removeEventListener('click', onClick)
+      v.remove()
+      pool.release(v)
+      if (ref.current === v) ref.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- le début ne sert qu'à créer le lecteur ; ensuite il saute seul
+  }, [pooled, pool, url])
   const [playing, setPlaying] = useState(false)
   const [ended, setEnded] = useState(false)
   const [muted, setMuted] = useState(true)
@@ -195,13 +242,26 @@ export function VideoSegment({
     }
   }
 
+  toggleRef.current = toggle
+  // Le lecteur gardé : son préchargement, son image d'attente et son son suivent l'étape.
+  useEffect(() => {
+    const v = ref.current
+    if (!pooled || !v) return
+    v.preload = auto ? 'auto' : 'metadata'
+    if (poster) v.poster = poster
+    else v.removeAttribute('poster')
+  }, [pooled, auto, poster, url])
+  useEffect(() => {
+    if (pooled && ref.current) ref.current.muted = muted
+  }, [pooled, muted])
+
   const len = Math.max(0.1, end - start)
   const pct = Math.min(100, Math.max(0, ((t - start) / len) * 100))
   const btn = big ? 'h-14 w-14' : 'h-11 w-11'
 
   return (
     <div className={cn('group relative h-full w-full overflow-hidden bg-black', className)}>
-      <video ref={ref} src={src} poster={poster} muted={muted} playsInline preload={auto ? 'auto' : 'metadata'} className="h-full w-full object-contain" onClick={toggle} />
+      {pooled ? <div ref={host} className="h-full w-full" /> : <video ref={ref} src={src} poster={poster} muted={muted} playsInline preload={auto ? 'auto' : 'metadata'} className="h-full w-full object-contain" onClick={toggle} />}
       {!playing && (
         <button type="button" onClick={toggle} aria-label={ended ? labels.replayClip : labels.playClip} className="absolute inset-0 m-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-md">
           {ended ? <RotateCcw className="h-9 w-9" /> : <Play className="ml-1 h-10 w-10 fill-current" />}
@@ -291,8 +351,13 @@ export function DocumentPage({ media, className }: { media: Extract<StepMedia, {
 }
 
 export function MediaView({ media, className, big, autoPlay, videoMode, modeControl, bare }: { media: StepMedia; className?: string; big?: boolean; autoPlay?: boolean; videoMode?: VideoMode; modeControl?: boolean; bare?: boolean }) {
+  const { reel } = useMediaPlayback()
   if (media.kind === 'image') return <AnnotatedImage src={media.url} annotations={media.annotations} alt={media.alt} className={className} />
-  if (media.kind === 'video') return <VideoSegment url={media.url} start={media.start} end={media.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} mode={videoMode} modeControl={modeControl} bare={bare} />
+  if (media.kind === 'video') {
+    // Au lecteur d'instruction : l'extrait dans la vidéo des étapes, s'il est à jour (reel.ts).
+    const p = playable(media, reel)
+    return <VideoSegment url={p.url} start={p.start} end={p.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} mode={videoMode} modeControl={modeControl} bare={bare} />
+  }
   if (media.kind === 'html') return <HtmlMedia html={media.html} title={media.title} className={className} />
   return <DocumentPage media={media} className={className} />
 }

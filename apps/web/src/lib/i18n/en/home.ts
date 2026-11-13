@@ -45,6 +45,10 @@ export const home: typeof Fr = {
     streakWeeks: (weeks: number) => `week${weeks !== 1 ? 's' : ''} in a row with something published`,
     streakStart: 'Publish this week to start your streak',
   },
+  renewal: {
+    title: (count: number) => `To review (${count.toLocaleString('en-CA')})`,
+    hint: 'They’re reaching their review date. Nothing changed? Confirm it in one tap.',
+  },
   review: {
     title: (count: number) => `To approve (${count.toLocaleString('en-CA')})`,
     hint: 'Changed steps are marked in the editor.',

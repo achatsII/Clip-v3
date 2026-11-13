@@ -18,7 +18,7 @@ import { messages } from '../i18n'
 import { LANGUAGES } from '../model/catalog'
 import { nowIso } from '../model/repo'
 import { mediaKey } from '../model/translation'
-import type { InstructionContent, LockoutTranslation, MediaTranslation, StepMedia, TranslatedContent } from '../model/types'
+import type { Check, InstructionContent, LockoutTranslation, MediaTranslation, StepMedia, TranslatedContent } from '../model/types'
 import { translateExtrasSystem, translatedImagePrompt, translateImageSystem, translatePrompt, translateSystem } from './prompts'
 import { extrasSchema, imageTextSchema, translationSchema } from './schemas'
 import { visualTexts, type VisualTexts } from './visualText'
@@ -118,9 +118,13 @@ export function mediaTranslationFrom(stepId: string, index: number, m: StepMedia
 }
 
 /** Tout ce que l'opérateur lit en dehors des étapes et dans leurs médias, avec un id chacun. */
+/** Les noms de sections, chacun une fois, dans l'ordre : traduits comme des textes à part. */
+const sectionNames = (content: InstructionContent): string[] => [...new Set(content.steps.map((s) => s.section?.trim()).filter((x): x is string => !!x))]
+
 export function contentSegments(content: InstructionContent): { segments: Segment[]; visuals: Map<string, VisualTexts | null> } {
   const segments: Segment[] = []
   const visuals = new Map<string, VisualTexts | null>()
+  sectionNames(content).forEach((x, i) => hasLetter(x) && segments.push({ id: `section:${i}`, text: x }))
   content.tools.forEach((x, i) => hasLetter(x) && segments.push({ id: `tool:${i}`, text: x }))
   if (hasLetter(content.equipment)) segments.push({ id: 'equipment', text: content.equipment })
   const lo = content.lockout
@@ -138,7 +142,46 @@ export function contentSegments(content: InstructionContent): { segments: Segmen
       segments.push(...r.segments)
       if (r.visual) visuals.set(mediaBase(s.id, i), r.visual)
     })
+  // Les relevés : leur libellé et leurs choix (les unités et les nombres ne se traduisent pas).
+  for (const s of content.steps)
+    for (const c of s.checks ?? []) {
+      if (hasLetter(c.label)) segments.push({ id: `check:${s.id}:${c.id}`, text: c.label })
+      for (const o of c.options ?? []) if (hasLetter(o.label)) segments.push({ id: `check:${s.id}:${c.id}:${o.id}`, text: o.label })
+    }
+  // Les questions de formation : l'énoncé, chaque choix (le bon garde son rang) et le pourquoi.
+  for (const q of content.quiz ?? []) {
+    if (hasLetter(q.question)) segments.push({ id: `quiz:${q.id}:q`, text: q.question })
+    q.choices.forEach((c, i) => hasLetter(c) && segments.push({ id: `quiz:${q.id}:c:${i}`, text: c }))
+    if (hasLetter(q.why)) segments.push({ id: `quiz:${q.id}:why`, text: q.why })
+  }
   return { segments, visuals }
+}
+
+/** Les questions de formation dans la langue traduite ; rien si aucun texte n'a été traduit. */
+export function quizFrom(quiz: InstructionContent['quiz'], map: Map<string, string>): TranslatedContent['quiz'] {
+  const out = (quiz ?? []).flatMap((q) => {
+    const question = map.get(`quiz:${q.id}:q`)
+    const choices = q.choices.map((c, i) => map.get(`quiz:${q.id}:c:${i}`) ?? c)
+    const anyChoice = q.choices.some((_, i) => map.has(`quiz:${q.id}:c:${i}`))
+    const why = map.get(`quiz:${q.id}:why`)
+    if (!question && !anyChoice && !why) return []
+    return [{ id: q.id, ...(question ? { question } : {}), ...(anyChoice ? { choices } : {}), ...(why ? { why } : {}) }]
+  })
+  return out.length ? out : undefined
+}
+
+/** Les relevés d'une étape dans la langue traduite ; rien si aucun texte n'a été traduit. */
+function checksFrom(stepId: string, checks: Check[] | undefined, map: Map<string, string>): NonNullable<TranslatedContent['steps'][number]['checks']> | undefined {
+  const out = (checks ?? []).flatMap((c) => {
+    const label = map.get(`check:${stepId}:${c.id}`)
+    const options = Object.fromEntries((c.options ?? []).flatMap((o) => {
+      const x = map.get(`check:${stepId}:${c.id}:${o.id}`)
+      return x ? [[o.id, x]] : []
+    }))
+    if (!label && !Object.keys(options).length) return []
+    return [{ id: c.id, ...(label ? { label } : {}), ...(Object.keys(options).length ? { options } : {}) }]
+  })
+  return out.length ? out : undefined
 }
 
 type TranslationJson = {
@@ -162,12 +205,15 @@ const extrasMap = (extras: unknown): Map<string, string> =>
 export function buildTranslation(content: InstructionContent, j: TranslationJson, visuals: Map<string, VisualTexts | null>): TranslatedContent {
   const map = extrasMap(j.extras)
   const core = new Map((j.steps ?? []).filter((s) => s && typeof s.id === 'string').map((s) => [s.id, s]))
+  const names = sectionNames(content)
   const steps = content.steps.flatMap((s) => {
     const x = core.get(s.id)
     const media = s.media.map((m, i) => mediaTranslationFrom(s.id, i, m, map, visuals.get(mediaBase(s.id, i)) ?? null))
     const withMedia = media.some(Boolean)
-    if (!x && !withMedia) return []
-    return [{ id: s.id, title: x?.title ?? '', text: x?.text ?? '', keyPoints: x?.keyPoints ?? [], warning: x?.warning?.trim() || null, ...(withMedia ? { media } : {}) }]
+    const section = s.section?.trim() ? map.get(`section:${names.indexOf(s.section.trim())}`) : undefined
+    const checks = checksFrom(s.id, s.checks, map)
+    if (!x && !withMedia && !section && !checks) return []
+    return [{ id: s.id, title: x?.title ?? '', text: x?.text ?? '', keyPoints: x?.keyPoints ?? [], warning: x?.warning?.trim() || null, ...(section ? { section } : {}), ...(withMedia ? { media } : {}), ...(checks ? { checks } : {}) }]
   })
   const lo = content.lockout
   const lockout: LockoutTranslation | undefined = lo
@@ -187,6 +233,7 @@ export function buildTranslation(content: InstructionContent, j: TranslationJson
         })),
       }
     : undefined
+  const quiz = quizFrom(content.quiz, map)
   return {
     title: j.title,
     summary: j.summary,
@@ -195,6 +242,7 @@ export function buildTranslation(content: InstructionContent, j: TranslationJson
     ...(content.tools.length ? { tools: content.tools.map((x, i) => map.get(`tool:${i}`) ?? x) } : {}),
     ...(map.get('equipment') ? { equipment: map.get('equipment') } : {}),
     ...(lockout ? { lockout } : {}),
+    ...(quiz ? { quiz } : {}),
     translatedAt: nowIso(),
   }
 }

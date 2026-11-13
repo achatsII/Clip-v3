@@ -3,12 +3,14 @@
  * Toutes les écritures passent par PATCH (seules les clés touchées changent), sauf le document
  * publié, remplacé en entier à chaque publication.
  */
+import { withoutProposals } from './checks'
 import type { DataApi, Doc } from '../gateway/data'
 import { messages, messagesIn } from '../i18n'
 import { summarizeChanges } from './diff'
 import { coverOf, emptyContent, findPublished, nowIso, T } from './repo'
-import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Source, Version } from './types'
+import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Renewal, Signature, Source, Version } from './types'
 import { reuseSource } from './library'
+import { allocateNumbers, instructionSearchText, publishedCard } from './search'
 
 export interface Actor {
   id: string
@@ -43,6 +45,7 @@ export async function createInstruction(data: DataApi, actor: Actor, init: Parti
     sourceCount: init.sources?.length ?? 0,
     ...init,
   }
+  json.searchText = instructionSearchText(json, json.draft)
   return data.insert<Instruction>(T.instruction, json, json.title)
 }
 
@@ -63,6 +66,8 @@ export async function saveDraft(data: DataApi, id: string, instr: Instruction, d
     updatedAt: nowIso(),
     updatedBy: actor.id,
     updatedByName: actor.name,
+    // L'index de recherche suit le brouillon (la recherche se fait au serveur).
+    searchText: instructionSearchText({ number: instr.number, intent: instr.intent }, draft),
     ...extra,
   }
   if (instr.status === 'published' || instr.publishedVersion) patch.dirty = true
@@ -73,28 +78,35 @@ export function brandingOf(org: OrgSettings): Branding {
   return { orgName: org.name, logoUrl: org.logoUrl ?? null, color: org.color ?? null }
 }
 
-export function needsApproval(org: OrgSettings, actorRole: string): boolean {
-  if (org.approval.mode === 'none') return false
-  return actorRole !== 'admin' && actorRole !== 'approver'
-}
-
 /**
  * Publie le brouillon : version immuable, document public remplacé, instruction à jour.
- * Rend le numéro de la nouvelle version.
+ * Rend le numéro de la nouvelle version et le document public.
  */
 export async function publishInstruction(
   data: DataApi,
   doc: Doc<Instruction>,
   org: OrgSettings,
   actor: Actor,
-  opts: { approvedBy?: Actor | null; previous?: InstructionContent | null } = {},
-): Promise<number> {
+  opts: {
+    approvedBy?: Actor | null
+    previous?: InstructionContent | null
+    renewal?: Renewal | null
+    approvals?: { list: NonNullable<Version['approvals']>; line: string } | null
+    /** La formation (toggle `training`) : combien de questions sont publiées, et faut-il se re-former. */
+    training?: { questions: number; retrain: boolean } | null
+    /** Une phrase en tête du résumé de la version (« Bloc commun « X » v3. »). */
+    note?: string
+  } = {},
+): Promise<{ number: number; publishedId: string | null; docNumber: string | null }> {
   const instr = doc.json_data
-  const content = instr.draft
+  // Ce qui part au poste : les relevés que l'IA a proposés et que l'auteur n'a pas gardés restent au brouillon.
+  const content = instr.draft ? withoutProposals(instr.draft) : null
   if (!content || !content.steps.length) throw new Error(messages().instructions.errors.publishWithoutSteps)
   const number = (instr.publishedVersion ?? 0) + 1
   const publishedAt = nowIso()
   const previous = opts.previous ?? null
+  // Le numéro de document se donne à la première publication, et reste ensuite (un bloc commun n'en a pas).
+  const docNumber = instr.number || (instr.block ? null : (await allocateNumbers(data, 1).catch(() => []))[0]) || null
 
   const version: Version = {
     instructionId: doc._id,
@@ -104,26 +116,41 @@ export async function publishInstruction(
     publishedBy: instr.review?.requestedBy ?? actor.id,
     publishedByName: instr.review?.requestedByName ?? actor.name,
     approvedBy: opts.approvedBy?.id ?? null,
-    approvedByName: opts.approvedBy?.name ?? null,
-    changelog: summarizeChanges(previous, content),
+    // À plusieurs : « Nathalie Roy (Qualité), Luc Gagnon (Production) », et chaque signature à part.
+    approvedByName: opts.approvals?.line || (opts.approvedBy?.name ?? null),
+    ...(opts.approvals?.list.length ? { approvals: opts.approvals.list } : {}),
+    changelog: [opts.note, summarizeChanges(previous, content)].filter(Boolean).join(' '),
     createdAt: publishedAt,
   }
   await data.insert<Version>(T.version, version, `${content.title} — v${number}`)
 
-  const pub: Published = { instructionId: doc._id, version: number, content, stationIds: instr.stationIds, branding: brandingOf(org), publishedAt }
-  let publishedId = instr.publishedId
-  if (publishedId) {
-    const existing = await data.get<Published>(T.published, publishedId)
-    if (existing) await data.replace(T.published, publishedId, pub)
-    else publishedId = null
+  const pub: Published = {
+    instructionId: doc._id,
+    version: number,
+    content,
+    stationIds: instr.stationIds,
+    branding: brandingOf(org),
+    publishedAt,
+    // La fiche et l'index : la liste d'un poste et sa recherche ne lisent pas le contenu.
+    card: publishedCard(content, docNumber),
+    searchText: instructionSearchText({ number: docNumber }, content),
   }
-  if (!publishedId) {
-    const found = await findPublished(data, doc._id)
-    if (found) {
-      publishedId = found._id
-      await data.replace(T.published, publishedId, pub)
-    } else {
-      publishedId = (await data.insert<Published>(T.published, pub, content.title))._id
+  // Un bloc commun ne s'affiche à aucun poste : pas de version publique ; ses instructions le portent.
+  let publishedId = instr.block ? null : instr.publishedId
+  if (!instr.block) {
+    if (publishedId) {
+      const existing = await data.get<Published>(T.published, publishedId)
+      if (existing) await data.replace(T.published, publishedId, pub)
+      else publishedId = null
+    }
+    if (!publishedId) {
+      const found = await findPublished(data, doc._id)
+      if (found) {
+        publishedId = found._id
+        await data.replace(T.published, publishedId, pub)
+      } else {
+        publishedId = (await data.insert<Published>(T.published, pub, content.title))._id
+      }
     }
   }
 
@@ -132,28 +159,53 @@ export async function publishInstruction(
     publishedVersion: number,
     publishedId,
     publishedAt,
+    ...(docNumber && docNumber !== instr.number ? { number: docNumber, searchText: instructionSearchText({ number: docNumber, intent: instr.intent }, content) } : {}),
     dirty: false,
     review: null,
+    // Publier repousse la relecture périodique (toggle `renewal`).
+    ...(opts.renewal !== undefined ? { renewal: opts.renewal } : {}),
+    // La matrice de compétences lit ces deux champs : une formation d'avant `trainingVersion` est à refaire.
+    ...(opts.training ? { publishedQuiz: opts.training.questions, ...(opts.training.retrain ? { trainingVersion: number } : {}) } : {}),
     updatedAt: publishedAt,
     updatedBy: actor.id,
     updatedByName: actor.name,
   })
-  return number
+  return { number, publishedId, docNumber }
 }
 
-export async function requestReview(data: DataApi, doc: Doc<Instruction>, org: OrgSettings, actor: Actor, note?: string) {
+/** « Toujours bonne » : la relecture est faite, la prochaine est repoussée ; pas de nouvelle version. */
+export async function confirmRenewal(data: DataApi, id: string, renewal: Renewal): Promise<void> {
+  await data.patch(T.instruction, id, { renewal })
+}
+
+export async function requestReview(data: DataApi, doc: Doc<Instruction>, org: OrgSettings, actor: Actor, note?: string, retrain?: boolean) {
   await data.patch(T.instruction, doc._id, {
     status: 'review',
     review: {
       requestedBy: actor.id,
       requestedByName: actor.name,
       requestedAt: nowIso(),
-      approverIds: org.approval.approverIds,
+      // À plusieurs, les approbateurs sont les membres des groupes ; une nouvelle demande repart sans signature.
+      approverIds: org.approval.mode === 'all' ? [...new Set((org.approval.groups ?? []).flatMap((g) => g.memberIds))] : org.approval.approverIds,
       note: note?.trim() || null,
       changesRequested: null,
+      signatures: [],
+      ...(retrain ? { retrain: true } : {}),
     },
     updatedAt: nowIso(),
   })
+}
+
+/**
+ * Range les signatures d'une revue. L'instruction est relue juste avant : une signature posée par
+ * quelqu'un d'autre entre-temps reste.
+ */
+export async function saveSignatures(data: DataApi, id: string, mine: Signature[]): Promise<Signature[]> {
+  const fresh = await data.get<Instruction>(T.instruction, id)
+  const others = (fresh?.json_data.review?.signatures ?? []).filter((s) => !mine.some((m) => m.groupId === s.groupId))
+  const signatures = [...others, ...mine]
+  await data.patch(T.instruction, id, { 'review.signatures': signatures, updatedAt: nowIso() })
+  return signatures
 }
 
 export async function requestChanges(data: DataApi, doc: Doc<Instruction>, actor: Actor, comment: string) {
@@ -161,7 +213,8 @@ export async function requestChanges(data: DataApi, doc: Doc<Instruction>, actor
   await data.patch(T.instruction, doc._id, {
     status: doc.json_data.publishedVersion ? 'published' : 'draft',
     dirty: !!doc.json_data.publishedVersion,
-    review: review ? { ...review, changesRequested: { by: actor.id, byName: actor.name, at: nowIso(), comment } } : null,
+    // Des changements demandés : les signatures déjà posées ne valent plus.
+    review: review ? { ...review, signatures: [], changesRequested: { by: actor.id, byName: actor.name, at: nowIso(), comment } } : null,
     updatedAt: nowIso(),
   })
 }
@@ -189,6 +242,7 @@ export async function duplicateInstruction(data: DataApi, doc: Doc<Instruction>,
     stationIds: src.stationIds,
     sources: src.sources,
     draft,
+    ...(src.block ? { block: true } : {}),
     origin: 'duplicate',
     coverUrl: coverOf(draft),
     stepCount: draft.steps.length,

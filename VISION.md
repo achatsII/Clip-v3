@@ -121,10 +121,23 @@ instructions publiées sont réellement consultées au plancher semaine après s
 
 - Un traitement de texte à la Word (mise en page libre) : la structure est imposée, c'est elle qui
   rend les instructions lisibles au plancher.
-- Un LMS complet (cours, examens, certifications) : on trace la consultation et la réalisation,
-  pas plus.
+- Un LMS (cours libres, catalogue de formations, examens certifiants, palmarès) : sans module, on
+  vérifie la compréhension d'une instruction en quelques questions, à la fin, au poste, et on garde
+  la trace de qui est formé, à quel poste (la matrice de la page Équipe). Le module Académie
+  (demandé en novembre 2026) va plus loin, toujours à partir des instructions : le parcours d'un
+  poste, ce sont ses instructions publiées ; un superviseur valide sur le terrain ; la qualification
+  se revalide ; la couverture par quart et le registre servent l'audit. Il ne crée pas de cours.
 - Un MES ou un ERP (ordres de fabrication, temps de cycle) : on se branche sur leurs numéros
   (codes, étiquettes, QR), on ne les remplace pas.
+- Un logiciel qualité complet (cartes de contrôle, SPC, non-conformités et actions correctives) : à
+  une étape, on relève une valeur, on juge l'écart, on note ce qui a été fait et on garde la trace.
+  Le module Relevés (novembre 2026) montre la tendance de chaque mesure avec ses limites et exporte
+  le registre pour le tableur ; l'analyse statistique (capabilité, cartes de contrôle) et le suivi
+  des actions restent ailleurs.
+- Un outil de BI ou de surveillance des personnes : les rapports (novembre 2026) répondent à des
+  questions de l'usine (combien de temps, qui a fait quoi, où ça accroche, qui est formé) ; les
+  personnes y vont par ordre alphabétique, comme dans un registre, jamais en palmarès ni en note de
+  performance. Le code calcule les chiffres ; l'IA les commente, elle n'en invente pas.
 - La génération de vidéos par l'IA.
 - Le hors ligne complet : la capture tolère un réseau instable, la consultation demande le réseau.
 

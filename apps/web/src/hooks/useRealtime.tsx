@@ -2,15 +2,18 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { useToast } from '@/components/ui/Toast'
 import { useMessages } from '@/lib/i18n'
-import { getAccessToken } from '@/lib/gateway/client'
-import { connectRealtime, deviceId, disconnectRealtime, dispatchRealtime, setRealtimeState } from '@/lib/realtime/client'
+import { getAccessToken, refreshSession } from '@/lib/gateway/client'
+import { connectRealtime, deviceId, disconnectRealtime, dispatchRealtime, noteRealtimeStart, setRealtimeState } from '@/lib/realtime/client'
 import { isRealtimeEvent, refreshFor } from '@/lib/realtime/events'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
 import { qk } from './queries'
+
+/** Les relectures d'une instruction après l'annonce de son brouillon. */
+const RELOOK_MS = [1500, 4000]
 
 /**
  * Posé une fois dans la coquille de l'app : écoute le canal de l'usine et relit aussitôt ce qui a
@@ -30,12 +33,20 @@ export function RealtimeBridge() {
   const here = useRef({ pathname: '', userId: profile.userId, liveEditing, t, toast, router })
   here.current = { pathname: usePathname(), userId: profile.userId, liveEditing, t, toast, router }
   const offered = useRef(new Map<string, number>())
+  // « Reconnecter » au témoin, quand le direct n'a pas pu démarrer.
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    const again = () => setAttempt((n) => n + 1)
+    window.addEventListener('clip:realtime-retry', again)
+    return () => window.removeEventListener('clip:realtime-retry', again)
+  }, [])
 
   useEffect(() => {
+    noteRealtimeStart({ available, hasOrg: !!orgId })
     if (!available || !orgId) return
     let off = () => undefined as void
     let alive = true
-    void connectRealtime(orgId, getAccessToken).then((channel) => {
+    void connectRealtime(orgId, getAccessToken, refreshSession).then((channel) => {
       if (!channel || !alive) return
       const onEvent = (m: { data?: unknown }) => {
         if (!isRealtimeEvent(m.data)) return
@@ -57,6 +68,12 @@ export function RealtimeBridge() {
           else if (key === 'instructions') void qc.invalidateQueries({ queryKey: qk.instructions })
           else void qc.invalidateQueries({ queryKey: qk.instruction(key.slice('instruction:'.length)) })
         }
+        // La Gateway peut rendre l'ancienne version un court instant après l'enregistrement : le
+        // lecteur ouvert sur l'instruction se relit encore un peu après, pour ne rien manquer.
+        if (m.data.type === 'draft') {
+          const key = qk.instruction(m.data.id)
+          for (const wait of RELOOK_MS) setTimeout(() => void qc.invalidateQueries({ queryKey: key }), wait)
+        }
       }
       // Le canal branché (ou refusé) se dit à l'écran : le témoin du direct, la relecture de secours.
       channel.subscribe('event', onEvent).then(
@@ -69,7 +86,7 @@ export function RealtimeBridge() {
       alive = false
       off()
     }
-  }, [available, orgId, qc])
+  }, [available, orgId, qc, attempt])
 
   // Quitter l'app (déconnexion) ferme la connexion.
   useEffect(() => () => disconnectRealtime(), [])

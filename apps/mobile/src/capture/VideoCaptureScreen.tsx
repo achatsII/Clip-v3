@@ -18,8 +18,9 @@ import { useBackAction } from './backAction'
 import { captureController, type ActiveCapture } from './controller'
 import { PermissionPanel } from './PermissionPanel'
 import { ShutterButton } from './ShutterButton'
+import { previewFrame, useCameraLens } from './framing'
 import { usePinchZoom } from './usePinchZoom'
-import { ZoomReset } from './ZoomReset'
+import { ZoomPresets } from './ZoomPresets'
 import { useStrings } from '../i18n'
 
 const KEEP_AWAKE_TAG = 'clip-video'
@@ -43,7 +44,8 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
   const [facing, setFacing] = useState<CameraType>('back')
   const [torch, setTorch] = useState(false)
   const [withoutSound, setWithoutSound] = useState(false)
-  const { zoom, reset: resetZoom, gesture: pinch } = usePinchZoom()
+  const lens = useCameraLens(facing)
+  const { range, magnification, zoom, setMagnification, reset: resetZoom, gesture: pinch } = usePinchZoom(lens.ultraWide)
   const [fromLibrary, setFromLibrary] = useState(false)
 
   const maxDuration = capture.payload.maxDurationSec ?? CAPTURE_PRESETS.video.maxDurationSec
@@ -148,9 +150,12 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
       <View style={styles.black}>
         <CameraView
           ref={cameraRef}
-          style={StyleSheet.absoluteFill}
+          style={previewFrame({ width, height }, insets.top, 16 / 9)}
           mode="video"
+          ratio="16:9"
           facing={facing}
+          selectedLens={lens.selectedLens}
+          onAvailableLensesChanged={lens.onAvailableLensesChanged}
           enableTorch={torch}
           mute={withoutSound}
           videoQuality={CAPTURE_PRESETS.video.quality}
@@ -195,7 +200,10 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
               <IconButton
                 icon="refresh-ccw"
                 label={t.common.switchCamera}
-                onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+                onPress={() => {
+                  resetZoom()
+                  setFacing((f) => (f === 'back' ? 'front' : 'back'))
+                }}
                 size={touch.min + 8}
               />
             ) : null}
@@ -220,7 +228,7 @@ export function VideoCaptureScreen({ capture }: { capture: ActiveCapture<'video'
               </Text>
             </View>
           ) : null}
-          <ZoomReset zoom={zoom} onReset={resetZoom} />
+          <ZoomPresets range={range} magnification={magnification} onPick={setMagnification} />
           <View style={styles.controls}>
             <View style={[styles.side, styles.sideLeft]}>
               {phase === 'idle' ? (

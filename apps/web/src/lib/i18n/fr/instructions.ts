@@ -4,14 +4,15 @@ export const instructions = {
   list: {
     title: 'Instructions',
     count: (shown: number, total: number) => `${shown.toLocaleString('fr-CA')} sur ${total.toLocaleString('fr-CA')}`,
+    total: (n: number) => (n > 1 ? `${n.toLocaleString('fr-CA')} instructions` : n === 1 ? '1 instruction' : 'Aucune instruction'),
     import: 'Importer',
     new: 'Nouvelle',
-    searchPlaceholder: 'Chercher un titre, un poste, un numéro de pièce…',
+    searchPlaceholder: 'Chercher un titre, un numéro, un poste, un mot d’une étape…',
     search: 'Chercher',
     searchByVoice: 'Chercher en parlant',
     clear: 'Effacer',
     scope: { mine: 'Pour moi', all: 'Tout' },
-    filters: { all: 'Toutes', published: 'Publiées', draft: 'Brouillons', review: 'À approuver' },
+    filters: { all: 'Toutes', published: 'Publiées', draft: 'Brouillons', review: 'À approuver', renew: 'À revoir' },
     tiles: 'Tuiles',
     rows: 'Liste',
     emptyTitle: 'Créez votre première instruction',
@@ -20,8 +21,26 @@ export const instructions = {
     noMatchTitle: 'Rien ne correspond',
     noMatchText: 'Essayez un autre mot, ou retirez un filtre.',
     showAll: 'Tout afficher',
+    more: 'Voir plus',
+    loadingMore: 'Chargement…',
+    /** « Où ? » : un secteur (les postes regroupés) ou un poste. */
+    place: {
+      all: 'Tous les lieux',
+      title: 'Où ?',
+      search: 'Chercher un secteur ou un poste',
+      everywhere: 'Partout',
+      sector: (n: number) => `${n.toLocaleString('fr-CA')} poste${n > 1 ? 's' : ''}`,
+      noSector: 'Sans secteur',
+      none: 'Aucun secteur ni poste ne correspond.',
+    },
   },
   /** Les tuiles et les lignes de la bibliothèque. */
+  /** La relecture périodique : « à revoir dans 1 an ». */
+  renewal: {
+    choice: (months: number | null) => (months === null ? 'Jamais' : months === 12 ? '1 an' : months === 24 ? '2 ans' : `${months.toLocaleString('fr-CA')} mois`),
+    soon: 'À revoir',
+    late: 'Révision en retard',
+  },
   card: {
     lockout: 'Cadenassage',
     noStation: 'Aucun poste',
@@ -153,6 +172,7 @@ export const instructions = {
     ppe: 'EPI modifiés',
     safety: 'mises en garde modifiées',
     lockout: 'points de cadenassage modifiés',
+    quiz: 'questions de formation modifiées',
     formatting: 'Mise en forme.',
     /** Les changements à la suite, en une phrase. */
     sentence: (parts: string[]) => {

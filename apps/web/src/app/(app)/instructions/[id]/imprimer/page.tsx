@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { ErrorState, Skeleton } from '@/components/ui/States'
 import { useInstruction, useStations, useVersions } from '@/hooks/queries'
 import { callNative, hasCapability } from '@/lib/bridge/native'
-import { BILLING_V2 } from '@/lib/config'
+import { useToggle } from '@/lib/toggles'
 import { buildPrintHtml } from '@/lib/pdf/printHtml'
 import { T } from '@/lib/model/repo'
 import type { Published } from '@/lib/model/types'
@@ -22,6 +22,7 @@ import { useMessages } from '@/lib/i18n'
 export default function PrintPage() {
   const { id } = useParams<{ id: string }>()
   const session = useSession()
+  const recordsOn = useToggle('records')
   const t = useMessages()
   const instruction = useInstruction(id)
   const stations = useStations()
@@ -77,17 +78,20 @@ export default function PrintPage() {
     const latest = versions.data?.[0]?.json_data
     return buildPrintHtml(content, {
       branding: { orgName: session.org.json_data.name, logoUrl: session.org.json_data.logoUrl, color: session.org.json_data.color },
+      number: doc.json_data.number ?? null,
       version: usePublished ? published.data!.json_data.version : null,
       publishedAt: usePublished ? published.data!.json_data.publishedAt : null,
       approvedByName: usePublished ? latest?.approvedByName ?? null : null,
       stationNames: (stations.data ?? []).filter((s) => doc.json_data.stationIds.includes(s._id)).map((s) => s.json_data.name),
       liveUrl: live,
       qrSvg: qr,
-      showClipMention: BILLING_V2 && brandKit === 'locked',
+      // Le droit se lit dans l'état (aperçu compris) ; facturation éteinte, rien n'est fermé.
+      showClipMention: brandKit === 'locked',
       draft: !usePublished,
       ratios,
+      records: recordsOn,
     })
-  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios])
+  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn])
 
   async function print() {
     if (hasCapability('print')) {

@@ -22,6 +22,8 @@ export const editorTools = {
     stay: 'Rester',
     leave: 'Quitter',
     textPlaceholder: 'Texte à afficher (ex. Vis A, 25 N·m)',
+    /** La valeur d’une distance, écrite au milieu de la flèche à deux pointes. */
+    measurePlaceholder: 'Valeur de la distance (ex. 12 mm)',
     textLabel: 'Texte de l’annotation',
     textOk: 'OK',
     deleteHint: 'Supprimer (Suppr)',
@@ -49,6 +51,7 @@ export const editorTools = {
       highlight: 'Surligneur',
       arrow: 'Flèche',
       line: 'Ligne',
+      measure: 'Distance',
       circle: 'Cercle',
       rect: 'Cadre',
       text: 'Texte',
@@ -57,6 +60,8 @@ export const editorTools = {
       blur: 'Flouter',
     },
     sizes: { s: 'Petit', m: 'Moyen', l: 'Grand', xl: 'Très grand', xxl: 'Énorme' },
+    /** Le style d’un trait ou d’une forme. */
+    styles: { dashed: 'Pointillé', filled: 'Rempli' },
     colors: { red: 'Rouge', orange: 'Orange', yellow: 'Jaune', green: 'Vert', blue: 'Bleu', white: 'Blanc', black: 'Noir' },
     /** Les icônes à poser, par leur clé (celle que garde l’annotation ; voir lib/annotations/icons.ts). */
     icons: {
@@ -137,6 +142,7 @@ export const editorTools = {
       instruction: (parts: string[]) => `Instruction : ${parts.join(', ') || 'rien à changer'}`,
       stepAdded: (step: number, title: string) => `Nouvelle étape ${nb(step)} : « ${title} »`,
       step: (step: number, parts: string[]) => `Étape ${nb(step)} : ${parts.join(', ') || 'rien à changer'}`,
+      checks: (step: number, n: number) => (n ? `Étape ${nb(step)} : ${nb(n)} relevé${n > 1 ? 's' : ''} à noter` : `Étape ${nb(step)} : relevés retirés`),
       stepRemoved: (step: number, title: string) => `Étape ${nb(step)} retirée : « ${title} »`,
       stepMoved: (title: string, to: number, from: number) => `Étape « ${title} » déplacée en ${nb(to)} (était ${nb(from)})`,
       layoutCompare: (step: number) => `Étape ${nb(step)} : à faire / à éviter côte à côte`,
@@ -176,6 +182,7 @@ export const editorTools = {
       updateStep: (step: string) => `${step} : je réécris…`,
       deleteStep: (step: string) => `${step} : je retire…`,
       moveStep: (step: string) => `${step} : je déplace…`,
+      setChecks: (step: string) => `${step} : je prépare les relevés…`,
       annotate: (step: string) => `${step} : je place les marques sur la photo…`,
       clearAnnotations: (step: string) => `${step} : je retire les marques…`,
       illustrate: (step: string) => `${step} : je crée une illustration…`,

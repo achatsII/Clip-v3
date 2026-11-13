@@ -1,0 +1,48 @@
+const num = (n: number) => n.toLocaleString('fr-CA')
+
+/** La formation : les questions d'une instruction et la matrice de compétences (toggle `training`). */
+export const training = {
+  menu: 'Questions de formation',
+  title: 'Questions de formation',
+  intro: 'Après l’instruction, la personne au poste répond à quelques questions : on sait qui est formé, à quel poste.',
+  make: 'Préparer les questions avec l’IA',
+  remake: 'Refaire avec l’IA',
+  remakeConfirm: { title: 'Refaire les questions ?', description: 'L’IA remplace les questions actuelles, retouches comprises.', confirm: 'Refaire' },
+  making: 'L’IA prépare les questions…',
+  empty: 'Pas encore de questions',
+  count: (n: number) => (n > 1 ? `${num(n)} questions` : n === 1 ? '1 question' : 'Aucune question'),
+  question: (n: number) => `Question ${num(n)}`,
+  choice: (n: number) => `Choix ${num(n)}`,
+  markCorrect: 'C’est la bonne réponse',
+  correct: 'Bonne réponse',
+  why: 'Pourquoi (montré après la réponse)',
+  addQuestion: 'Ajouter une question',
+  removeQuestion: 'Retirer la question',
+  addChoice: 'Ajouter un choix',
+  removeChoice: 'Retirer ce choix',
+  done: 'Terminé',
+  publishHint: 'Les questions arrivent au poste à la prochaine publication.',
+  incomplete: (n: number) => (n > 1 ? `${num(n)} questions de formation sont incomplètes : elles ne seront pas posées.` : 'Une question de formation est incomplète : elle ne sera pas posée.'),
+  /** La publication : demander de se re-former. */
+  retrain: 'Il faut se re-former',
+  retrainHint: 'Un changement important : les formations d’avant cette version ne comptent plus.',
+  retrainAsked: 'Changement important : il faudra se re-former.',
+  /** La matrice de compétences (page Équipe). */
+  matrix: 'Compétences',
+  people: 'Personnes',
+  gaps: (n: number) => (n ? `${num(n)} formation${n > 1 ? 's' : ''} à faire` : 'Tout le monde est formé'),
+  emptyTitle: 'Rien à apprendre pour l’instant',
+  emptyHint: 'Ajoutez des questions de formation à une instruction publiée à un poste : la matrice s’affiche ici.',
+  noPeople: 'Ajoutez d’abord les personnes de l’équipe.',
+  onlyGaps: 'Seulement les écarts',
+  howTo: 'Au poste, la personne se nomme (« Qui êtes-vous ? »), lit l’instruction, puis valide sa formation en quelques questions.',
+  open: 'Ouvrir l’instruction',
+  legend: { done: 'Formé', partial: 'En partie', none: 'Pas formé', outdated: 'À refaire' },
+  states: { done: 'Formé', missing: 'À faire', outdated: 'À refaire (changée depuis)' },
+  cellTitle: (person: string, station: string) => `${person} · ${station}`,
+  cellLabel: (person: string, station: string, done: number, total: number) => `${person}, ${station} : ${num(done)} sur ${num(total)}`,
+  errors: {
+    empty: 'L’IA n’a pas pu préparer de questions. Réessayez.',
+    makeFailed: 'Les questions n’ont pas été préparées',
+  },
+}

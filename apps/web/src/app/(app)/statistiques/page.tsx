@@ -12,7 +12,7 @@ import { Input, Label } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { ErrorState, Skeleton } from '@/components/ui/States'
 import { Card, PageHeader, SectionTitle } from '@/components/ui/Surface'
-import { useFeedback, useInstructions } from '@/hooks/queries'
+import { useFeedback, useStatsIndex } from '@/hooks/queries'
 import { useAdoption } from '@/hooks/useAdoption'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { num, useMessages } from '@/lib/i18n'
@@ -26,7 +26,6 @@ export default function StatsPage() {
   const { org, updateOrg, can } = useSession()
   const t = useMessages()
   const w = t.stats.page
-  const instructions = useInstructions()
   const feedback = useFeedback()
   const detailed = useEntitlement('adoption_stats')
   const gate = useGate()
@@ -34,6 +33,8 @@ export default function StatsPage() {
   const reportOn = useToggle('valueReport')
   const [roiOpen, setRoiOpen] = useState(false)
   const { events, stats, since } = useAdoption(DAYS)
+  // Les publiées et les nouvelles de la période, en champs choisis : pas toute la bibliothèque.
+  const instructions = useStatsIndex(since)
 
   const facts = periodFacts({ instructions: instructions.data ?? [], feedback: feedback.data ?? [], perInstruction: stats.perInstruction, since })
   const roi = org.json_data.roi

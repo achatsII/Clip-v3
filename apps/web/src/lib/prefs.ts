@@ -72,5 +72,3 @@ const SEEN = 'clip_seen_created'
 export const markCreatedSeen = (id: string) => setInIdList(SEEN, id, true, 80)
 export const useSeenCreated = () => useIdList(SEEN)
 
-/** Les questions de l'IA repliées (« Plus tard »), par instruction. */
-export const QUESTIONS_FOLDED = 'clip_questions_folded'

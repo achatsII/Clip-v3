@@ -8,6 +8,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { BILLING_V2 } from '../config'
 import { onRefusal, onSettled, type Refusal } from './bus'
+import { recordTry } from './advisorStore'
 import { limitOf, type BillingClient, type BillingState, type LimitStatus } from './client'
 import type { FeatureKey } from './catalog'
 
@@ -18,31 +19,39 @@ export interface PaywallRequest {
   used?: number
   /** L'action à relancer après l'achat (la saisie est gardée par l'écran). */
   retry?: () => void
+  /** Ouverte par le conseiller d'achat (accueil), et non par un refus. */
+  source?: 'advisor'
 }
 
 interface BillingContextValue {
   enabled: boolean
+  /** L'aperçu (drapeau éteint) : l'état vient du catalogue de l'app, rien ne s'achète (`preview.ts`). */
+  preview: boolean
   state: BillingState | null
   loading: boolean
   refresh: () => Promise<BillingState | null>
   paywall: PaywallRequest | null
   openPaywall: (r: PaywallRequest) => void
   closePaywall: () => void
+  /** Une fonction fermée vient d'être essayée : le conseiller d'achat s'en souvient. */
+  noteTry: (feature: string) => void
 }
 
 const Ctx = createContext<BillingContextValue>({
   enabled: false,
+  preview: false,
   state: null,
   loading: false,
   refresh: async () => null,
   paywall: null,
   openPaywall: () => undefined,
   closePaywall: () => undefined,
+  noteTry: () => undefined,
 })
 
 const QUIET_MS = 4000
 
-export function BillingProvider({ client, session, enabled = BILLING_V2, children }: { client: BillingClient; session: string | null; enabled?: boolean; children: ReactNode }) {
+export function BillingProvider({ client, session, enabled = BILLING_V2, preview = false, children }: { client: BillingClient; session: string | null; enabled?: boolean; preview?: boolean; children: ReactNode }) {
   const [read, setRead] = useState<{ session: string; state: BillingState | null } | null>(null)
   const [paywall, setPaywall] = useState<PaywallRequest | null>(null)
   const current = enabled && session && read?.session === session ? read : null
@@ -82,6 +91,7 @@ export function BillingProvider({ client, session, enabled = BILLING_V2, childre
       const now = Date.now()
       if (now - lastRefusal.current < QUIET_MS) return
       lastRefusal.current = now
+      if (session && refusal.featureKey) recordTry(session, refusal.featureKey)
       setPaywall({ refusal })
     })
     return () => {
@@ -89,11 +99,11 @@ export function BillingProvider({ client, session, enabled = BILLING_V2, childre
       offSettled()
       offRefusal()
     }
-  }, [enabled, refresh])
+  }, [enabled, refresh, session])
 
   const value = useMemo<BillingContextValue>(
-    () => ({ enabled, state, loading, refresh, paywall, openPaywall: setPaywall, closePaywall: () => setPaywall(null) }),
-    [enabled, state, loading, refresh, paywall],
+    () => ({ enabled, preview: enabled && preview, state, loading, refresh, paywall, openPaywall: setPaywall, closePaywall: () => setPaywall(null), noteTry: (feature: string) => session && recordTry(session, feature) }),
+    [enabled, preview, state, loading, refresh, paywall, session],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
@@ -122,14 +132,18 @@ export function useLimit(featureKey: FeatureKey, used: number | undefined): Limi
 
 /** Ouvre la fonction si elle est incluse, sinon le paywall (avec l'action à relancer). */
 export function useGate() {
-  const { openPaywall, refresh } = useBilling()
+  const { openPaywall, refresh, noteTry } = useBilling()
   return useCallback(
     (entitlement: Entitlement, feature: FeatureKey, action: () => void) => {
       if (entitlement === 'off' || entitlement === 'open') return action()
-      if (entitlement === 'locked') return openPaywall({ feature, retry: action })
+      const locked = () => {
+        noteTry(feature)
+        openPaywall({ feature, retry: action })
+      }
+      if (entitlement === 'locked') return locked()
       // Pas encore lu : on relit, puis on décide ; illisible, on ne sert pas la fonction.
-      void refresh().then((fresh) => (fresh?.features[feature] === true ? action() : openPaywall({ feature, retry: action })))
+      void refresh().then((fresh) => (fresh?.features[feature] === true ? action() : locked()))
     },
-    [openPaywall, refresh],
+    [openPaywall, refresh, noteTry],
   )
 }

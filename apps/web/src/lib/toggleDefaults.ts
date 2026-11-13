@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'reports'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -18,6 +18,40 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   draftHistory: true,
   // L'assistant d'édition en bulle dans l'aperçu.
   previewAgent: true,
+  // Les vidéos au poste : un seul lecteur d'une étape à l'autre (rien ne se recharge), et la vidéo
+  // des étapes, montée après la publication sans la retenir (peu de données).
+  stepReel: true,
+  // Les sections d'une longue instruction (« Démontage », « Remontage ») et le sommaire au poste.
+  sections: true,
+  // Exigences d'Apple : l'accord avant le premier envoi à l'IA, et supprimer son compte dans l'app.
+  aiConsent: true,
+  deleteAccount: true,
+  // La relecture périodique des instructions publiées (« à revoir dans 1 an »).
+  renewal: true,
+  // Qui travaille au poste : l'équipe (sans compte), son code à 4 chiffres, et « Qui êtes-vous ? » à la tablette.
+  operators: true,
+  // Les relevés d'une étape (mesure, oui ou non, choix, texte, photo) et le registre du travail fait.
+  records: true,
+  // L'approbation à plusieurs : chaque groupe (Qualité, chef d'atelier…) signe, publication à la dernière signature.
+  multiApproval: true,
+  // Avertir les bonnes personnes : « À voir » dans l'app, courriel et notification sur le téléphone.
+  notify: true,
+  // La formation : des questions par l'IA, la validation au poste et la matrice de compétences.
+  training: true,
+  // Les blocs communs : des étapes rédigées une fois, réutilisées dans plusieurs instructions.
+  sharedBlocks: true,
+  // Le conseiller d'achat : de temps en temps, l'offre qui sert l'usine (accueil seulement), et la
+  // demande à l'administrateur quand on ne peut pas acheter soi-même.
+  salesAdvisor: true,
+  // Les modules en option, montrés et vendus seulement une fois bâtis : l'Académie (bâtie), les Relevés avancés.
+  academy: true,
+  recordsPlus: true,
+  // L'aperçu de la facturation : tant que le catalogue n'est pas publié, les plans, les modules,
+  // les cadenas et les offres se montrent quand même (web), sans rien acheter ni débiter.
+  billingPreview: true,
+  // Les rapports : un répertoire de modèles prêts (temps, qui a fait quoi, écarts, formation…), et
+  // l'IA qui commente des chiffres déjà calculés.
+  reports: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -33,4 +67,20 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   liveEditing: false,
   draftHistory: false,
   previewAgent: false,
+  stepReel: false,
+  sections: false,
+  aiConsent: false,
+  deleteAccount: false,
+  renewal: false,
+  operators: false,
+  records: false,
+  multiApproval: false,
+  notify: false,
+  training: false,
+  sharedBlocks: false,
+  salesAdvisor: false,
+  academy: false,
+  recordsPlus: false,
+  billingPreview: false,
+  reports: false,
 }

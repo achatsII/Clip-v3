@@ -66,7 +66,7 @@ export function PreviewEditing({ doc, player }: { doc: Doc<Instruction>; player:
       knownAt.current = at
       cacheDraft(qc, doc._id, saved)
       // L'éditeur ouvert ailleurs (l'ordinateur derrière soi) suit, à l'étape changée.
-      if (live) publishRealtime({ type: 'draft', id: doc._id, title: saved.title, userId: actor.id, byName: actor.name, device: inNativeShell() ? 'app' : 'web', steps: changedSteps(lastSaved.current, saved), from: deviceId })
+      if (live) publishRealtime({ type: 'draft', id: doc._id, title: saved.title, userId: actor.id, byName: actor.name, device: inNativeShell() ? 'app' : 'web', steps: changedSteps(lastSaved.current, saved), from: deviceId, at })
       lastSaved.current = saved
     } catch {
       toast.error(t.editor.page.saveState.error)

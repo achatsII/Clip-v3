@@ -1,5 +1,6 @@
 'use client'
 
+import { roleOf } from '@/lib/model/roles'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react'
@@ -40,14 +41,8 @@ const Ctx = createContext<SessionValue | null>(null)
 
 const rank: Record<Permission, number> = { none: 0, read: 1, write: 2 }
 
-export function roleOf(org: OrgSettings, profile: Profile): MemberRole {
-  // Réglage de la personne, sinon celui posé à son invitation (clé `email:<courriel>`).
-  const explicit = org.members[profile.userId]?.role ?? org.members[`email:${profile.email.toLowerCase()}`]?.role
-  if (explicit) return explicit
-  if (profile.orgRole === 'admin') return 'admin'
-  if (org.createdBy && org.createdBy === profile.userId) return 'admin'
-  return 'author'
-}
+// Le rôle : `roleOf` (src/lib/model/roles.ts), partagé avec le serveur.
+export { roleOf }
 
 export function SessionProvider({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
   const router = useRouter()

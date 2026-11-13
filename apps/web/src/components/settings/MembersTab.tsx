@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { Eye, Mail, UserPlus, Users } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { LockBadge } from '@/components/billing/Billing'
 import { UsageMeter } from '@/components/billing/Usage'
 import { useSession } from '@/components/providers/Session'
@@ -17,10 +17,12 @@ import { useBilling, useLimit } from '@/lib/billing/state'
 import { countEditors, countText } from '@/lib/billing/usage'
 import { gateway } from '@/lib/gateway/client'
 import { currentGrantId, isNotAdmin, orgApi, type Member } from '@/lib/gateway/org'
-import { messages, useMessages } from '@/lib/i18n'
+import { messages, num, useMessages } from '@/lib/i18n'
 import { CATEGORIES, CATEGORY_KEYS, ROLES, type Feature } from '@/lib/model/catalog'
 import type { CategoryKey, MemberRole, MemberSettings } from '@/lib/model/types'
 import { cn, initials } from '@/lib/util/cn'
+import { SearchField } from '@/components/ui/SearchField'
+import { matchesTokens, SEARCH_FROM, searchTokens } from '@/lib/util/people'
 
 const org$ = orgApi(gateway)
 
@@ -52,6 +54,9 @@ export function MembersTab() {
   const canWrite = can('members', 'write')
   const grantId = currentGrantId()
   const pending = Object.entries(org.json_data.members).filter(([k]) => k.startsWith('email:') && !(members.data ?? []).some((m) => `email:${m.email.toLowerCase()}` === k))
+  // Des dizaines de personnes (les lecteurs ne se comptent pas) : une recherche et le filtre par rôle.
+  const [query, setQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState<MemberRole | 'all'>('all')
 
   const settingsFor = (m: Member): MemberSettings => org.json_data.members[m.user_id] ?? org.json_data.members[`email:${m.email.toLowerCase()}`] ?? { role: m.role === 'admin' ? 'admin' : 'author', categories: [], stationIds: [] }
 
@@ -113,8 +118,17 @@ export function MembersTab() {
         ) : !members.data?.length ? (
           <EmptyState icon={<Users className="h-7 w-7" />} title={t.emptyTitle} description={t.emptyDescription} />
         ) : (
+          <MembersList
+            members={members.data}
+            pending={pending}
+            settingsFor={settingsFor}
+            query={query}
+            onQuery={setQuery}
+            role={roleFilter}
+            onRole={setRoleFilter}
+            render={(list, pendingShown) => (
           <ul className="space-y-2">
-            {members.data.map((m) => {
+            {list.map((m) => {
               const s = settingsFor(m)
               const name = m.full_name || m.email
               return (
@@ -141,7 +155,7 @@ export function MembersTab() {
                 </li>
               )
             })}
-            {pending.map(([k, v]) => (
+            {pendingShown.map(([k, v]) => (
               <li key={k} className="flex items-center gap-3 rounded-[22px] border-2 border-dashed border-slate-200 p-3 dark:border-slate-700">
                 <Mail className="h-5 w-5 text-slate-400" />
                 <span className="flex-1 text-sm font-bold text-slate-500">
@@ -150,6 +164,8 @@ export function MembersTab() {
               </li>
             ))}
           </ul>
+            )}
+          />
         )}
       </Panel>
 
@@ -275,6 +291,61 @@ export function MembersTab() {
           </div>
         )}
       </Modal>
+    </div>
+  )
+}
+
+const ROLE_ORDER: MemberRole[] = ['admin', 'approver', 'author', 'reader']
+
+/** La liste des membres, cherchée et filtrée par rôle dès qu'elle grandit ; le rendu reste celui de l'onglet. */
+function MembersList({
+  members,
+  pending,
+  settingsFor,
+  query,
+  onQuery,
+  role,
+  onRole,
+  render,
+}: {
+  members: Member[]
+  pending: Array<[string, MemberSettings]>
+  settingsFor: (m: Member) => MemberSettings
+  query: string
+  onQuery: (v: string) => void
+  role: MemberRole | 'all'
+  onRole: (r: MemberRole | 'all') => void
+  render: (list: Member[], pending: Array<[string, MemberSettings]>) => ReactNode
+}) {
+  const words = useMessages()
+  const t = words.settings.members
+  const tokens = searchTokens(query)
+  const total = members.length + pending.length
+  const roleOf = (m: Member) => settingsFor(m).role
+  const counts = Object.fromEntries(ROLE_ORDER.map((r) => [r, members.filter((m) => roleOf(m) === r).length + pending.filter(([, v]) => v.role === r).length])) as Record<MemberRole, number>
+  const list = members.filter((m) => (role === 'all' || roleOf(m) === role) && matchesTokens(tokens, m.full_name, m.email))
+  const pendingShown = pending.filter(([k, v]) => (role === 'all' || v.role === role) && matchesTokens(tokens, k.slice(6)))
+  if (total <= SEARCH_FROM) return <>{render(members, pending)}</>
+  return (
+    <div className="space-y-3">
+      <SearchField value={query} onChange={onQuery} placeholder={t.search} />
+      <div role="radiogroup" aria-label={t.role} className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+        {(['all', ...ROLE_ORDER.filter((r) => counts[r] > 0)] as const).map((r) => (
+          <button key={r} type="button" role="radio" aria-checked={role === r} onClick={() => onRole(r)} className={cn('btn-press h-11 shrink-0 rounded-2xl px-3 text-sm font-black', role === r ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card text-slate-700 dark:text-slate-200')}>
+            {r === 'all' ? t.allRoles : ROLES[r].label} <span className="opacity-60 tabular-nums">{num(r === 'all' ? total : counts[r])}</span>
+          </button>
+        ))}
+      </div>
+      {list.length || pendingShown.length ? (
+        render(list, pendingShown)
+      ) : (
+        <p className="glass-card rounded-[22px] p-4 text-center text-sm font-bold text-slate-500">
+          {words.common.noMatch}{' '}
+          <button type="button" onClick={() => { onQuery(''); onRole('all') }} className="font-black text-[var(--primary)]">
+            {words.common.showAll}
+          </button>
+        </p>
+      )}
     </div>
   )
 }

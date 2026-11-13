@@ -5,6 +5,10 @@ import {
   ArrowRight,
   BookOpen,
   Check,
+  ClipboardCheck,
+  CloudOff,
+  ChevronDown,
+  GraduationCap,
   Clock,
   Languages,
   Layers,
@@ -33,18 +37,28 @@ import type { AiApi } from '@/lib/gateway/ai'
 import type { DataApi } from '@/lib/gateway/data'
 import type { FilesApi } from '@/lib/gateway/files'
 import { ENERGY, LANGUAGES, PPE, textDir, WARNINGS } from '@/lib/model/catalog'
+import { firstIncomplete, hasChecks, type Answers, type CheckAnswer, liveChecks } from '@/lib/model/checks'
+import { buildExecution, flushExecutions, saveExecution } from '@/lib/model/executions'
+import { buildTraining, cleanQuiz, flushTrainings, saveTraining } from '@/lib/model/training'
+import { notifyEvent } from '@/lib/notify'
 import { logUsage } from '@/lib/model/repo'
+import { sectionGroups } from '@/lib/model/sections'
 import { localized } from '@/lib/model/translation'
 import type { Branding, InstructionContent, Step } from '@/lib/model/types'
 import { LiveSpeaker, stepSpeech } from '@/lib/liveSpeech'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { FeedbackSheet } from './FeedbackSheet'
-import { strings, type PlayerStrings } from './i18n'
+import { StepChecks } from './StepChecks'
+import { QuizRunner } from './QuizRunner'
+import { rangeText, strings, type PlayerStrings } from './i18n'
 import { StepMediaArea } from './StepMediaArea'
 import { layoutOf } from '@/lib/model/media'
 import { VoiceAssistant } from './VoiceAssistant'
 import { Input } from '@/components/ui/Field'
 import { DictationLanguage } from '@/lib/media/dictation'
+import { playable } from '@/lib/media/reel'
+import { MediaPlaybackProvider, slowConnection, VideoPool } from '@/lib/media/videoPool'
+import { useToggle } from '@/lib/toggles'
 
 export interface PlayerDeps {
   data: DataApi
@@ -81,6 +95,22 @@ export interface PlayerProps {
    * étapes, à droite de « Suivant », pour ne rien cacher de l'étape ; ailleurs, il flotte.
    */
   accessory?: ReactNode
+  /** Qui travaille au poste (« Qui êtes-vous ? ») : il signe ce qu'il fait ici. */
+  operator?: { id: string; name: string } | null
+  /**
+   * Les relevés s'écrivent dans le registre (`clip_execution`) : la page le permet (un lien qui ne
+   * peut pas l'écrire passe `false` ; on relève quand même, sans trace).
+   */
+  canRecord?: boolean
+  /** La personne connectée qui fait l'instruction dans l'app (pas une personne de l'équipe). */
+  recorder?: { id: string; name: string } | null
+  /** Le lien du poste ou de l'instruction : un danger ou un écart y avertit les bonnes personnes (toggle `notify`). */
+  notifyLink?: string
+  /**
+   * La formation validée s'écrit (`clip_training`) : la page le permet. Au poste, seulement au nom
+   * d'une personne de l'équipe (« Qui êtes-vous ? ») ; l'aperçu fait un essai sans rien écrire.
+   */
+  canTrain?: boolean
 }
 
 function deviceId(): string {
@@ -97,7 +127,8 @@ function deviceId(): string {
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false } = props
+  const who = { operatorId: operator?.id ?? null, operatorName: operator?.name ?? null }
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
     try {
@@ -123,7 +154,33 @@ export function Player(props: PlayerProps) {
   const [langOpen, setLangOpen] = useState(false)
   const [voiceOpen, setVoiceOpen] = useState(false)
   const [rated, setRated] = useState<'up' | 'down' | null>(null)
+  // Le sommaire : toutes les étapes, par section (toggle `sections`).
+  const sectionsOn = useToggle('sections')
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const startedAt = useRef<number>(Date.now())
+  // Les relevés (toggle `records`) : les réponses de cette fois, ce qui manque, et la trace écrite.
+  const recordsOn = useToggle('records')
+  const [answers, setAnswers] = useState<Answers>({})
+  const [nudge, setNudge] = useState(0)
+  const [record, setRecord] = useState<{ state: 'saved' | 'queued'; deviations: number } | null>(null)
+  const recording = recordsOn && canRecord && !preview && hasChecks(props.content.steps)
+  // Avertir (toggle `notify`) : depuis un poste, par son lien ; dans l'app, au nom de la personne.
+  const notifyOn = useToggle('notify')
+  const notifyVia = notifyOn && !preview ? (notifyLink ? { link: notifyLink } : source === 'app' ? {} : null) : null
+  const answerCheck = useCallback((id: string, a: CheckAnswer) => setAnswers((prev) => ({ ...prev, [id]: a })), [])
+  // La formation (toggle `training`) : à la fin, une personne nommée valide ce qu'elle a compris.
+  const trainingOn = useToggle('training')
+  const quiz = useMemo(() => cleanQuiz(content.quiz), [content.quiz])
+  const offerTraining = trainingOn && quiz.length > 0 && (!!preview || (!!operator && canTrain))
+  const [quizOpen, setQuizOpen] = useState(false)
+  const [trained, setTrained] = useState(false)
+  useEffect(() => {
+    if (trainingOn && canTrain && !preview) void flushTrainings(deps.data)
+  }, [trainingOn, canTrain, preview, deps.data])
+  // Une trace restée dans l'appareil (réseau coupé) repart dès qu'une instruction s'ouvre.
+  useEffect(() => {
+    if (recordsOn && canRecord && !preview) void flushExecutions(deps.data)
+  }, [recordsOn, canRecord, preview, deps.data])
   // La voix en direct : elle s'ouvre au premier « Écouter » et lit chaque étape tout de suite.
   const speaker = useMemo(() => (deps.ai ? new LiveSpeaker(deps.ai) : null), [deps.ai])
   const touch = useRef<{ x: number; y: number } | null>(null)
@@ -149,10 +206,27 @@ export function Player(props: PlayerProps) {
 
   useEffect(() => {
     if (preview) return
-    logUsage(deps.data, { type: 'view', instructionId, stationId: stationId ?? null, version: version ?? null, source, deviceId: deviceId() })
-  }, [preview, deps.data, instructionId, stationId, version, source])
+    logUsage(deps.data, { type: 'view', instructionId, stationId: stationId ?? null, version: version ?? null, source, deviceId: deviceId(), ...who })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preview, deps.data, instructionId, stationId, version, source, operator?.id])
 
   const step: Step | undefined = index >= 0 && index < total ? content.steps[index] : undefined
+
+  // Les vidéos : un lecteur gardé d'une étape à l'autre, et la vidéo des étapes (toggle `stepReel`).
+  // L'étape suivante se prépare pendant qu'on lit celle-ci, sauf sur une connexion lente.
+  const reel = useToggle('stepReel')
+  const pool = useMemo(() => new VideoPool(3), [])
+  useEffect(() => () => pool.dispose(), [pool])
+  // Le toggle coupe aussi les lecteurs gardés : chaque étape reprend alors son propre lecteur.
+  const playback = useMemo(() => ({ pool: reel ? pool : null, reel }), [pool, reel])
+  useEffect(() => {
+    // Toggle coupé : aucun lecteur gardé, donc rien à préparer (il ne servirait à personne).
+    if (!reel || slowConnection()) return
+    const next = content.steps[index + 1]?.media[0]
+    if (next?.kind !== 'video') return
+    const p = playable(next, reel)
+    pool.warm(p.url, p.start)
+  }, [index, content.steps, reel, pool])
 
   // L'aperçu qu'on modifie : on va à l'étape demandée, et on dit laquelle est affichée.
   useEffect(() => {
@@ -183,17 +257,49 @@ export function Player(props: PlayerProps) {
 
   const go = useCallback(
     (i: number) => {
-      const clamped = Math.max(-1, Math.min(total, i))
+      let clamped = Math.max(-1, Math.min(total, i))
+      // On n'avance pas au-delà d'une étape dont les relevés manquent : on y revient, et ce qui manque se signale.
+      if (recordsOn && !preview && clamped > index) {
+        const stop = firstIncomplete(content.steps, answers, clamped)
+        if (stop >= 0) {
+          clamped = stop
+          setNudge((n) => n + 1)
+          haptic('error')
+          if (stop === index) return
+        }
+      }
       setIndex(clamped)
       haptic('light')
       speaker?.stop()
       if (clamped === total && !preview) {
-        logUsage(deps.data, { type: 'complete', instructionId, stationId: stationId ?? null, version: version ?? null, source, deviceId: deviceId(), durationSec: Math.round((Date.now() - startedAt.current) / 1000) })
+        logUsage(deps.data, { type: 'complete', instructionId, stationId: stationId ?? null, version: version ?? null, source, deviceId: deviceId(), durationSec: Math.round((Date.now() - startedAt.current) / 1000), operatorId: operator?.id ?? null, operatorName: operator?.name ?? null })
         haptic('success')
+        if (recording) {
+          // La trace, dans la langue d'origine de l'instruction : celle que lit le responsable.
+          const exec = buildExecution(props.content, answers, {
+            instructionId,
+            version: version ?? null,
+            stationId: stationId ?? null,
+            source,
+            startedAt: new Date(startedAt.current).toISOString(),
+            language: lang,
+            deviceId: deviceId(),
+            operatorId: operator?.id ?? null,
+            operatorName: operator?.name ?? null,
+            userId: operator ? null : (recorder?.id ?? null),
+            userName: operator ? null : (recorder?.name ?? null),
+          })
+          void saveExecution(deps.data, exec).then((state) => setRecord({ state, deviations: exec.deviations }))
+          if (exec.deviations && notifyVia) {
+            const first = exec.answers.find((a) => a.ok === false)
+            const value = first ? (typeof first.value === 'number' ? `${first.value}${first.unit ? ` ${first.unit}` : ''}` : typeof first.value === 'string' ? first.value : '') : ''
+            void notifyEvent({ kind: 'deviation', instruction: exec.instructionTitle, who: exec.operatorName ?? exec.userName ?? '', text: first ? [first.label, value, first.note].filter(Boolean).join(' · ') : '' }, notifyVia)
+          }
+        }
       }
       if (autoRead && clamped >= 0 && clamped < total) speakStep(content.steps[clamped])
     },
-    [total, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source],
+    [total, index, recordsOn, answers, recording, recorder, notifyVia, lang, props.content, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator],
   )
 
   useEffect(() => {
@@ -242,7 +348,7 @@ export function Player(props: PlayerProps) {
 
   const player = (
     <div className={cn('fixed inset-0 z-50 flex flex-col bg-slate-50 dark:bg-slate-950', frameClassName)} role="application" aria-label={content.title}>
-      <Confetti show={index === total} />
+      <Confetti show={index === total && !quizOpen} />
       {/* En-tête */}
       <header className="pt-safe glass-nav z-10 border-b">
         <div className="flex h-16 items-center gap-2 px-3 sm:px-5">
@@ -253,14 +359,24 @@ export function Player(props: PlayerProps) {
             </button>
           )}
           {showBranding && branding?.logoUrl && <img src={branding.logoUrl} alt={branding.orgName} className="hidden h-9 max-w-28 object-contain sm:block" />}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
-            {index >= 0 && index < total && (
-              <p className="label-caps text-slate-500 tabular-nums">
-                {t.stepOf(index + 1, total)}
+          {sectionsOn && index >= 0 && index < total ? (
+            // Le titre et « Étape 3 sur 12 » ouvrent le sommaire : toute la zone se touche.
+            <button type="button" onClick={() => setSummaryOpen(true)} aria-label={t.openSummary} title={t.openSummary} className="btn-press min-w-0 flex-1 rounded-2xl px-1 py-1 text-left hover:bg-slate-900/5 dark:hover:bg-white/5">
+              <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
+              <p className="label-caps flex items-center gap-1 text-slate-500 tabular-nums">
+                {t.stepOf(index + 1, total)} <ChevronDown className="h-3.5 w-3.5" />
               </p>
-            )}
-          </div>
+            </button>
+          ) : (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
+              {index >= 0 && index < total && (
+                <p className="label-caps text-slate-500 tabular-nums">
+                  {t.stepOf(index + 1, total)}
+                </p>
+              )}
+            </div>
+          )}
           {languages.length > 1 && (
             <button type="button" onClick={() => setLangOpen(true)} className="btn-press flex h-12 items-center gap-1.5 rounded-2xl px-3 text-sm font-black hover:bg-slate-900/5" aria-label={t.language}>
               <Languages className="h-5 w-5" /> {lang.toUpperCase()}
@@ -297,17 +413,46 @@ export function Player(props: PlayerProps) {
       >
         {view === 'document' ? (
           <div dir={textDir(lang)}>
-            <DocumentView content={content} t={t} energyById={energyById} />
+            <DocumentView content={content} t={t} energyById={energyById} sections={sectionsOn} records={recordsOn} />
           </div>
         ) : index === -1 ? (
           <Intro content={content} t={t} onStart={() => go(0)} />
+        ) : index >= total && quizOpen ? (
+          <div dir={textDir(lang)} className="h-full">
+            <QuizRunner
+              quiz={quiz}
+              t={t.training}
+              name={operator?.name}
+              onPassed={async (choices) => {
+                if (preview) return null
+                // La trace, dans la langue d'origine de l'instruction ; les réponses se rattachent aux ids.
+                const tr = buildTraining(quiz, choices, { instructionId, instructionTitle: props.content.title, version: version ?? null, stationId: stationId ?? null, language: lang, source, operatorId: operator?.id ?? null, operatorName: operator?.name ?? null })
+                return saveTraining(deps.data, tr)
+              }}
+              onReread={() => {
+                setQuizOpen(false)
+                go(0)
+              }}
+              onClose={() => {
+                setQuizOpen(false)
+                setTrained(true)
+              }}
+            />
+          </div>
         ) : index >= total ? (
           <Done
             t={t}
             rated={rated}
             onRate={(v) => setRated(v)}
+            record={record}
+            training={offerTraining ? { count: quiz.length, done: trained } : null}
+            onTrain={() => setQuizOpen(true)}
             onRestart={() => {
               startedAt.current = Date.now()
+              setAnswers({})
+              setNudge(0)
+              setRecord(null)
+              setTrained(false)
               go(-1)
             }}
             onReport={() => setFeedbackOpen(true)}
@@ -324,6 +469,7 @@ export function Player(props: PlayerProps) {
               </div>
             )}
             <div dir={textDir(lang)} className={cn('flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-8', step.media[0] ? 'lg:max-w-[560px] lg:overflow-y-auto' : 'mx-auto w-full max-w-3xl pt-8 sm:pt-12')}>
+              {sectionsOn && step.section && <p className="label-caps -mb-2 text-[var(--primary-strong)] dark:text-sky-300">{step.section}</p>}
               <div className="flex items-start gap-4">
                 <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
                 <h2 className="pt-1 text-3xl leading-[1.05] font-black tracking-tighter text-slate-900 sm:text-4xl dark:text-white">{step.title}</h2>
@@ -351,6 +497,7 @@ export function Player(props: PlayerProps) {
                   </ul>
                 </div>
               )}
+              {recordsOn && !!step.checks?.length && <StepChecks step={step} answers={answers} onAnswer={answerCheck} t={t.records} files={deps.files} nudge={nudge} preview={preview} />}
               <div className="mt-auto flex flex-wrap gap-2 pt-2">
                 {!preview && (
                   <button type="button" onClick={() => setFeedbackOpen(true)} className="btn-press glass-card flex h-12 items-center gap-2 rounded-2xl px-4 text-sm font-black text-amber-700 dark:text-amber-300">
@@ -405,7 +552,10 @@ export function Player(props: PlayerProps) {
             instructionTitle: props.content.title,
             source,
             stationId: stationId ?? null,
+            ...who,
           }}
+          operatorName={operator?.name}
+          notify={notifyVia}
         />
       )}
 
@@ -425,6 +575,37 @@ export function Player(props: PlayerProps) {
         {answer && (
           <div className="animate-slide-up mt-4 rounded-3xl bg-primary-soft p-5 text-lg font-bold text-slate-800 dark:text-slate-100">{answer.busy ? <span className="skeleton block h-6 w-3/4 rounded-xl" /> : answer.text}</div>
         )}
+      </Modal>
+
+      <Modal open={summaryOpen} onClose={() => setSummaryOpen(false)} title={t.summary} size="md">
+        <div dir={textDir(lang)} className="space-y-4">
+          {sectionGroups(content.steps).map((g) => (
+            <section key={g.start}>
+              {g.name && <p className="label-caps mb-1.5 px-1 text-[var(--primary-strong)] dark:text-sky-300">{g.name}</p>}
+              <div className="grid gap-1.5">
+                {content.steps.slice(g.start, g.end).map((s, k) => {
+                  const i = g.start + k
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        setSummaryOpen(false)
+                        go(i)
+                      }}
+                      aria-current={i === index ? 'step' : undefined}
+                      className={cn('btn-press flex min-h-14 items-center gap-3 rounded-2xl px-3 text-left', i === index ? 'bg-gradient-primary text-white shadow-primary' : 'glass-card')}
+                    >
+                      <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black tabular-nums', i === index ? 'bg-white/20' : 'bg-slate-900/5 dark:bg-white/10')}>{i + 1}</span>
+                      <span className="min-w-0 flex-1 text-[15px] leading-snug font-black">{s.title}</span>
+                      {i < index && <Check className="h-5 w-5 shrink-0 text-emerald-500" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
       </Modal>
 
       <Modal open={langOpen} onClose={() => setLangOpen(false)} title={t.language} size="sm">
@@ -468,7 +649,9 @@ export function Player(props: PlayerProps) {
   // Au poste, la dictée (retour, question) suit la langue choisie par l'opérateur.
   return (
     <DictationLanguage lang={lang}>
-      <MediaLabelsProvider value={t.media}>{player}</MediaLabelsProvider>
+      <MediaPlaybackProvider value={playback}>
+        <MediaLabelsProvider value={t.media}>{player}</MediaLabelsProvider>
+      </MediaPlaybackProvider>
     </DictationLanguage>
   )
 }
@@ -587,7 +770,7 @@ function Intro({ content, t, onStart }: { content: InstructionContent; t: Return
   )
 }
 
-function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, preview }: { t: ReturnType<typeof strings>; rated: 'up' | 'down' | null; onRate: (v: 'up' | 'down') => void; onRestart: () => void; onReport: () => void; onExit?: () => void; exitLabel?: string; preview?: boolean }) {
+function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, preview, record, training, onTrain }: { t: ReturnType<typeof strings>; rated: 'up' | 'down' | null; onRate: (v: 'up' | 'down') => void; onRestart: () => void; onReport: () => void; onExit?: () => void; exitLabel?: string; preview?: boolean; record?: { state: 'saved' | 'queued'; deviations: number } | null; training?: { count: number; done: boolean } | null; onTrain: () => void }) {
   return (
     <div className="mx-auto flex min-h-full max-w-xl flex-col items-center justify-center gap-6 p-8 text-center">
       <span className="animate-pop-in flex h-28 w-28 items-center justify-center rounded-[36px] bg-gradient-to-br from-[#2EE59D] to-[#18c480] text-white shadow-[0_20px_40px_rgba(24,196,128,0.35)]">
@@ -597,6 +780,37 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
         <h2 className="text-5xl font-black tracking-tighter">{t.done}</h2>
         <p className="mt-2 text-xl font-bold text-slate-600 dark:text-slate-300">{t.doneText}</p>
       </div>
+      {/* La trace : enregistrée, ou gardée dans l'appareil ; et les écarts signalés. */}
+      {record && (
+        <div className="flex flex-col items-center gap-2">
+          <p className={cn('flex items-center gap-2 rounded-2xl px-4 py-2 text-base font-black', record.state === 'saved' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200')}>
+            {record.state === 'saved' ? <ClipboardCheck className="h-5 w-5" /> : <CloudOff className="h-5 w-5" />} {record.state === 'saved' ? t.records.saved : t.records.queued}
+          </p>
+          {record.deviations > 0 && (
+            <p className="flex items-center gap-2 text-base font-black text-rose-600 dark:text-rose-400">
+              <TriangleAlert className="h-5 w-5" /> {t.records.deviations(record.deviations)}
+            </p>
+          )}
+        </div>
+      )}
+      {/* La formation : valider ce qu'on a compris, en quelques questions. */}
+      {training &&
+        (training.done ? (
+          <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2 text-base font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+            <GraduationCap className="h-5 w-5" /> {t.training.passed}
+          </p>
+        ) : (
+          <button type="button" onClick={onTrain} className="btn-press flex w-full items-center gap-4 rounded-[28px] bg-primary-soft p-4 text-left">
+            <span className="bg-gradient-accent shadow-accent flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white">
+              <GraduationCap className="h-7 w-7" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-xl font-black text-slate-900 dark:text-white">{t.training.start}</span>
+              <span className="block text-base font-bold text-slate-600 dark:text-slate-300">{t.training.startHint(training.count)}</span>
+            </span>
+            <ArrowRight className="h-6 w-6 shrink-0 text-[var(--primary)]" />
+          </button>
+        ))}
       {!preview && (
         <div className="w-full">
           <p className="label-caps mb-3 text-slate-500">{t.howWasIt}</p>
@@ -631,12 +845,14 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
   )
 }
 
-function DocumentView({ content, t, energyById }: { content: InstructionContent; t: ReturnType<typeof strings>; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }> }) {
+function DocumentView({ content, t, energyById, sections, records }: { content: InstructionContent; t: ReturnType<typeof strings>; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }>; sections: boolean; records: boolean }) {
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-5 sm:p-8">
       <Intro content={content} t={t} onStart={() => document.getElementById('doc-step-0')?.scrollIntoView({ behavior: 'smooth' })} />
       {content.steps.map((s, i) => (
-        <article id={`doc-step-${i}`} key={s.id} className="glass-panel overflow-hidden rounded-[32px] p-0">
+        <div key={s.id} className="space-y-6">
+        {sections && s.section && (i === 0 || content.steps[i - 1].section !== s.section) && <h2 className="label-caps px-1 pt-2 text-base text-[var(--primary-strong)] dark:text-sky-300">{s.section}</h2>}
+        <article id={`doc-step-${i}`} className="glass-panel overflow-hidden rounded-[32px] p-0">
           {s.media[0] && (
             <div className={cn('bg-slate-900', layoutOf(s) === 'focus' ? 'aspect-video' : 'aspect-[16/7]')}>
               <StepMediaArea step={s} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
@@ -659,8 +875,22 @@ function DocumentView({ content, t, energyById }: { content: InstructionContent;
                 ))}
               </ul>
             )}
+            {records && liveChecks(s).length > 0 && (
+              <ul className="mt-3 space-y-1 text-base font-bold text-slate-700 dark:text-slate-200">
+                {liveChecks(s).map((c) => (
+                  <li key={c.id} className="flex gap-2">
+                    <ClipboardCheck className="mt-1 h-4 w-4 shrink-0 text-[var(--primary)]" />
+                    <span>
+                      {c.label}
+                      {(c.kind === 'measure' || c.kind === 'measures') && rangeText(c, t.records) ? ` · ${rangeText(c, t.records)}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </article>
+        </div>
       ))}
       {content.kind === 'lockout' && !!content.lockout?.restartSteps?.length && (
         <section className="glass-panel rounded-[32px] p-6">

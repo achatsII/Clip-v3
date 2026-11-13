@@ -21,13 +21,35 @@ const listeners = new Set<(e: RealtimeEvent) => void>()
  */
 export type RealtimeState = 'off' | 'connecting' | 'live' | 'down'
 let state: RealtimeState = 'off'
+/** Pourquoi le direct ne passe pas (message technique d'Ably et son code), montré par le témoin. */
+let reason = ''
+/** Le direct a-t-il pu démarrer sur cet appareil : temps réel offert par le serveur, usine connue. */
+let startInfo: { available: boolean; hasOrg: boolean } | null = null
 const stateListeners = new Set<() => void>()
 
 export function setRealtimeState(next: RealtimeState, why?: unknown) {
-  if (next === 'down' && state !== 'down') console.warn('[CLIP] Temps réel indisponible', why ?? '')
+  if (next === 'down') {
+    const w = why as { message?: string; code?: number; statusCode?: number } | string | undefined
+    const text = typeof w === 'string' ? w : w?.message ?? ''
+    const code = typeof w === 'object' && w?.code ? ` (${w.code}${w.statusCode ? `/${w.statusCode}` : ''})` : ''
+    if (state !== 'down') console.warn('[CLIP] Temps réel indisponible', why ?? '')
+    reason = `${text}${code}`.trim()
+  }
   if (state === next) return
   state = next
   stateListeners.forEach((fn) => fn())
+}
+
+export const realtimeReason = () => reason
+export const realtimeStart = () => startInfo
+export function noteRealtimeStart(info: { available: boolean; hasOrg: boolean }) {
+  startInfo = info
+}
+
+/** « Reconnecter » au témoin : relance la connexion, ou la démarre si elle n'a pas pu l'être. */
+export function retryRealtime() {
+  if (client) wakeRealtime()
+  else if (typeof window !== 'undefined') window.dispatchEvent(new Event('clip:realtime-retry'))
 }
 
 export function useRealtimeState(): RealtimeState {
@@ -64,8 +86,48 @@ export function dispatchRealtime(e: RealtimeEvent): void {
 let channel: RealtimeChannel | null = null
 let connecting: Promise<RealtimeChannel | null> | null = null
 let org: string | null = null
+/**
+ * Les annonces faites pendant que la connexion se rétablit (téléphone sorti de veille, retour de
+ * l'appareil photo) : gardées, la dernière par instruction, et envoyées dès qu'elle revient.
+ */
+const pending = new Map<string, RealtimeEvent>()
 
-export function connectRealtime(orgId: string, getToken: () => string | null): Promise<RealtimeChannel | null> {
+function flushPending() {
+  if (!channel || client?.connection.state !== 'connected') return
+  const events = [...pending.values()]
+  pending.clear()
+  for (const e of events) void channel.publish('event', e).catch(() => pending.set(`${e.type}:${e.id}`, e))
+}
+
+/** Un canal resté en échec ou suspendu, la connexion revenue : on le rebranche (Ably ne le fait pas seul). */
+function ensureAttached() {
+  if (!channel || client?.connection.state !== 'connected') return
+  if (channel.state !== 'attached' && channel.state !== 'attaching') void channel.attach().catch((e: unknown) => setRealtimeState('down', e))
+}
+
+/** Revenir à l'écran, ou au réseau : on se reconnecte tout de suite, sans attendre le prochain essai (15 à 30 s). */
+export function wakeRealtime() {
+  const st = client?.connection.state
+  if (client && st && st !== 'connected' && st !== 'connecting' && st !== 'closing') client.connection.connect()
+  else ensureAttached()
+}
+if (typeof window !== 'undefined') {
+  const wake = () => document.visibilityState === 'visible' && wakeRealtime()
+  document.addEventListener('visibilitychange', wake)
+  window.addEventListener('online', wake)
+  window.addEventListener('focus', wake)
+  window.addEventListener('pageshow', wake)
+  // Coupé et à l'écran : on réessaie aussi de soi-même, une connexion en échec ne revenant pas seule.
+  setInterval(() => {
+    if (state === 'down') wake()
+  }, 30_000)
+}
+
+/**
+ * `refresh` : rafraîchit la session de la Gateway (un onglet resté ouvert longtemps a un jeton
+ * expiré ; sans lui, le direct ne pouvait plus se rebrancher).
+ */
+export function connectRealtime(orgId: string, getToken: () => string | null, refresh?: () => Promise<boolean>): Promise<RealtimeChannel | null> {
   if (channel && org === orgId) return Promise.resolve(channel)
   if (connecting && org === orgId) return connecting
   disconnectRealtime()
@@ -77,18 +139,30 @@ export function connectRealtime(orgId: string, getToken: () => string | null): P
         // Ses propres messages ne reviennent pas à l'appareil qui les envoie.
         echoMessages: false,
         authCallback: (_params, callback) => {
-          const token = getToken()
-          if (!token) return callback('Connexion requise', null)
-          fetch('/api/realtime/token', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
-            .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`jeton ${r.status}`))))
-            .then((tokenRequest) => callback(null, tokenRequest), (e: unknown) => callback(e instanceof Error ? e.message : 'jeton', null))
+          const ask = (token: string | null) => (token ? fetch('/api/realtime/token', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }) : Promise.resolve(null))
+          void (async () => {
+            try {
+              let res = await ask(getToken())
+              // Jeton de la Gateway expiré (onglet resté ouvert, ordinateur en veille) : rafraîchi une fois.
+              if ((!res || res.status === 401) && refresh && (await refresh())) res = await ask(getToken())
+              if (!res) return callback('Connexion requise', null)
+              if (!res.ok) return callback(`jeton ${res.status}`, null)
+              callback(null, await res.json())
+            } catch (e) {
+              callback(e instanceof Error ? e.message : 'jeton', null)
+            }
+          })()
         },
       })
       // L'état de la connexion, pour le dire à l'écran (le canal branché, lui, se confirme à l'abonnement).
       client.connection.on((change) => {
         if (change.current === 'connecting' || change.current === 'disconnected') setRealtimeState('connecting')
         else if (change.current === 'suspended' || change.current === 'failed') setRealtimeState('down', change.reason?.message ?? change.current)
-        else if (change.current === 'connected' && channel?.state === 'attached') setRealtimeState('live')
+        else if (change.current === 'connected') {
+          if (channel?.state === 'attached') setRealtimeState('live')
+          else ensureAttached()
+          flushPending()
+        }
       })
       channel = client.channels.get(orgChannel(orgId))
       channel.on((change) => {
@@ -107,10 +181,22 @@ export function connectRealtime(orgId: string, getToken: () => string | null): P
   return connecting
 }
 
-/** Dit aux autres appareils de l'usine ce qui vient de changer ; sans connexion, ne fait rien. */
+/**
+ * Dit aux autres appareils de l'usine ce qui vient de changer. Sans connexion pour l'instant,
+ * l'annonce attend qu'elle revienne (et on la rappelle tout de suite) ; sans temps réel, rien.
+ */
 export function publishRealtime(event: RealtimeEvent): void {
-  if (!channel) return
-  void channel.publish('event', event).catch(() => undefined)
+  if (!channel || !client) return
+  const key = `${event.type}:${event.id}`
+  if (client.connection.state !== 'connected') {
+    pending.set(key, event)
+    wakeRealtime()
+    return
+  }
+  void channel.publish('event', event).catch(() => {
+    pending.set(key, event)
+    wakeRealtime()
+  })
 }
 
 export function disconnectRealtime(): void {
@@ -122,5 +208,6 @@ export function disconnectRealtime(): void {
   client = null
   channel = null
   org = null
+  pending.clear()
   setRealtimeState('off')
 }

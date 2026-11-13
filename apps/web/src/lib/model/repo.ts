@@ -3,7 +3,7 @@
  * connecté, ou celui d'un lien public (jeton guest à portée limitée).
  */
 import type { DataApi, Doc } from '../gateway/data'
-import { contentLanguage, messages, messagesIn } from '../i18n'
+import { contentLanguage, messages, messagesIn } from '../i18n/core'
 import type {
   Feedback,
   Instruction,
@@ -27,6 +27,17 @@ export const T = {
   importJob: 'clip_import',
   /** Les points de retour du brouillon (historique des modifications non publiées). */
   checkpoint: 'clip_checkpoint',
+  /** Les personnes qui travaillent aux postes, sans compte : un nom et un code à 4 chiffres. */
+  operator: 'clip_operator',
+  /** Le travail fait au poste : qui, quand, les valeurs relevées et les photos de preuve. */
+  execution: 'clip_execution',
+  contact: 'clip_contact',
+  /** Les réponses aux questions de compréhension d'une instruction (formation). */
+  training: 'clip_training',
+  /** Les demandes à l'administrateur : une fonction que quelqu'un voudrait (conseiller d'achat). */
+  request: 'clip_request',
+  /** L'Académie : les validations sur le terrain (le registre des qualifications). */
+  qualification: 'clip_qualification',
 } as const
 
 export const nowIso = () => new Date().toISOString()
@@ -45,7 +56,7 @@ export function defaultStandard(): WritingStandard {
   return {
     rules: defaultRules(),
     startWithSafety: true,
-    maxWordsPerStep: 25,
+    maxWordsPerStep: 20,
     tone: 'infinitif',
     glossary: [],
     version: 1,
@@ -108,16 +119,6 @@ export async function listStations(data: DataApi): Promise<Doc<Station>[]> {
 
 /* ───────────────────────── Instructions ───────────────────────── */
 
-const LIST_PROJECTION = { 'json_data.draft': 0, 'json_data.sources': 0 } as const
-
-export async function listInstructions(data: DataApi, filter?: Record<string, unknown>, limit = 500): Promise<Doc<Instruction>[]> {
-  return data.filter<Instruction>(T.instruction, {
-    filter: { 'json_data.status': { $ne: 'archived' }, ...(filter ?? {}) },
-    projection: LIST_PROJECTION,
-    sort: { 'json_data.updatedAt': -1 },
-    limit,
-  })
-}
 
 export function emptyContent(partial: Partial<InstructionContent> = {}): InstructionContent {
   // Le titre par défaut s'écrit dans la langue du contenu.
@@ -165,22 +166,7 @@ export async function findPublished(data: DataApi, instructionId: string): Promi
   return docs[0] ?? null
 }
 
-export async function listPublishedForStation(data: DataApi, stationId: string): Promise<Doc<Published>[]> {
-  return data.filter<Published>(T.published, {
-    filter: { 'json_data.stationIds': { $eq: stationId } },
-    projection: { 'json_data.content.translations': 0 },
-    sort: { 'json_data.content.title': 1 },
-    limit: 300,
-  })
-}
 
-export async function listAllPublished(data: DataApi, limit = 500): Promise<Doc<Published>[]> {
-  return data.filter<Published>(T.published, {
-    projection: { 'json_data.content.translations': 0 },
-    sort: { 'json_data.content.title': 1 },
-    limit,
-  })
-}
 
 /* ───────────────────────── Retours et événements ───────────────────────── */
 

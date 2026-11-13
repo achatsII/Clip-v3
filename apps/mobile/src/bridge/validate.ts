@@ -176,6 +176,7 @@ export const validators: Validators = {
     return ok({ productId: p.productId })
   },
   'store.restore': () => ok({}),
+  'push.register': () => ok({}),
   'ui.language': (p) => {
     if (!isRecord(p) || typeof p.lang !== 'string' || !/^[a-z]{2,3}([-_][A-Za-z0-9]{2,8})?$/.test(p.lang)) return fail('lang est un code de langue (fr, en…)')
     return ok({ lang: p.lang })

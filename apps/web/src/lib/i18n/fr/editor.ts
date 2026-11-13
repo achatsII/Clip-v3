@@ -3,11 +3,6 @@ const num = (n: number) => n.toLocaleString('fr-CA')
 
 /** L’éditeur : fiche, « Comme au poste », assistant, annotations, dialogues. */
 export const editor = {
-  /** Les deux façons de modifier une instruction : la fiche (tous les réglages) ou l’étape telle qu’au poste. */
-  views: {
-    form: 'Fiche',
-    stage: 'Comme au poste',
-  },
   /** Les mots d’une étape, partagés par la fiche et la vue « Comme au poste ». */
   step: {
     of: (n: number, total: number) => `Étape ${num(n)} sur ${num(total)}`,
@@ -20,8 +15,6 @@ export const editor = {
     addKeyPoint: 'Ajouter un point clé',
     removeKeyPoint: 'Retirer le point clé',
     warningText: 'Texte de la mise en garde',
-    improveWithAi: 'Améliorer avec l’IA',
-    otherRequest: 'Autre demande…',
   },
   /** La zone des médias d’une étape, comme au poste. */
   mediaArea: {
@@ -53,28 +46,51 @@ export const editor = {
       connectingHint: 'Le direct se branche. En attendant, l’écran se relit seul.',
       polling: 'Relu toutes les 8 s',
       pollingHint: 'Le direct ne passe pas sur ce réseau : l’écran se relit seul toutes les 8 secondes.',
+      /** Ce qui bloque, dans la fenêtre du témoin. */
+      reason: 'Raison :',
+      reconnect: 'Reconnecter',
+      notOffered: 'le temps réel n’est pas offert par le serveur.',
+      noOrg: 'l’usine de ce compte n’est pas connue sur cet appareil.',
+      notStarted: 'le direct n’a pas encore démarré sur cet appareil.',
+      unknown: 'inconnue.',
     },
     backToList: 'Instructions',
+    /** L’état de l’instruction, sous son titre, avec celui de l’enregistrement. */
+    status: {
+      draft: 'Brouillon',
+      published: (version: number) => `Publiée · v${num(version)}`,
+      unpublished: 'Modifications à publier',
+      review: 'En attente d’approbation',
+    },
+    /** Le titre, le résumé, les postes et la fiche : dans une fenêtre, ouverte par le titre. */
+    info: {
+      open: 'Modifier le titre, les postes et les infos',
+      menu: 'Titre, postes et infos',
+      title: 'Infos de l’instruction',
+      untitled: 'Instruction sans titre',
+    },
     header: {
-      publishedBadge: (version: number) => `Publiée · v${num(version)}`,
-      unpublishedChanges: 'Modifications non publiées',
-      /** « il y a 3 jours », déjà dans la langue de l’outil. */
-      publishedAgo: (when: string) => `Publiée ${when}`,
       titleLabel: 'Titre de l’instruction',
       summaryLabel: 'Résumé',
       summaryPlaceholder: 'À quoi sert cette instruction, en une phrase',
-      preview: 'Aperçu',
-      share: 'Partager',
     },
     actions: {
       approveAndPublish: 'Approuver et publier',
-      awaitingApproval: 'En attente d’approbation',
-      viewAtStation: 'Voir au poste',
       requestApproval: 'Demander l’approbation',
+      /** Au téléphone, dans la barre du haut. */
+      requestApprovalShort: 'Faire approuver',
+      approve: 'Approuver',
       publish: 'Publier',
-      publishVersion: (version: number) => `Publier la version ${num(version)}`,
+      /** Approbation à plusieurs : chaque groupe signe. */
+      requestSignatures: 'Demander les signatures',
+      requestSignaturesShort: 'Faire signer',
+      sign: (groups: string) => `Signer (${groups})`,
+      signAndPublish: 'Signer et publier',
     },
     menu: {
+      label: 'Plus d’actions sur l’instruction',
+      test: 'Tester comme l’opérateur',
+      share: 'Partager (lien et code QR)',
       reuseMedia: 'Nouvelle instruction avec ces médias',
       reuseMediaFailed: 'La nouvelle instruction n’a pas pu être créée',
       exportPdf: 'Exporter en PDF',
@@ -108,6 +124,15 @@ export const editor = {
       sendRequest: 'Envoyer la demande',
       changesPlaceholder: 'Ce qu’il faut corriger avant de publier',
       send: 'Envoyer',
+      /** Approbation à plusieurs. */
+      signatures: 'Signatures',
+      signedBy: (group: string, name: string) => `${group} · ${name}`,
+      waiting: (group: string) => `${group} · en attente`,
+      resign: (group: string) => `${group} · à refaire (modifiée depuis)`,
+      signed: 'Signature enregistrée',
+      waitingFor: (groups: string) => `En attente de : ${groups}`,
+      signFailed: 'La signature n’a pas été enregistrée',
+      signaturesIntro: 'Chaque groupe signe l’instruction ; elle se publie à la dernière signature. Un mot pour les signataires ?',
     },
     /** L’avis sur une instruction générée par l’IA. */
     rating: {
@@ -131,13 +156,8 @@ export const editor = {
       loadTheirs: 'Charger sa version',
     },
     questions: {
-      title: 'À vérifier avant de publier',
-      markChecked: 'Marquer comme vérifié',
-      intro: 'L’IA n’a pas pu trancher ces points. Répondez, et elle corrige l’instruction ; ou cochez ce que vous avez déjà vérifié.',
-      answer: 'Répondre',
-      later: 'Plus tard',
-      folded: (n: number) => `${num(n)} point${n > 1 ? 's' : ''} à vérifier avant de publier`,
-      show: 'Afficher',
+      /** La pastille de l’en-tête : elle ouvre les questions, une à la fois. */
+      pill: (n: number) => `${num(n)} à vérifier`,
       /** La fenêtre : une question à la fois. */
       dialog: {
         title: 'Les questions de l’IA',
@@ -147,6 +167,7 @@ export const editor = {
         skip: 'Passer',
         next: 'Suivant',
         apply: 'Corriger l’instruction',
+        checked: 'C’est déjà vérifié',
       },
       /** Ce que l'assistant d'édition reçoit, et que la personne voit dans la conversation. */
       request: (items: Array<{ question: string; answer: string }>) =>
@@ -154,8 +175,6 @@ export const editor = {
       applied: 'Réponses envoyées à l’assistant',
     },
     steps: {
-      title: 'Étapes',
-      count: (n: number) => `${num(n)} étape${n > 1 ? 's' : ''}`,
       empty: 'Ajoutez une première étape.',
     },
     /** Ce qui empêche de publier. */
@@ -176,8 +195,21 @@ export const editor = {
       notYet: 'Pas encore',
       replaces: (stations: number) => `Elle remplacera la version actuelle sur ${num(stations)} poste${stations > 1 ? 's' : ''} et dans les liens partagés.`,
       library: 'Elle sera visible dans la bibliothèque et par les liens partagés.',
+      where: 'Où l’afficher ?',
     },
     deleteStepTitle: (n: number) => `Supprimer l’étape ${num(n)} ?`,
+    /** La relecture périodique : choisie en publiant, rappelée un mois avant. */
+    renewal: {
+      label: 'À revoir dans',
+      hint: 'CLIP le rappellera un mois avant.',
+      soon: (date: string) => `À revoir avant le ${date}.`,
+      late: (date: string) => `Révision en retard depuis le ${date}.`,
+      question: 'Rien n’a changé ?',
+      confirm: 'Toujours bonne',
+      confirmed: 'Relecture notée',
+      confirmedDetail: (date: string) => `Prochaine relecture le ${date}.`,
+      failed: 'La relecture n’a pas été notée',
+    },
     toasts: {
       stationNotSaved: 'Le poste n’a pas été enregistré',
       stationCreated: 'Poste créé',
@@ -204,6 +236,19 @@ export const editor = {
   },
   /** La vue « Comme au poste » : l’étape telle que l’opérateur la verra, modifiable sur place. */
   stage: {
+    region: 'Modifier l’instruction',
+    /** Les sections : les phases d’une longue instruction (« Démontage »). */
+    newSection: 'Nouvelle section ici',
+    newSectionName: 'Nouvelle section',
+    removeSection: 'Retirer la section',
+    sectionLabel: 'Nom de la section',
+    assistant: 'Assistant',
+    askAssistant: 'Demander autre chose à l’assistant…',
+    addKeyPointShort: 'Point clé',
+    addWarningShort: 'Mise en garde',
+    warningLevel: 'Niveau de la mise en garde',
+    firstStep: 'Ajouter la première étape',
+    emptyHint: 'L’opérateur lit une étape à la fois. Commencez par la première.',
     mediaTitle: (n: number) => `Média de l’étape ${num(n)}`,
     editMedia: 'Modifier le média',
     addMedia: 'Ajouter un média',
@@ -212,7 +257,6 @@ export const editor = {
     previous: 'Étape précédente',
     next: 'Étape suivante',
     goTo: 'Aller à l’étape',
-    improve: 'Améliorer',
     titleLabel: 'Titre de l’étape',
     titlePlaceholder: 'Ce qu’il faut faire',
     warningPlaceholder: 'Le risque, en une phrase',
@@ -222,17 +266,69 @@ export const editor = {
     textPlaceholder: 'Comment faire, en une ou deux phrases',
     keyPoint: (n: number) => `Point clé ${num(n)}`,
     stepActions: 'Actions sur l’étape',
-    clickToEdit: 'Cliquez un texte pour le modifier.',
-    tapToEdit: 'Touchez un texte pour le modifier.',
     addMediaHint: 'Ajouter une photo, un extrait, un schéma',
     stepsNav: 'Étapes',
     thumbTitle: (n: number, title: string) => `Étape ${num(n)} · ${title}`,
     addAtEnd: 'Ajouter une étape à la fin',
   },
+  /** Les relevés d’une étape : ce que l’opérateur note pour la trace (toggle `records`). */
+  checks: {
+    title: 'À relever',
+    add: 'Relevé',
+    newTitle: 'Nouveau relevé',
+    editTitle: 'Relevé',
+    edit: (label: string) => `Modifier le relevé « ${label} »`,
+    kind: 'Ce qu’on relève',
+    kinds: { measure: 'Mesure', yesno: 'Oui ou non', choice: 'Choix', text: 'Texte', photo: 'Photo', checklist: 'Liste à cocher', measures: 'Mesures répétées' },
+    kindHints: { measure: 'Une valeur et son unité', yesno: 'Une vérification', choice: 'Un état parmi quelques-uns', text: 'Un numéro de lot, une remarque', photo: 'Une preuve en photo', checklist: 'Chaque point : conforme ou non', measures: 'Plusieurs lectures, jugées une à une' },
+    label: 'Libellé',
+    labelPlaceholders: { measure: 'Pression du circuit', yesno: 'Joint en place', choice: 'État du filtre', text: 'Numéro de lot', photo: 'Photo du joint posé', checklist: 'Tour de la machine', measures: 'Épaisseur de la pièce' },
+    unit: 'Unité',
+    unitPlaceholder: 'bar, °C, mm…',
+    min: 'Minimum',
+    max: 'Maximum',
+    target: 'Valeur visée',
+    limitsHint: 'Hors des limites, l’opérateur dit ce qu’il a fait. Laissez vide si aucune limite n’est connue.',
+    expected: 'La bonne réponse',
+    expectedNone: 'Aucune',
+    expectedHint: 'L’autre réponse est un écart : l’opérateur dit ce qu’il a fait.',
+    yes: 'Oui',
+    no: 'Non',
+    expectedLine: (answer: string) => `attendu : ${answer}`,
+    options: 'Les choix',
+    option: (n: number) => `Choix ${num(n)}`,
+    addOption: 'Ajouter un choix',
+    bad: 'Écart',
+    badHint: 'Touchez « Écart » sur les choix qui ne sont pas bons.',
+    removeOption: 'Retirer ce choix',
+    optional: 'Facultatif',
+    optionalHint: 'On peut passer l’étape sans y répondre.',
+    save: 'Enregistrer le relevé',
+    remove: 'Retirer le relevé',
+    invalid: 'Donnez un libellé, au moins deux choix pour un choix, et deux points pour une liste.',
+    /** Le module Relevés. */
+    plus: 'Relevés avancés',
+    how: 'Comment mesurer',
+    howPlaceholder: 'Pied à coulisse, au centre de la pièce',
+    count: 'Nombre de lectures',
+    items: 'Les points à vérifier',
+    item: (n: number) => `Point ${num(n)}`,
+    addItem: 'Ajouter un point',
+    removeItem: 'Retirer ce point',
+    scan: 'Se scanne (numéro de lot, de série)',
+    scanHint: 'Au poste, un bouton « Scanner » lit le code.',
+    photos: 'Nombre de photos',
+    authorize: 'Un écart doit être autorisé',
+    authorizeHint: 'Au poste, la personne écrit aussi qui a autorisé de continuer.',
+    /** Les relevés que l’IA propose. */
+    proposed: 'Proposé par l’IA',
+    keep: 'Garder',
+    dismiss: 'Retirer',
+    proposedHint: 'Gardez ce relevé pour qu’il aille au poste, ou retirez-le.',
+    proposedPublish: (n: number) => (n > 1 ? `${num(n)} relevés proposés par l’IA n’iront pas au poste tant qu’ils ne sont pas gardés.` : '1 relevé proposé par l’IA n’ira pas au poste tant qu’il n’est pas gardé.'),
+  },
   /** Une étape dans la fiche : médias, texte, mise en garde, retouches par l’IA. */
   stepEditor: {
-    moveUp: 'Monter',
-    moveDown: 'Descendre',
     operatorFeedback: (comment: string) => `Retour d’un opérateur : « ${comment} »`,
     addMediaHint: 'Ajouter une photo, un extrait vidéo ou un plan',
     removeMedia: 'Retirer ce média',
@@ -248,22 +344,17 @@ export const editor = {
     video: 'Vidéo',
     image: 'Image',
     otherMoment: 'Autre instant',
-    changeOrAdd: 'Changer ou ajouter',
     chooseMedia: 'Choisir un média',
     annotate: 'Annoter',
-    aiIllustration: 'Illustration IA',
-    aiVisual: 'Schéma IA',
+    aiIllustration: 'Illustration à partir de la photo',
+    aiVisual: 'Schéma de l’étape',
+    withAi: 'Avec l’IA',
+    moreOptions: 'Plus d’options',
     verdicts: { none: 'Neutre', do: '✓ À faire', dont: '✕ À éviter' },
     captionPlaceholder: 'Légende (facultatif)',
     captionLabel: 'Légende du média',
     layoutLabel: 'Disposition au poste',
     layouts: { focus: 'Un à la fois', compare: 'À faire / À éviter', grid: 'Grille' },
-    action: 'Action',
-    actionPlaceholder: 'Retirer le garde de protection',
-    words: (n: number) => `${num(n)} mot${n > 1 ? 's' : ''}`,
-    how: 'Comment',
-    warning: 'Mise en garde',
-    noWarning: 'Aucune',
     frameTaken: 'Image tirée de la vidéo',
     frameTakenDetail: 'Touchez « Annoter » pour y montrer ce qu’il faut regarder.',
     backToVideo: {
@@ -281,7 +372,7 @@ export const editor = {
     visualFailed: 'Le schéma n’a pas pu être dessiné',
     visualDialog: {
       title: 'Un schéma pour cette étape',
-      intro: 'L’IA dessine un schéma clair (vue de face, de dessus, en coupe, ou en 3D) à partir de l’étape. Décrivez ce qu’il doit montrer, ou laissez vide.',
+      intro: 'L’IA dessine un schéma simple qui montre le geste de l’étape, avec très peu de mots (vue de face, de dessus, en coupe, ou en 3D). Décrivez ce qu’il doit montrer, ou laissez vide.',
       placeholder: 'Ex. : vue de face du panneau avec les 3 boutons, le rouge à gauche, et une flèche vers le vert',
       label: 'Ce que le schéma doit montrer',
       draw: 'Dessiner le schéma',
@@ -289,16 +380,13 @@ export const editor = {
   },
   /** La liste des étapes de la fiche. */
   stepList: {
-    untitled: 'Étape sans titre',
-    warnings: { danger: 'Danger', caution: 'Attention', info: 'Info' },
     added: 'Nouvelle',
     modified: 'Modifiée',
     feedback: (n: number) => `${num(n)} retour${n > 1 ? 's' : ''}`,
-    add: 'Ajouter une étape',
   },
   /** Les retouches d’une étape par l’IA : en un geste, ou la demande libre. */
   assist: {
-    actions: { simplify: 'Simplifier', clarify: 'Plus clair', keypoint: 'Point clé', safety: 'Sécurité' },
+    actions: { simplify: 'Simplifier l’étape', clarify: 'Rendre plus clair', keypoint: 'Ajouter un point clé', safety: 'Vérifier la sécurité' },
     /** Des exemples de demande libre, à toucher pour les reprendre. */
     examples: ['Ajoute qu’il faut porter des gants', 'Mentionne la valeur de serrage', 'Coupe en deux étapes plus courtes'],
     failed: 'L’IA n’a pas pu corriger l’étape',

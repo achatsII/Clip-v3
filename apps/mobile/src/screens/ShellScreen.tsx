@@ -20,6 +20,7 @@ import { routeBridgeMessage } from '../bridge/router'
 import { isSameOrigin, type WebTarget } from '../config/env'
 import { shouldLoadInApp } from '../config/navigation'
 import { logError, logEvent } from '../logging/log'
+import { onPushOpen } from '../push/push'
 import { colors } from '../ui/theme'
 import { OfflineScreen } from './SystemScreens'
 import { strings } from '../i18n'
@@ -71,6 +72,15 @@ export function ShellScreen({
     })
     return () => sub.remove()
   }, [emit])
+
+  // Un toucher sur un avertissement ouvre sa page, si elle est bien de CLIP.
+  useEffect(
+    () =>
+      onPushOpen((url) => {
+        if (isSameOrigin(url, target.origin)) webRef.current?.injectJavaScript(`location.assign(${JSON.stringify(url)});true;`)
+      }),
+    [target.origin],
+  )
 
   useEffect(() => {
     if (Platform.OS !== 'android') return

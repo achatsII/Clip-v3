@@ -7,7 +7,7 @@
  */
 import { APP_DATA_IDENTIFIER, SHARED_APP } from '../config'
 import { ApiError, GatewayClient } from './client'
-import { messages } from '@/lib/i18n'
+import { messages } from '@/lib/i18n/core'
 
 export interface Doc<T> {
   _id: string
@@ -31,6 +31,9 @@ function scoped(filter?: Record<string, unknown>): Record<string, unknown> | und
   if (!SHARED_APP) return filter && Object.keys(filter).length ? filter : undefined
   const slug = { 'json_data.app_identifier': { $eq: APP_DATA_IDENTIFIER } }
   if (!filter || !Object.keys(filter).length) return slug
+  // Un filtre déjà en « $and » se met à plat : la profondeur permise (5 niveaux) reste au filtre.
+  const keys = Object.keys(filter)
+  if (keys.length === 1 && Array.isArray(filter.$and)) return { $and: [slug, ...(filter.$and as unknown[])] }
   return { $and: [slug, filter] }
 }
 

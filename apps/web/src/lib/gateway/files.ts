@@ -3,6 +3,7 @@
  * traitement vidéo, captures d'images, conversion Word → PDF, page de PDF en image.
  * Specs : skill api-plateforme-ii, références 09 (§2.7.10) et 10 (§2.8).
  */
+import { requireAiConsent } from '../ai/consent'
 import { APP_DATA_IDENTIFIER, GATEWAY_URL } from '../config'
 import { ApiError, GatewayClient } from './client'
 import { messages } from '@/lib/i18n'
@@ -133,6 +134,7 @@ export function filesApi(client: GatewayClient) {
     },
 
     async transcribe(audio: Blob, fileName: string): Promise<string> {
+      await requireAiConsent()
       const form = new FormData()
       form.append('file', audio, safeName(fileName))
       const res = await client.call<{ success?: boolean; text?: string }>('/api/v1/files/audio/transcribe', {
@@ -145,6 +147,7 @@ export function filesApi(client: GatewayClient) {
 
     /** Téléverse chez Gemini un fichier déjà en ligne (≤ 100 Mo). URI valable ~48 h. */
     async geminiUpload(url: string, mimeType: string, sizeBytes: number, filename: string): Promise<{ uri: string; expiresAt: string | null }> {
+      await requireAiConsent()
       const res = await client.call<{ results?: Array<{ geminiFileUri?: string; expirationTime?: string }> }>(
         '/api/v1/ai/gemini/upload/direct',
         { method: 'POST', body: { url, mimeType, fileSize: sizeBytes, filename: safeName(filename) }, timeoutMs: 180_000 },
@@ -162,6 +165,21 @@ export function filesApi(client: GatewayClient) {
       )
       if (!res.url) throw new ApiError(messages().common.errors.videoOptimize, 500, res)
       return { url: res.url, sizeBytes: res.metadata?.processedSize ?? null, durationSec: res.metadata?.duration ?? null }
+    },
+
+    /**
+     * Une vidéo montée à partir d'extraits, dans l'ordre (spec §2.8.15, route au pluriel) : la
+     * vidéo des étapes. Synchrone ; `mute` retire le son (une source sans piste son peut faire
+     * échouer le montage).
+     */
+    async composeVideo(segments: Array<{ videoUrl: string; start: number; end: number }>, opts: { mute?: boolean } = {}): Promise<string> {
+      const res = await client.call<{ success?: boolean; result?: { url?: string } }>('/api/v1/files/videos/compose', {
+        method: 'POST',
+        body: { segments: segments.map((s) => ({ videoUrl: s.videoUrl, startTime: s.start, endTime: s.end, ...(opts.mute ? { mute: true } : {}) })), options: { resolution: '720p' } },
+        timeoutMs: 15 * 60_000,
+      })
+      if (!res.result?.url) throw new ApiError(messages().common.errors.videoOptimize, 500, res)
+      return res.result.url
     },
 
     /** Captures d'images d'une vidéo à des instants donnés (secondes). */

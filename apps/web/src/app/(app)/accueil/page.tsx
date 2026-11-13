@@ -1,10 +1,13 @@
 'use client'
 
+import { useToggle } from '@/lib/toggles'
+import { needsRenewal } from '@/lib/model/renewal'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Check, CheckCircle2, ClipboardCheck, EyeOff, Flame, MapPin, MessageSquareWarning, Mic, Palette, PenLine, QrCode, ScanLine, Sparkles, Trophy, UserPlus, Video } from 'lucide-react'
+import { ArrowRight, Check, CheckCircle2, ClipboardCheck, EyeOff, Flame, MapPin, MessageSquareWarning, Mic, Palette, PenLine, QrCode, ScanLine, Sparkles, TriangleAlert, Trophy, UserPlus, Video } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo } from 'react'
+import { OfferCard } from '@/components/billing/Advisor'
 import { CreditPill, LowBalanceBanner } from '@/components/billing/Billing'
 import { CreationList } from '@/components/CreationList'
 import { InstructionRow } from '@/components/InstructionCard'
@@ -12,9 +15,11 @@ import { useSession } from '@/components/providers/Session'
 import { LinkButton } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/States'
 import { Card, SectionTitle } from '@/components/ui/Surface'
-import { useFeedback, useInstructions, useStations } from '@/hooks/queries'
+import { useFeedback, useHomeLibrary, useStations } from '@/hooks/queries'
 import { num, useMessages, type Messages } from '@/lib/i18n'
 import { FEEDBACK_KINDS } from '@/lib/model/catalog'
+import { canSign, signingGroups } from '@/lib/model/approvals'
+import { listExecutions } from '@/lib/model/executions'
 import { T } from '@/lib/model/repo'
 import { usePref, writePref } from '@/lib/prefs'
 import { cn, timeAgo } from '@/lib/util/cn'
@@ -60,7 +65,8 @@ export default function HomePage() {
   const router = useRouter()
   const t = useMessages().home
   const { profile, displayName, org, role, can, me, data } = useSession()
-  const instructions = useInstructions()
+  // De petites requêtes ciblées : l'accueil reste rapide avec des milliers d'instructions.
+  const lib = useHomeLibrary()
   const stations = useStations()
   const feedback = useFeedback({ 'json_data.status': { $eq: 'new' } })
   const weekAgo = useMemo(() => new Date(Date.now() - 7 * 86400_000).toISOString(), [])
@@ -70,24 +76,45 @@ export default function HomePage() {
     enabled: can('stats'),
   })
 
+  // Les écarts relevés aux postes ces 7 derniers jours (toggle `records`).
+  const recordsOn = useToggle('records')
+  const deviations = useQuery({
+    queryKey: ['executions-deviations-week'],
+    queryFn: async () => (await listExecutions(data, { deviations: true, since: weekAgo, limit: 100 })).reduce((n, d) => n + (d.json_data.deviations ?? 0), 0),
+    enabled: recordsOn && can('feedback'),
+    refetchInterval: 120_000,
+  })
+  const recordsT = useMessages().records
+
   // Première ouverture d'un administrateur : la configuration guidée.
   useEffect(() => {
-    if (role === 'admin' && !org.json_data.onboardedAt && instructions.data && instructions.data.length === 0) router.replace('/bienvenue')
-  }, [role, org.json_data.onboardedAt, instructions.data, router])
+    if (role === 'admin' && !org.json_data.onboardedAt && lib.total.data === 0) router.replace('/bienvenue')
+  }, [role, org.json_data.onboardedAt, lib.total.data, router])
 
-  const all = instructions.data ?? []
-  const published = all.filter((d) => d.json_data.publishedVersion)
-  const review = all.filter((d) => d.json_data.status === 'review')
-  const myDrafts = all.filter((d) => d.json_data.authorId === profile.userId && (!d.json_data.publishedVersion || d.json_data.dirty) && d.json_data.status !== 'review').slice(0, 4)
-  const covered = new Set(published.flatMap((d) => d.json_data.stationIds))
+  const publishedCount = lib.published.data ?? 0
+  const loading = lib.published.isLoading
+  // À approuver : à plusieurs signatures, seulement ce que mes groupes n'ont pas encore signé.
+  const multiOn = useToggle('multiApproval')
+  const groups = signingGroups(org.json_data, multiOn)
+  const review = (lib.review.data ?? []).filter((d) => {
+    if (d.json_data.status !== 'review') return false
+    if (!groups.length) return true
+    const signed = new Set((d.json_data.review?.signatures ?? []).map((x) => x.groupId))
+    return groups.some((g) => !signed.has(g.id) && canSign(g, profile.userId, true))
+  })
+  // Les instructions qui arrivent à leur date de relecture (un mois avant, ou en retard).
+  const renewalOn = useToggle('renewal')
+  const toRenew = renewalOn ? (lib.renew.data ?? []).filter((d) => needsRenewal(d.json_data)).slice(0, 5) : []
+  const myDrafts = lib.drafts.data ?? []
+  const covered = lib.covered.data ?? new Set<string>()
   const stationCount = stations.data?.length ?? 0
   const coverage = stationCount ? Math.round(((stations.data ?? []).filter((s) => covered.has(s._id)).length / stationCount) * 100) : 0
-  const streak = streakOf(published.map((d) => d.json_data.publishedAt ?? d.json_data.updatedAt))
-  const focusList = all.filter((d) => d.json_data.publishedVersion && (me.categories.includes(d.json_data.category) || d.json_data.stationIds.some((s) => me.stationIds.includes(s)))).slice(0, 6)
+  const streak = streakOf(lib.dates.data ?? [])
+  const focusList = lib.mine.data ?? []
   const stationName = new Map((stations.data ?? []).map((s) => [s._id, s.json_data.name]))
 
   const setup = [
-    { done: published.length > 0, label: t.setup.publish, href: '/instructions/nouvelle', icon: <Sparkles className="h-4 w-4" /> },
+    { done: publishedCount > 0, label: t.setup.publish, href: '/instructions/nouvelle', icon: <Sparkles className="h-4 w-4" /> },
     { done: (stations.data ?? []).some((s) => s.json_data.linkId), label: t.setup.station, href: '/postes', icon: <QrCode className="h-4 w-4" /> },
     { done: !!org.json_data.logoUrl, label: t.setup.logo, href: '/reglages', icon: <Palette className="h-4 w-4" /> },
     { done: Object.keys(org.json_data.members).length > 1, label: t.setup.invite, href: '/reglages?onglet=membres', icon: <UserPlus className="h-4 w-4" /> },
@@ -148,6 +175,9 @@ export default function HomePage() {
 
       {canCreate && <CreationList />}
 
+      {/* Le conseiller d'achat : de temps en temps, l'offre qui sert l'usine (une à la fois). */}
+      <OfferCard />
+
       {/* La mise en route se cache d'un geste, et revient de la petite pastille. */}
       {role === 'admin' && setupDone < setup.length && setupHidden && (
         <button type="button" onClick={() => writePref(SETUP_HIDDEN, null)} className="btn-press glass-card flex h-12 items-center gap-3 self-start rounded-2xl pr-4 pl-2 text-sm font-black text-slate-600 dark:text-slate-300">
@@ -179,15 +209,39 @@ export default function HomePage() {
         </Card>
       )}
 
+      {!!deviations.data && (
+        <Link href="/registre?ecarts=1" className="btn-press lift flex items-center gap-4 rounded-[28px] bg-rose-50 p-5 text-rose-900 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-100 dark:ring-rose-500/30">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-lg">
+            <TriangleAlert className="h-6 w-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-black tracking-tight">{recordsT.homeTitle(deviations.data)}</span>
+            <span className="block text-sm font-bold opacity-80">{recordsT.homeHint}</span>
+          </span>
+          <ArrowRight className="h-5 w-5 shrink-0" aria-label={recordsT.open} />
+        </Link>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-3">
-        <Tile className="from-emerald-400 to-teal-600" icon={<CheckCircle2 className="h-6 w-6" />} label={t.tiles.published} value={instructions.isLoading ? null : published.length} hint={stationCount ? t.tiles.coverage(coverage) : t.tiles.noStation} />
+        <Tile className="from-emerald-400 to-teal-600" icon={<CheckCircle2 className="h-6 w-6" />} label={t.tiles.published} value={loading ? null : publishedCount} hint={stationCount ? t.tiles.coverage(coverage) : t.tiles.noStation} />
         {can('stats') ? (
           <Tile className="from-sky-500 to-blue-700" icon={<MapPin className="h-6 w-6" />} label={t.tiles.views} value={views.isLoading ? null : views.data ?? 0} hint={t.tiles.viewsHint} href="/statistiques" />
         ) : (
           <Tile className="from-sky-500 to-blue-700" icon={<MapPin className="h-6 w-6" />} label={t.tiles.stations} value={stations.isLoading ? null : stationCount} hint={t.tiles.stationsHint} href="/postes" />
         )}
-        <Tile className="from-orange-400 to-rose-500" icon={<Flame className="h-6 w-6" />} label={t.tiles.streak} value={instructions.isLoading ? null : streak} hint={streak ? t.tiles.streakWeeks(streak) : t.tiles.streakStart} />
+        <Tile className="from-orange-400 to-rose-500" icon={<Flame className="h-6 w-6" />} label={t.tiles.streak} value={lib.dates.isLoading ? null : streak} hint={streak ? t.tiles.streakWeeks(streak) : t.tiles.streakStart} />
       </div>
+
+      {can('instructions', 'write') && toRenew.length > 0 && (
+        <section>
+          <SectionTitle title={t.renewal.title(toRenew.length)} hint={t.renewal.hint} action={<Link href="/instructions?statut=revoir" className="text-sm font-black text-[var(--primary)]">{t.feedback.seeAll}</Link>} />
+          <div className="space-y-2">
+            {toRenew.map((d) => (
+              <InstructionRow key={d._id} doc={d} stationNames={d.json_data.stationIds.map((s) => stationName.get(s) ?? '').filter(Boolean)} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {can('approve', 'write') && review.length > 0 && (
         <section>
@@ -240,18 +294,18 @@ export default function HomePage() {
         </section>
       )}
 
-      {published.length >= 10 && (
+      {publishedCount >= 10 && (
         <Card className="flex items-center gap-4">
           <Trophy className="h-10 w-10 text-amber-500" />
           <div>
-            <p className="font-black">{t.library.count(published.length)}</p>
+            <p className="font-black">{t.library.count(publishedCount)}</p>
             <p className="text-sm font-bold text-slate-500">{t.library.hint}</p>
           </div>
         </Card>
       )}
 
-      {instructions.isLoading && <Skeleton className="h-40" />}
-      {can('feedback', 'write') && !feedback.data?.length && published.length > 0 && (
+      {lib.review.isLoading && <Skeleton className="h-40" />}
+      {can('feedback', 'write') && !feedback.data?.length && publishedCount > 0 && (
         <p className="flex items-center gap-2 text-sm font-bold text-slate-400">
           <MessageSquareWarning className="h-4 w-4" /> {t.feedback.none} <ClipboardCheck className="h-4 w-4" />
         </p>

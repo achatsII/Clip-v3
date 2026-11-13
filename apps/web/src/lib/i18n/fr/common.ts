@@ -15,6 +15,13 @@ export const common = {
   add: 'Ajouter',
   remove: 'Retirer',
   search: 'Rechercher',
+  /** Effacer une recherche ; « Tout montrer » remet les filtres d’une liste. */
+  clear: 'Effacer',
+  showAll: 'Tout montrer',
+  noMatch: 'Rien ne correspond à cette recherche.',
+  searchPeople: 'Chercher une personne',
+  /** Sous une liste coupée : les autres se trouvent par la recherche. */
+  moreHidden: (n: number) => `+ ${n.toLocaleString('fr-CA')} autre${n > 1 ? 's' : ''} : cherchez un nom.`,
   loading: 'Chargement',
   moreActions: 'Plus d’actions',
   qrCode: 'Code QR',
@@ -27,6 +34,8 @@ export const common = {
   loadFailed: 'Impossible de charger',
   errors: {
     network: 'Impossible de joindre le serveur. Vérifiez votre connexion.',
+    /** L'envoi à l'IA n'a pas été accepté (une fois, au premier usage). */
+    aiConsent: 'Vous n’avez pas accepté l’envoi à l’IA. Acceptez-le pour utiliser cette fonction.',
     timeout: 'Le serveur a mis trop de temps à répondre.',
     forbidden: 'Vous n’avez pas accès à cette action.',
     noCredits: 'Plus de crédits pour cette action.',

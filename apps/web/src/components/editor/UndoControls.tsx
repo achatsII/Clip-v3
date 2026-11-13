@@ -31,7 +31,7 @@ export function UndoPill({ history }: { history: DraftHistory }) {
   const t = useMessages().editor.page.undo
   if (!history.enabled || (!history.canUndo && !history.canRedo)) return null
   return (
-    <div className="glass-float kb-hide animate-pop-in fixed bottom-24 left-4 z-40 flex h-12 items-center rounded-full px-0.5 lg:hidden" role="group" aria-label={t.group}>
+    <div className="glass-float kb-hide animate-pop-in fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-4 z-40 flex h-12 items-center rounded-full px-0.5 lg:hidden" role="group" aria-label={t.group}>
       <button type="button" onClick={history.undo} disabled={!history.canUndo} aria-label={t.undo} className={cn(button, 'rounded-full')}>
         <Undo2 className="h-5 w-5" />
       </button>

@@ -85,10 +85,19 @@ export function isLegacyText(a: Annotation): boolean {
   return a.type === 'arrow' && !!a.text && (a.x2 ?? a.x) === a.x && (a.y2 ?? a.y) === a.y
 }
 
+/** Un trait entre deux bouts : flèche, ligne ou distance. */
+export function isSegment(a: Annotation): boolean {
+  return (a.type === 'arrow' || a.type === 'line' || a.type === 'measure') && !isLegacyText(a)
+}
+
+/** Les marques qui se tracent en pointillé, et celles qui se remplissent (une zone). */
+export const canDash = (type: AnnotationType): boolean => type === 'arrow' || type === 'line' || type === 'measure' || type === 'circle' || type === 'rect'
+export const canFill = (type: AnnotationType): boolean => type === 'circle' || type === 'rect'
+
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 
 /** Les outils qui se tracent en glissant le doigt (les autres se posent d'un toucher). */
-export const DRAG_TOOLS: AnnotationType[] = ['pen', 'highlight', 'arrow', 'line', 'circle', 'rect', 'blur']
+export const DRAG_TOOLS: AnnotationType[] = ['pen', 'highlight', 'arrow', 'line', 'measure', 'circle', 'rect', 'blur']
 
 export interface Box {
   x1: number
@@ -104,7 +113,7 @@ export function bbox(a: Annotation): Box {
     const ys = a.points.map((p) => p[1])
     return { x1: Math.min(...xs), y1: Math.min(...ys), x2: Math.max(...xs), y2: Math.max(...ys) }
   }
-  if ((a.type === 'arrow' || a.type === 'line') && a.x2 !== undefined && a.y2 !== undefined) {
+  if ((a.type === 'arrow' || a.type === 'line' || a.type === 'measure') && a.x2 !== undefined && a.y2 !== undefined) {
     return { x1: Math.min(a.x, a.x2), y1: Math.min(a.y, a.y2), x2: Math.max(a.x, a.x2), y2: Math.max(a.y, a.y2) }
   }
   if (a.w !== undefined && a.h !== undefined && (a.type === 'circle' || a.type === 'rect' || a.type === 'blur')) {
@@ -163,7 +172,7 @@ export function resizeBy(a: Annotation, corner: Corner, p: { x: number; y: numbe
   return { ...a, x: Math.min(fx, mx), y: Math.min(fy, my), w: Math.abs(mx - fx), h: Math.abs(my - fy) }
 }
 
-/** Déplace un bout d'une flèche ou d'une ligne. */
+/** Déplace un bout d'une flèche, d'une ligne ou d'une distance. */
 export function moveEnd(a: Annotation, end: 'start' | 'end', p: { x: number; y: number }): Annotation {
   return end === 'start' ? { ...a, x: clamp01(p.x), y: clamp01(p.y) } : { ...a, x2: clamp01(p.x), y2: clamp01(p.y) }
 }
@@ -183,7 +192,7 @@ export function snap45(from: { x: number; y: number }, to: { x: number; y: numbe
  * `width` et `height` : l'image affichée, en pixels avant zoom.
  */
 export function handlesOf(a: Annotation, width: number, height: number): Array<{ kind: HandleKind; x: number; y: number }> {
-  if ((a.type === 'arrow' || a.type === 'line') && !isLegacyText(a)) {
+  if (isSegment(a)) {
     return [
       { kind: 'start', x: a.x, y: a.y },
       { kind: 'end', x: a.x2 ?? a.x, y: a.y2 ?? a.y },
@@ -228,7 +237,7 @@ export function hitTest(list: Annotation[], px: number, py: number, width: numbe
       for (let k = 1; k < pts.length && !hit; k++) {
         hit = distToSegment(px, py, X(pts[k - 1][0]), Y(pts[k - 1][1]), X(pts[k][0]), Y(pts[k][1])) <= reach
       }
-    } else if ((a.type === 'arrow' || a.type === 'line') && !isLegacyText(a)) {
+    } else if (isSegment(a)) {
       hit = distToSegment(px, py, X(a.x), Y(a.y), X(a.x2 ?? a.x), Y(a.y2 ?? a.y)) <= tolerance + 6
     } else if (a.type === 'circle' || a.type === 'rect' || a.type === 'blur') {
       const b = bbox(a)
@@ -249,7 +258,7 @@ export function hitTest(list: Annotation[], px: number, py: number, width: numbe
 export function sanitizeAnnotation(raw: unknown): Annotation | null {
   if (!raw || typeof raw !== 'object') return null
   const a = raw as Partial<Annotation>
-  const types: AnnotationType[] = ['pen', 'highlight', 'arrow', 'line', 'circle', 'rect', 'text', 'number', 'icon', 'blur']
+  const types: AnnotationType[] = ['pen', 'highlight', 'arrow', 'line', 'measure', 'circle', 'rect', 'text', 'number', 'icon', 'blur']
   if (!a.id || !a.type || !types.includes(a.type)) return null
   const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? clamp01(v) : undefined)
   const x = n(a.x)
@@ -265,6 +274,8 @@ export function sanitizeAnnotation(raw: unknown): Annotation | null {
   if (typeof a.icon === 'string' && a.icon in ANNOTATION_ICONS) out.icon = a.icon
   if (a.size && (SIZES as string[]).includes(a.size)) out.size = a.size
   if (typeof a.scale === 'number' && Number.isFinite(a.scale) && a.scale !== 1) out.scale = clampScale(a.scale)
+  if (a.dashed === true && canDash(out.type)) out.dashed = true
+  if (a.filled === true && canFill(out.type)) out.filled = true
   if (out.type === 'icon' && !out.icon) return null
   if ((out.type === 'pen' || out.type === 'highlight') && !out.points?.length) return null
   return out

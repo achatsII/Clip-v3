@@ -11,7 +11,6 @@ import { agentBusy, agentTurn, runAgentOps, type AgentLogEntry, type VoiceTurnRe
 import { suggestEdits } from '@/lib/ai/suggest'
 import { AI_COSTS } from '@/lib/billing/catalog'
 import { useBilling, useEntitlement, useGate } from '@/lib/billing/state'
-import { BILLING_V2 } from '@/lib/config'
 import { useMessages } from '@/lib/i18n'
 import type { InstructionContent, Source } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
@@ -110,7 +109,7 @@ export function AgentPanel({
   const translateToggle = useToggle('translations')
   const translateRight = useEntitlement('translations')
   const canTranslate = translateToggle && translateRight !== 'locked'
-  const { openPaywall } = useBilling()
+  const { openPaywall, enabled: billingOn } = useBilling()
   const liveContent = useRef(content)
   liveContent.current = busy ? liveContent.current : content
   const scroller = useRef<HTMLDivElement>(null)
@@ -165,7 +164,7 @@ export function AgentPanel({
         onLook: (info) => {
           looked = info.sourceIds.join(', ')
           patch(agentId, (m) => ({
-            actions: [...(m.actions ?? []), { key: -1, label: `${ta.looking(looked!, info.videoSec > 0 ? formatDuration(info.videoSec) : null)}${BILLING_V2 ? ` · ${t.billing.credits(AI_COSTS[info.operation])}` : ''}`, stepId: null, state: 'working' as const }],
+            actions: [...(m.actions ?? []), { key: -1, label: `${ta.looking(looked!, info.videoSec > 0 ? formatDuration(info.videoSec) : null)}${billingOn ? ` · ${t.billing.credits(AI_COSTS[info.operation])}` : ''}`, stepId: null, state: 'working' as const }],
           }))
         },
         onSources: onSourcesChange,
@@ -245,8 +244,9 @@ export function AgentPanel({
 
   const bubble = variant === 'bubble'
   if (!open) {
-    // La bulle de l'aperçu est posée par la page, dans la barre du lecteur (`AgentBubble`).
-    return bubble ? null : (
+    // La bulle de l'aperçu est posée par la page, dans la barre du lecteur (`AgentBubble`) ; ouvert par
+    // la page (l'éditeur : le bouton « Assistant » de l'en-tête), le panneau n'a pas son propre bouton.
+    return bubble || openProp !== undefined ? null : (
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -274,7 +274,7 @@ export function AgentPanel({
       aria-label={t.editorTools.agent.label}
       // Ses champs gardent leur propre annulation : Ctrl+Z n'y annule pas l'instruction.
       data-own-undo=""
-      className={cn('kb-bottom fixed inset-x-0 bottom-0 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:max-h-none lg:w-[400px] lg:rounded-[32px] dark:border-white/10 dark:bg-slate-900', bubble ? 'z-[60] lg:top-6' : 'z-50 lg:top-24')}
+      className={cn('kb-bottom fixed inset-x-0 bottom-0 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:max-h-none lg:w-[400px] lg:rounded-[32px] dark:border-white/10 dark:bg-slate-900', bubble ? 'z-[60] lg:top-6' : 'z-50 lg:top-6')}
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-slate-900/5 px-4 py-3 dark:border-white/5">
         <span className="bg-gradient-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">

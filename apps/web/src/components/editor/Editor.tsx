@@ -4,89 +4,99 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
   Archive,
-  ArrowLeft,
+  Blocks,
+  CalendarClock,
   Check,
-  ChevronDown,
-  ChevronUp,
   CircleCheck,
-  CloudOff,
+  CircleDashed,
+  ClipboardCheck,
   Copy,
   CopyPlus,
   Eye,
   FileDown,
   FileJson,
+  GraduationCap,
   History,
+  Info,
   Languages,
-  ListChecks,
-  Loader2,
-  MessageCircleQuestion,
   MessageSquare,
-  Radio,
-  MonitorSmartphone,
   Send,
   Share2,
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  RotateCcw,
+  Trash2,
+  Unlink,
   X,
 } from 'lucide-react'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from '@/components/providers/Session'
-import { Button, LinkButton } from '@/components/ui/Button'
+import { Button } from '@/components/ui/Button'
 import { Confetti } from '@/components/ui/Celebrate'
 import { useConfirm } from '@/components/ui/Confirm'
-import { AutoTextarea, Input, Segmented, Textarea } from '@/components/ui/Field'
-import { Menu } from '@/components/ui/Menu'
+import { Input, Label, Segmented, Switch, Textarea } from '@/components/ui/Field'
+import { Menu, type MenuItem } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
-import { Badge } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
-import { cacheDraft, cacheInstruction, qk, useFeedback, useInstructions } from '@/hooks/queries'
+import { cacheDraft, cacheInstruction, qk, useFeedback, usePublishedCount } from '@/hooks/queries'
 import { useDraftHistory } from '@/hooks/useDraftHistory'
 import { useDraftWatch } from '@/hooks/useDraftWatch'
 import { LockBadge } from '@/components/billing/Billing'
 import { useBilling, useEntitlement, useGate, useLimit } from '@/lib/billing/state'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
+import { useImmersive } from '@/lib/ui/immersive'
 import { inNativeShell } from '@/lib/bridge/native'
 import { deviceId, onRealtime, publishRealtime, useRealtimeState, writtenBy } from '@/lib/realtime/client'
-import { changedSteps, followStep, remoteDraftAction } from '@/lib/realtime/liveDraft'
+import { changedSteps, followStep, readVersion, remoteDraftAction } from '@/lib/realtime/liveDraft'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
+import { addSignatures, approvalsOf, contentHash, groupsToSign, needsApproval, signingGroups, signingState } from '@/lib/model/approvals'
+import { hasChecks, proposedChecks } from '@/lib/model/checks'
+import { notifyEvent } from '@/lib/notify'
 import { diffSteps } from '@/lib/model/diff'
-import { FEEDBACK_KINDS, STATUS } from '@/lib/model/catalog'
+import { inheritSection, moveStep as moveStepKeepingSections } from '@/lib/model/sections'
+import { RENEWAL_CHOICES, renewalFrom, renewalMonthsOf, renewalState } from '@/lib/model/renewal'
+import { FEEDBACK_KINDS } from '@/lib/model/catalog'
 import { nowIso, T, uid } from '@/lib/model/repo'
 import {
   archiveInstruction,
+  confirmRenewal,
   duplicateInstruction,
   newFromSources,
-  needsApproval,
   publishInstruction,
   requestChanges,
   requestReview,
+  saveSignatures,
   saveDraft,
   saveSources,
   updatePublishedStations,
 } from '@/lib/model/service'
-import type { Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
-import { markCreatedSeen, QUESTIONS_FOLDED, setInIdList, useIdList } from '@/lib/prefs'
-import { cn, formatDateTime, timeAgo } from '@/lib/util/cn'
+import type { ApprovalGroup, Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
+import { markCreatedSeen } from '@/lib/prefs'
+import { cn, formatDate, formatDateTime, timeAgo } from '@/lib/util/cn'
 import { AgentPanel, type AgentRequest } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
+import { InsertBlockDialog, MakeBlockDialog } from './BlockDialogs'
+import { countUsing, detachBlock, propagateBlock, removeBlock } from '@/lib/model/blocks'
 import { LockoutEditor } from './LockoutEditor'
-import { MetaCard } from './MetaCard'
+import { MetaCard, StationPicker } from './MetaCard'
 import { QuestionsDialog, type QuestionAnswer } from './QuestionsDialog'
+import { QuizDialog } from './QuizDialog'
+import { cleanQuiz } from '@/lib/model/training'
 import { StageEditor } from './StageEditor'
-import { StepEditor } from './StepEditor'
-import { StepList } from './StepList'
 import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
+import { attachReel, carryClips } from '@/lib/media/reel'
 import { LiveBadge } from './LiveBadge'
-import { UndoButtons, UndoPill } from './UndoControls'
+import { UndoPill } from './UndoControls'
 
 type SaveState = 'saved' | 'saving' | 'error'
 /** Ce qu'un autre appareil annonce d'un brouillon enregistré. */
-type DraftNotice = { byName?: string; device: 'app' | 'web'; steps?: string[] }
+type DraftNotice = { byName?: string; device: 'app' | 'web'; steps?: string[]; at?: string }
+/** Les relectures d'un brouillon annoncé que la Gateway ne rend pas encore. */
+const RELOOK_MS = [500, 1200, 2500, 5000]
 
 function newStep(): Step {
   return { id: uid('st_'), title: '', text: '', keyPoints: [], warning: null, media: [] }
@@ -94,7 +104,7 @@ function newStep(): Step {
 
 export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>; stations: Doc<Station>[]; onRegenerate: () => void }) {
   const session = useSession()
-  const { data, org, role, profile, displayName, can } = session
+  const { data, org, role, profile, displayName, can, files } = session
   const actor = useMemo(() => ({ id: profile.userId, name: displayName }), [profile.userId, displayName])
   const qc = useQueryClient()
   const toast = useToast()
@@ -114,8 +124,23 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [selected, setSelected] = useState<string | null>(params.get('etape') ?? instr.draft?.steps[0]?.id ?? null)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [publishing, setPublishing] = useState(false)
+  const reelToggle = useToggle('stepReel')
+  const sectionsToggle = useToggle('sections')
+  const recordsToggle = useToggle('records')
+  // La relecture périodique : choisie en publiant, rappelée un mois avant (toggle `renewal`).
+  const renewalToggle = useToggle('renewal')
+  const [renewMonths, setRenewMonths] = useState<number | null>(() => renewalMonthsOf(instr, org.json_data))
+  const [renewedAt, setRenewedAt] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(false)
-  const [dialog, setDialog] = useState<null | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks'>(null)
+  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz' | 'makeBlock' | 'insertBlock'>(null)
+  // La formation (toggle `training`) : les questions, et « il faut se re-former » à la publication.
+  const trainingToggle = useToggle('training')
+  const [retrain, setRetrain] = useState(false)
+  // Les blocs communs (toggle `sharedBlocks`) : ce document en est-il un, et combien d'instructions l'utilisent.
+  const blocksToggle = useToggle('sharedBlocks')
+  const isBlock = !!instr.block
+  const usedBy = useQuery({ queryKey: ['instructions', 'block-use', doc._id], queryFn: () => countUsing(data, doc._id), enabled: isBlock && blocksToggle })
+  const [propagation, setPropagation] = useState<{ done: number; total: number } | null>(null)
   const [comment, setComment] = useState('')
   const [rating, setRating] = useState(instr.generation?.rating ?? null)
   const [ratingComment, setRatingComment] = useState<string | null>(null)
@@ -123,9 +148,6 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const questionsRef = useRef(questions)
   questionsRef.current = questions
   const [questionsOpen, setQuestionsOpen] = useState(false)
-  // « Plus tard » : la carte des questions se replie en une ligne (retenu pour cette instruction).
-  const questionsFolded = useIdList(QUESTIONS_FOLDED).includes(doc._id)
-  const foldQuestions = (on: boolean) => setInIdList(QUESTIONS_FOLDED, doc._id, on)
   const [agentRequest, setAgentRequest] = useState<AgentRequest | null>(null)
   /** Retire des questions de l'IA celles qui sont réglées (vérifiées, ou répondues et corrigées). */
   const settleQuestions = (done: string[]) => {
@@ -170,7 +192,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     enabled: !!instr.publishedId,
   })
   const feedback = useFeedback({ 'json_data.instructionId': { $eq: doc._id }, 'json_data.status': { $eq: 'new' } }, qk.feedbackFor(doc._id))
-  const instructions = useInstructions()
+  const publishedCount = usePublishedCount()
   const feedbackByStep = useMemo(() => {
     const m: Record<string, number> = {}
     for (const f of feedback.data ?? []) if (f.json_data.stepId) m[f.json_data.stepId] = (m[f.json_data.stepId] ?? 0) + 1
@@ -193,7 +215,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       cacheDraft(qc, doc._id, saved)
       setSaveState('saved')
       // Les autres appareils ouverts sur cette instruction suivent : l'étape changée en premier.
-      if (liveRef.current) publishRealtime({ type: 'draft', id: doc._id, title: saved.title, userId: actor.id, byName: actor.name, device: inNativeShell() ? 'app' : 'web', steps: changedSteps(lastSaved.current, saved), from: deviceId })
+      if (liveRef.current) publishRealtime({ type: 'draft', id: doc._id, title: saved.title, userId: actor.id, byName: actor.name, device: inNativeShell() ? 'app' : 'web', steps: changedSteps(lastSaved.current, saved), from: deviceId, at })
       lastSaved.current = saved
     } catch {
       setSaveState('error')
@@ -278,7 +300,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       }
       pulling.current = true
       try {
-        const fresh = await data.get<Instruction>(T.instruction, doc._id)
+        // Lue trop tôt, la Gateway rend encore l'ancienne version : on relit, un peu plus tard chaque fois.
+        const fresh = await readVersion(() => data.get<Instruction>(T.instruction, doc._id), e.at, RELOOK_MS)
         const draft = fresh?.json_data.draft
         if (!draft) return
         // La personne a commencé à modifier pendant la lecture : on ne reprend rien.
@@ -327,7 +350,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   useEffect(() => {
     if (!liveToggle || !realtime) return
     return onRealtime((e) => {
-      if (e.type === 'draft' && e.id === doc._id) void pullRemote({ byName: e.byName, device: e.device, steps: e.steps })
+      if (e.type === 'draft' && e.id === doc._id) void pullRemote({ byName: e.byName, device: e.device, steps: e.steps, at: e.at })
     })
   }, [liveToggle, realtime, doc._id, pullRemote])
   // Le direct ne passe pas (réseau, jeton) : l'écran se relit seul toutes les 8 s, s'il n'y a rien en cours ici.
@@ -336,7 +359,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     enabled: liveToggle,
     known: () => knownAt.current,
     idle: () => !timer.current && saveStateRef.current !== 'saving',
-    onRemote: (row) => void pullRemote({ byName: row.updatedByName, device: row.updatedVia ?? 'web' }),
+    onRemote: (row) => void pullRemote({ byName: row.updatedByName, device: row.updatedVia ?? 'web', at: row.updatedAt }),
   })
   // L'étape changée ailleurs reste encadrée quelques secondes.
   useEffect(() => {
@@ -364,23 +387,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const changes = instr.publishedVersion && published.data ? diffSteps(published.data.json_data.content, content) : undefined
   const isDirty = !instr.publishedVersion || instr.dirty || saveState === 'saving' || (changes ? Object.values(changes).some((c) => c !== 'same') || published.data?.json_data.content.title !== content.title : true)
 
-  // La vue de modification, retenue sur l'appareil.
-  const [view, setView] = useState<'form' | 'stage'>('form')
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('clip_pref_editor_view') === 'stage') setView('stage')
-    } catch {
-      /* préférence facultative */
-    }
-  }, [])
-  const chooseView = (v: 'form' | 'stage') => {
-    setView(v)
-    try {
-      localStorage.setItem('clip_pref_editor_view', v)
-    } catch {
-      /* préférence facultative */
-    }
-  }
+  // L'éditeur prend tout l'écran : la barre et la navigation de l'app s'effacent.
+  useImmersive()
 
   // L'assistant amène l'écran à l'étape qu'il modifie, et l'entoure pendant qu'il travaille.
   const [agentStep, setAgentStep] = useState<string | null>(null)
@@ -400,12 +408,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   function moveStep(dir: -1 | 1) {
     const j = idx + dir
     if (j < 0 || j >= steps.length) return
-    const next = [...steps]
-    ;[next[idx], next[j]] = [next[j], next[idx]]
-    update({ ...content, steps: next })
+    // Les sections restent à leur place : l'étape prend celle de la position où elle arrive.
+    update({ ...content, steps: moveStepKeepingSections(steps, idx, dir) })
   }
   function insertAfter(i: number) {
-    const s = newStep()
+    // Une étape ajoutée reste dans la section de celle d'avant.
+    const s = inheritSection(newStep(), steps[i])
     const next = [...steps.slice(0, i + 1), s, ...steps.slice(i + 1)]
     update({ ...content, steps: next })
     setSelected(s.id)
@@ -424,7 +432,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   async function createStation(name: string): Promise<string | null> {
     if (!name) return null
     try {
-      const d = await data.insert<Station>(T.station, { name, kind: 'poste', createdAt: nowIso(), linkMode: 'focus' }, name)
+      const d = await data.insert<Station>(T.station, { name, kind: 'poste', createdAt: nowIso(), linkMode: 'focus', ...(org.json_data.notify?.sealed ? { notifySeal: org.json_data.notify.sealed } : {}) }, name)
       void qc.invalidateQueries({ queryKey: qk.stations })
       toast.success(tp.toasts.stationCreated, name)
       return d._id
@@ -445,21 +453,51 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     const n: string[] = []
     const noMedia = steps.filter((s) => !s.media.length).length
     if (noMedia) n.push(tp.notes.noMedia(noMedia))
-    if (!stationIds.length) n.push(tp.notes.noStation)
+    if (!stationIds.length && !instr.block) n.push(tp.notes.noStation)
     if (questions.length) n.push(tp.notes.questions(questions.length))
     if (content.kind === 'lockout' && content.lockout?.energyPoints.some((e) => !e.isolationDevice || !e.verification)) n.push(tp.notes.lockoutIncomplete)
+    const quizGaps = trainingToggle && content.quiz?.length ? content.quiz.length - cleanQuiz(content.quiz).length : 0
+    if (quizGaps > 0) n.push(t.training.incomplete(quizGaps))
     return n
-  }, [steps, stationIds, questions, content, tp])
+  }, [steps, stationIds, questions, content, tp, t, trainingToggle])
 
-  async function doPublish(approvedBy?: { id: string; name: string }) {
+  async function doPublish(approvedBy?: { id: string; name: string }, approvals?: { list: Array<{ group: string; byName: string; at: string }>; line: string }) {
     setPublishing(true)
     try {
       await flush()
-      const current = { ...doc, json_data: { ...docRef.current.json_data, draft: latest.current, stationIds } }
-      const n = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous: published.data?.json_data.content ?? null })
-      setCelebrate(true)
-      setTimeout(() => setCelebrate(false), 2800)
-      toast.success(tp.toasts.published(n), stationIds.length ? tp.toasts.visibleNow : tp.toasts.addStation, { label: tp.toasts.view, onClick: () => router.push(`/instructions/${doc._id}/lire`) })
+      // La vidéo des étapes (au poste, on ne télécharge que les secondes utiles) : les extraits
+      // inchangés y gardent leur place ; si un extrait a changé, elle se monte après la publication,
+      // sans la retenir, et le poste lit la vidéo d'origine d'ici là.
+      const previous = published.data?.json_data.content ?? null
+      const draft = reelToggle ? carryClips(latest.current, previous) : latest.current
+      const current = { ...doc, json_data: { ...docRef.current.json_data, draft, stationIds } }
+      const renewal = renewalToggle ? renewalFrom(renewMonths, nowIso(), actor.name) : undefined
+      // La personne qui avait demandé l'approbation : avertie de la publication.
+      const requester = docRef.current.json_data.review?.requestedBy
+      // La formation : les questions qui seront posées, et si les formations d'avant cette version tombent.
+      const training = trainingToggle ? { questions: cleanQuiz(draft.quiz).length, retrain: retrain || !!docRef.current.json_data.review?.retrain } : null
+      const { number: n, publishedId, docNumber } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous, renewal, approvals: approvals ?? null, training })
+      // Le numéro de document, tout de suite dans le cache : le prochain enregistrement l'indexe.
+      if (docNumber) cacheInstruction(qc, doc._id, { number: docNumber })
+      setRetrain(false)
+      if (notifyOn && requester && requester !== actor.id) void notifyEvent({ kind: 'published', instructionId: doc._id, to: [requester] })
+      if (reelToggle && publishedId)
+        void attachReel(files, data, { publishedId, version: n }, draft).then((ok) => {
+          if (ok) void qc.invalidateQueries({ queryKey: ['published', doc._id] })
+        })
+      if (docRef.current.json_data.block) {
+        // Un bloc commun : chaque instruction qui l'utilise prend sa nouvelle version.
+        setPropagation({ done: 0, total: usedBy.data ?? 0 })
+        const res = await propagateBlock(data, org.json_data, actor, { id: doc._id, version: n, title: draft.title, steps: draft.steps }, (done, total) => setPropagation({ done, total }))
+        setPropagation(null)
+        toast.success(tp.toasts.published(n), t.blocks.propagated(res.republished, res.drafts))
+        if (res.failed) toast.error(t.blocks.propagateFailed(res.failed))
+        void qc.invalidateQueries({ queryKey: qk.instructions })
+      } else {
+        setCelebrate(true)
+        setTimeout(() => setCelebrate(false), 2800)
+        toast.success(tp.toasts.published(n), stationIds.length ? tp.toasts.visibleNow : tp.toasts.addStation, { label: tp.toasts.view, onClick: () => router.push(`/instructions/${doc._id}/lire`) })
+      }
       setDialog(null)
       refresh()
       void qc.invalidateQueries({ queryKey: ['published', doc._id] })
@@ -474,7 +512,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setPublishing(true)
     try {
       await flush()
-      await requestReview(data, { ...doc, json_data: { ...docRef.current.json_data, stationIds } }, org.json_data, actor, comment)
+      await requestReview(data, { ...doc, json_data: { ...docRef.current.json_data, stationIds } }, org.json_data, actor, comment, trainingToggle && retrain)
+      if (notifyOn) void notifyEvent({ kind: 'review', instructionId: doc._id })
       toast.success(tp.toasts.reviewSent, tp.toasts.reviewSentDetail)
       setDialog(null)
       setComment('')
@@ -491,12 +530,37 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setPublishing(true)
     try {
       await requestChanges(data, doc, actor, comment.trim())
+      if (notifyOn) void notifyEvent({ kind: 'changes', instructionId: doc._id })
       toast.success(tp.toasts.changesSent, tp.toasts.changesSentDetail(instr.review?.requestedByName))
       setDialog(null)
       setComment('')
       refresh()
     } catch (e) {
       toast.error(tp.toasts.sendFailed, errorText(e))
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  /** Signer pour ses groupes ; la dernière signature publie. */
+  async function doSign(signing: ApprovalGroup[]) {
+    setPublishing(true)
+    try {
+      await flush()
+      const draft = latest.current
+      const hash = contentHash(draft)
+      const mine = addSignatures([], groups, signing, actor, hash, nowIso()).signatures
+      const all = await saveSignatures(data, doc._id, mine)
+      const pending = groups.filter((g) => !all.some((x) => x.groupId === g.id && x.hash === hash))
+      if (!pending.length) {
+        const { approvals, line } = approvalsOf(all, groups, hash)
+        await doPublish(actor, { list: approvals, line })
+        return
+      }
+      toast.success(tp.review.signed, tp.review.waitingFor(pending.map((g) => g.name).join(', ')))
+      refresh()
+    } catch (e) {
+      toast.error(tp.review.signFailed, errorText(e))
     } finally {
       setPublishing(false)
     }
@@ -521,38 +585,211 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setTimeout(() => URL.revokeObjectURL(a.href), 5000)
   }
 
-  const approval = needsApproval(org.json_data, role)
+  const multiOn = useToggle('multiApproval')
+  const notifyOn = useToggle('notify')
+  const groups = signingGroups(org.json_data, multiOn)
+  const approval = needsApproval(org.json_data, role, multiOn)
   const canApprove = can('approve', 'write')
   const inReview = instr.status === 'review'
+  // À plusieurs : où en est chaque groupe, et ceux que cette personne peut signer maintenant.
+  const signing = inReview && groups.length ? signingState(groups, instr.review, content) : []
+  const mySigns = groupsToSign(signing, profile.userId, canApprove)
+  const lastSignature = signing.length > 0 && signing.filter((x) => !x.signature).length === mySigns.length
   // Limite d'instructions publiées : une instruction déjà publiée se republie toujours.
-  const publishLimit = useLimit('published_instructions', instructions.data?.filter((d) => d.json_data.publishedVersion).length)
+  const publishLimit = useLimit('published_instructions', publishedCount.data)
   const blockedByLimit = !instr.publishedVersion && !!publishLimit?.reached
   const translations = useEntitlement('translations')
   const translateToggle = useToggle('translations')
   const gate = useGate()
+  const blocksEnt = useEntitlement('shared_blocks')
   const { openPaywall } = useBilling()
 
-  const primary = readOnly ? null : inReview ? (
-    canApprove ? (
-      <Button variant="success" size="lg" loading={publishing} onClick={() => doPublish(actor)} icon={<CircleCheck className="h-5 w-5" />}>
-        {tp.actions.approveAndPublish}
+  // « Il faut se re-former » : seulement pour une nouvelle version d'une instruction qui a des questions.
+  const askRetrain = trainingToggle && !!instr.publishedVersion && !!content.quiz?.length
+  const askPublish = () => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog(approval ? 'review' : 'checks') }) : setDialog(approval ? 'review' : 'checks'))
+  const primary = (compact: boolean) =>
+    readOnly ? null : inReview ? (
+      groups.length ? (
+        mySigns.length ? (
+          <Button variant="success" size={compact ? 'sm' : 'md'} loading={publishing} onClick={() => void doSign(mySigns)} icon={<CircleCheck className="h-5 w-5" />}>
+            {lastSignature && !compact ? tp.actions.signAndPublish : tp.actions.sign(mySigns.map((g) => g.name).join(', '))}
+          </Button>
+        ) : null
+      ) : canApprove ? (
+        <Button variant="success" size={compact ? 'sm' : 'md'} loading={publishing} onClick={() => doPublish(actor)} icon={<CircleCheck className="h-5 w-5" />}>
+          {compact ? tp.actions.approve : tp.actions.approveAndPublish}
+        </Button>
+      ) : null
+    ) : !isDirty ? null : (
+      <Button variant="primary" size={compact ? 'sm' : 'md'} disabled={!!problems.length} title={problems.join(' ') || undefined} loading={publishing} onClick={askPublish} icon={<Send className="h-4 w-4" />}>
+        {approval ? (groups.length ? (compact ? tp.actions.requestSignaturesShort : tp.actions.requestSignatures) : compact ? tp.actions.requestApprovalShort : tp.actions.requestApproval) : tp.actions.publish} {blockedByLimit && <LockBadge />}
       </Button>
-    ) : (
-      <Badge tone="warning" className="h-12 px-4 text-xs">{tp.actions.awaitingApproval}</Badge>
     )
-  ) : !isDirty ? (
-    <LinkButton href={`/instructions/${doc._id}/lire`} variant="primary" size="lg" icon={<Eye className="h-5 w-5" />}>
-      {tp.actions.viewAtStation}
-    </LinkButton>
-  ) : approval ? (
-    <Button variant="primary" size="lg" disabled={!!problems.length} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog('review') }) : setDialog('review'))} icon={<Send className="h-5 w-5" />}>
-      {tp.actions.requestApproval} {blockedByLimit && <LockBadge />}
-    </Button>
-  ) : (
-    <Button variant="primary" size="lg" disabled={!!problems.length} loading={publishing} onClick={() => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog('checks') }) : setDialog('checks'))} icon={<Send className="h-5 w-5" />}>
-      {instr.publishedVersion ? tp.actions.publishVersion(instr.publishedVersion + 1) : tp.actions.publish} {blockedByLimit && <LockBadge />}
-    </Button>
-  )
+
+  // Sous le titre : où en est l'instruction, et l'enregistrement.
+  const publication = `${instr.block ? `${t.blocks.chip} · ` : instr.number ? `${instr.number} · ` : ''}${inReview ? tp.status.review : !instr.publishedVersion ? tp.status.draft : isDirty ? tp.status.unpublished : tp.status.published(instr.publishedVersion)}`
+  const status = liveLabel ?? (saveState === 'saved' ? `${publication} · ${saveLabel}` : saveLabel)
+
+  // Tout ce qui touche l'instruction entière, rangé dans son « … ».
+  const menu: MenuItem[] = [
+    { label: isBlock ? t.blocks.info : tp.info.menu, icon: <Info className="h-4 w-4" />, onClick: () => setDialog('info') },
+    { label: tp.menu.test, icon: <Eye className="h-4 w-4" />, onClick: () => router.push(`/instructions/${doc._id}/lire?apercu=1`) },
+    { label: tp.menu.share, icon: <Share2 className="h-4 w-4" />, onClick: () => setDialog('share'), hidden: isBlock },
+    { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle || isBlock, hint: translations === 'locked' ? <LockBadge /> : undefined },
+    // Les blocs communs : faire un bloc de quelques étapes (il se publie tout de suite), ou en insérer un.
+    { label: t.blocks.make, icon: <Blocks className="h-4 w-4" />, onClick: () => gate(blocksEnt, 'shared_blocks', () => setDialog('makeBlock')), hidden: !blocksToggle || isBlock || readOnly || approval || !content.steps.some((s) => !s.fromBlock), hint: blocksEnt === 'locked' ? <LockBadge /> : undefined },
+    { label: t.blocks.insert, icon: <Blocks className="h-4 w-4" />, onClick: () => gate(blocksEnt, 'shared_blocks', () => setDialog('insertBlock')), hidden: !blocksToggle || isBlock || readOnly, hint: blocksEnt === 'locked' ? <LockBadge /> : undefined },
+    // Les questions de formation : préparées par l'IA, retouchées ici (toggle `training`).
+    { label: t.training.menu, icon: <GraduationCap className="h-4 w-4" />, onClick: () => setDialog('quiz'), hidden: !trainingToggle || isBlock || (readOnly && !content.quiz?.length), hint: content.quiz?.length ? <span className="text-xs font-black text-slate-400 tabular-nums">{content.quiz.length}</span> : undefined },
+    { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history'), divider: true },
+    // Le travail fait avec cette instruction : ses relevés, ses écarts (toggle `records`).
+    { label: t.records.openForInstruction, icon: <ClipboardCheck className="h-4 w-4" />, onClick: () => router.push(`/registre?instruction=${doc._id}`), hidden: !recordsToggle || !hasChecks(content.steps) || !can('feedback') },
+    { label: tp.menu.exportPdf, icon: <FileDown className="h-4 w-4" />, onClick: () => window.open(`/instructions/${doc._id}/imprimer`, '_blank') },
+    { label: tp.menu.exportJson, icon: <FileJson className="h-4 w-4" />, onClick: exportJson },
+    {
+      label: tp.menu.duplicate,
+      icon: <Copy className="h-4 w-4" />,
+      hidden: readOnly,
+      divider: true,
+      onClick: async () => {
+        const d = await duplicateInstruction(data, { ...doc, json_data: { ...instr, draft: content } }, actor)
+        refresh()
+        router.push(`/instructions/${d._id}`)
+      },
+    },
+    {
+      // Relancer sans toucher à celle-ci : une nouvelle capture avec les mêmes médias et la même demande.
+      label: tp.menu.reuseMedia,
+      icon: <CopyPlus className="h-4 w-4" />,
+      hidden: readOnly || !sources.length,
+      onClick: async () => {
+        try {
+          const d = await newFromSources(data, { ...doc, json_data: { ...instr, sources } }, actor)
+          void qc.invalidateQueries({ queryKey: qk.instructions })
+          router.push(`/instructions/${d._id}`)
+        } catch (e) {
+          toast.error(tp.menu.reuseMediaFailed, errorText(e))
+        }
+      },
+    },
+    {
+      label: tp.menu.regenerate,
+      icon: <Sparkles className="h-4 w-4" />,
+      hidden: readOnly || !sources.length,
+      onClick: async () => {
+        if (!(await confirm({ title: tp.menu.regenerateConfirm.title, description: history.enabled ? tp.menu.regenerateConfirm.descriptionKept : tp.menu.regenerateConfirm.description, confirmLabel: tp.menu.regenerateConfirm.confirm }))) return
+        // Le brouillon enregistré tel quel : la génération en garde un point de retour avant de le remplacer.
+        await flush().catch(() => undefined)
+        onRegenerate()
+      },
+    },
+    {
+      label: tp.menu.archive,
+      icon: <Archive className="h-4 w-4" />,
+      danger: true,
+      divider: true,
+      hidden: readOnly,
+      onClick: async () => {
+        const description = isBlock ? t.blocks.archiveDescription(usedBy.data ?? (await countUsing(data, doc._id).catch(() => 0))) : tp.menu.archiveConfirm.description
+        if (!(await confirm({ title: tp.menu.archiveConfirm.title(content.title), description, confirmLabel: tp.menu.archiveConfirm.confirm, danger: true }))) return
+        await archiveInstruction(data, doc)
+        refresh()
+        toast.success(isBlock ? t.blocks.archived : tp.menu.archived)
+        router.push('/instructions')
+      },
+    },
+  ]
+
+  // Sous l'en-tête, seulement quand il y a lieu : une modification en même temps ailleurs, l'approbation.
+  const renewal = renewalToggle && !readOnly && !renewedAt ? renewalState(instr) : 'none'
+  async function stillGood() {
+    const at = nowIso()
+    const next = renewalFrom(renewalMonthsOf(instr, org.json_data), at, actor.name)
+    try {
+      await confirmRenewal(data, doc._id, next)
+      setRenewedAt(at)
+      refresh()
+      toast.success(tp.renewal.confirmed, next.dueAt ? tp.renewal.confirmedDetail(formatDate(next.dueAt)) : undefined)
+    } catch (e) {
+      toast.error(tp.renewal.failed, errorText(e))
+    }
+  }
+  const notices =
+    remote?.conflict || (inReview && instr.review) || (!inReview && instr.review?.changesRequested) || renewal === 'soon' || renewal === 'late' ? (
+      <>
+        {(renewal === 'soon' || renewal === 'late') && instr.renewal?.dueAt && (
+          <div className={cn('flex flex-col gap-2 rounded-2xl p-3 sm:flex-row sm:items-center', renewal === 'late' ? 'bg-rose-50 dark:bg-rose-500/10' : 'bg-amber-50 dark:bg-amber-500/10')} role="status">
+            <CalendarClock className={cn('h-5 w-5 shrink-0 max-sm:hidden', renewal === 'late' ? 'text-rose-600' : 'text-amber-600')} />
+            <p className={cn('min-w-0 flex-1 text-sm font-bold', renewal === 'late' ? 'text-rose-900 dark:text-rose-100' : 'text-amber-900 dark:text-amber-100')}>
+              {renewal === 'late' ? tp.renewal.late(formatDate(instr.renewal.dueAt)) : tp.renewal.soon(formatDate(instr.renewal.dueAt))} {tp.renewal.question}
+            </p>
+            <Button size="sm" variant="success" onClick={() => void stillGood()} icon={<Check className="h-4 w-4" />}>
+              {tp.renewal.confirm}
+            </Button>
+          </div>
+        )}
+        {remote?.conflict && (
+          <div className="flex flex-col gap-2 rounded-2xl bg-amber-50 p-3 sm:flex-row sm:items-center dark:bg-amber-500/10" role="status">
+            <p className="flex-1 text-sm font-bold text-amber-900 dark:text-amber-100">{tp.live.conflict(remote.device, remote.byName)}</p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => setRemote(null)}>
+                {tp.live.keepMine}
+              </Button>
+              <Button size="sm" variant="primary" onClick={() => void pullRemote({ byName: remote.byName, device: remote.device }, true)}>
+                {tp.live.loadTheirs}
+              </Button>
+            </div>
+          </div>
+        )}
+        {inReview && instr.review && (
+          <div className="flex flex-col gap-2 rounded-2xl bg-amber-50 p-3 sm:flex-row sm:items-center dark:bg-amber-500/10">
+            <MessageSquare className="h-5 w-5 shrink-0 text-amber-600 max-sm:hidden" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-amber-900 dark:text-amber-200">{tp.review.requested(instr.review.requestedByName, timeAgo(instr.review.requestedAt))}</p>
+              {instr.review.note && <p className="text-sm font-medium text-amber-800 dark:text-amber-300">{tp.review.quote(instr.review.note)}</p>}
+              {trainingToggle && instr.review.retrain && (
+                <p className="mt-1 flex items-center gap-1.5 text-xs font-black text-amber-800 dark:text-amber-200">
+                  <GraduationCap className="h-3.5 w-3.5" /> {t.training.retrainAsked}
+                </p>
+              )}
+              {signing.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5" aria-label={tp.review.signatures}>
+                  {signing.map(({ group, signature, stale }) => (
+                    <span key={group.id} className={cn('inline-flex min-h-8 items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-black', signature ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200' : stale ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200' : 'bg-white/70 text-amber-900 dark:bg-white/10 dark:text-amber-100')}>
+                      {signature ? <Check className="h-3.5 w-3.5" /> : stale ? <RotateCcw className="h-3.5 w-3.5" /> : <CircleDashed className="h-3.5 w-3.5" />}
+                      {signature ? tp.review.signedBy(group.name, signature.byName) : stale ? tp.review.resign(group.name) : tp.review.waiting(group.name)}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {changes && <p className="text-xs font-bold text-amber-700">{tp.review.changesMarked}</p>}
+            </div>
+            {canApprove && (
+              <Button size="sm" onClick={() => setDialog('changes')} icon={<X className="h-4 w-4" />}>
+                {tp.review.requestChanges}
+              </Button>
+            )}
+          </div>
+        )}
+        {!inReview && instr.review?.changesRequested && (
+          <div className="flex items-start gap-3 rounded-2xl bg-rose-50 p-3 dark:bg-rose-500/10">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+            <div className="min-w-0">
+              <p className="text-sm font-black text-rose-900 dark:text-rose-200">{tp.review.changesRequested(instr.review.changesRequested.byName)}</p>
+              <p className="text-sm font-medium text-rose-800 dark:text-rose-300">{tp.review.quote(instr.review.changesRequested.comment)}</p>
+            </div>
+          </div>
+        )}
+      </>
+    ) : null
+
+  const feedbackNote = !step ? null : highlightFeedback && highlightFeedback.json_data.stepId === step.id ? highlightFeedback.json_data.comment || FEEDBACK_KINDS.unclear.label : ((feedback.data ?? []).find((f) => f.json_data.stepId === step.id)?.json_data.comment ?? null)
+  const addSource = (src: Source) => {
+    const next = [...sources, src]
+    setSources(next)
+    cacheInstruction(qc, doc._id, { sources: next })
+    void saveSources(data, doc._id, next, actor)
+  }
 
   function duplicateStep() {
     if (!step) return
@@ -560,6 +797,46 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     update({ ...content, steps: [...steps.slice(0, idx + 1), copy, ...steps.slice(idx + 1)] })
     setSelected(copy.id)
   }
+
+  // Une étape d'un bloc commun : on le dit, avec ce qu'on peut faire (ouvrir le bloc, détacher, retirer).
+  const fromBlock = blocksToggle ? step?.fromBlock : undefined
+  async function detach(id: string) {
+    if (!(await confirm({ title: t.blocks.detachConfirm.title, description: t.blocks.detachConfirm.description, confirmLabel: t.blocks.detachConfirm.confirm }))) return
+    update(detachBlock(content, id))
+  }
+  async function dropBlock(id: string) {
+    if (!(await confirm({ title: t.blocks.removeConfirm.title, description: t.blocks.removeConfirm.description, confirmLabel: t.blocks.removeConfirm.confirm, danger: true }))) return
+    const next = removeBlock(content, id)
+    update(next)
+    setSelected(next.steps[Math.max(0, Math.min(idx, next.steps.length - 1))]?.id ?? null)
+  }
+  const blockNotice = fromBlock ? (
+    <div className="flex flex-col gap-2 rounded-2xl bg-violet-50 p-2 pl-3 sm:flex-row sm:items-center dark:bg-violet-500/10" role="status">
+      <Blocks className="h-5 w-5 shrink-0 text-violet-600 max-sm:hidden" />
+      <p className="min-w-0 flex-1 text-sm font-bold text-violet-900 dark:text-violet-100">{t.blocks.stepNotice(fromBlock.title, fromBlock.version)}</p>
+      {/* À droite, au téléphone aussi : le menu « … » s'ouvre vers la gauche sans sortir de l'écran. */}
+      <div className="flex items-center gap-2 self-end sm:self-auto">
+        <Button size="sm" icon={<Blocks className="h-4 w-4" />} onClick={() => router.push(`/instructions/${fromBlock.id}`)}>
+          {t.blocks.open}
+        </Button>
+        {!readOnly && (
+          <Menu
+            label={t.blocks.more}
+            items={[
+              { label: t.blocks.detach, icon: <Unlink className="h-4 w-4" />, onClick: () => void detach(fromBlock.id) },
+              { label: t.blocks.remove, icon: <Trash2 className="h-4 w-4" />, danger: true, onClick: () => void dropBlock(fromBlock.id) },
+            ]}
+          />
+        )}
+      </div>
+    </div>
+  ) : isBlock && blocksToggle && usedBy.data !== undefined ? (
+    // Le bloc lui-même : on modifie une pièce partagée, et on le dit.
+    <div className="flex items-center gap-2 rounded-2xl bg-violet-50 p-3 dark:bg-violet-500/10" role="status">
+      <Blocks className="h-5 w-5 shrink-0 text-violet-600" />
+      <p className="min-w-0 flex-1 text-sm font-bold text-violet-900 dark:text-violet-100">{t.blocks.editing(usedBy.data)}</p>
+    </div>
+  ) : null
 
   async function deleteStep() {
     if (!step) return
@@ -570,320 +847,38 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   }
 
   return (
-    <div className={cn('pb-40', agentOpen && 'lg:pr-[424px]')}>
+    <div>
       <Confetti show={celebrate} />
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <Link href="/instructions" className="inline-flex items-center gap-1 text-sm font-black text-slate-500">
-          <ArrowLeft className="h-4 w-4" /> {tp.backToList}
-        </Link>
-        <div className="flex min-w-0 items-center gap-1">
-          {liveToggle && <LiveBadge state={realtimeState} />}
-          <UndoButtons history={history} className="max-lg:hidden" />
-          {/* L'état de l'enregistrement mène à l'historique : on y retrouve les états d'avant. */}
-          <button
-            type="button"
-            onClick={() => setDialog('history')}
-            title={tp.undo.history}
-            className={cn('btn-press inline-flex min-h-11 min-w-0 items-center gap-1.5 rounded-2xl px-2 text-xs font-black hover:bg-slate-900/5 dark:hover:bg-white/10', liveLabel ? 'text-[var(--primary)]' : saveState === 'error' ? 'text-rose-600' : 'text-slate-400')}
-            aria-live="polite"
-          >
-            {liveLabel ? <Radio className="h-3.5 w-3.5 shrink-0" /> : saveState === 'saving' ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : saveState === 'error' ? <CloudOff className="h-3.5 w-3.5 shrink-0" /> : <Check className="h-3.5 w-3.5 shrink-0" />}
-            <span className="truncate">{saveLabel}</span>
-            <History className="h-3.5 w-3.5 shrink-0 opacity-60" />
-          </button>
-        </div>
-      </div>
-      {remote?.conflict && (
-        <div className="mb-4 flex flex-col gap-3 rounded-[24px] bg-amber-50 p-4 sm:flex-row sm:items-center dark:bg-amber-500/10" role="status">
-          <p className="flex-1 text-sm font-bold text-amber-900 dark:text-amber-100">{tp.live.conflict(remote.device, remote.byName)}</p>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => setRemote(null)}>
-              {tp.live.keepMine}
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => void pullRemote({ byName: remote.byName, device: remote.device }, true)}>
-              {tp.live.loadTheirs}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <Badge className={cn('text-white', STATUS[inReview ? 'review' : instr.publishedVersion ? 'published' : 'draft'].className)}>
-              {inReview ? STATUS.review.label : instr.publishedVersion ? tp.header.publishedBadge(instr.publishedVersion) : STATUS.draft.label}
-            </Badge>
-            {instr.publishedVersion && isDirty && !inReview && <Badge tone="warning">{tp.header.unpublishedChanges}</Badge>}
-            {instr.publishedAt && <span className="text-xs font-bold text-slate-400">{tp.header.publishedAgo(timeAgo(instr.publishedAt))}</span>}
-          </div>
-          <AutoTextarea
-            singleLine
-            value={content.title}
-            readOnly={readOnly}
-            onChange={(e) => update({ ...content, title: e.target.value })}
-            aria-label={tp.header.titleLabel}
-            className="w-full bg-transparent text-3xl leading-tight font-black tracking-tighter text-balance text-slate-900 focus:outline-none sm:text-4xl dark:text-white"
-          />
-          <AutoTextarea
-            value={content.summary}
-            readOnly={readOnly}
-            onChange={(e) => update({ ...content, summary: e.target.value })}
-            aria-label={tp.header.summaryLabel}
-            placeholder={tp.header.summaryPlaceholder}
-            className="mt-1 w-full bg-transparent text-base font-medium text-slate-500 focus:outline-none dark:text-slate-400"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <LinkButton href={`/instructions/${doc._id}/lire?apercu=1`} icon={<Eye className="h-4 w-4" />}>
-            {tp.header.preview}
-          </LinkButton>
-          <Button onClick={() => setDialog('share')} icon={<Share2 className="h-4 w-4" />}>
-            {tp.header.share}
-          </Button>
-          <Menu
-            items={[
-              { label: tp.menu.exportPdf, icon: <FileDown className="h-4 w-4" />, onClick: () => window.open(`/instructions/${doc._id}/imprimer`, '_blank') },
-              { label: tp.menu.exportJson, icon: <FileJson className="h-4 w-4" />, onClick: exportJson },
-              { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history') },
-              { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle, hint: translations === 'locked' ? <LockBadge /> : undefined },
-              {
-                label: tp.menu.regenerate,
-                icon: <Sparkles className="h-4 w-4" />,
-                hidden: readOnly || !sources.length,
-                onClick: async () => {
-                  if (!(await confirm({ title: tp.menu.regenerateConfirm.title, description: history.enabled ? tp.menu.regenerateConfirm.descriptionKept : tp.menu.regenerateConfirm.description, confirmLabel: tp.menu.regenerateConfirm.confirm }))) return
-                  // Le brouillon enregistré tel quel : la génération en garde un point de retour avant de le remplacer.
-                  await flush().catch(() => undefined)
-                  onRegenerate()
-                },
-              },
-              {
-                label: tp.menu.duplicate,
-                icon: <Copy className="h-4 w-4" />,
-                hidden: readOnly,
-                onClick: async () => {
-                  const d = await duplicateInstruction(data, { ...doc, json_data: { ...instr, draft: content } }, actor)
-                  refresh()
-                  router.push(`/instructions/${d._id}`)
-                },
-              },
-              {
-                // Relancer sans toucher à celle-ci : une nouvelle capture avec les mêmes médias et la même demande.
-                label: tp.menu.reuseMedia,
-                icon: <CopyPlus className="h-4 w-4" />,
-                hidden: readOnly || !sources.length,
-                onClick: async () => {
-                  try {
-                    const d = await newFromSources(data, { ...doc, json_data: { ...instr, sources } }, actor)
-                    void qc.invalidateQueries({ queryKey: qk.instructions })
-                    router.push(`/instructions/${d._id}`)
-                  } catch (e) {
-                    toast.error(tp.menu.reuseMediaFailed, errorText(e))
-                  }
-                },
-              },
-              {
-                label: tp.menu.archive,
-                icon: <Archive className="h-4 w-4" />,
-                danger: true,
-                hidden: readOnly,
-                onClick: async () => {
-                  if (!(await confirm({ title: tp.menu.archiveConfirm.title(content.title), description: tp.menu.archiveConfirm.description, confirmLabel: tp.menu.archiveConfirm.confirm, danger: true }))) return
-                  await archiveInstruction(data, doc)
-                  refresh()
-                  toast.success(tp.menu.archived)
-                  router.push('/instructions')
-                },
-              },
-            ]}
-          />
-          {primary}
-        </div>
-      </header>
-
-      {inReview && instr.review && (
-        <div className="mb-5 flex flex-col gap-3 rounded-[28px] bg-amber-50 p-5 sm:flex-row sm:items-center dark:bg-amber-500/10">
-          <MessageSquare className="h-6 w-6 shrink-0 text-amber-600" />
-          <div className="flex-1">
-            <p className="font-black text-amber-900 dark:text-amber-200">
-              {tp.review.requested(instr.review.requestedByName, timeAgo(instr.review.requestedAt))}
-            </p>
-            {instr.review.note && <p className="text-sm font-medium text-amber-800 dark:text-amber-300">{tp.review.quote(instr.review.note)}</p>}
-            {changes && <p className="text-sm font-bold text-amber-700">{tp.review.changesMarked}</p>}
-          </div>
-          {canApprove && (
-            <Button onClick={() => setDialog('changes')} icon={<X className="h-4 w-4" />}>
-              {tp.review.requestChanges}
-            </Button>
-          )}
-        </div>
-      )}
-      {!inReview && instr.review?.changesRequested && (
-        <div className="mb-5 flex items-start gap-3 rounded-[28px] bg-rose-50 p-5 dark:bg-rose-500/10">
-          <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-rose-600" />
-          <div>
-            <p className="font-black text-rose-900 dark:text-rose-200">{tp.review.changesRequested(instr.review.changesRequested.byName)}</p>
-            <p className="text-sm font-medium text-rose-800 dark:text-rose-300">{tp.review.quote(instr.review.changesRequested.comment)}</p>
-          </div>
-        </div>
-      )}
-
-      {instr.generation && !rating && !readOnly && (
-        <div className="glass-card mb-5 flex flex-col gap-3 rounded-[28px] p-4 sm:flex-row sm:items-center">
-          <Sparkles className="h-5 w-5 shrink-0 text-[var(--primary)] max-sm:hidden" />
-          <p className="flex-1 text-sm font-bold text-slate-600 dark:text-slate-300">{tp.rating.prompt(timeAgo(instr.generation.at))}</p>
-          {ratingComment === null ? (
-            <div className="flex items-center gap-2">
-              <Button size="sm" icon={<ThumbsUp className="h-4 w-4" />} onClick={() => rate('up')}>
-                {tp.rating.yes}
-              </Button>
-              <Button size="sm" icon={<ThumbsDown className="h-4 w-4" />} onClick={() => setRatingComment('')}>
-                {tp.rating.no}
-              </Button>
-            </div>
-          ) : (
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(e) => {
-                e.preventDefault()
-                void rate('down', ratingComment ?? '')
-              }}
-            >
-              <Input data-own-undo="" autoFocus value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder={tp.rating.missingPlaceholder} aria-label={tp.rating.missingLabel} className="h-11 text-sm" wrapperClassName="flex-1 sm:w-72 sm:flex-none" />
-              <Button size="sm" type="submit" variant="primary">
-                {tp.rating.send}
-              </Button>
-            </form>
-          )}
-        </div>
-      )}
-
-      {questions.length > 0 && !readOnly && questionsFolded && (
-        <button type="button" onClick={() => foldQuestions(false)} className="btn-press mb-5 flex min-h-12 w-full items-center gap-3 rounded-[20px] bg-amber-50 px-4 py-2 text-left text-sm font-black text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
-          <MessageCircleQuestion className="h-5 w-5 shrink-0 text-amber-600" />
-          <span className="min-w-0 flex-1">{tp.questions.folded(questions.length)}</span>
-          <span className="flex shrink-0 items-center gap-1 text-amber-700 dark:text-amber-300">
-            {tp.questions.show} <ChevronDown className="h-4 w-4" />
-          </span>
-        </button>
-      )}
-      {questions.length > 0 && !readOnly && !questionsFolded && (
-        <div className="mb-5 rounded-[28px] bg-amber-50 p-5 dark:bg-amber-500/10">
-          <p className="label-caps mb-1 text-amber-700 dark:text-amber-300">{tp.questions.title}</p>
-          <p className="mb-3 text-sm font-medium text-amber-900/80 dark:text-amber-100/80">{tp.questions.intro}</p>
-          <ul className="space-y-2">
-            {questions.map((q) => (
-              <li key={q} className="flex items-start gap-3">
-                <button
-                  type="button"
-                  aria-label={tp.questions.markChecked}
-                  title={tp.questions.markChecked}
-                  onClick={() => settleQuestions([q])}
-                  className="btn-press mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-amber-400 text-amber-600 hover:bg-amber-400 hover:text-white"
-                >
-                  <Check className="h-4 w-4" />
-                </button>
-                <span className="text-[15px] font-bold text-amber-950 dark:text-amber-100">{q}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button icon={<MessageCircleQuestion className="h-4 w-4" />} onClick={() => setQuestionsOpen(true)}>
-              {tp.questions.answer}
-            </Button>
-            <button type="button" onClick={() => foldQuestions(true)} className="btn-press flex h-11 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-500/15">
-              <ChevronUp className="h-4 w-4" /> {tp.questions.later}
-            </button>
-          </div>
-        </div>
-      )}
-      <QuestionsDialog open={questionsOpen} questions={questions} choices={instr.generation?.choices ?? {}} onClose={() => setQuestionsOpen(false)} onApply={answerQuestions} />
-
-      <MetaCard content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={update} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
-
-      {content.kind === 'lockout' && content.lockout && (
-        <div className="mt-5">
-          <LockoutEditor value={content.lockout} readOnly={readOnly} onChange={(lockout) => update({ ...content, lockout })} />
-        </div>
-      )}
-
-      {/* Deux façons de modifier : la fiche (tous les réglages) ou l'étape telle qu'au poste. */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="label-caps px-1 text-slate-500">{tp.steps.title}</p>
-        <Segmented
-          value={view}
-          onChange={chooseView}
-          options={[
-            { value: 'form', label: t.editor.views.form, icon: <ListChecks className="h-4 w-4" /> },
-            { value: 'stage', label: t.editor.views.stage, icon: <MonitorSmartphone className="h-4 w-4" /> },
-          ]}
-        />
-      </div>
-      <div className="mt-4 grid gap-5 lg:grid-cols-[340px_1fr]">
-        <aside className={cn('lg:sticky lg:top-6 lg:self-start', view === 'stage' && 'max-lg:hidden')}>
-          <p className="label-caps mb-2 px-1 text-slate-500">{tp.steps.count(steps.length)}</p>
-          <div className="lg:max-h-[calc(100dvh-140px)] lg:overflow-y-auto lg:pr-1">
-            <StepList steps={steps} selectedId={step?.id ?? null} onSelect={setSelected} onAdd={() => insertAfter(steps.length - 1)} changes={inReview ? changes : undefined} readOnly={readOnly} feedbackByStep={feedbackByStep} />
-          </div>
-        </aside>
-        <section id="step-editor" className="min-w-0 scroll-mt-24">
-          {step && view === 'stage' ? (
-            <StageEditor
-              content={content}
-              step={step}
-              index={idx}
-              sources={sources}
-              readOnly={readOnly}
-              agentWorking={agentStep === step.id}
-              agentOpen={agentOpen}
-              saveLabel={saveLabel}
-              badge={liveToggle ? <LiveBadge state={realtimeState} /> : null}
-              remoteNote={flash?.stepId === step.id ? flash.note : null}
-              history={history}
-              onHistory={() => setDialog('history')}
-              onChange={setStep}
-              onSelect={(id) => id && setSelected(id)}
-              onInsertAfter={() => insertAfter(idx)}
-              onAddEnd={() => insertAfter(steps.length - 1)}
-              onMove={moveStep}
-              onDuplicate={duplicateStep}
-              onDelete={deleteStep}
-              onExit={() => chooseView('form')}
-              onSourceAdded={(s) => {
-                const next = [...sources, s]
-                setSources(next)
-                cacheInstruction(qc, doc._id, { sources: next })
-                void saveSources(data, doc._id, next, actor)
-              }}
-            />
-          ) : step ? (
-            <StepEditor
-              key={step.id}
-              agentWorking={agentStep === step.id}
-              remoteNote={flash?.stepId === step.id ? flash.note : null}
-              content={content}
-              step={step}
-              index={idx}
-              sources={sources}
-              readOnly={readOnly}
-              highlight={highlightFeedback && highlightFeedback.json_data.stepId === step.id ? highlightFeedback.json_data.comment || FEEDBACK_KINDS.unclear.label : (feedback.data ?? []).find((f) => f.json_data.stepId === step.id)?.json_data.comment ?? null}
-              onChange={setStep}
-              onMove={moveStep}
-              onInsertAfter={() => insertAfter(idx)}
-              onDuplicate={duplicateStep}
-              onDelete={deleteStep}
-              onSourceAdded={(s) => {
-                const next = [...sources, s]
-                setSources(next)
-                cacheInstruction(qc, doc._id, { sources: next })
-                void saveSources(data, doc._id, next, actor)
-              }}
-            />
-          ) : (
-            <div className="glass-panel rounded-[32px] p-10 text-center font-bold text-slate-500">{tp.steps.empty}</div>
-          )}
-        </section>
-      </div>
+      <StageEditor
+        content={content}
+        step={step}
+        index={idx}
+        sources={sources}
+        readOnly={readOnly}
+        agentWorking={!!step && agentStep === step.id}
+        agentOpen={agentOpen}
+        top={{ title: content.title, status, statusTone: liveLabel ? 'live' : saveState === 'error' ? 'error' : undefined, primary, menu, onInfo: () => setDialog('info'), infoLabel: isBlock ? t.blocks.infoOpen : undefined, questions: readOnly ? 0 : questions.length, onQuestions: () => setQuestionsOpen(true) }}
+        notices={blockNotice || notices ? <>{blockNotice}{notices}</> : null}
+        badge={liveToggle ? <LiveBadge state={realtimeState} compact /> : null}
+        remoteNote={step && flash?.stepId === step.id ? flash.note : null}
+        feedbackNote={feedbackNote}
+        feedbackByStep={feedbackByStep}
+        changes={inReview ? changes : undefined}
+        history={history}
+        onAssistant={() => setAgentOpen(true)}
+        sections={sectionsToggle}
+        records={recordsToggle}
+        onSteps={(next) => update({ ...content, steps: next })}
+        onChange={setStep}
+        onSelect={(id) => id && setSelected(id)}
+        onInsertAfter={() => insertAfter(idx)}
+        onAddEnd={() => insertAfter(steps.length - 1)}
+        onMove={moveStep}
+        onDuplicate={duplicateStep}
+        onDelete={deleteStep}
+        onSourceAdded={addSource}
+      />
+      <QuestionsDialog open={questionsOpen} questions={questions} choices={instr.generation?.choices ?? {}} onClose={() => setQuestionsOpen(false)} onApply={answerQuestions} onChecked={(q) => settleQuestions([q])} />
 
       {!readOnly && (
         <AgentPanel
@@ -892,6 +887,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           focusStepId={step?.id ?? null}
           onFocus={focusStep}
           onWorking={setAgentStep}
+          open={agentOpen}
           onOpenChange={setAgentOpen}
           request={agentRequest}
           onTurnStart={history.begin}
@@ -905,6 +901,20 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         />
       )}
 
+      <Modal open={dialog === 'info'} onClose={() => setDialog(null)} size="lg" title={isBlock ? t.blocks.infoTitle : tp.info.title}>
+        <div className="space-y-5">
+          <div>
+            <Label htmlFor="instruction-title">{isBlock ? t.blocks.name : tp.header.titleLabel}</Label>
+            <Input id="instruction-title" value={content.title} readOnly={readOnly} onChange={(e) => update({ ...content, title: e.target.value })} className="h-14 text-lg font-black" />
+          </div>
+          <div>
+            <Label htmlFor="instruction-summary">{tp.header.summaryLabel}</Label>
+            <Textarea id="instruction-summary" rows={2} value={content.summary} readOnly={readOnly} onChange={(e) => update({ ...content, summary: e.target.value })} placeholder={isBlock ? t.blocks.summaryPlaceholder : tp.header.summaryPlaceholder} />
+          </div>
+          <MetaCard embedded noStations={isBlock} content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={update} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
+          {content.kind === 'lockout' && content.lockout && <LockoutEditor value={content.lockout} readOnly={readOnly} onChange={(lockout) => update({ ...content, lockout })} />}
+        </div>
+      </Modal>
       <ShareDialog open={dialog === 'share'} onClose={() => setDialog(null)} doc={doc} onLinked={refresh} />
       <HistoryDialog
         open={dialog === 'history'}
@@ -930,6 +940,35 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         }}
       />
       <UndoPill history={history} />
+      <QuizDialog open={dialog === 'quiz'} onClose={() => setDialog(null)} content={content} ai={session.ai} readOnly={readOnly} published={!!instr.publishedVersion} onChange={(quiz) => update({ ...content, quiz })} />
+      {blocksToggle && !isBlock && (
+        <>
+          <MakeBlockDialog
+            open={dialog === 'makeBlock'}
+            onClose={() => setDialog(null)}
+            content={content}
+            current={step?.id ?? null}
+            onMade={(next) => {
+              update(next)
+              setDialog(null)
+              void qc.invalidateQueries({ queryKey: qk.instructions })
+            }}
+          />
+          <InsertBlockDialog
+            open={dialog === 'insertBlock'}
+            onClose={() => setDialog(null)}
+            content={content}
+            after={idx}
+            onInserted={(next, title) => {
+              const first = next.steps.find((s) => s.fromBlock && !content.steps.some((x) => x.id === s.id))
+              update(next)
+              if (first) setSelected(first.id)
+              setDialog(null)
+              toast.success(t.blocks.inserted(title))
+            }}
+          />
+        </>
+      )}
       <TranslateDialog open={dialog === 'translate'} onClose={() => setDialog(null)} content={content} onTranslated={(lang, translated) => update({ ...content, translations: { ...(content.translations ?? {}), [lang]: translated } })} />
 
       <Modal
@@ -939,15 +978,50 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         footer={
           <>
             <Button onClick={() => setDialog(null)}>{tp.publish.notYet}</Button>
-            <Button variant="primary" loading={publishing} onClick={() => doPublish()} icon={<Send className="h-4 w-4" />}>
+            {/* Le focus va au bouton : pas de clavier qui surgit au téléphone. */}
+            <Button variant="primary" data-autofocus loading={publishing} onClick={() => doPublish()} icon={<Send className="h-4 w-4" />}>
               {tp.actions.publish}
             </Button>
           </>
         }
       >
-        <p className="font-medium text-slate-600 dark:text-slate-300">
-          {stationIds.length ? tp.publish.replaces(stationIds.length) : tp.publish.library}
-        </p>
+        {/* Les relevés que l'IA a proposés et que l'auteur n'a pas gardés restent au brouillon. */}
+        {recordsToggle && proposedChecks(content.steps) > 0 && (
+          <p className="mb-4 flex items-start gap-2 rounded-2xl bg-violet-50 p-3 text-sm font-bold text-violet-900 dark:bg-violet-500/10 dark:text-violet-100">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0" /> {t.editor.checks.proposedPublish(proposedChecks(content.steps))}
+          </p>
+        )}
+        {isBlock ? (
+          // Un bloc commun ne va à aucun poste : on dit ce que sa publication met à jour.
+          <>
+            <p className="flex items-start gap-2 font-medium text-slate-600 dark:text-slate-300">
+              <Blocks className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" /> {t.blocks.publishImpact(usedBy.data ?? 0)}
+            </p>
+            {propagation && <p className="mt-3 text-sm font-black text-[var(--primary-strong)] dark:text-sky-300" role="status">{t.blocks.propagating(propagation.done, propagation.total)}</p>}
+          </>
+        ) : (
+          <>
+            <p className="font-medium text-slate-600 dark:text-slate-300">
+              {stationIds.length ? tp.publish.replaces(stationIds.length) : tp.publish.library}
+            </p>
+            {/* Le bon moment pour dire où elle s'affiche, et quand la relire. */}
+            <div className="mt-4">
+              <StationPicker label={tp.publish.where} stationIds={stationIds} stations={stations} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
+            </div>
+            {renewalToggle && (
+              <div className="mt-4">
+                <Label>{tp.renewal.label}</Label>
+                <Segmented size="sm" value={String(renewMonths)} onChange={(v) => setRenewMonths(v === 'null' ? null : Number(v))} options={RENEWAL_CHOICES.map((m) => ({ value: String(m), label: t.instructions.renewal.choice(m) }))} />
+                <p className="mt-1.5 text-xs font-bold text-slate-400">{tp.renewal.hint}</p>
+              </div>
+            )}
+            {askRetrain && (
+              <div className="mt-3">
+                <Switch checked={retrain} onChange={setRetrain} label={t.training.retrain} description={t.training.retrainHint} />
+              </div>
+            )}
+          </>
+        )}
         {notes.length > 0 && (
           <ul className="mt-4 space-y-2">
             {notes.map((n) => (
@@ -956,6 +1030,35 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
               </li>
             ))}
           </ul>
+        )}
+        {/* L'avis sur la génération : au moment où la personne a tout relu. */}
+        {instr.generation && !rating && (
+          <div className="mt-4 rounded-2xl bg-slate-900/[0.03] p-3 dark:bg-white/5">
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{tp.rating.prompt(timeAgo(instr.generation.at))}</p>
+            {ratingComment === null ? (
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" icon={<ThumbsUp className="h-4 w-4" />} onClick={() => rate('up')}>
+                  {tp.rating.yes}
+                </Button>
+                <Button size="sm" icon={<ThumbsDown className="h-4 w-4" />} onClick={() => setRatingComment('')}>
+                  {tp.rating.no}
+                </Button>
+              </div>
+            ) : (
+              <form
+                className="mt-2 flex items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void rate('down', ratingComment ?? '')
+                }}
+              >
+                <Input data-own-undo="" autoFocus value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder={tp.rating.missingPlaceholder} aria-label={tp.rating.missingLabel} className="h-11 text-sm" wrapperClassName="flex-1" />
+                <Button size="sm" type="submit" variant="primary">
+                  {tp.rating.send}
+                </Button>
+              </form>
+            )}
+          </div>
         )}
       </Modal>
       <Modal
@@ -971,8 +1074,13 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           </>
         }
       >
-        <p className="mb-3 font-medium text-slate-600 dark:text-slate-300">{tp.review.intro}</p>
+        <p className="mb-3 font-medium text-slate-600 dark:text-slate-300">{groups.length ? tp.review.signaturesIntro : tp.review.intro}</p>
         <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={tp.review.notePlaceholder} />
+        {askRetrain && (
+          <div className="mt-3">
+            <Switch checked={retrain} onChange={setRetrain} label={t.training.retrain} description={t.training.retrainHint} />
+          </div>
+        )}
         {notes.length > 0 && <p className="mt-3 text-sm font-bold text-amber-700">{notes.join(' ')}</p>}
       </Modal>
       <Modal

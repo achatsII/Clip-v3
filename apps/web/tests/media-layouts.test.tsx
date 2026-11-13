@@ -57,9 +57,20 @@ describe('l’IA dessine et annote sur demande', () => {
     const ai = fakeAi({ title: 'Panneau', html: '<svg viewBox="0 0 10 10"></svg>' })
     const v = await createVisual(ai, emptyContent(), step({}), 'vue de face')
     expect(ai.ask.mock.calls[0][0]).toBe('visual')
+    // Le dessin seul : ni en-tête ni texte d'explication, très peu de mots.
+    expect(ai.ask.mock.calls[0][1].system_instruction).toMatch(/AUCUN en-tête/)
+    expect(ai.ask.mock.calls[0][1].system_instruction).toMatch(/Au plus 4 libellés de 1 à 3 mots/)
+    expect(ai.ask.mock.calls[0][1].prompt).toMatch(/sans en-tête ni texte d’explication/)
     expect(v).toMatchObject({ kind: 'html', title: 'Panneau' })
     expect(v.html.startsWith('<!doctype html>')).toBe(true)
     await expect(createVisual(fakeAi({ title: 'x', html: `<svg>${'a'.repeat(400_000)}</svg>` }), emptyContent(), step({}), '')).rejects.toThrow(/trop lourd/)
+  })
+
+  it('« la distance entre les deux trous, 12 mm » : une distance d’un bout à l’autre, dans le sens le plus long', async () => {
+    const wide = await annotateImage(fakeAi({ marks: [{ label: '12 mm', shape: 'measure', box: [400, 200, 500, 800] }] }), 'https://x/p.jpg', step({}), 'distance de 12 mm entre les trous')
+    expect(wide[0]).toMatchObject({ type: 'measure', x: 0.2, x2: 0.8, y: 0.45, y2: 0.45, text: '12 mm' })
+    const tall = await annotateImage(fakeAi({ marks: [{ label: '3 cm', shape: 'measure', box: [100, 480, 900, 520] }] }), 'https://x/p.jpg', step({}), 'hauteur')
+    expect(tall[0]).toMatchObject({ type: 'measure', x: 0.5, x2: 0.5, y: 0.1, y2: 0.9 })
   })
 
   it('« encercle le bouton vert » : la demande et la couleur passent à la marque', async () => {

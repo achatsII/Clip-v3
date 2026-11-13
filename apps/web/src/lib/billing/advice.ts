@@ -4,6 +4,7 @@
  */
 import { messages } from '@/lib/i18n'
 import { formatDate } from '../util/cn'
+import { addonFor, type ModuleDef } from './catalog'
 import type { BillingState, CreditBucket, PublicPlan } from './client'
 
 /** Ce qu'un plan donne pour une feature, en un nombre comparable : crédits, plafond (illimité = ∞) ou 1/0. */
@@ -45,6 +46,20 @@ export function planFor(plans: PublicPlan[], state: BillingState | null, feature
   }
   const now = feature ? (current ? amountOf(current, feature) : amountNow(state, feature)) : current ? monthlyCents(current) : 0
   return forSale.find((p) => (feature ? amountOf(p, feature) : monthlyCents(p)) > now) ?? null
+}
+
+/**
+ * Ce qui ouvre un module : son add-on, si le plan de l'usine le reçoit et qu'il est en vente ;
+ * sinon le moins cher des plans qui le reçoivent (« l'Académie s'ajoute à Équipe »). Le module que
+ * la plateforme désigne dans son refus (`upgrade_hint.addon_code`) passe d'abord.
+ */
+export function moduleOffer(plans: PublicPlan[], state: BillingState | null, m: ModuleDef, hint?: string | null): { addon: PublicPlan | null; plan: PublicPlan | null } {
+  const currentCode = state?.plan_code ?? plans.find((p) => p.is_current && p.kind === 'base')?.code ?? null
+  const onSale = (code: string | null | undefined) => (code ? (plans.find((p) => p.kind === 'addon' && p.code === code && p.prices.length > 0) ?? null) : null)
+  const code = addonFor(m, currentCode)
+  if (code) return { addon: (hint && Object.values(m.addons).includes(hint) ? onSale(hint) : null) ?? onSale(code), plan: null }
+  const eligible = plans.filter((p) => p.kind === 'base' && p.prices.length > 0 && p.code !== currentCode && m.addons[p.code]).sort((a, b) => monthlyCents(a) - monthlyCents(b))
+  return { addon: null, plan: eligible[0] ?? null }
 }
 
 /** Pourquoi la fenêtre des crédits s'ouvre : un refus réel de la plateforme, ou le solde du mois. */

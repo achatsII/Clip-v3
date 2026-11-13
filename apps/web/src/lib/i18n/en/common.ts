@@ -17,6 +17,13 @@ export const common: typeof Fr = {
   add: 'Add',
   remove: 'Remove',
   search: 'Search',
+  /** Clear a search; « Show all » resets a list's filters. */
+  clear: 'Clear',
+  showAll: 'Show all',
+  noMatch: 'Nothing matches this search.',
+  searchPeople: 'Search for a person',
+  /** Under a cut-off list: the others are found by searching. */
+  moreHidden: (n: number) => `+ ${n.toLocaleString('en-CA')} more: search for a name.`,
   loading: 'Loading',
   moreActions: 'More actions',
   qrCode: 'QR code',
@@ -28,6 +35,7 @@ export const common: typeof Fr = {
   loadFailed: 'Couldn’t load',
   errors: {
     network: 'Can’t reach the server. Check your connection.',
+    aiConsent: 'You haven’t agreed to send data to the AI. Agree to it to use this feature.',
     timeout: 'The server took too long to respond.',
     forbidden: 'You don’t have access to this action.',
     noCredits: 'No credits left for this action.',

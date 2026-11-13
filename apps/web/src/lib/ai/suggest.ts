@@ -44,7 +44,7 @@ function forStep(step: Step, n: number, maxWords: number, terms: Terms): string[
 export function suggestEdits(content: InstructionContent, standard?: Pick<WritingStandard, 'startWithSafety' | 'maxWordsPerStep'> | null, focusStepId?: string | null): string[] {
   const t = messages().editor.suggestions
   const terms = content.language === 'en' ? TERMS.en : TERMS.fr
-  const max = standard?.maxWordsPerStep || 25
+  const max = standard?.maxWordsPerStep || 20
   const steps = content.steps
   const out: string[] = []
   const focus = focusStepId ? steps.findIndex((s) => s.id === focusStepId) : -1

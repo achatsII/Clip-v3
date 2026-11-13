@@ -49,6 +49,7 @@ export function summarizeChanges(before: InstructionContent | null, after: Instr
   if (JSON.stringify(before.ppe) !== JSON.stringify(after.ppe)) parts.push(t.ppe)
   if (JSON.stringify(before.safety) !== JSON.stringify(after.safety)) parts.push(t.safety)
   if (JSON.stringify(before.lockout ?? null) !== JSON.stringify(after.lockout ?? null)) parts.push(t.lockout)
+  if (JSON.stringify(before.quiz ?? []) !== JSON.stringify(after.quiz ?? [])) parts.push(t.quiz)
   if (!parts.length) return t.formatting
   return t.sentence(parts)
 }

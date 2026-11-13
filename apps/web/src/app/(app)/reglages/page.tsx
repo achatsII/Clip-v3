@@ -1,6 +1,11 @@
 'use client'
 
-import { Check, CreditCard, Download, ImagePlus, Loader2, Lock, Smartphone } from 'lucide-react'
+import { useToggle } from '@/lib/toggles'
+import { DEFAULT_RENEWAL_MONTHS, RENEWAL_CHOICES } from '@/lib/model/renewal'
+import { AccountCard } from '@/components/settings/Account'
+import { AlertsTab } from '@/components/settings/AlertsTab'
+import { ApprovalGroups, defaultGroups } from '@/components/settings/ApprovalGroups'
+import { Check, CreditCard, Download, ImagePlus, Loader2, Lock, Smartphone, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useRef, useState } from 'react'
@@ -14,15 +19,17 @@ import { ChoiceTile, Input, Label, Segmented } from '@/components/ui/Field'
 import { errorText } from '@/components/ui/States'
 import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
-import { BILLING_V2, APP_IDENTIFIER, GATEWAY_URL } from '@/lib/config'
+import { APP_IDENTIFIER, GATEWAY_URL } from '@/lib/config'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { compressImage } from '@/lib/media/image'
-import { listInstructions, listVersions } from '@/lib/model/repo'
+import { listVersions } from '@/lib/model/repo'
+import { cleanPrefix, DEFAULT_PREFIX, everyInstruction, formatNumber } from '@/lib/model/search'
 import { applyBrandColor } from '@/lib/theme'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { cn } from '@/lib/util/cn'
+import { useBilling } from '@/lib/billing/state'
 
-type Tab = 'usine' | 'standard' | 'approbation' | 'membres' | 'apparence' | 'donnees'
+type Tab = 'usine' | 'standard' | 'approbation' | 'membres' | 'avertissements' | 'apparence' | 'donnees'
 
 /** Les onglets : la valeur dans l'adresse, la clé du libellé (lu au rendu, dans la langue de l'outil). */
 const TABS: Array<{ value: Tab; label: keyof Messages['settings']['tabs']; admin?: boolean }> = [
@@ -30,6 +37,8 @@ const TABS: Array<{ value: Tab; label: keyof Messages['settings']['tabs']; admin
   { value: 'standard', label: 'standard' },
   { value: 'approbation', label: 'approval', admin: true },
   { value: 'membres', label: 'members', admin: true },
+  // Les avertissements : les miens pour chacun, ceux de l'usine pour un administrateur (toggle `notify`).
+  { value: 'avertissements', label: 'alerts' },
   { value: 'apparence', label: 'appearance' },
   { value: 'donnees', label: 'data' },
 ]
@@ -38,9 +47,11 @@ export default function SettingsPage() {
   const params = useSearchParams()
   const router = useRouter()
   const { can } = useSession()
+  const billingOn = useBilling().enabled
   const t = useMessages().settings
   const isAdmin = can('settings', 'write')
-  const tabs = TABS.filter((x) => !x.admin || isAdmin)
+  const notifyOn = useToggle('notify')
+  const tabs = TABS.filter((x) => (!x.admin || isAdmin) && (x.value !== 'avertissements' || notifyOn))
   const requested = params.get('onglet') as Tab | null
   const tab: Tab = tabs.some((x) => x.value === requested) ? requested! : tabs[0].value
 
@@ -49,7 +60,7 @@ export default function SettingsPage() {
       <PageHeader
         title={t.title}
         actions={
-          BILLING_V2 ? (
+          billingOn ? (
             <Link href="/reglages/abonnement" className="btn-press glass-card inline-flex h-12 items-center gap-2 rounded-full px-5 text-sm font-black">
               <CreditCard className="h-4 w-4" /> {t.subscription}
             </Link>
@@ -67,6 +78,7 @@ export default function SettingsPage() {
       {tab === 'standard' && <StandardTab />}
       {tab === 'approbation' && <ApprovalTab />}
       {tab === 'membres' && <MembersTab />}
+      {tab === 'avertissements' && <AlertsTab />}
       {tab === 'apparence' && <AppearanceTab />}
       {tab === 'donnees' && <DataTab />}
     </div>
@@ -75,6 +87,7 @@ export default function SettingsPage() {
 
 function PlantTab() {
   const { org, updateOrg, files } = useSession()
+  const renewalOn = useToggle('renewal')
   const words = useMessages()
   const t = words.settings.plant
   const toast = useToast()
@@ -110,6 +123,19 @@ function PlantTab() {
             {words.common.save}
           </Button>
         </div>
+        {renewalOn && (
+          <div className="mt-5">
+            <Label>{t.renewal}</Label>
+            <Segmented
+              size="sm"
+              value={String(org.json_data.renewalMonths === undefined ? DEFAULT_RENEWAL_MONTHS : org.json_data.renewalMonths)}
+              onChange={(v) => void updateOrg({ renewalMonths: v === 'null' ? null : Number(v) }).then(() => toast.success(t.renewalSaved))}
+              options={RENEWAL_CHOICES.map((m) => ({ value: String(m), label: words.instructions.renewal.choice(m) }))}
+            />
+            <p className="mt-1.5 text-xs font-bold text-slate-400">{t.renewalHint}</p>
+          </div>
+        )}
+        <NumberingField />
       </Panel>
       <Panel>
         <h2 className="mb-1 flex items-center gap-2 text-xl font-black tracking-tight">{t.brandTitle} {brand === 'locked' && <LockBadge />}</h2>
@@ -155,9 +181,16 @@ function ApprovalTab() {
   const toast = useToast()
   const approvals = useEntitlement('approvals')
   const gate = useGate()
-  const mode = org.json_data.approval.mode
-  const set = (m: 'none' | 'one') =>
-    void updateOrg({ approval: { ...org.json_data.approval, mode: m } }).then(() => toast.success(m === 'none' ? t.directOn : t.approvalOn, m === 'none' ? t.directOnHint : t.approvalOnHint))
+  const multiOn = useToggle('multiApproval')
+  // Toggle coupé, « plusieurs signatures » se comporte comme une approbation : la tuile le montre ainsi.
+  const mode = org.json_data.approval.mode === 'all' && !multiOn ? 'one' : org.json_data.approval.mode
+  const set = (m: 'none' | 'one' | 'all') => {
+    // La première fois : deux groupes de départ, à renommer.
+    const groups = m === 'all' && !org.json_data.approval.groups?.length ? defaultGroups(t.defaultGroups) : org.json_data.approval.groups
+    void updateOrg({ approval: { ...org.json_data.approval, mode: m, ...(groups ? { groups } : {}) } }).then(() =>
+      toast.success(m === 'none' ? t.directOn : m === 'all' ? t.allOn : t.approvalOn, m === 'none' ? t.directOnHint : m === 'all' ? t.allOnHint : t.approvalOnHint),
+    )
+  }
   return (
     <Panel className="max-w-3xl">
       <h2 className="mb-1 text-xl font-black tracking-tight">{t.title}</h2>
@@ -171,8 +204,18 @@ function ApprovalTab() {
           title={<span className="inline-flex items-center gap-2">{t.oneTitle} {approvals === 'locked' && <LockBadge />}</span>}
           description={t.oneDescription}
         />
+        {multiOn && (
+          <ChoiceTile
+            selected={mode === 'all'}
+            onClick={() => gate(approvals, 'approvals', () => set('all'))}
+            icon={<Users className="h-5 w-5" />}
+            title={<span className="inline-flex items-center gap-2">{t.allTitle} {approvals === 'locked' && <LockBadge />}</span>}
+            description={t.allDescription}
+          />
+        )}
       </div>
-      {mode === 'one' && <p className="mt-4 text-sm font-bold text-slate-500">{t.approversNote}</p>}
+      {mode !== 'none' && <p className="mt-4 text-sm font-bold text-slate-500">{t.approversNote}</p>}
+      {mode === 'all' && <ApprovalGroups />}
     </Panel>
   )
 }
@@ -203,7 +246,8 @@ function DataTab() {
   async function exportAll() {
     setBusy(true)
     try {
-      const list = await listInstructions(data, undefined, 2000)
+      // Toutes, page après page : l'export reste complet avec des milliers d'instructions.
+      const list = await everyInstruction(data)
       const full = await Promise.all(list.map((d) => data.get(`clip_instruction`, d._id)))
       const versions = await Promise.all(list.map((d) => listVersions(data, d._id).catch(() => [])))
       const payload = {
@@ -233,10 +277,37 @@ function DataTab() {
           {t.exportAll} {fullExport === 'locked' && <LockBadge />}
         </Button>
       </Panel>
+      <AccountCard />
       <Panel>
         <h2 className="mb-2 text-lg font-black tracking-tight">{t.connection}</h2>
         <p className="text-sm font-medium text-slate-500">{t.gateway(GATEWAY_URL.replace('https://', ''), APP_IDENTIFIER)}</p>
       </Panel>
+    </div>
+  )
+}
+
+/** Le préfixe des numéros de document (« IT » → IT-0001, IT-0002…) ; le compteur ne change pas. */
+function NumberingField() {
+  const { org, updateOrg, can } = useSession()
+  const words = useMessages()
+  const t = words.settings.plant
+  const toast = useToast()
+  const current = org.json_data.numbering?.prefix || DEFAULT_PREFIX
+  const [prefix, setPrefix] = useState(current)
+  const clean = cleanPrefix(prefix)
+  const canWrite = can('settings', 'write')
+  return (
+    <div className="mt-5">
+      <Label htmlFor="org-prefix">{t.numbering}</Label>
+      <div className="flex gap-2">
+        <Input id="org-prefix" dictation={false} value={prefix} readOnly={!canWrite} maxLength={6} onChange={(e) => setPrefix(e.target.value.toUpperCase())} className="font-black tracking-widest uppercase" />
+        {canWrite && (
+          <Button variant="primary" disabled={clean === current} onClick={() => void updateOrg({ 'numbering.prefix': clean }).then(() => toast.success(t.numberingSaved))}>
+            {words.common.save}
+          </Button>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs font-bold text-slate-400">{t.numberingHint(formatNumber(clean, org.json_data.numbering?.next || 1))}</p>
     </div>
   )
 }

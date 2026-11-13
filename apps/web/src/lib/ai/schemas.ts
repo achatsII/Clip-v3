@@ -22,20 +22,39 @@ const mediaRef = {
   required: ['source'],
 }
 
+/** Un relevé : les limites sont des textes (« 4,5 »), vides quand les sources n'en donnent pas. */
+export const checkSchema = {
+  type: 'object',
+  properties: {
+    kind: { type: 'string', enum: ['measure', 'yesno', 'choice', 'text', 'photo'] },
+    label: str('Ce qu’on relève, 2 à 6 mots : « Pression du circuit », « Joint en place », « Numéro de lot »'),
+    unit: str('measure : l’unité (bar, °C, mm, N·m, psi…) ; vide sinon'),
+    min: str('measure : la limite basse dite par les sources, en chiffres ; vide si aucune'),
+    max: str('measure : la limite haute dite par les sources, en chiffres ; vide si aucune'),
+    target: str('measure : la valeur visée dite par les sources ; vide si aucune'),
+    expected: { type: 'string', enum: ['yes', 'no', 'none'], description: 'yesno : la bonne réponse (l’autre est un écart) ; none sinon' },
+    options: strList('choice : 2 à 5 choix courts ; vide sinon'),
+    bad: strList('choice : les choix qui sont un écart (« Sale », « À remplacer ») ; vide sinon'),
+  },
+  required: ['kind', 'label'],
+}
+
 const stepSchema = {
   type: 'object',
   properties: {
     id: str("Identifiant de l'étape existante à conserver ; vide pour une nouvelle étape"),
-    title: str("Verbe d'action à l'infinitif + objet, 2 à 8 mots"),
-    text: str('Une seule action, phrases courtes et simples'),
-    keyPoints: strList('0 à 3 points clés : ce qui fait réussir, avec la raison'),
+    title: str("Verbe d'action à l'infinitif + objet, 2 à 6 mots"),
+    text: str("Une ou deux phrases courtes : comment faire, sans répéter le titre ni ce que le média montre"),
+    keyPoints: strList("0 à 2 points clés de 3 à 8 mots, seulement s'ils font vraiment réussir l'étape ; le plus souvent aucun"),
     warningLevel: { type: 'string', enum: ['none', 'info', 'caution', 'danger'] },
     warningText: str('Texte de la mise en garde ; vide si aucune'),
     media: { type: 'array', items: mediaRef, description: '0 à 2 médias, le meilleur en premier' },
     durationSec: num('Durée approximative de l’étape en secondes ; 0 si inconnue'),
     energyTag: str('Fiche de cadenassage : repère du point d’isolement traité (E1, P1…) ; vide sinon'),
+    section: str('La phase où se trouve l’étape, 1 à 3 mots (« Démontage ») ; les étapes d’une même phase se suivent et portent le même nom ; vide si l’instruction a 8 étapes ou moins'),
+    checks: { type: 'array', items: checkSchema, description: 'Ce que l’opérateur doit relever à cette étape pour la trace : 0 à 2, le plus souvent aucun' },
   },
-  required: ['title', 'text', 'keyPoints', 'warningLevel', 'warningText', 'media'],
+  required: ['title', 'text', 'keyPoints', 'warningLevel', 'warningText', 'media', 'section'],
 }
 
 const lockoutSchema = {
@@ -104,9 +123,9 @@ export const instructionSchema = {
 export const stepEditSchema = {
   type: 'object',
   properties: {
-    title: str("Verbe d'action à l'infinitif + objet, 2 à 8 mots"),
-    text: str('Une seule action, phrases courtes'),
-    keyPoints: strList('0 à 3 points clés'),
+    title: str("Verbe d'action à l'infinitif + objet, 2 à 6 mots"),
+    text: str('Une ou deux phrases courtes'),
+    keyPoints: strList('0 à 2 points clés courts'),
     warningLevel: { type: 'string', enum: ['none', 'info', 'caution', 'danger'] },
     warningText: str('Texte de la mise en garde ; vide si aucune'),
     explanation: str('Ce que tu as changé, en une phrase'),
@@ -161,7 +180,7 @@ export const annotationSchema = {
         type: 'object',
         properties: {
           label: str('Ce que la marque montre, 1 à 4 mots'),
-          shape: { type: 'string', enum: ['circle', 'rect', 'arrow'] },
+          shape: { type: 'string', enum: ['circle', 'rect', 'arrow', 'measure'], description: 'measure : une distance, d’un bout à l’autre de la boîte (en largeur si la boîte est plus large que haute)' },
           box: { type: 'array', items: { type: 'number' }, description: '[ymin, xmin, ymax, xmax] normalisés de 0 à 1000' },
           color: { type: 'string', enum: ['red', 'orange', 'yellow', 'green', 'blue', 'white', 'black'], description: 'Rouge par défaut ; la couleur demandée sinon' },
         },
@@ -210,8 +229,8 @@ export const standardSchema = {
 export const visualSchema = {
   type: 'object',
   properties: {
-    title: str('Titre court du schéma, 2 à 6 mots'),
-    html: str('La page HTML complète et autonome'),
+    title: str('Titre court du schéma, 2 à 5 mots'),
+    html: str('La page HTML complète et autonome : le dessin seul, sans en-tête ni texte d’explication'),
   },
   required: ['title', 'html'],
 }

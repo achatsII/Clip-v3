@@ -1,5 +1,6 @@
 'use client'
 
+import { SectorList } from '@/components/PlacePicker'
 import { useQueryClient } from '@tanstack/react-query'
 import { MapPin, Plus, Printer, QrCode, Search } from 'lucide-react'
 import Link from 'next/link'
@@ -14,7 +15,7 @@ import { Modal } from '@/components/ui/Modal'
 import { EmptyState, ErrorState, SkeletonRows, errorText } from '@/components/ui/States'
 import { PageHeader } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
-import { qk, useInstructions, useStations } from '@/hooks/queries'
+import { qk, useStationCounts, useStations } from '@/hooks/queries'
 import { useBilling, useLimit } from '@/lib/billing/state'
 import { locale, useMessages } from '@/lib/i18n'
 import { nowIso, T } from '@/lib/model/repo'
@@ -25,12 +26,12 @@ import { normalizeText } from '@/lib/util/cn'
 const KINDS: StationKind[] = ['poste', 'equipement', 'zone']
 
 export default function StationsPage() {
-  const { data, can } = useSession()
+  const { data, can, org } = useSession()
   const t = useMessages()
   const qc = useQueryClient()
   const toast = useToast()
   const stations = useStations()
-  const instructions = useInstructions()
+  const perStation = useStationCounts()
   const { openPaywall } = useBilling()
   const limit = useLimit('stations', stations.data?.length)
   const [open, setOpen] = useState(false)
@@ -38,11 +39,7 @@ export default function StationsPage() {
   const [form, setForm] = useState({ name: '', code: '', kind: 'poste' as StationKind, area: '' })
   const [busy, setBusy] = useState(false)
 
-  const counts = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const d of instructions.data ?? []) if (d.json_data.publishedVersion) for (const s of d.json_data.stationIds) m.set(s, (m.get(s) ?? 0) + 1)
-    return m
-  }, [instructions.data])
+  const counts = perStation.data ?? new Map<string, number>()
 
   const list = useMemo(() => {
     const q = normalizeText(query)
@@ -63,7 +60,7 @@ export default function StationsPage() {
     if (!form.name.trim()) return
     setBusy(true)
     try {
-      await data.insert<Station>(T.station, { name: form.name.trim(), code: form.code.trim() || undefined, kind: form.kind, area: form.area.trim() || undefined, linkMode: 'focus', createdAt: nowIso() }, form.name.trim())
+      await data.insert<Station>(T.station, { name: form.name.trim(), code: form.code.trim() || undefined, kind: form.kind, area: form.area.trim() || undefined, linkMode: 'focus', createdAt: nowIso(), ...(org.json_data.notify?.sealed ? { notifySeal: org.json_data.notify.sealed } : {}) }, form.name.trim())
       await qc.invalidateQueries({ queryKey: qk.stations })
       toast.success(t.stations.list.created, t.stations.list.createdHint)
       setOpen(false)
@@ -179,7 +176,9 @@ export default function StationsPage() {
           </div>
           <div>
             <Label htmlFor="st-area" hint={t.stations.create.optional}>{t.stations.create.area}</Label>
-            <Input id="st-area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder={t.stations.create.areaPlaceholder} />
+            {/* Les secteurs déjà nommés sont proposés : pas deux façons d'écrire « Usinage ». */}
+            <Input id="st-area" list="sectors" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder={t.stations.create.areaPlaceholder} />
+            <SectorList stations={stations.data ?? []} />
           </div>
         </div>
       </Modal>

@@ -84,3 +84,12 @@ export async function fetchProfile(): Promise<Profile> {
 export async function updateProfile(input: { fullname?: string; company?: string; avatar_url?: string }): Promise<void> {
   await gateway.call('/api/v1/auth/user/profile', { method: 'PUT', body: input })
 }
+
+/**
+ * Supprime pour de bon le compte de la personne connectée (exigence d'Apple) : la passerelle révoque
+ * ses sessions et efface le compte. Les instructions de l'usine restent à l'équipe. Après coup, le
+ * jeton ne vaut plus rien : on vide le stockage sans tenter de rafraîchir.
+ */
+export async function deleteAccount(): Promise<void> {
+  await gateway.call<{ success?: boolean }>('/api/v1/auth/user/delete', { method: 'DELETE', headers: { 'x-application': APP_IDENTIFIER } })
+}

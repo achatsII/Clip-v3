@@ -7,6 +7,11 @@
  */
 
 export const WATCH_MS = 8_000
+/**
+ * Direct branché, une vérification lente quand même : l'autre appareil peut avoir perdu le sien
+ * (ses annonces n'arrivent plus) ; on voit alors ses changements en moins de 20 s.
+ */
+export const WATCH_LIVE_MS = 20_000
 /** Ce que la lecture regarde en arrière : assez pour tolérer une horloge d'appareil décalée. */
 export const WATCH_WINDOW_MS = 6 * 3600_000
 

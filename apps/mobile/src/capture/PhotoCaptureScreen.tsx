@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera'
 import * as Haptics from 'expo-haptics'
 import { useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { GestureDetector } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -17,8 +17,9 @@ import { useBackAction } from './backAction'
 import { captureController, type ActiveCapture } from './controller'
 import { PermissionPanel } from './PermissionPanel'
 import { ShutterButton } from './ShutterButton'
+import { previewFrame, useCameraLens } from './framing'
 import { usePinchZoom } from './usePinchZoom'
-import { ZoomReset } from './ZoomReset'
+import { ZoomPresets } from './ZoomPresets'
 import { useStrings } from '../i18n'
 
 /**
@@ -39,7 +40,9 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
   const nextKey = useRef(1)
   const [taken, setTaken] = useState<Array<{ key: number; media?: CapturedMedia }>>([])
   const [picking, setPicking] = useState(false)
-  const { zoom, reset: resetZoom, gesture: pinch } = usePinchZoom()
+  const win = useWindowDimensions()
+  const lens = useCameraLens(facing)
+  const { range, magnification, zoom, setMagnification, reset: resetZoom, gesture: pinch } = usePinchZoom(lens.ultraWide)
 
   const maxCount = capture.payload.maxCount ?? 30
   const count = taken.length
@@ -144,9 +147,12 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
       <View style={styles.black}>
         <CameraView
           ref={cameraRef}
-          style={StyleSheet.absoluteFill}
+          style={previewFrame(win, insets.top + 64, 4 / 3)}
           mode="picture"
+          ratio="4:3"
           facing={facing}
+          selectedLens={lens.selectedLens}
+          onAvailableLensesChanged={lens.onAvailableLensesChanged}
           enableTorch={torch}
           animateShutter
           zoom={zoom}
@@ -168,7 +174,10 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
             <IconButton
               icon="refresh-ccw"
               label={t.common.switchCamera}
-              onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+              onPress={() => {
+                resetZoom()
+                setFacing((f) => (f === 'back' ? 'front' : 'back'))
+              }}
               size={touch.min + 8}
             />
           </View>
@@ -195,7 +204,7 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
             <Text style={styles.hint}>{t.photo.hint}</Text>
           )}
           <View style={styles.zoomRow}>
-            <ZoomReset zoom={zoom} onReset={resetZoom} />
+            <ZoomPresets range={range} magnification={magnification} onPick={setMagnification} />
           </View>
           <View style={styles.controls}>
             <View style={[styles.side, styles.sideLeft]}>

@@ -5,14 +5,15 @@ export const instructions: typeof Fr = {
   list: {
     title: 'Instructions',
     count: (shown: number, total: number) => `${shown.toLocaleString('en-CA')} of ${total.toLocaleString('en-CA')}`,
+    total: (n: number) => (n === 1 ? '1 instruction' : n ? `${n.toLocaleString('en-CA')} instructions` : 'No instructions'),
     import: 'Import',
     new: 'New',
-    searchPlaceholder: 'Search a title, a station, a part number…',
+    searchPlaceholder: 'Search a title, a number, a station, a word in a step…',
     search: 'Search',
     searchByVoice: 'Search by voice',
     clear: 'Clear',
     scope: { mine: 'For me', all: 'All' },
-    filters: { all: 'All', published: 'Published', draft: 'Drafts', review: 'To approve' },
+    filters: { all: 'All', published: 'Published', draft: 'Drafts', review: 'To approve', renew: 'To review' },
     tiles: 'Tiles',
     rows: 'List',
     emptyTitle: 'Create your first instruction',
@@ -21,6 +22,22 @@ export const instructions: typeof Fr = {
     noMatchTitle: 'Nothing matches',
     noMatchText: 'Try another word, or remove a filter.',
     showAll: 'Show all',
+    more: 'Show more',
+    loadingMore: 'Loading…',
+    place: {
+      all: 'All places',
+      title: 'Where?',
+      search: 'Search a sector or a station',
+      everywhere: 'Everywhere',
+      sector: (n: number) => `${n.toLocaleString('en-CA')} station${n === 1 ? '' : 's'}`,
+      noSector: 'No sector',
+      none: 'No sector or station matches.',
+    },
+  },
+  renewal: {
+    choice: (months: number | null) => (months === null ? 'Never' : months === 12 ? '1 year' : months === 24 ? '2 years' : `${months.toLocaleString('en-CA')} months`),
+    soon: 'To review',
+    late: 'Review overdue',
   },
   card: {
     lockout: 'Lockout',
@@ -136,6 +153,7 @@ export const instructions: typeof Fr = {
     ppe: 'PPE changed',
     safety: 'warnings changed',
     lockout: 'lockout points changed',
+    quiz: 'training questions changed',
     formatting: 'Formatting only.',
     sentence: (parts: string[]) => {
       const text = parts.join(', ')

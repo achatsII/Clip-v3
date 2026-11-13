@@ -13,10 +13,15 @@ export interface MenuItem {
   hidden?: boolean
   disabled?: boolean
   hint?: ReactNode
+  /** Un trait le sépare des choix d'avant : un autre groupe d'actions. */
+  divider?: boolean
 }
 
-/** `bare` : le déclencheur fourni porte déjà son allure ; le bouton ne lui ajoute rien. */
-export function Menu({ items, label: givenLabel, trigger, align = 'right', bare = false }: { items: MenuItem[]; label?: string; trigger?: ReactNode; align?: 'left' | 'right'; bare?: boolean }) {
+/**
+ * `bare` : le déclencheur fourni porte déjà son allure ; le bouton ne lui ajoute rien.
+ * `side="up"` : le menu s'ouvre au-dessus (un bouton en bas de l'écran).
+ */
+export function Menu({ items, label: givenLabel, trigger, align = 'right', bare = false, side = 'down' }: { items: MenuItem[]; label?: string; trigger?: ReactNode; align?: 'left' | 'right'; bare?: boolean; side?: 'down' | 'up' }) {
   const t = useMessages()
   const label = givenLabel ?? t.common.moreActions
   const [open, setOpen] = useState(false)
@@ -49,7 +54,7 @@ export function Menu({ items, label: givenLabel, trigger, align = 'right', bare 
         {trigger ?? <MoreHorizontal className="h-5 w-5" />}
       </button>
       {open && (
-        <div className={cn('animate-pop-in absolute z-50 mt-2 w-64 overflow-hidden rounded-3xl border border-white/80 bg-white/95 p-1.5 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-850/95', align === 'right' ? 'right-0' : 'left-0')} role="menu">
+        <div className={cn('animate-pop-in absolute z-50 max-h-[min(70dvh,560px)] w-64 overflow-y-auto overscroll-contain rounded-3xl border border-white/80 bg-white p-1.5 shadow-[0_20px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-slate-850', align === 'right' ? 'right-0' : 'left-0', side === 'up' ? 'bottom-full mb-2' : 'mt-2')} role="menu">
           {visible.map((item) => (
             <button
               key={item.label}
@@ -62,6 +67,7 @@ export function Menu({ items, label: givenLabel, trigger, align = 'right', bare 
               }}
               className={cn(
                 'flex min-h-11 w-full items-center gap-3 rounded-2xl px-3 py-2 text-left text-sm font-bold disabled:opacity-50',
+                item.divider && 'relative mt-2 before:absolute before:inset-x-3 before:-top-1 before:h-px before:bg-slate-900/10 dark:before:bg-white/10',
                 item.danger ? 'text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10' : 'text-slate-700 hover:bg-slate-900/5 dark:text-slate-200 dark:hover:bg-white/5',
               )}
             >

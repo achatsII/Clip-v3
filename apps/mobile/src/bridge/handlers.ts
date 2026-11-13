@@ -14,6 +14,7 @@ import { discardMedia, pendingMedia, toCapturedMedia } from '../media/mediaStore
 import { MAX_PICK_BYTES, pickFromLibrary, tooLarge } from '../media/pick'
 import { finalizeDocument } from '../media/pipeline'
 import { uploadMultipart, uploadPut } from '../media/upload'
+import { registerForPush } from '../push/push'
 import { connectStore, purchaseInStore, restoreInStore, storeEnabled, storeOffers } from '../store/store'
 import { BridgeError, cancelled } from './errors'
 import type { BridgeEvent, CapturedMedia } from './protocol'
@@ -154,6 +155,9 @@ export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandle
     },
 
     // L'achat dans le magasin : la capacité n'est annoncée que si le module est utilisable.
+    // Les avertissements sur le téléphone : la permission, puis le jeton push.
+    'push.register': () => registerForPush(),
+
     'store.connect': async ({ orgId }) => {
       if (!storeEnabled()) throw new BridgeError('unsupported', strings().errors.storeUnavailable)
       await connectStore(orgId)

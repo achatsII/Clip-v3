@@ -5,7 +5,8 @@
  * Il s'écrit dans la langue de l'instruction (`content.language`), pas dans celle de l'outil : les
  * titres que le lecteur des opérateurs a déjà viennent de ses mots, le reste du groupe `print`.
  */
-import { strings, type PlayerStrings } from '@/components/player/i18n'
+import { liveChecks } from '../model/checks'
+import { rangeText, strings, type PlayerStrings } from '@/components/player/i18n'
 import { LANGS, messagesIn, type Messages } from '../i18n'
 import { annotationsMarkup } from '../annotations/markup'
 import { layoutOf } from '../model/media'
@@ -62,6 +63,8 @@ function stepMediaBlock(s: Step, ratios: Record<string, number> | undefined, key
 
 export interface PrintMeta {
   branding: Branding
+  /** Le numéro de document (« IT-0042 »), en tête de la ligne. */
+  number?: string | null
   version: number | null
   publishedAt?: string | null
   approvedByName?: string | null
@@ -72,6 +75,26 @@ export interface PrintMeta {
   draft: boolean
   /** Largeur / hauteur de chaque image (par URL), lue avant l'impression : les annotations tombent juste. */
   ratios?: Record<string, number>
+  /** Les relevés s'impriment comme des cases à remplir (toggle `records`). */
+  records?: boolean
+}
+
+/** Les relevés d'une étape, à remplir à la main : une ligne pour la valeur, des cases pour cocher. */
+function checksBlock(s: Step, p: PlayerStrings): string {
+  const r = p.records
+  const box = '<span class="box"></span>'
+  const rows = liveChecks(s).map((c) => {
+    let field = ''
+    if (c.kind === 'measure') field = `<span class="fill"></span>${c.unit ? ` ${esc(c.unit)}` : ''}`
+    else if (c.kind === 'measures') field = Array.from({ length: c.count ?? 3 }, () => '<span class="fill"></span>').join(' ') + (c.unit ? ` ${esc(c.unit)}` : '')
+    else if (c.kind === 'checklist') field = (c.items ?? []).map((i) => `<br>${box}${esc(i.label)}`).join('')
+    else if (c.kind === 'yesno') field = `${box}${esc(r.yes)} ${box}${esc(r.no)}`
+    else if (c.kind === 'choice') field = (c.options ?? []).map((o) => `${box}${esc(o.label)}`).join(' ')
+    else if (c.kind === 'text') field = '<span class="fill wide"></span>'
+    const range = c.kind === 'measure' || c.kind === 'measures' ? rangeText(c, r) : null
+    return `<div class="ck"><b>${esc(c.label)}</b> ${field}${range ? `<small>${esc(range)}</small>` : ''}</div>`
+  })
+  return `<div class="checks"><p>${esc(r.title)}</p>${rows.join('')}</div>`
 }
 
 export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): string {
@@ -89,13 +112,16 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
   const steps = content.steps
     .map((s, i) => {
       const w = s.warning
-      return `<article class="step">
+      // Une section s'ouvre : son nom, en titre, sur toute la largeur.
+      const opens = !!s.section?.trim() && (i === 0 || content.steps[i - 1].section !== s.section)
+      return `${opens ? `<h2 class="section">${esc(s.section!.trim())}</h2>` : ''}<article class="step">
         ${stepMediaBlock(s, meta.ratios, String(i), words)}
         <div class="body">
           <h3><span class="n">${i + 1}</span>${esc(s.title)}</h3>
           ${w ? `<p class="warn ${w.level}"><b>${t.warning(esc(cat.warnings[w.level]))}</b> ${esc(w.text)}</p>` : ''}
           ${s.text ? `<p class="text">${esc(s.text)}</p>` : ''}
           ${s.keyPoints?.length ? `<ul class="kp">${s.keyPoints.map((k) => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
+          ${meta.records && liveChecks(s).length ? checksBlock(s, p) : ''}
         </div>
       </article>`
     })
@@ -132,7 +158,10 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .chip{display:inline-block;background:#e0f2fe;color:#075985;border-radius:8px;padding:4px 8px;margin:0 6px 6px 0;font-size:12px;font-weight:800}
 .safety{background:#fff1f2;border-color:#fecdd3}.safety li{font-weight:700}
 .steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.steps .section{grid-column:1/-1;margin:10px 0 0;font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#0056D6;break-after:avoid;page-break-after:avoid}
 .step{border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
+.checks{margin-top:8px;border:1.5px solid #bfdbfe;border-radius:10px;padding:6px 8px}.checks p{margin:0 0 4px;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#0056D6}
+.ck{font-size:11px;margin:4px 0;line-height:1.6}.ck small{display:block;color:#64748b;font-size:9px}.fill{display:inline-block;width:70px;border-bottom:1.5px solid #334155;height:12px;vertical-align:bottom}.fill.wide{width:150px}.box{display:inline-block;width:10px;height:10px;border:1.5px solid #334155;border-radius:2px;margin:0 3px 0 6px;vertical-align:-1px}
 .media{position:relative;background:#0f172a;display:flex;justify-content:center}.frame{position:relative}.frame img{width:100%;height:100%;display:block}
 .ann{position:absolute;inset:0;container-type:inline-size}
 .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:3px;background:#0f172a}.tile{position:relative}.tile.do{outline:3px solid #10b981;outline-offset:-3px}.tile.dont{outline:3px solid #f43f5e;outline-offset:-3px}
@@ -154,7 +183,7 @@ ${meta.draft ? `<div class="draft">${t.draft}</div>` : ''}
   <div class="t">
     <div class="eyebrow">${esc(meta.branding.orgName)} · ${esc(cat.kinds[content.kind].label)} · ${esc((cat.categories as Record<string, { label: string }>)[content.category]?.label ?? '')}</div>
     <h1>${esc(content.title)}</h1>
-    <div class="meta">${meta.version ? t.version(meta.version, esc(date)) : t.printedOn(esc(date))}${meta.approvedByName ? ` · ${t.approvedBy(esc(meta.approvedByName))}` : ''}${meta.stationNames.length ? ` · ${t.stations(meta.stationNames.map(esc).join(', '))}` : ''}${content.durationMin ? ` · ${t.minutes(content.durationMin)}` : ''}${content.frequency ? ` · ${esc(content.frequency)}` : ''}</div>
+    <div class="meta">${meta.number ? `<b>${esc(meta.number)}</b> · ` : ''}${meta.version ? t.version(meta.version, esc(date)) : t.printedOn(esc(date))}${meta.approvedByName ? ` · ${t.approvedBy(esc(meta.approvedByName))}` : ''}${meta.stationNames.length ? ` · ${t.stations(meta.stationNames.map(esc).join(', '))}` : ''}${content.durationMin ? ` · ${t.minutes(content.durationMin)}` : ''}${content.frequency ? ` · ${esc(content.frequency)}` : ''}</div>
     ${content.summary ? `<p class="text">${esc(content.summary)}</p>` : ''}
   </div>
   ${meta.qrSvg ? `<div class="qr">${meta.qrSvg}<div>${t.upToDate}</div></div>` : ''}

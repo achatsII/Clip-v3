@@ -56,6 +56,8 @@ function SharedInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; on
       deps={{ data, ai: canReadAloud(link.permissions) ? aiApi(client) : null, files: filesApi(client) }}
       onExit={() => setClosed(true)}
       exitLabel={(words) => words.close}
+      canRecord={!!link.scope?.resources.some((r) => r.data_type === T.execution && r.actions.includes('insert'))}
+      notifyLink={uuid}
     />
   )
 }

@@ -8,6 +8,8 @@ export const shell = {
     stations: 'Postes',
     feedback: 'Retours',
     stats: 'Statistiques',
+    team: 'Équipe',
+    records: 'Registre',
     import: 'Importer des documents',
     billing: 'Abonnement et crédits',
     settings: 'Réglages',
@@ -17,6 +19,15 @@ export const shell = {
   account: 'Mon compte',
   appearance: 'Apparence',
   signOut: 'Se déconnecter',
+  /** L'accord avant le premier envoi à l'IA (exigence d'Apple). */
+  aiConsent: {
+    title: 'Avant d’utiliser l’IA',
+    body: 'Pour rédiger et modifier vos instructions, CLIP envoie vos photos, vidéos, notes vocales et textes à des services d’intelligence artificielle de Google et d’OpenAI, par la plateforme d’Intelligence Industrielle.',
+    more: 'Rien n’est envoyé sans votre accord. Vous pourrez le retirer dans Réglages › Données.',
+    privacy: 'Politique de confidentialité',
+    accept: 'J’accepte',
+    refuse: 'Pas maintenant',
+  },
   /** Vos modifications sur un autre appareil, pendant que celui-ci est ailleurs dans l'app. */
   live: {
     editingElsewhere: (title: string, device: 'app' | 'web') => `Vous modifiez ${title ? `« ${title} »` : 'une instruction'} sur ${device === 'app' ? 'l’app mobile' : 'un autre ordinateur'}`,

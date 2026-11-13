@@ -57,6 +57,28 @@ describe('répondre aux questions de l’IA', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('une question déjà vérifiée quitte la liste ; la dernière fait partir les réponses déjà données', () => {
+    const onApply = vi.fn()
+    const onClose = vi.fn()
+    let list = [...questions]
+    const onChecked = vi.fn((q: string) => {
+      list = list.filter((x) => x !== q)
+    })
+    const view = render(<QuestionsDialog open questions={list} choices={choices} onClose={onClose} onApply={onApply} onChecked={onChecked} />)
+    const rerender = () => view.rerender(<QuestionsDialog open questions={list} choices={choices} onClose={onClose} onApply={onApply} onChecked={onChecked} />)
+    // La première a sa réponse ; la deuxième est déjà vérifiée : la troisième prend sa place.
+    fireEvent.click(screen.getByRole('button', { name: 'Oui' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Suivant' }))
+    fireEvent.click(screen.getByRole('button', { name: /C’est déjà vérifié/ }))
+    rerender()
+    expect(onChecked).toHaveBeenCalledWith('Quel couple de serrage ?')
+    expect(screen.getByText('Le carter se remet-il avant l’essai ?')).toBeTruthy()
+    // La dernière, vérifiée elle aussi : la réponse donnée part, sans les questions réglées.
+    fireEvent.click(screen.getByRole('button', { name: /C’est déjà vérifié/ }))
+    expect(onApply).toHaveBeenCalledWith([{ question: 'Faut-il porter des gants ?', answer: 'Oui' }])
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it('l’assistant reçoit chaque question avec sa réponse', () => {
     const text = messages().editor.page.questions.request([{ question: 'Quel couple de serrage ?', answer: '25 N·m' }])
     expect(text).toContain('1. Quel couple de serrage ? → 25 N·m')
