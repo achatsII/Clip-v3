@@ -48,6 +48,7 @@ import { LockBadge } from '@/components/billing/Billing'
 import { useBilling, useEntitlement, useGate, useLimit } from '@/lib/billing/state'
 import { useRealtimeAvailable, useToggle } from '@/lib/toggles'
 import { useImmersive } from '@/lib/ui/immersive'
+import { useEditorView, type EditorView } from '@/lib/ui/editorView'
 import { inNativeShell } from '@/lib/bridge/native'
 import { deviceId, onRealtime, publishRealtime, useRealtimeState, writtenBy } from '@/lib/realtime/client'
 import { changedSteps, followStep, readVersion, remoteDraftAction } from '@/lib/realtime/liveDraft'
@@ -81,8 +82,9 @@ import { AgentPanel, type AgentRequest } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
 import { InsertBlockDialog, MakeBlockDialog } from './BlockDialogs'
 import { countUsing, detachBlock, propagateBlock, removeBlock } from '@/lib/model/blocks'
-import { LockoutEditor } from './LockoutEditor'
-import { MetaCard, StationPicker } from './MetaCard'
+import { FormEditor } from './FormEditor'
+import { InstructionFields } from './InstructionFields'
+import { StationPicker } from './MetaCard'
 import { QuestionsDialog, type QuestionAnswer } from './QuestionsDialog'
 import { QuizDialog } from './QuizDialog'
 import { cleanQuiz } from '@/lib/model/training'
@@ -390,10 +392,35 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   // L'éditeur prend tout l'écran : la barre et la navigation de l'app s'effacent.
   useImmersive()
 
+  // Deux façons de modifier, retenues sur l'appareil (toggle `editorViews`) : « Comme au poste » et
+  // « Fiche ». Changer de vue garde l'étape ; la fiche l'ouvre directement.
+  const viewsToggle = useToggle('editorViews')
+  const [view, saveView] = useEditorView(viewsToggle)
+  const switched = useRef(false)
+  const chooseView = (v: EditorView) => {
+    switched.current = true
+    saveView(v)
+  }
+  // La fiche va où l'éditeur l'amène : l'étape d'un lien (`?etape=`), celle que l'assistant change,
+  // ou l'instruction entière (null).
+  const [formFocus, setFormFocus] = useState<{ stepId: string | null; key: number } | null>(() => (params.get('etape') ? { stepId: params.get('etape'), key: 0 } : null))
+  /** L'aperçu : le lecteur du poste. Au retour, l'éditeur revient à la même étape. */
+  const openPreview = () => {
+    if (step) {
+      const q = new URLSearchParams(window.location.search)
+      q.set('etape', step.id)
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}?${q}`)
+    }
+    router.push(`/instructions/${doc._id}/lire?apercu=1`)
+  }
+  /** Les infos de l'instruction : une fenêtre dans « Comme au poste », son panneau dans la fiche. */
+  const openInfo = () => (viewsToggle && view === 'form' ? setFormFocus({ stepId: null, key: Date.now() }) : setDialog('info'))
+
   // L'assistant amène l'écran à l'étape qu'il modifie, et l'entoure pendant qu'il travaille.
   const [agentStep, setAgentStep] = useState<string | null>(null)
   const [agentOpen, setAgentOpen] = useState(false)
   const focusStep = useCallback((id: string | null) => {
+    setFormFocus({ stepId: id, key: Date.now() })
     if (!id) {
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
@@ -630,10 +657,10 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const publication = `${instr.block ? `${t.blocks.chip} · ` : instr.number ? `${instr.number} · ` : ''}${inReview ? tp.status.review : !instr.publishedVersion ? tp.status.draft : isDirty ? tp.status.unpublished : tp.status.published(instr.publishedVersion)}`
   const status = liveLabel ?? (saveState === 'saved' ? `${publication} · ${saveLabel}` : saveLabel)
 
-  // Tout ce qui touche l'instruction entière, rangé dans son « … ».
-  const menu: MenuItem[] = [
-    { label: isBlock ? t.blocks.info : tp.info.menu, icon: <Info className="h-4 w-4" />, onClick: () => setDialog('info') },
-    { label: tp.menu.test, icon: <Eye className="h-4 w-4" />, onClick: () => router.push(`/instructions/${doc._id}/lire?apercu=1`) },
+  // L'aperçu : l'œil de l'en-tête quand on a le choix des vues ; sinon, dans le « … ».
+  const previewItem: MenuItem = { label: viewsToggle ? t.editor.views.preview : tp.menu.test, icon: <Eye className="h-4 w-4" />, onClick: openPreview }
+  // Tout ce qui touche l'instruction entière : rangé dans son « … » ; à découvert dans la fiche.
+  const actions: MenuItem[] = [
     { label: tp.menu.share, icon: <Share2 className="h-4 w-4" />, onClick: () => setDialog('share'), hidden: isBlock },
     { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle || isBlock, hint: translations === 'locked' ? <LockBadge /> : undefined },
     // Les blocs communs : faire un bloc de quelques étapes (il se publie tout de suite), ou en insérer un.
@@ -699,6 +726,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       },
     },
   ]
+  const menu: MenuItem[] = [{ label: isBlock ? t.blocks.info : tp.info.menu, icon: <Info className="h-4 w-4" />, onClick: openInfo }, ...(viewsToggle ? [] : [previewItem]), ...actions]
+  const tools: MenuItem[] = [previewItem, ...actions]
 
   // Sous l'en-tête, seulement quand il y a lieu : une modification en même temps ailleurs, l'approbation.
   const renewal = renewalToggle && !readOnly && !renewedAt ? renewalState(instr) : 'none'
@@ -846,38 +875,58 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setSelected(next[Math.max(0, idx - 1)]?.id ?? null)
   }
 
+  // Ce que les deux vues reçoivent : la même instruction, les mêmes gestes.
+  const viewProps = {
+    content,
+    step,
+    index: idx,
+    sources,
+    readOnly,
+    agentWorking: !!step && agentStep === step.id,
+    agentOpen,
+    top: {
+      title: content.title,
+      status,
+      statusTone: liveLabel ? ('live' as const) : saveState === 'error' ? ('error' as const) : undefined,
+      primary,
+      menu,
+      onInfo: openInfo,
+      infoLabel: isBlock ? t.blocks.infoOpen : undefined,
+      questions: readOnly ? 0 : questions.length,
+      onQuestions: () => setQuestionsOpen(true),
+      views: viewsToggle ? { current: view, onChange: chooseView, onPreview: openPreview } : undefined,
+    },
+    notices: blockNotice || notices ? (
+      <>
+        {blockNotice}
+        {notices}
+      </>
+    ) : null,
+    badge: liveToggle ? <LiveBadge state={realtimeState} compact /> : null,
+    remoteNote: step && flash?.stepId === step.id ? flash.note : null,
+    feedbackNote,
+    feedbackByStep,
+    changes: inReview ? changes : undefined,
+    history,
+    onAssistant: () => setAgentOpen(true),
+    sections: sectionsToggle,
+    records: recordsToggle,
+    onSteps: (next: Step[]) => update({ ...content, steps: next }),
+    onChange: setStep,
+    onSelect: (id: string) => id && setSelected(id),
+    onInsertAfter: () => insertAfter(idx),
+    onAddEnd: () => insertAfter(steps.length - 1),
+    onMove: moveStep,
+    onDuplicate: duplicateStep,
+    onDelete: deleteStep,
+    onSourceAdded: addSource,
+  }
+  const fieldProps = { content, onChange: update, readOnly, block: isBlock, stationIds, stations, onStations: changeStations, onCreateStation: can('stations', 'write') ? createStation : undefined }
+
   return (
     <div>
       <Confetti show={celebrate} />
-      <StageEditor
-        content={content}
-        step={step}
-        index={idx}
-        sources={sources}
-        readOnly={readOnly}
-        agentWorking={!!step && agentStep === step.id}
-        agentOpen={agentOpen}
-        top={{ title: content.title, status, statusTone: liveLabel ? 'live' : saveState === 'error' ? 'error' : undefined, primary, menu, onInfo: () => setDialog('info'), infoLabel: isBlock ? t.blocks.infoOpen : undefined, questions: readOnly ? 0 : questions.length, onQuestions: () => setQuestionsOpen(true) }}
-        notices={blockNotice || notices ? <>{blockNotice}{notices}</> : null}
-        badge={liveToggle ? <LiveBadge state={realtimeState} compact /> : null}
-        remoteNote={step && flash?.stepId === step.id ? flash.note : null}
-        feedbackNote={feedbackNote}
-        feedbackByStep={feedbackByStep}
-        changes={inReview ? changes : undefined}
-        history={history}
-        onAssistant={() => setAgentOpen(true)}
-        sections={sectionsToggle}
-        records={recordsToggle}
-        onSteps={(next) => update({ ...content, steps: next })}
-        onChange={setStep}
-        onSelect={(id) => id && setSelected(id)}
-        onInsertAfter={() => insertAfter(idx)}
-        onAddEnd={() => insertAfter(steps.length - 1)}
-        onMove={moveStep}
-        onDuplicate={duplicateStep}
-        onDelete={deleteStep}
-        onSourceAdded={addSource}
-      />
+      {viewsToggle && view === 'form' ? <FormEditor {...viewProps} info={<InstructionFields layout="cards" {...fieldProps} />} tools={tools} focus={formFocus} startOn={switched.current || formFocus ? 'step' : 'list'} stationCount={stationIds.length} block={isBlock} /> : <StageEditor {...viewProps} />}
       <QuestionsDialog open={questionsOpen} questions={questions} choices={instr.generation?.choices ?? {}} onClose={() => setQuestionsOpen(false)} onApply={answerQuestions} onChecked={(q) => settleQuestions([q])} />
 
       {!readOnly && (
@@ -902,18 +951,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       )}
 
       <Modal open={dialog === 'info'} onClose={() => setDialog(null)} size="lg" title={isBlock ? t.blocks.infoTitle : tp.info.title}>
-        <div className="space-y-5">
-          <div>
-            <Label htmlFor="instruction-title">{isBlock ? t.blocks.name : tp.header.titleLabel}</Label>
-            <Input id="instruction-title" value={content.title} readOnly={readOnly} onChange={(e) => update({ ...content, title: e.target.value })} className="h-14 text-lg font-black" />
-          </div>
-          <div>
-            <Label htmlFor="instruction-summary">{tp.header.summaryLabel}</Label>
-            <Textarea id="instruction-summary" rows={2} value={content.summary} readOnly={readOnly} onChange={(e) => update({ ...content, summary: e.target.value })} placeholder={isBlock ? t.blocks.summaryPlaceholder : tp.header.summaryPlaceholder} />
-          </div>
-          <MetaCard embedded noStations={isBlock} content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={update} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
-          {content.kind === 'lockout' && content.lockout && <LockoutEditor value={content.lockout} readOnly={readOnly} onChange={(lockout) => update({ ...content, lockout })} />}
-        </div>
+        <InstructionFields layout="dialog" {...fieldProps} />
       </Modal>
       <ShareDialog open={dialog === 'share'} onClose={() => setDialog(null)} doc={doc} onLinked={refresh} />
       <HistoryDialog

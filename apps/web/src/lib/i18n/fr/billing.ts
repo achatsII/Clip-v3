@@ -218,6 +218,10 @@ export const billing = {
     /** Au retour d’un « achat » dans l’aperçu. */
     taken: (name: string) => `Aperçu : ${name} est maintenant actif`,
     takenHint: 'Une fois le paiement ouvert, c’est ici que l’achat se fera.',
+    /** Dans l’app mobile : l’aperçu ne vend rien, ni prix ni achat d’ailleurs. */
+    appHint: 'Rien ne s’achète dans cet aperçu : changez le plan, les modules ou les crédits en haut de la page, et toute l’app suit.',
+    moduleOff: 'Pas dans cet aperçu : ajoutez-le en haut de la page.',
+    seeWith: (name: string) => `Voir CLIP avec ${name}`,
   },
   /** Le conseiller d’achat : de temps en temps, l’offre qui sert l’usine (à l’accueil). */
   advisor: {

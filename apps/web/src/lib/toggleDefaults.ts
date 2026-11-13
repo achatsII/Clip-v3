@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'reports'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -49,9 +49,18 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // L'aperçu de la facturation : tant que le catalogue n'est pas publié, les plans, les modules,
   // les cadenas et les offres se montrent quand même (web), sans rien acheter ni débiter.
   billingPreview: true,
+  // Le même aperçu dans l'app mobile, sans aucun prix ni achat d'ailleurs (règles d'Apple et de Google).
+  // À couper (CLIP_TOGGLES) avant une soumission aux magasins tant que la vraie facturation n'y est pas.
+  billingPreviewApp: true,
   // Les rapports : un répertoire de modèles prêts (temps, qui a fait quoi, écarts, formation…), et
   // l'IA qui commente des chiffres déjà calculés.
   reports: true,
+  // Les façons de modifier une instruction : « Comme au poste » ou « Fiche » (la liste des étapes et
+  // tous les outils de chacune), retenue sur l'appareil, et l'Aperçu en un geste dans l'en-tête.
+  editorViews: true,
+  // La lecture au téléphone : le média à ses vraies proportions, qui laisse au texte la place qu'il
+  // lui faut ; côte à côte quand on tourne le téléphone ; « Tout sur une page » depuis le sommaire.
+  phoneReader: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -82,5 +91,8 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   academy: false,
   recordsPlus: false,
   billingPreview: false,
+  billingPreviewApp: false,
   reports: false,
+  editorViews: false,
+  phoneReader: false,
 }

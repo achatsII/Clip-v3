@@ -212,7 +212,7 @@ function Subscription() {
                         ))}
                       </ul>
                     </div>
-                    {platform && price && !current && (
+                    {platform && !preview && price && !current && (
                       <div className="relative mt-6">
                         <StoreBuy client={billingClient} plan={p} interval={interval} storePurchase={plans.data?.store_purchase} platform={platform} tone={highlight ? 'onColor' : 'light'} />
                       </div>
@@ -233,10 +233,12 @@ function Subscription() {
               })}
           </div>
         )}
-        {inShell && !canBuyInStore() && <p className="mt-4 text-sm font-bold text-slate-500">{t.billing.managedByAdmin}</p>}
+        {/* Dans l'app, l'aperçu ne vend rien : le plan se change en tête de la page. */}
+        {inShell && (preview ? <p className="mt-4 text-sm font-bold text-slate-500">{t.billing.preview.appHint}</p> : !canBuyInStore() && <p className="mt-4 text-sm font-bold text-slate-500">{t.billing.managedByAdmin}</p>)}
       </section>
 
-      {!inShell && modules.length > 0 && plans.data && (
+      {/* Les modules ne se vendent pas dans les magasins : dans l'app, seulement l'aperçu de ce qu'ils donnent. */}
+      {(!inShell || preview) && modules.length > 0 && plans.data && (
         <section>
           <div className="mb-4">
             <h2 className="text-xl font-black tracking-tight">{t.billing.modules.title}</h2>
@@ -244,7 +246,7 @@ function Subscription() {
           </div>
           <div className="grid gap-5 md:grid-cols-2">
             {modules.map((m) => (
-              <ModuleCard key={m.key} m={m} plans={plans.data!.plans} state={state} interval={interval} isAdmin={isAdmin} busy={!!busy && Object.values(m.addons).includes(busy)} onBuy={(code) => void buy(code)} />
+              <ModuleCard key={m.key} m={m} plans={plans.data!.plans} state={state} interval={interval} isAdmin={isAdmin} busy={!!busy && Object.values(m.addons).includes(busy)} onBuy={(code) => void buy(code)} inApp={inShell} />
             ))}
           </div>
         </section>

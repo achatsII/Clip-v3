@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, 
 import { annotationsMarkup } from '@/lib/annotations/markup'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { isFresh } from '@/lib/annotations/fresh'
+import { reportRatio } from '@/lib/media/ratio'
 import { playable } from '@/lib/media/reel'
 import { useMediaPlayback } from '@/lib/media/videoPool'
 import { VIDEO_MODES, setVideoMode, type VideoMode } from '@/lib/media/videoMode'
@@ -98,7 +99,12 @@ export function AnnotatedImage({ src, annotations = [], alt = '', className, fit
           src={src}
           alt={alt}
           draggable={false}
-          onLoad={(e) => setRatio(e.currentTarget.naturalWidth / Math.max(1, e.currentTarget.naturalHeight))}
+          onLoad={(e) => {
+            const r = e.currentTarget.naturalWidth / Math.max(1, e.currentTarget.naturalHeight)
+            setRatio(r)
+            // Le lecteur, au téléphone, donne au média la hauteur qu'il lui faut (src/lib/media/fit.ts).
+            reportRatio(src, r)
+          }}
           className="block h-full max-h-full w-full max-w-full rounded-[inherit] object-contain select-none"
         />
         <AnnotationLayer annotations={annotations} ratio={ratio} blink={blink} />
@@ -187,6 +193,7 @@ export function VideoSegment({
       v.play()?.catch(() => setPlaying(false))
     }
     const onMeta = () => {
+      if (v.videoWidth && v.videoHeight) reportRatio(url, v.videoWidth / v.videoHeight)
       if (v.currentTime < start - 0.3 || v.currentTime > end) v.currentTime = start
       if (auto && v.paused) play()
     }

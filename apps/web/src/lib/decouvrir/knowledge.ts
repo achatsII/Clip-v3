@@ -53,10 +53,14 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   français ou anglais (Réglages › Apparence).
 
 ## 1. Capturer (« Nouvelle instruction »)
-- « Montrez et expliquez comme à un nouvel employé. L'IA s'occupe de la rédaction. » Les gestes :
-  « Vidéo » (filmez le geste), « Photos » (pièces, réglages), « Note vocale » (expliquez à voix haute),
-  « Note » (une précision écrite), « Fichiers » (PDF, Word, vidéos). « De quoi s'agit-il ? » (facultatif)
-  dit la tâche en une phrase (« nettoyage des rails de la machine 1234, une fois par mois »).
+- « Montrez et expliquez comme à un nouvel employé. L'IA s'occupe de la rédaction. » Tout tient sur un
+  écran, au téléphone aussi (la page prend alors tout l'écran, comme l'éditeur) : « Filmer le geste » en
+  grand (« Montrez et expliquez à voix haute : c'est le plus rapide »), puis, sur une ligne, « Photos »
+  (pièces, réglages), « Note vocale » (expliquez à voix haute), « Note » (une précision écrite) et
+  « Fichiers » (PDF, Word, vidéos). « De quoi s'agit-il ? » (facultatif) dit la tâche en quelques mots
+  (« nettoyage des rails, machine 1234 »).
+- Une fois un média ajouté, ce qu'on a ajouté (« Vos notes ») passe en tête, « Ajouter » en propose
+  d'autres, et « Générer l'instruction » paraît dans une barre en bas.
 - On peut glisser des fichiers : vidéos d'une autre caméra, photos, anciennes instructions en PDF ou Word.
   « Médias déjà pris » reprend les médias des instructions précédentes, sans rien téléverser de nouveau.
 - Des médias légers : l'app mobile filme en 720p (environ 19 Mo la minute) et ramène les photos à 1920 px ;
@@ -89,9 +93,13 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Rien n'est publié sans un geste humain : l'IA propose, une personne relit et publie.
 
 ## 3. Retoucher, annoter, illustrer
-- L'éditeur montre l'étape telle que l'opérateur la verra, et chaque texte se modifie là où il est. À
-  l'ordinateur, le grand média à gauche, le texte à droite, la bande des étapes en bas ; au téléphone, les
-  étapes sous le pouce.
+- Deux façons de modifier, au choix, retenu sur l'appareil. « Comme au poste » : l'étape telle que
+  l'opérateur la verra, chaque texte modifié là où il est ; à l'ordinateur, le grand média à gauche, le
+  texte à droite, la bande des étapes en bas ; au téléphone, les étapes sous le pouce. « Fiche » : la liste
+  des étapes, et tous les outils de l'étape choisie à découvert (le texte et ses retouches par l'IA, le
+  média, la mise en garde, les points clés, les relevés, la section) ; à l'ordinateur, la liste à gauche ;
+  au téléphone, la liste, puis l'étape touchée. On glisse une étape par sa poignée pour la changer de place.
+- « Aperçu » (l'œil) : l'instruction comme l'opérateur la suivra, puis retour à la même étape.
 - « Assistant », le bouton de l'IA dans l'éditeur : « Simplifier l'étape », « Rendre plus clair », « Ajouter
   un point clé », « Vérifier la sécurité », ou une conversation pour demander n'importe quel changement
   (réécrire, ajouter une étape, « encercle le bouton vert sur la photo de l'étape 3 », dessiner un schéma,
@@ -107,9 +115,9 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Annuler et rétablir (Ctrl+Z) ; l'historique (versions publiées et points de retour du brouillon) pour
   revenir en arrière ; l'édition en direct entre appareils (ce qui change sur le téléphone s'affiche sur
   l'ordinateur) ; les sections d'une longue instruction (« Démontage », « Remontage »).
-- Le menu « … » de l'instruction : tester comme l'opérateur, partager (lien et code QR), traduire,
-  historique, exporter en PDF ou en JSON, dupliquer, nouvelle instruction avec ces médias, régénérer avec
-  l'IA, archiver.
+- Le menu « … » de l'instruction (dans la fiche, ces outils sont à découvert, en tuiles) : ses infos,
+  partager (lien et code QR), traduire, les questions de formation, historique, exporter en PDF ou en JSON,
+  dupliquer, nouvelle instruction avec ces médias, régénérer avec l'IA, archiver.
 - La fiche de cadenassage : équipement, emplacement, cadenas requis, chaque source d'énergie (électrique,
   pneumatique, hydraulique, mécanique, gravité, thermique, chimique, vapeur, eau) avec sa magnitude, son
   dispositif d'isolement, sa méthode de cadenassage et la vérification de l'absence d'énergie, le matériel
@@ -156,6 +164,10 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   les EPI, les outils et les mises en garde « Avant de commencer », l'extrait vidéo en boucle, une fois ou au
   toucher, le zoom sur les images, « Tout voir » pour toute l'instruction d'un coup, « Toutes les étapes »
   (le sommaire, par section).
+- Au téléphone, le média prend ses vraies proportions et laisse au texte la place de se lire sans
+  défiler : une photo cède un peu de place, jamais sous un peu plus du tiers de l'écran, et une vidéo garde
+  toute sa largeur. Tourné à l'horizontale, l'image et le texte vont côte à côte. « Tout voir » s'ouvre
+  aussi depuis le sommaire.
 - « Écouter » : l'étape est lue à voix haute.
 - « Pas clair ? » : l'opérateur signale en deux touchers ce qui ne va pas (« Pas clair », « Erreur »,
   « Danger », « Idée », « Merci »), avec un commentaire, son prénom et une photo s'il le veut. Le retour
