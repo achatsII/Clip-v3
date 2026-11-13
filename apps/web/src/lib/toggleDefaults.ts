@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'reports'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -49,6 +49,9 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // L'aperçu de la facturation : tant que le catalogue n'est pas publié, les plans, les modules,
   // les cadenas et les offres se montrent quand même (web), sans rien acheter ni débiter.
   billingPreview: true,
+  // Le même aperçu dans l'app mobile, sans aucun prix ni achat d'ailleurs (règles d'Apple et de Google).
+  // À couper (CLIP_TOGGLES) avant une soumission aux magasins tant que la vraie facturation n'y est pas.
+  billingPreviewApp: true,
   // Les rapports : un répertoire de modèles prêts (temps, qui a fait quoi, écarts, formation…), et
   // l'IA qui commente des chiffres déjà calculés.
   reports: true,
@@ -82,5 +85,6 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   academy: false,
   recordsPlus: false,
   billingPreview: false,
+  billingPreviewApp: false,
   reports: false,
 }

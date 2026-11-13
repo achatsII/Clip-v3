@@ -72,8 +72,11 @@ export function AskAdmin({ feature, targetName, offerId, primary, className }: {
   )
 }
 
-/** Un module sur la page Abonnement : ce qu'il donne, son prix pour le plan de l'usine, l'essai. */
-export function ModuleCard({ m, plans, state, interval, isAdmin, busy, onBuy }: { m: ModuleDef; plans: PublicPlan[]; state: BillingState | null; interval: 'monthly' | 'yearly'; isAdmin: boolean; busy: boolean; onBuy: (code: string) => void }) {
+/**
+ * Un module sur la page Abonnement : ce qu'il donne, son prix pour le plan de l'usine, l'essai. Dans
+ * l'app mobile (`inApp`, l'aperçu seulement), ni prix ni achat : un module ne se vend pas dans les magasins.
+ */
+export function ModuleCard({ m, plans, state, interval, isAdmin, busy, onBuy, inApp = false }: { m: ModuleDef; plans: PublicPlan[]; state: BillingState | null; interval: 'monthly' | 'yearly'; isAdmin: boolean; busy: boolean; onBuy: (code: string) => void; inApp?: boolean }) {
   const t = useMessages().billing
   const tx = t.modules[m.key]
   const owned = state?.features[m.feature] === true
@@ -104,7 +107,9 @@ export function ModuleCard({ m, plans, state, interval, isAdmin, busy, onBuy }: 
         </Link>
       )}
       {!owned &&
-        (!eligible ? (
+        (inApp ? (
+          <p className="mt-6 rounded-2xl bg-slate-900/5 p-3 text-center text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{eligible ? t.preview.moduleOff : t.modules.withPlans}</p>
+        ) : !eligible ? (
           <p className="mt-6 rounded-2xl bg-slate-900/5 p-3 text-center text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{t.modules.withPlans}</p>
         ) : !addon || !price ? (
           <p className="mt-6 text-sm font-bold text-slate-500">{t.modules.notOnSale}</p>

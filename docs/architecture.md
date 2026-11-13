@@ -795,7 +795,10 @@ manifeste plan par plan) et de ce que la personne choisit en tête de la page, d
 défaut, Usine avec tous les modules : rien ne se ferme pour personne. `billingClient` passe au client de
 l'aperçu (`createPreviewClient`) : « Choisir » ou « Essayer » change l'aperçu et revient à la page
 (`?essai-apercu=`, un message, puis l'adresse se nettoie) ; il n'y a ni paiement, ni portail, ni débit, et
-l'IA garde sa route d'avant. Pas d'aperçu dans la coquille : on y vend dans le magasin.
+l'IA garde sa route d'avant. Dans la coquille, l'aperçu demande aussi le toggle `billingPreviewApp` et
+n'y montre ni prix ni achat d'ailleurs : les plans et les modules sans prix, et « Voir CLIP avec … » dans
+la fenêtre d'un cadenas, qui change l'aperçu ; la vraie vente y reste celle du magasin (`StoreBuy`).
+On coupe ce toggle avant une soumission aux magasins tant que la vraie facturation n'y est pas branchée.
 
 **Le conseiller d'achat** (toggle `salesAdvisor`, `src/lib/billing/advisor.ts`). De temps en temps,
 l'offre qui sert vraiment l'usine, sur une carte de l'accueil (`OfferCard`), jamais au poste ni

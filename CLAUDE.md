@@ -233,14 +233,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   refus `Paywall`, qui ne conseille jamais le plan actuel, seulement le moins cher des plans qui
   donnent vraiment plus (`src/lib/billing/advice.ts`). Pas de route serveur : le navigateur appelle
   la passerelle avec le jeton de l'utilisateur.
-- **L'aperçu** (toggle `billingPreview`, web seulement) : tant que le drapeau est éteint, la page
+- **L'aperçu** (toggle `billingPreview` ; dans l'app mobile, aussi `billingPreviewApp`) : tant que le drapeau est éteint, la page
   Abonnement, les modules, les cadenas, les jauges, la pastille et le conseiller se montrent quand même,
   à partir d'une copie du manifeste (`src/lib/billing/preview.ts`, comparée par
   `tests/billing-preview.test.ts`). En tête de la page, « Voyez CLIP comme une usine abonnée » choisit
   le plan, les modules et le niveau de crédits, dans cet appareil (défaut : Usine et tous les modules,
   rien ne se ferme). « Choisir » ou « Essayer » change l'aperçu au lieu de payer : rien n'est débité,
   l'IA garde sa route d'avant, le serveur ne vérifie rien de plus. Le mode se lit par `useBillingMode()`
-  (`live`, `preview`, `off`) et le client `billingClient` passe à l'un ou l'autre.
+  (`live`, `preview`, `off` ; la décision dans `billingModeOf`) et le client `billingClient` passe à l'un
+  ou l'autre. Dans l'app mobile (Expo Go, TestFlight), l'aperçu ne montre aucun prix ni achat d'ailleurs
+  (règles des magasins) : plans et modules sans prix, « Voir CLIP avec … » au lieu de payer. On coupe
+  `billingPreviewApp` (`CLIP_TOGGLES`) avant une soumission aux magasins tant que la vraie facturation
+  n'y est pas.
 - Les leviers de vente, drapeau allumé. Une limite comptée par l'app (postes, rédacteurs, instructions
   publiées) a sa jauge `UsageMeter` (`src/components/billing/Usage.tsx`). La jauge s'allume à 80 %
   (`NEAR_RATIO`, `src/lib/billing/usage.ts`) et nomme le plan qui en donne plus. La fenêtre d'une
