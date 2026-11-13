@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardCheck, Download, Printer, Search, TriangleAlert, X } from 'lucide-react'
+import { ClipboardCheck, Download, Printer, TriangleAlert, X } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
@@ -10,6 +10,7 @@ import { Trends } from '@/components/records/Trends'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Segmented } from '@/components/ui/Field'
+import { SearchField } from '@/components/ui/SearchField'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState, errorText, ErrorState, SkeletonRows } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
@@ -26,7 +27,8 @@ import { executionSheet } from '@/lib/pdf/executionSheet'
 import { printHtml } from '@/lib/pdf/print'
 import { FALLBACK_TOGGLES } from '@/lib/toggleDefaults'
 import { usePublicConfig } from '@/lib/toggles'
-import { cn, formatDateTime, formatDuration, normalizeText, timeAgo } from '@/lib/util/cn'
+import { cn, formatDateTime, formatDuration, timeAgo } from '@/lib/util/cn'
+import { matchesTokens, SEARCH_FROM, searchTokens } from '@/lib/util/people'
 import { csvDate, csvSeparator, downloadCsv } from '@/lib/util/csv'
 
 /**
@@ -43,7 +45,8 @@ export default function RecordsPage() {
   const params = useSearchParams()
   const instructionId = params.get('instruction')
   const [onlyDeviations, setOnlyDeviations] = useState(params.get('ecarts') === '1')
-  const [query, setQuery] = useState('')
+  // `?q=` : un lien (un rapport, une personne) ouvre le registre déjà cherché.
+  const [query, setQuery] = useState(() => params.get('q') ?? '')
   const [open, setOpen] = useState<Doc<Execution> | null>(null)
   const stations = useStations()
   const allowed = can('feedback')
@@ -66,19 +69,16 @@ export default function RecordsPage() {
   if (config.isLoading) return <SkeletonRows />
   if (!on || !allowed) return <EmptyState icon={<ClipboardCheck className="h-7 w-7" />} title={t.title} description={t.emptyHint} />
 
-  const q = normalizeText(query.trim())
-  const rows = (list.data ?? []).filter((d) => {
-    if (!q) return true
-    const e = d.json_data
-    return normalizeText(`${e.instructionTitle} ${doneBy(e) ?? ''} ${stationName.get(e.stationId ?? '') ?? ''}`).includes(q)
-  })
+  const tokens = searchTokens(query)
+  const matches = (e: Execution) => matchesTokens(tokens, e.instructionTitle, doneBy(e), stationName.get(e.stationId ?? ''))
+  const rows = (list.data ?? []).filter((d) => matches(d.json_data))
   const forInstruction = instructionId ? list.data?.[0]?.json_data.instructionTitle : null
   // L'export prend tout le registre de la vue (jusqu'à 5 000 travaux), pas seulement les 300 affichés.
   async function exportCsv() {
     setExporting(true)
     try {
       const all = await listExecutions(data, { instructionId, deviations: onlyDeviations, limit: 5000 })
-      const docs = all.filter((d) => !q || normalizeText(`${d.json_data.instructionTitle} ${doneBy(d.json_data) ?? ''} ${stationName.get(d.json_data.stationId ?? '') ?? ''}`).includes(q))
+      const docs = all.filter((d) => matches(d.json_data))
       const csv = executionsCsv(docs, {
         head: [...t.exportHead],
         sep: csvSeparator(getLang()),
@@ -133,12 +133,7 @@ export default function RecordsPage() {
             {t.export}
           </Button>
         )}
-        {(list.data?.length ?? 0) > 8 && (
-          <div className="glass-panel flex flex-1 basis-full items-center gap-3 rounded-[24px] px-4 sm:basis-0">
-            <Search className="h-5 w-5 shrink-0 text-slate-400" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.search} aria-label={t.search} className="h-12 min-w-0 flex-1 bg-transparent text-[15px] font-bold focus:outline-none" />
-          </div>
-        )}
+        {((list.data?.length ?? 0) > SEARCH_FROM || !!query) && <SearchField value={query} onChange={setQuery} placeholder={t.search} className="flex-1 basis-full sm:basis-0" />}
       </div>
 
       {list.isLoading ? (

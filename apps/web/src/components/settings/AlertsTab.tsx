@@ -15,6 +15,7 @@ import { orgApi } from '@/lib/gateway/org'
 import { useLang, useMessages } from '@/lib/i18n'
 import { addPushToken, ensureContact, notifyEvent, setContactPrefs } from '@/lib/notify'
 import { cn, formatDate } from '@/lib/util/cn'
+import { PeopleChips } from '@/components/ui/PeopleChips'
 
 const org$ = orgApi(gateway)
 /** Le téléphone de cet appareil, une fois enregistré (pour savoir si l'interrupteur est allumé ici). */
@@ -177,16 +178,11 @@ function PlantAlerts() {
           ) : (
             <>
               {!recipients.length && <p className="mb-2 text-sm font-bold text-amber-700 dark:text-amber-300">{t.nobody}</p>}
-              <div className="flex flex-wrap gap-2">
-                {(members.data ?? []).map((m) => {
-                  const on = recipients.includes(m.user_id)
-                  return (
-                    <button key={m.user_id} type="button" aria-pressed={on} onClick={() => set({ recipients: on ? recipients.filter((x) => x !== m.user_id) : [...recipients, m.user_id] })} className={cn('btn-press h-11 rounded-2xl px-3 text-sm font-black', on ? 'bg-gradient-primary shadow-primary text-white' : 'glass-card text-slate-700 dark:text-slate-200')}>
-                      {m.full_name || m.email}
-                    </button>
-                  )
-                })}
-              </div>
+              <PeopleChips
+                people={(members.data ?? []).map((m) => ({ id: m.user_id, name: m.full_name || m.email, detail: m.email }))}
+                selected={recipients}
+                onToggle={(id) => set({ recipients: recipients.includes(id) ? recipients.filter((x) => x !== id) : [...recipients, id] })}
+              />
             </>
           )}
         </>

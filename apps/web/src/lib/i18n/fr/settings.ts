@@ -158,6 +158,8 @@ export const settings = {
   },
   /** L'onglet Membres : rôles, responsabilités, invitations, « Voir comme ». */
   members: {
+    search: 'Chercher un membre (nom ou courriel)',
+    allRoles: 'Tous',
     title: 'Membres et responsabilités',
     intro: 'Un rôle, quelques responsabilités : c’est fini. Les opérateurs au poste n’ont pas besoin de compte.',
     invite: 'Inviter',

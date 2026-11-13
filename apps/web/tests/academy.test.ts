@@ -97,11 +97,11 @@ describe('les rappels dans « À voir » et l’attestation', () => {
   ]
   const base = { userId: 'mel', instructions: [], feedback: [], executions: [], groups: [] }
 
-  it('rappelle à qui valide : échue depuis l’échéance, à venir dès un mois avant', () => {
+  it('rappelle à qui valide : échue depuis l’échéance, à venir dès un mois avant, et mène à la personne', () => {
     const items = buildInbox({ ...base, due, can: { approve: true, feedback: true } })
     expect(items.map((i) => [i.kind, i.title, i.text, i.at, i.href])).toEqual([
-      ['requalify', 'Ana', 'Presse P-12 : échue le 1 novembre 2026', '2026-11-01T00:00:00.000Z', '/equipe?vue=competences'],
-      ['requalify', 'Ben', 'Presse P-12 : avant le 1 décembre 2026', '2026-11-01T00:00:00.000Z', '/equipe?vue=competences'],
+      ['requalify', 'Ana', 'Presse P-12 : échue le 1 novembre 2026', '2026-11-01T00:00:00.000Z', '/equipe?vue=competences&q=Ana'],
+      ['requalify', 'Ben', 'Presse P-12 : avant le 1 décembre 2026', '2026-11-01T00:00:00.000Z', '/equipe?vue=competences&q=Ben'],
     ])
     expect(buildInbox({ ...base, due, can: { approve: false, feedback: true } })).toEqual([])
   })

@@ -13,7 +13,7 @@ import { useMessages } from '@/lib/i18n'
 import { MAX_GROUPS } from '@/lib/model/approvals'
 import { uid } from '@/lib/model/repo'
 import type { ApprovalGroup } from '@/lib/model/types'
-import { cn } from '@/lib/util/cn'
+import { PeopleChips } from '@/components/ui/PeopleChips'
 
 const org$ = orgApi(gateway)
 
@@ -77,17 +77,12 @@ export function ApprovalGroups() {
           ) : !signers.length ? (
             <p className="text-sm font-bold text-slate-500">{t.noApprovers}</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {!g.memberIds.length && <span className="flex h-11 items-center rounded-2xl bg-slate-900/5 px-3 text-sm font-black text-slate-500 dark:bg-white/10">{t.anyApprover}</span>}
-              {signers.map((m) => {
-                const on = g.memberIds.includes(m.user_id)
-                return (
-                  <button key={m.user_id} type="button" aria-pressed={on} onClick={() => toggle(g, m.user_id)} className={cn('btn-press h-11 rounded-2xl px-3 text-sm font-black', on ? 'bg-gradient-primary shadow-primary text-white' : 'glass-card text-slate-700 dark:text-slate-200')}>
-                    {m.full_name || m.email}
-                  </button>
-                )
-              })}
-            </div>
+            <PeopleChips
+              people={signers.map((m) => ({ id: m.user_id, name: m.full_name || m.email, detail: m.email }))}
+              selected={g.memberIds}
+              onToggle={(id) => toggle(g, id)}
+              prefix={!g.memberIds.length && <span className="flex h-11 items-center rounded-2xl bg-slate-900/5 px-3 text-sm font-black text-slate-500 dark:bg-white/10">{t.anyApprover}</span>}
+            />
           )}
         </div>
       ))}

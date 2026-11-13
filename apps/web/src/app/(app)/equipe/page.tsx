@@ -1,9 +1,10 @@
 'use client'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { KeyRound, MoreHorizontal, Pencil, Printer, Search, Trash2, UserPlus, Users } from 'lucide-react'
+import { KeyRound, MoreHorizontal, Pencil, Printer, Trash2, UserPlus, Users } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
+import { PlacePicker, placeStations, type Place } from '@/components/PlacePicker'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { useConfirm } from '@/components/ui/Confirm'
@@ -11,6 +12,7 @@ import { Input, Label, Textarea } from '@/components/ui/Field'
 import { Menu } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState, ErrorState, errorText, SkeletonRows } from '@/components/ui/States'
+import { SearchField } from '@/components/ui/SearchField'
 import { PageHeader } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { Academy, AcademyTeaser } from '@/components/team/Academy'
@@ -26,7 +28,8 @@ import { usePublicConfig } from '@/lib/toggles'
 import { FALLBACK_TOGGLES } from '@/lib/toggleDefaults'
 import { codesSheet } from '@/lib/pdf/codesSheet'
 import { printHtml } from '@/lib/pdf/print'
-import { cn, formatDate, initials, normalizeText } from '@/lib/util/cn'
+import { cn, formatDate, initials } from '@/lib/util/cn'
+import { matchesTokens, SEARCH_FROM, searchTokens } from '@/lib/util/people'
 import { mapPool } from '@/lib/util/pool'
 
 const SHIFTS: Shift[] = ['jour', 'soir', 'nuit', 'fds', 'rotation']
@@ -57,7 +60,11 @@ export default function TeamPage() {
   const stations = useStations()
   const canManage = can('stations', 'write')
   const ops = useQuery({ queryKey: KEY, queryFn: () => listOperators(data), enabled: on && canManage })
-  const [query, setQuery] = useState('')
+  // Des dizaines de personnes : chaque mot cherché (nom, équipe, poste), le quart, le lieu. `?q=` : un lien
+  // (« À voir », un rapport) ouvre la page déjà cherchée.
+  const [query, setQuery] = useState(() => params.get('q') ?? '')
+  const [shift, setShift] = useState<Shift | 'none' | 'all'>('all')
+  const [place, setPlace] = useState<Place>(null)
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Doc<Operator> | null>(null)
   // Les codes à remettre : montrés une seule fois, à imprimer.
@@ -70,9 +77,20 @@ export default function TeamPage() {
   if (!canManage) return <EmptyState icon={<Users className="h-7 w-7" />} title={t.title} description={t.adminOnly} />
 
   const refresh = () => void qc.invalidateQueries({ queryKey: KEY })
-  const q = normalizeText(query.trim())
-  const matches = (o: Doc<Operator>) => !q || normalizeText(`${o.json_data.name} ${o.json_data.team ?? ''}`).includes(q)
+  const tokens = searchTokens(query)
+  const placeIds = place ? new Set(placeStations(place, stations.data ?? [], words.instructions.list.place.noSector)) : null
+  const matches = (o: Doc<Operator>) =>
+    (shift === 'all' || (o.json_data.shift ?? 'none') === shift) &&
+    (!placeIds || o.json_data.stationIds.some((id) => placeIds.has(id))) &&
+    matchesTokens(tokens, o.json_data.name, o.json_data.team, ...o.json_data.stationIds.map((id) => stationName.get(id)))
   const list = (ops.data ?? []).filter(matches)
+  const filtered = tokens.length > 0 || shift !== 'all' || !!place
+  const shiftsHere = (['none', ...SHIFTS] as const).filter((s) => (ops.data ?? []).some((o) => (o.json_data.shift ?? 'none') === s))
+  const clearFilters = () => {
+    setQuery('')
+    setShift('all')
+    setPlace(null)
+  }
 
   async function newCode(o: Doc<Operator>) {
     setBusy(o._id)
@@ -125,10 +143,21 @@ export default function TeamPage() {
         </div>
       )}
 
-      {(ops.data?.length ?? 0) > 8 && (
-        <div className="glass-panel mb-4 flex items-center gap-3 rounded-[24px] px-4">
-          <Search className="h-5 w-5 shrink-0 text-slate-400" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.search} aria-label={t.search} className="h-14 min-w-0 flex-1 bg-transparent text-[15px] font-bold focus:outline-none" />
+      {(ops.data?.length ?? 0) > SEARCH_FROM && (
+        <div className="mb-4 space-y-3">
+          <SearchField value={query} onChange={setQuery} placeholder={t.search} />
+          <div className="flex flex-wrap items-center gap-2">
+            {shiftsHere.length > 1 && (
+              <div role="radiogroup" aria-label={t.shift} className="no-scrollbar flex max-w-full gap-2 overflow-x-auto">
+                {(['all', ...shiftsHere] as const).map((s) => (
+                  <button key={s} type="button" role="radio" aria-checked={shift === s} onClick={() => setShift(s)} className={cn('btn-press h-11 shrink-0 rounded-2xl px-3 text-sm font-black', shift === s ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card text-slate-700 dark:text-slate-200')}>
+                    {s === 'all' ? t.allShifts : s === 'none' ? t.withoutShift : t.shifts[s]}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!!stations.data?.length && <PlacePicker value={place} onChange={setPlace} stations={stations.data} />}
+          </div>
         </div>
       )}
 
@@ -147,6 +176,13 @@ export default function TeamPage() {
             </Button>
           }
         />
+      ) : filtered && !list.length ? (
+        <p className="glass-card rounded-[24px] p-6 text-center font-bold text-slate-500">
+          {words.common.noMatch}{' '}
+          <button type="button" onClick={clearFilters} className="font-black text-[var(--primary)]">
+            {words.common.showAll}
+          </button>
+        </p>
       ) : view === 'skills' ? (
         // L'Académie (module) : niveaux, validation sur le terrain, couverture ; sans elle, la matrice simple.
         academyOn && academy !== 'locked' && academy !== 'pending' ? (
@@ -159,7 +195,7 @@ export default function TeamPage() {
         )
       ) : (
         <>
-          <p className="label-caps mb-2 px-1 text-slate-500">{t.count(ops.data.length)}</p>
+          <p className="label-caps mb-2 px-1 text-slate-500">{filtered ? t.countOf(list.length, ops.data.length) : t.count(ops.data.length)}</p>
           <div className="space-y-2">
             {list.map((o) => {
               const op = o.json_data

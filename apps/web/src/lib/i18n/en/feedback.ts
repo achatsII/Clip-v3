@@ -3,6 +3,7 @@ import type { feedback as Fr } from '../fr/feedback'
 /** Les retours des opérateurs. */
 export const feedback: typeof Fr = {
   list: {
+    search: 'Search an instruction, a word, a person, a station',
     title: 'Operator feedback',
     subtitle: 'What the floor reports: fix the step in one tap, and the operator sees the new version.',
     open: (n: number) => `Open${n ? ` (${n.toLocaleString('en-CA')})` : ''}`,

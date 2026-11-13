@@ -2,6 +2,7 @@
 export const feedback = {
   /** La liste des retours à traiter. */
   list: {
+    search: 'Chercher une instruction, un mot, une personne, un poste',
     title: 'Retours des opérateurs',
     subtitle: 'Ce que le plancher signale : corrigez l’étape en un geste, l’opérateur verra la nouvelle version.',
     open: (n: number) => `À traiter${n ? ` (${n.toLocaleString('fr-CA')})` : ''}`,

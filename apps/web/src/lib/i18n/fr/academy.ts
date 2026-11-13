@@ -75,6 +75,7 @@ export const academy = {
     due: (station: string, date: string) => `${station} : avant le ${date}`,
     expired: (station: string, date: string) => `${station} : échue le ${date}`,
   },
+  onlyDue: 'Ne montrer que les personnes à revalider',
   dueCount: (n: number) => (n ? `${num(n)} qualification${n > 1 ? 's' : ''} à revalider` : 'Toutes les qualifications sont à jour'),
   revalidateSaved: 'Règle de revalidation enregistrée',
   revalidateHint: 'S’applique aux prochaines validations.',

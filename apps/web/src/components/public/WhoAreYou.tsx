@@ -4,21 +4,28 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Delete, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { PublicLoading, PublicMessage } from '@/components/public/PublicShell'
+import { SearchField } from '@/components/ui/SearchField'
 import type { DataApi, Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
 import { listOperators, orderForStation, saveStationSession, verifyCode, type StationSession } from '@/lib/model/operators'
 import type { Operator } from '@/lib/model/types'
 import { cn, initials } from '@/lib/util/cn'
+import { matchesTokens, SEARCH_FROM, searchTokens } from '@/lib/util/people'
+
+/** Sans recherche, au plus ce nombre de noms à la fois : au-delà, on cherche le sien. */
+const SHOWN = 24
 
 /**
  * « Qui êtes-vous ? » à la tablette du poste : on touche son nom (ceux du poste d'abord), puis on tape
  * son code à 4 chiffres sur un grand pavé. Le serveur vérifie le code. Si l'identification ne peut
  * pas se faire (lien d'avant, serveur muet), on laisse continuer : le travail ne s'arrête jamais.
+ * Une grande équipe : une grande recherche (chaque mot du nom), sans clavier qui s'ouvre tout seul.
  */
 export function WhoAreYou({ link, data, stationId, canIdentify, onDone, onSkip }: { link: string; data: DataApi; stationId: string | null; canIdentify: boolean; onDone: (s: StationSession) => void; onSkip: () => void }) {
   const t = useMessages().publicLinks.kiosk.who
   const ops = useQuery({ queryKey: ['k-operators'], queryFn: () => listOperators(data), enabled: canIdentify, staleTime: 5 * 60_000 })
   const [picked, setPicked] = useState<Doc<Operator> | null>(null)
+  const [query, setQuery] = useState('')
 
   if (!canIdentify) return <PublicMessage title={t.title} description={t.outdated} action={<SkipButton onSkip={onSkip} />} />
   if (ops.isLoading) return <PublicLoading />
@@ -27,15 +34,40 @@ export function WhoAreYou({ link, data, stationId, canIdentify, onDone, onSkip }
   if (!mine.length && !others.length) return <PublicMessage title={t.title} description={t.empty} action={<SkipButton onSkip={onSkip} />} />
   if (picked) return <PinPad link={link} operator={picked} onBack={() => setPicked(null)} onDone={onDone} onSkip={onSkip} />
 
+  const total = mine.length + others.length
+  const tokens = searchTokens(query)
+  const found = tokens.length ? [...mine, ...others].filter((o) => matchesTokens(tokens, o.json_data.name, o.json_data.team)) : []
+  // Les gens du poste d'abord ; les autres, en entier si l'équipe est petite, sinon par la recherche.
+  const main = mine.length ? mine : others.slice(0, SHOWN)
+  const rest = mine.length ? others.slice(0, Math.max(0, SHOWN - mine.length)) : []
+  const hidden = total - main.length - rest.length
   return (
     <main className="mx-auto min-h-dvh max-w-5xl px-4 pt-10 pb-16 sm:px-8">
       <h1 className="text-4xl font-black tracking-tighter sm:text-5xl">{t.title}</h1>
       <p className="mt-2 text-lg font-bold text-slate-500">{t.hint}</p>
-      <NameGrid people={mine.length ? mine : others} onPick={setPicked} />
-      {mine.length > 0 && others.length > 0 && (
+      {total > SEARCH_FROM && <SearchField size="station" value={query} onChange={setQuery} placeholder={t.search} className="mt-6" />}
+      {tokens.length ? (
+        found.length ? (
+          <NameGrid people={found} onPick={setPicked} />
+        ) : (
+          <div className="glass-card mt-6 rounded-[28px] p-6 text-center">
+            <p className="text-xl font-black">{t.noMatch}</p>
+            <p className="mt-1 font-bold text-slate-500">{t.noMatchHint}</p>
+            <div className="mt-5">
+              <SkipButton onSkip={onSkip} />
+            </div>
+          </div>
+        )
+      ) : (
         <>
-          <p className="label-caps mt-10 mb-3 text-slate-500">{t.others}</p>
-          <NameGrid people={others} onPick={setPicked} small />
+          <NameGrid people={main} onPick={setPicked} />
+          {rest.length > 0 && (
+            <>
+              <p className="label-caps mt-10 mb-3 text-slate-500">{t.others}</p>
+              <NameGrid people={rest} onPick={setPicked} small />
+            </>
+          )}
+          {hidden > 0 && <p className="mt-6 text-center text-lg font-bold text-slate-500">{t.more(hidden)}</p>}
         </>
       )}
     </main>

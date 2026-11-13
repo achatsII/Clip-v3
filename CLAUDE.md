@@ -107,6 +107,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `'fr-CA'` en dur ; règles dans `docs/architecture.md` §7). Design system « verre » de
   `src/app/globals.css` (tokens, `glass-*`), une seule action principale par écran, trois états pour
   toute donnée asynchrone, cibles d'au moins 44 px, mode sombre.
+- **Des dizaines de personnes** : toute liste de personnes (ou qui peut grandir) a sa recherche dès
+  8 éléments (`SearchField`, chaque mot cherché : `searchTokens`/`matchesTokens`,
+  `src/lib/util/people.ts`) et des filtres simples où ils servent (quart, lieu, rôle, « à revalider ») ;
+  choisir parmi beaucoup passe par `PeopleChips` (les choisies d'abord, 24 autres au plus, recherche
+  dès 12). À la tablette, « Qui êtes-vous ? » : les gens du poste d'abord, une grande recherche, jamais
+  de clavier qui s'ouvre tout seul. `?q=` ouvre l'Équipe ou le registre déjà cherchés.
 
 ## Pièges déjà rencontrés
 

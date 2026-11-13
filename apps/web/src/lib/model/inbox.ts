@@ -75,7 +75,7 @@ export function buildInbox(x: InboxInput): InboxItem[] {
     for (const d of x.due ?? []) {
       const until = Date.parse(d.validUntil)
       const start = new Date(d.expired ? until : until - DUE_SOON_DAYS * 86400_000).toISOString()
-      items.push({ id: `requalify:${d.operatorId}:${d.stationId}:${d.validUntil}`, kind: 'requalify', title: d.operatorName, text: (d.expired ? t.expired : t.due)(d.stationName, formatDate(d.validUntil)), at: start, href: '/equipe?vue=competences' })
+      items.push({ id: `requalify:${d.operatorId}:${d.stationId}:${d.validUntil}`, kind: 'requalify', title: d.operatorName, text: (d.expired ? t.expired : t.due)(d.stationName, formatDate(d.validUntil)), at: start, href: `/equipe?vue=competences&q=${encodeURIComponent(d.operatorName)}` })
     }
   }
 

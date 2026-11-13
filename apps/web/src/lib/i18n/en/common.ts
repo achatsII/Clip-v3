@@ -17,6 +17,13 @@ export const common: typeof Fr = {
   add: 'Add',
   remove: 'Remove',
   search: 'Search',
+  /** Clear a search; « Show all » resets a list's filters. */
+  clear: 'Clear',
+  showAll: 'Show all',
+  noMatch: 'Nothing matches this search.',
+  searchPeople: 'Search for a person',
+  /** Under a cut-off list: the others are found by searching. */
+  moreHidden: (n: number) => `+ ${n.toLocaleString('en-CA')} more: search for a name.`,
   loading: 'Loading',
   moreActions: 'More actions',
   qrCode: 'QR code',

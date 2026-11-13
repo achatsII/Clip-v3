@@ -15,6 +15,10 @@ export const team = {
   addFailed: 'Les personnes n’ont pas été ajoutées',
   codesLater: 'Les codes n’ont pas été donnés : « Donner un code » les donnera plus tard',
   count: (n: number) => `${num(n)} ${plural(n, 'personne', 'personnes')}`,
+  /** Une liste filtrée : « 12 personnes sur 140 ». */
+  countOf: (n: number, total: number) => `${num(n)} ${plural(n, 'personne', 'personnes')} sur ${num(total)}`,
+  allShifts: 'Tous les quarts',
+  withoutShift: 'Sans quart',
   empty: 'Personne pour l’instant',
   emptyHint: 'Ajoutez les personnes qui travaillent aux postes : elles se nommeront à la tablette avant de commencer.',
   search: 'Chercher une personne',

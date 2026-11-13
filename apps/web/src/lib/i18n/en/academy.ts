@@ -66,6 +66,7 @@ export const academy: typeof Fr = {
     due: (station: string, date: string) => `${station}: before ${date}`,
     expired: (station: string, date: string) => `${station}: expired on ${date}`,
   },
+  onlyDue: 'Only show the people to revalidate',
   dueCount: (n: number) => (n ? `${num(n)} qualification${n !== 1 ? 's' : ''} to revalidate` : 'All qualifications are up to date'),
   revalidateSaved: 'Revalidation rule saved',
   revalidateHint: 'Applies to the next sign-offs.',

@@ -3,10 +3,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, ExternalLink, Inbox, MessageSquareWarning, X } from 'lucide-react'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Segmented } from '@/components/ui/Field'
+import { SearchField } from '@/components/ui/SearchField'
 import { EmptyState, ErrorState, SkeletonRows, errorText } from '@/components/ui/States'
 import { PageHeader } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
@@ -16,6 +17,7 @@ import { FEEDBACK_KINDS } from '@/lib/model/catalog'
 import { nowIso, T } from '@/lib/model/repo'
 import type { FeedbackKind } from '@/lib/model/types'
 import { cn, timeAgo } from '@/lib/util/cn'
+import { matchesTokens, SEARCH_FROM, searchTokens } from '@/lib/util/people'
 
 export default function FeedbackPage() {
   const { data, profile, displayName } = useSession()
@@ -24,19 +26,20 @@ export default function FeedbackPage() {
   const toast = useToast()
   const [status, setStatus] = useState<'new' | 'done'>('new')
   const [kind, setKind] = useState<FeedbackKind | 'all'>('all')
+  // Des centaines de retours : chaque mot cherché dans l'instruction, le commentaire, qui et où.
+  const [query, setQuery] = useState('')
+  const words = useMessages()
   const feedback = useFeedback()
   const stations = useStations()
   const stationName = new Map((stations.data ?? []).map((s) => [s._id, s.json_data.name]))
 
-  const list = useMemo(
-    () =>
-      (feedback.data ?? [])
-        .filter((f) => (status === 'new' ? f.json_data.status === 'new' : f.json_data.status !== 'new'))
-        .filter((f) => kind === 'all' || f.json_data.kind === kind)
-        // Les dangers d'abord.
-        .sort((a, b) => Number(b.json_data.kind === 'danger') - Number(a.json_data.kind === 'danger')),
-    [feedback.data, status, kind],
-  )
+  const tokens = searchTokens(query)
+  const inStatus = (feedback.data ?? []).filter((f) => (status === 'new' ? f.json_data.status === 'new' : f.json_data.status !== 'new'))
+  const list = inStatus
+    .filter((f) => kind === 'all' || f.json_data.kind === kind)
+    .filter((f) => matchesTokens(tokens, f.json_data.instructionTitle, f.json_data.comment, f.json_data.authorName, f.json_data.stationId ? stationName.get(f.json_data.stationId) : null))
+    // Les dangers d'abord.
+    .sort((a, b) => Number(b.json_data.kind === 'danger') - Number(a.json_data.kind === 'danger'))
   const newCount = (feedback.data ?? []).filter((f) => f.json_data.status === 'new').length
 
   async function resolve(id: string, next: 'done' | 'dismissed') {
@@ -68,10 +71,18 @@ export default function FeedbackPage() {
           </button>
         ))}
       </div>
+      {inStatus.length > SEARCH_FROM && <SearchField value={query} onChange={setQuery} placeholder={t.search} className="mb-4" />}
       {feedback.isLoading ? (
         <SkeletonRows />
       ) : feedback.error ? (
         <ErrorState error={feedback.error} onRetry={() => feedback.refetch()} />
+      ) : !list.length && (tokens.length > 0 || kind !== 'all') ? (
+        <p className="glass-card rounded-[24px] p-6 text-center font-bold text-slate-500">
+          {words.common.noMatch}{' '}
+          <button type="button" onClick={() => { setQuery(''); setKind('all') }} className="font-black text-[var(--primary)]">
+            {words.common.showAll}
+          </button>
+        </p>
       ) : !list.length ? (
         <EmptyState
           icon={status === 'new' ? <Inbox className="h-7 w-7" /> : <MessageSquareWarning className="h-7 w-7" />}

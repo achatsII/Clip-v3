@@ -15,6 +15,13 @@ export const common = {
   add: 'Ajouter',
   remove: 'Retirer',
   search: 'Rechercher',
+  /** Effacer une recherche ; « Tout montrer » remet les filtres d’une liste. */
+  clear: 'Effacer',
+  showAll: 'Tout montrer',
+  noMatch: 'Rien ne correspond à cette recherche.',
+  searchPeople: 'Chercher une personne',
+  /** Sous une liste coupée : les autres se trouvent par la recherche. */
+  moreHidden: (n: number) => `+ ${n.toLocaleString('fr-CA')} autre${n > 1 ? 's' : ''} : cherchez un nom.`,
   loading: 'Chargement',
   moreActions: 'Plus d’actions',
   qrCode: 'Code QR',

@@ -16,6 +16,10 @@ export const team: typeof Fr = {
   addFailed: 'The people weren’t added',
   codesLater: 'Codes weren’t given: “Give a code” will give them later',
   count: (n: number) => `${num(n)} ${plural(n, 'person', 'people')}`,
+  /** A filtered list: « 12 people of 140 ». */
+  countOf: (n: number, total: number) => `${num(n)} ${n === 1 ? 'person' : 'people'} of ${num(total)}`,
+  allShifts: 'All shifts',
+  withoutShift: 'No shift',
   empty: 'Nobody yet',
   emptyHint: 'Add the people who work at the stations: they’ll pick their name on the tablet before starting.',
   search: 'Search for a person',

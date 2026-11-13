@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Award, Check, CircleDashed, Clock, Download, GraduationCap, Hourglass, Printer, RotateCcw } from 'lucide-react'
+import { Award, Check, CircleDashed, Clock, Download, GraduationCap, Hourglass, Printer, RotateCcw, X } from 'lucide-react'
 import Link from 'next/link'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
@@ -67,6 +67,8 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
   const [open, setOpen] = useState<{ op: Doc<Operator>; station: { id: string; name: string } } | null>(null)
   const [person, setPerson] = useState<Doc<Operator> | null>(null)
   const [cover, setCover] = useState<{ station: string; shift: ShiftKey; cell: CoverageCell } | null>(null)
+  // « N à revalider » se touche : la matrice ne garde que ces personnes.
+  const [onlyDue, setOnlyDue] = useState(false)
   const [now] = useState(() => Date.now())
   const active = useMemo(() => operators.filter((o) => o.json_data.active !== false), [operators])
 
@@ -86,7 +88,8 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
   if (!model) return <SkeletonRows />
   if (!model.cols.length) return <EmptyState icon={<GraduationCap className="h-7 w-7" />} title={t.empty} description={t.emptyHint} />
 
-  const rows = active.filter(query)
+  const dueIds = new Set(model.due.map((d) => d.operatorId))
+  const rows = active.filter(query).filter((o) => !onlyDue || dueIds.has(o._id))
   const months = revalidateMonths(org.json_data)
   const cov = coverage(active, model.cols.map((c) => c.id), model.standing)
 
@@ -108,9 +111,17 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
             { value: 'coverage', label: t.views.coverage },
           ]}
         />
-        <p className={cn('flex min-h-11 items-center gap-2 rounded-2xl px-4 text-sm font-black', model.due.length ? 'bg-orange-50 text-orange-900 dark:bg-orange-500/15 dark:text-orange-100' : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200')}>
+        <button
+          type="button"
+          aria-pressed={onlyDue}
+          disabled={!model.due.length}
+          onClick={() => setOnlyDue((v) => !v)}
+          title={model.due.length ? t.onlyDue : undefined}
+          className={cn('btn-press flex min-h-11 items-center gap-2 rounded-2xl px-4 text-sm font-black disabled:cursor-default', model.due.length ? 'bg-orange-50 text-orange-900 dark:bg-orange-500/15 dark:text-orange-100' : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200', onlyDue && 'ring-2 ring-orange-400')}
+        >
           {model.due.length ? <RotateCcw className="h-4 w-4" /> : <Check className="h-4 w-4" />} {t.dueCount(model.due.length)}
-        </p>
+          {onlyDue && <X className="h-4 w-4" aria-hidden />}
+        </button>
         <span className="flex-1" />
         {/* Les outils d'administration restent à l'ordinateur : au téléphone, la matrice d'abord. */}
         {can('settings', 'write') && (

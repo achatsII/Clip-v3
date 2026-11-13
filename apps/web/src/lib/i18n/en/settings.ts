@@ -151,6 +151,8 @@ export const settings: typeof Fr = {
     },
   },
   members: {
+    search: 'Search for a member (name or email)',
+    allRoles: 'All',
     title: 'Members and responsibilities',
     intro: 'One role, a few responsibilities: that’s it. Operators at the station don’t need an account.',
     invite: 'Invite',
