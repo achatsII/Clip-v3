@@ -352,7 +352,11 @@ navigation de l'app s'effacent (`useImmersive`, `src/lib/ui/immersive.ts`). Togg
   puis chaque étape par section, avec sa vignette et ce qui la distingue (mise en garde, relevés,
   retours, nouvelle ou modifiée, bloc) — et à droite ce qu'on a choisi. Au téléphone, la liste, puis
   l'étape touchée en entier ; sous le pouce, la précédente, la liste (« Étape 3 sur 12 ») et la
-  suivante. **Une étape** : en tête, sa place et ses gestes (monter, descendre, dupliquer, supprimer),
+  suivante. **Une étape se glisse par sa poignée** (à droite, à la souris comme au doigt : des
+  événements de pointeur, le glisser-déposer du navigateur ne marchant ni sur un bouton ni au doigt) ;
+  un trait montre où elle tombera, la liste défile près des bords, et elle rejoint la section où on
+  la lâche — au-dessus du titre d'une section, à la fin de celle d'avant (`placeStep`) ; les autres
+  gardent la leur. Une étape d'un bloc commun ne se glisse pas seule. **Une étape** : en tête, sa place et ses gestes (monter, descendre, dupliquer, supprimer),
   puis une carte par sujet — le texte (action, comment faire, et les retouches par l'IA), le média
   (`StepMediaEditor` ouvert : annoter, vidéo ou image, l'IA, retirer, verdict, légende, disposition),
   la mise en garde (aucune, bon à savoir, attention, danger ; le texte dans la couleur du poste), les

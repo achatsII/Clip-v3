@@ -278,6 +278,7 @@ export const editor: typeof Fr = {
     allSteps: 'All steps',
     moveUp: 'Move the step up',
     moveDown: 'Move the step down',
+    dragHint: 'Drag to move the step',
     text: 'What to do',
     action: 'Action',
     how: 'How to do it',

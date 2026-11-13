@@ -47,7 +47,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   en QA : le poste lit alors la vidéo d'origine.
 - **Deux façons de modifier** (toggle `editorViews`) : « Comme au poste » (l'étape telle qu'au poste,
   modifiée sur place) et « Fiche » (la liste des étapes, tous les outils de l'étape choisie à
-  découvert, en cartes ; au téléphone, la liste puis l'étape), retenues sur l'appareil
+  découvert, en cartes ; au téléphone, la liste puis l'étape ; une étape se glisse par sa poignée et
+  rejoint la section où on la lâche, `placeStep`), retenues sur l'appareil
   (`clip_pref_editor_view` ; sans choix, la fiche au bureau, le poste au téléphone). Une fonction
   nouvelle de l'éditeur existe dans les deux. L'Aperçu (l'œil) est le lecteur du poste, pas une vue.
   En-tête commun : `src/components/editor/EditorBar.tsx`.

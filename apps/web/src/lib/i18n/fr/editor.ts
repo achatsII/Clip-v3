@@ -299,6 +299,7 @@ export const editor = {
     allSteps: 'Toutes les étapes',
     moveUp: 'Monter l’étape',
     moveDown: 'Descendre l’étape',
+    dragHint: 'Glisser pour changer l’étape de place',
     text: 'Ce qu’il faut faire',
     action: 'Action',
     how: 'Comment faire',
