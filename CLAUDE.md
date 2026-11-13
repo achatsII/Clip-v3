@@ -25,6 +25,13 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   réécriture complète garde les champs qu'on ne connaît pas.
 - **Liens publics** (poste, instruction) : la portée se bâtit côté serveur dans
   `src/lib/server/scope.ts`, jamais à partir du navigateur. Un lien ne lit que `clip_published`.
+- **Espace Découvrir** (`/decouvrir`, [`docs/DECOUVRIR.md`](docs/DECOUVRIR.md)) : les vidéos et le conseiller
+  pour les prospects, à part de l'app (sa propre session, le cookie `clip_decouvrir` ; rien dans les données de
+  Clip). Public par défaut ; `DECOUVRIR_ACCES=sandboxes` le ferme derrière Sandboxes (`src/proxy.ts`,
+  `src/lib/decouvrir/server`), qui reçoit le suivi, les conversations et les besoins. Jamais de prix, de client réel
+  ni d'outil interne. Une fonction qui change dans Clip se reporte dans la base du conseiller
+  (`src/lib/decouvrir/knowledge.ts`, chaque phrase vérifiée) ; une vidéo tournée se publie par
+  `public/decouvrir/videos/<id>.json`, le MP4 au stockage, jamais dans git.
 - **Génération suivie partout** : elle tourne dans l'appareil qui la lance (`startGeneration`). Il
   écrit son état dans l'instruction (`generating` : étape, signe de vie toutes les 30 s ;
   `src/lib/ai/creation.ts`). Les autres appareils le lisent par une petite requête partagée

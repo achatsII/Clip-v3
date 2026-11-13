@@ -10,6 +10,7 @@ langue et signale ce qui cloche.
 - L'architecture, les données et le pipeline de génération : [`docs/architecture.md`](docs/architecture.md)
 - Le pont entre l'app web et la coquille mobile : [`docs/pont-natif.md`](docs/pont-natif.md)
 - L'offre (plans, crédits, opérations d'IA) : [`billing.manifest.yaml`](billing.manifest.yaml)
+- L'espace Découvrir des prospects (vidéos, conseiller, accès par Sandboxes) : [`docs/DECOUVRIR.md`](docs/DECOUVRIR.md)
 
 ## Le dépôt
 
@@ -88,6 +89,25 @@ cd apps/mobile && EXPO_PUBLIC_CLIP_WEB_URL=http://192.168.1.20:3000 npx expo sta
 Remplacez l'adresse par celle du poste qui fait tourner l'app web (pas `localhost` : le téléphone ne
 le verrait pas). Sans `EXPO_PUBLIC_CLIP_WEB_URL`, la coquille affiche la production
 (https://clip-v3.vercel.app). Les tests de la coquille : `cd apps/mobile && npm test`.
+
+## L'espace Découvrir
+
+`/decouvrir` montre Clip aux prospects : les vidéos du produit (seul le film de 75 secondes est tourné, les autres
+sont « Bientôt ») et un conseiller IA qui répond d'après une base de connaissance vérifiée. Il est public par défaut.
+Avec `DECOUVRIR_ACCES=sandboxes`, il n'ouvre qu'aux personnes à qui Intelligence Industrielle l'a ouvert dans
+Sandboxes, et tout ce qu'elles y font part à Sandboxes ; rien ne s'écrit dans les données de Clip. Ses variables,
+toutes côté serveur :
+
+| Variable | Rôle | Par défaut |
+|---|---|---|
+| `DECOUVRIR_ACCES` | `sandboxes` : l'accès passe par Sandboxes (lue au build : redéployer après un changement) | `ouvert` |
+| `SANDBOXES_URL`, `SANDBOXES_CLE` | L'API de Sandboxes et la clé de Clip (Sandboxes › Produits) | — (prospects refusés) |
+| `SANDBOXES_APP` | L'application des prospects à la Gateway | `sandboxes` |
+| `DECOUVRIR_GATEWAY_URL` | La Gateway des comptes des prospects (la production) | `NEXT_PUBLIC_GATEWAY_URL` |
+| `SESSION_SECRET` | Scelle le cookie de l'espace (32 caractères ou plus) | — |
+
+Comment ça marche, les gestes pour brancher Clip à Sandboxes et comment ajouter une vidéo :
+[`docs/DECOUVRIR.md`](docs/DECOUVRIR.md).
 
 ## Ce qui reste à faire avant la production
 
