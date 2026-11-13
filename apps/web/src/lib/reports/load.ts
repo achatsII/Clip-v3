@@ -14,17 +14,34 @@ import { listTrainings } from '../model/training'
 import type { Execution, Feedback, Published, UsageEvent } from '../model/types'
 import type { CardInfo, LibraryFacts, TrainingFacts } from './catalog'
 
+/** Ce qu'une requête Data rend au plus : la Gateway refuse un `limit` au-delà de 10 000 (400). */
+export const DATA_PAGE = 10_000
 /** Au-delà, la période est trop chargée pour tout lire : le rapport le dit. */
-export const EVENTS_CAP = 20_000
+export const EVENTS_CAP = 30_000
 
-export async function loadEvents(data: DataApi, since: string): Promise<{ events: UsageEvent[]; capped: boolean }> {
-  const docs = await data.filter<UsageEvent>(T.event, {
-    filter: { $and: [{ 'json_data.at': { $gte: since } }, { 'json_data.type': { $in: ['view', 'complete'] } }] },
-    projection: { 'json_data.type': 1, 'json_data.instructionId': 1, 'json_data.stationId': 1, 'json_data.version': 1, 'json_data.durationSec': 1, 'json_data.operatorId': 1, 'json_data.operatorName': 1, 'json_data.source': 1, 'json_data.at': 1 },
-    sort: { _id: -1 },
-    limit: EVENTS_CAP,
-  })
-  return { events: docs.map((d) => d.json_data), capped: docs.length >= EVENTS_CAP }
+export type EventKind = 'view' | 'complete'
+
+/**
+ * Les événements de la période et de la précédente, par pages de 10 000, les plus récents d'abord
+ * (tri par `_id`, indexé). Seulement les types dont le rapport a besoin : les instructions faites, et
+ * les ouvertures pour la bibliothèque. Un événement écrit pendant la lecture décale les pages vers le
+ * bas : il revient en double, jamais en trou, et se retire par son `_id`.
+ */
+export async function loadEvents(data: DataApi, since: string, kinds: EventKind[] = ['complete']): Promise<{ events: UsageEvent[]; capped: boolean }> {
+  const filter = { $and: [{ 'json_data.at': { $gte: since } }, { 'json_data.type': { $in: kinds } }] }
+  const projection: Record<string, 0 | 1> = { 'json_data.type': 1, 'json_data.instructionId': 1, 'json_data.stationId': 1, 'json_data.version': 1, 'json_data.durationSec': 1, 'json_data.operatorId': 1, 'json_data.operatorName': 1, 'json_data.source': 1, 'json_data.at': 1 }
+  const seen = new Set<string>()
+  const events: UsageEvent[] = []
+  for (let skip = 0; skip < EVENTS_CAP; skip += DATA_PAGE) {
+    const docs = await data.filter<UsageEvent>(T.event, { filter, projection, sort: { _id: -1 }, limit: DATA_PAGE, skip })
+    for (const d of docs) {
+      if (seen.has(d._id)) continue
+      seen.add(d._id)
+      events.push(d.json_data)
+    }
+    if (docs.length < DATA_PAGE) return { events, capped: false }
+  }
+  return { events, capped: true }
 }
 
 export async function loadExecutions(data: DataApi, since: string): Promise<Execution[]> {

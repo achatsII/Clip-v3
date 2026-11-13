@@ -115,7 +115,8 @@ export interface ReportContext {
 
 export type ReportKey = 'semaine' | 'temps' | 'personnes' | 'postes' | 'ecarts' | 'revision' | 'formation' | 'retours' | 'bibliotheque'
 export type Family = 'floor' | 'quality' | 'training' | 'library' | 'direction'
-export type Need = 'events' | 'executions' | 'feedback' | 'training' | 'library'
+/** Ce qu'un rapport lit ; `views` : aussi les ouvertures (les instructions faites viennent avec `events`). */
+export type Need = 'events' | 'views' | 'executions' | 'feedback' | 'training' | 'library'
 
 export interface ReportDef {
   key: ReportKey
@@ -765,7 +766,7 @@ export const REPORTS: readonly ReportDef[] = [
   { key: 'revision', family: 'quality', defaultDays: 90, needs: ['events', 'executions', 'feedback'], forRoles: ['author', 'approver'], build: revisions },
   { key: 'formation', family: 'training', defaultDays: 30, needs: ['events', 'training'], forRoles: ['admin', 'approver'], build: training },
   { key: 'retours', family: 'library', defaultDays: 30, needs: ['feedback'], forRoles: ['author'], byShift: false, build: operatorFeedback },
-  { key: 'bibliotheque', family: 'library', defaultDays: 30, needs: ['events', 'library'], forRoles: ['author', 'admin'], byShift: false, build: library },
+  { key: 'bibliotheque', family: 'library', defaultDays: 30, needs: ['events', 'views', 'library'], forRoles: ['author', 'admin'], byShift: false, build: library },
 ]
 
 export const reportOf = (key: string | null | undefined): ReportDef | null => REPORTS.find((r) => r.key === key) ?? null

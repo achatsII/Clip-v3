@@ -22,7 +22,7 @@ import type { Shift } from '@/lib/model/types'
 import { printHtml } from '@/lib/pdf/print'
 import { reportOf, type Block, type ReportContext, type ReportDef } from '@/lib/reports/catalog'
 import { DAY, PERIOD_CHOICES, periodOf, previousOf, type PeriodDays } from '@/lib/reports/facts'
-import { EVENTS_CAP, loadCards, loadEvents, loadExecutions, loadFeedback, loadLibrary, loadTraining } from '@/lib/reports/load'
+import { EVENTS_CAP, loadCards, loadEvents, loadExecutions, loadFeedback, loadLibrary, loadTraining, type EventKind } from '@/lib/reports/load'
 import { reportHtml } from '@/lib/reports/print'
 import { useToggle } from '@/lib/toggles'
 import { cn, formatDate, formatDateTime } from '@/lib/util/cn'
@@ -85,7 +85,8 @@ function Report({ def }: { def: ReportDef }) {
   const since = useMemo(() => new Date(Math.floor((now - 2 * days * DAY) / 3600_000) * 3600_000).toISOString(), [now, days])
   const need = (n: ReportDef['needs'][number]) => def.needs.includes(n) && (n !== 'training' || def.key !== 'semaine' || withAcademy)
 
-  const events = useQuery({ queryKey: ['report', 'events', since], queryFn: () => loadEvents(data, since), enabled: need('events') })
+  const kinds: EventKind[] = def.needs.includes('views') ? ['view', 'complete'] : ['complete']
+  const events = useQuery({ queryKey: ['report', 'events', since, kinds.join()], queryFn: () => loadEvents(data, since, kinds), enabled: need('events') })
   const executions = useQuery({ queryKey: ['report', 'executions', since], queryFn: () => loadExecutions(data, since), enabled: need('executions') })
   const feedback = useQuery({ queryKey: ['report', 'feedback', since], queryFn: () => loadFeedback(data, since), enabled: need('feedback') })
   const training = useQuery({ queryKey: ['report', 'training', withAcademy], queryFn: () => loadTraining(data, withAcademy), enabled: need('training') })

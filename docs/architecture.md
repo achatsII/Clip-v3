@@ -670,7 +670,9 @@ répertoire y mène.
   (`trainingVersion`) avant le travail ; qualifié, la plus récente signature de l'Académie d'avant
   le travail, pas retirée ni échue.
 - **Ce qu'un rapport lit** (`load.ts`) : seulement ce dont il a besoin (`needs`), depuis le début de
-  la période précédente : les événements (projection, 20 000 au plus ; au-delà, le rapport le dit),
+  la période précédente : les événements (les instructions faites, et les ouvertures pour la
+  bibliothèque seulement ; projection ; par pages de 10 000, la limite d'une requête Data, 30 000 au
+  plus ; au-delà, le rapport le dit),
   les travaux avec relevés (5 000), les retours (3 000), les fiches publiées pour les titres et les
   temps prévus, la formation, et des comptes faits au serveur pour la bibliothèque. Jamais
   l'instruction complète ni toute la bibliothèque.
