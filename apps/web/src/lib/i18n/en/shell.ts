@@ -11,6 +11,7 @@ export const shell: typeof Fr = {
     feedback: 'Feedback',
     stats: 'Statistics',
     team: 'Team',
+    records: 'Log',
     import: 'Import documents',
     billing: 'Plan and credits',
     settings: 'Settings',

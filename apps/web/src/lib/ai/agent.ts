@@ -17,7 +17,9 @@
  * le contenu dans celle de l'instruction (`content.language`). Les consignes données au modèle
  * restent en français ; ce que l'app montre (actions, erreurs) se lit dans le dictionnaire.
  */
+import { cleanChecks, describeCheck } from '../model/checks'
 import { inheritSection } from '../model/sections'
+import { checkSchema } from './schemas'
 import type { AiApi, AiOperation, AskFile } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
 import { getLang, messages } from '../i18n'
@@ -34,7 +36,7 @@ import { resolveMedia, warningFrom } from './normalize'
 import { standardBlock } from './prompts'
 import type { LiveTool } from './useLiveVoice'
 
-export const AGENT_OPS = ['set_instruction', 'add_step', 'update_step', 'delete_step', 'move_step', 'annotate', 'clear_annotations', 'illustrate', 'visual', 'set_layout', 'set_media', 'remove_media', 'use_media', 'look', 'translate', 'translate_media', 'translate_image'] as const
+export const AGENT_OPS = ['set_instruction', 'add_step', 'update_step', 'delete_step', 'move_step', 'set_checks', 'annotate', 'clear_annotations', 'illustrate', 'visual', 'set_layout', 'set_media', 'remove_media', 'use_media', 'look', 'translate', 'translate_media', 'translate_image'] as const
 export type AgentOpName = (typeof AGENT_OPS)[number]
 
 export interface AgentOp {
@@ -50,6 +52,8 @@ export interface AgentOp {
   keyPoints?: string[]
   warningLevel?: WarningLevel | 'none'
   warningText?: string
+  /** set_checks : la liste complète des relevés de l'étape (vide : les retirer). */
+  checks?: unknown[]
   /** Numéro du média de l'étape, 1 = premier. */
   media?: number
   /** annotate, illustrate, visual : ce qu'il faut marquer ou dessiner, précisément. */
@@ -123,6 +127,7 @@ export const agentSchema = (ui: string) => ({
           keyPoints: strList('Points clés de l’étape (0 à 3)'),
           warningLevel: { type: 'string', enum: ['danger', 'caution', 'info', 'none'] },
           warningText: str('Texte de la mise en garde'),
+          checks: { type: 'array', items: checkSchema, description: 'set_checks : la liste complète des relevés de l’étape, ceux qu’on garde compris ; vide pour les retirer' },
           media: { type: 'number', description: 'Numéro du média de l’étape, 1 = premier' },
           request: str('annotate, illustrate : quoi marquer ou dessiner, avec la forme (cercle, cadre, flèche, distance), la couleur et le texte à écrire ; visual : la pièce et le geste à montrer (le schéma n’a que quelques mots)'),
           layout: { type: 'string', enum: ['focus', 'compare', 'grid'] },
@@ -169,6 +174,7 @@ export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, la
 - Traduire pour les opérateurs : translate, avec languages (codes) ; la traduction couvre les textes, les marques sur les photos, les légendes, les outils et les schémas. images: true seulement si la personne demande aussi les images : l’IA redessine celles où du texte se lit, avec ce texte traduit (plus cher). Refaire une traduction existante : translate.
 - Un seul média : translate_media traduit sa légende, ses marques ou son schéma ; translate_image redessine une photo ou une image avec son texte traduit (plus cher). language : la langue visée ; sans language, celle de l’instruction (un média dont le texte est dans une autre langue). Vers une autre langue, l’instruction doit déjà y être traduite (voir TRADUCTIONS) ; sinon, translate d’abord.${opts.translate === false ? '\n- La traduction n’est pas offerte à cette personne : n’utilise jamais translate, translate_media ni translate_image ; dis-le simplement dans reply.' : ''}
 - Mise en garde : danger (blessure possible), caution (erreur ou bris possible), info.
+- Relevés (ce que l’opérateur note à une étape pour la trace) : set_checks, avec la liste complète des relevés de l’étape (ceux qui restent compris) ; une liste vide les retire. measure = une valeur avec son unité et ses limites (min, max) ; yesno = une vérification, avec la bonne réponse ; choice = un état parmi quelques choix, avec ceux qui sont un écart ; text = un numéro de lot ou de série ; photo = une preuve. Les limites seulement si la personne ou les sources les donnent.
 - N’invente aucune valeur (couple, pression, cote, référence) : si elle manque, demande-la dans reply, sans opération.
 - Demande floue : UNE question courte dans reply, sans opération.
 - reply dit ce que tu as fait ; ne prétends jamais avoir fait une chose absente des opérations.
@@ -231,6 +237,7 @@ export function agentPrompt(content: InstructionContent, focusStepId: string | n
   content.steps.forEach((s, i) => {
     lines.push(`${i + 1}. [${s.id}] ${s.title} — ${s.text}${s.keyPoints?.length ? ` (points clés : ${s.keyPoints.join(' ; ')})` : ''}${s.warning ? ` (${s.warning.level} : ${s.warning.text})` : ''}`)
     lines.push(`   médias : ${s.media.length ? s.media.map(mediaLine).join(' ; ') : 'aucun'}${s.media.length > 1 ? ` ; disposition : ${layoutOf(s)}` : ''}`)
+    if (s.checks?.length) lines.push(`   relevés : ${s.checks.map(describeCheck).join(' ; ')}`)
   })
   const focus = focusStepId ? content.steps.findIndex((s) => s.id === focusStepId) : -1
   if (focus >= 0) lines.push(`\nLa personne regarde l’étape ${focus + 1} [${focusStepId}] : « cette étape » désigne celle-là.`)
@@ -432,6 +439,16 @@ export function applyOp(content: InstructionContent, op: AgentOp, ids: IdMap): O
       }
       return { content: withStep(content, index, next), label: t.done.step(index + 1, changed), stepId: step.id }
     }
+    case 'set_checks': {
+      const { step, index } = stepOf(content, ids, op.step)
+      // Un relevé gardé (même libellé) garde son id : les traces d'hier y restent liées.
+      const known = new Map((step.checks ?? []).map((c) => [c.label.trim().toLowerCase(), c.id]))
+      const checks = cleanChecks(op.checks ?? [], 4).map((c) => ({ ...c, id: known.get(c.label.trim().toLowerCase()) ?? c.id }))
+      const next: Step = { ...step }
+      if (checks.length) next.checks = checks
+      else delete next.checks
+      return { content: withStep(content, index, next), label: t.done.checks(index + 1, checks.length), stepId: step.id }
+    }
     case 'delete_step': {
       const { step, index } = stepOf(content, ids, op.step)
       return { content: { ...content, steps: content.steps.filter((s) => s.id !== step.id) }, label: t.done.stepRemoved(index + 1, step.title), stepId: content.steps[index + 1]?.id ?? content.steps[index - 1]?.id ?? null }
@@ -501,6 +518,7 @@ export function describeOp(content: InstructionContent, op: AgentOp, ids: IdMap)
     update_step: w.updateStep(n),
     delete_step: w.deleteStep(n),
     move_step: w.moveStep(n),
+    set_checks: w.setChecks(n),
     annotate: w.annotate(n),
     clear_annotations: w.clearAnnotations(n),
     illustrate: w.illustrate(n),

@@ -59,6 +59,7 @@ RÈGLES D’ÉCRITURE — le moins de texte possible : l’opérateur lit une é
 - N’invente JAMAIS une valeur (couple, pression, température, quantité, numéro de pièce, réglage) : si elle n’est ni dite ni visible, ne l’écris pas et pose une question.
 - Respecte l’ordre réel des gestes, tel qu’on le voit et l’entend dans les sources.
 - Au-delà de 8 étapes, regroupe-les en 3 à 8 phases (section : 1 à 3 mots, « Démontage », « Nettoyage », « Remontage ») ; les étapes d’une phase se suivent et portent le même nom. 8 étapes ou moins : aucune section.
+- Relevés (checks) : seulement là où le travail demande de noter quelque chose pour la trace — lire une valeur (pression, température, couple, dimension, niveau) → "measure" avec son unité ; « vérifier que… », « s’assurer que… » → "yesno" avec la bonne réponse ; un état parmi quelques-uns (propre, sale, à remplacer) → "choice" avec les choix qui sont un écart ; un numéro de lot ou de série → "text" ; une preuve demandée → "photo". Les limites (min, max, target) seulement si les sources les disent : jamais inventées ; une valeur à relever sans limite connue reste sans limite, et tu poses une question. 0 à 2 relevés par étape ; la plupart des étapes n’en ont aucun.
 - Langue de sortie : ${opts.language === 'fr' ? 'français québécois clair, avec les termes du métier en usage au Québec (EPI, cadenassage, quart de travail…)' : opts.language === 'en' ? 'anglais nord-américain clair (English), avec les termes du métier en usage dans les usines (PPE, lockout/tagout, shift…)' : `la langue « ${opts.language} »`}.
 
 MÉDIAS :

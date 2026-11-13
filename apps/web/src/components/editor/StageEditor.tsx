@@ -1,21 +1,23 @@
 'use client'
 
-import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Heading, ImagePlus, Loader2, MessageCircle, MessageCircleQuestion, MoreHorizontal, PencilLine, Plus, Radio, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Copy, Heading, ImagePlus, Loader2, MessageCircle, MessageCircleQuestion, MoreHorizontal, PencilLine, Plus, Radio, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { mediaThumb } from '@/components/media/MediaView'
+import { strings as playerStrings, rangeText } from '@/components/player/i18n'
 import { StepMediaArea } from '@/components/player/StepMediaArea'
 import { Button } from '@/components/ui/Button'
 import { AutoTextarea } from '@/components/ui/Field'
 import { Menu, type MenuItem } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import type { DraftHistory } from '@/hooks/useDraftHistory'
-import { useMessages, type Messages } from '@/lib/i18n'
+import { locale, useMessages, type Messages } from '@/lib/i18n'
 import { WARNINGS } from '@/lib/model/catalog'
 import type { StepChange } from '@/lib/model/diff'
 import { removeSection, sectionAt, setSectionRange, settleSection, startSection, startsSection } from '@/lib/model/sections'
-import type { InstructionContent, Source, Step, WarningLevel } from '@/lib/model/types'
+import type { Check as StepCheck, InstructionContent, Source, Step, WarningLevel } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
+import { CHECK_ICONS, CheckDialog } from './CheckDialog'
 import { ASSIST_ACTIONS, useStepAssist } from './StepAssist'
 import { StepMediaEditor } from './StepMediaEditor'
 import { UndoButtons } from './UndoControls'
@@ -83,6 +85,8 @@ export interface StageEditorProps {
   onAssistant: () => void
   /** Les sections (« Démontage », « Remontage ») : toggle `sections`. */
   sections?: boolean
+  /** Les relevés d'une étape (mesure, oui ou non, choix, texte, photo) : toggle `records`. */
+  records?: boolean
   /** Toutes les étapes d'un coup (les sections touchent plusieurs étapes). */
   onSteps: (steps: Step[]) => void
   onChange: (s: Step) => void
@@ -333,6 +337,11 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
   const set = (patch: Partial<Step>) => p.onChange({ ...step, ...patch })
   const keyPoints = step.keyPoints ?? []
   const warning = step.warning
+  const checks = step.checks ?? []
+  const setChecks = (list: StepCheck[]) => set({ checks: list.length ? list : undefined })
+  // Le relevé ouvert dans sa fenêtre : `new` pour en ajouter un.
+  const [editingCheck, setEditingCheck] = useState<StepCheck | 'new' | null>(null)
+  const canAddCheck = !!p.records && checks.length < 4
   return (
     <>
       {p.remoteNote && !p.agentWorking && (
@@ -404,8 +413,10 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
         </div>
       )}
 
-      {/* Ajouter seulement ce qui manque : une mise en garde, un point clé (trois au plus). */}
-      {!readOnly && (!warning || keyPoints.length < 3) && (
+      {p.records && checks.length > 0 && <ChecksBlock step={step} language={p.content.language} readOnly={readOnly} onEdit={setEditingCheck} />}
+
+      {/* Ajouter seulement ce qui manque : une mise en garde, un point clé (trois au plus), un relevé. */}
+      {!readOnly && (!warning || keyPoints.length < 3 || canAddCheck) && (
         <div className="flex flex-wrap gap-1">
           {!warning && (
             <button type="button" onClick={() => set({ warning: { level: 'caution', text: '' } })} className="btn-press flex h-11 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-500/10">
@@ -417,9 +428,63 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
               <Plus className="h-4 w-4" /> {t.editor.stage.addKeyPointShort}
             </button>
           )}
+          {canAddCheck && (
+            <button type="button" onClick={() => setEditingCheck('new')} className="btn-press hover:bg-primary-soft flex h-11 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-[var(--primary)]">
+              <Plus className="h-4 w-4" /> {t.editor.checks.add}
+            </button>
+          )}
         </div>
       )}
+
+      {editingCheck && (
+        <CheckDialog
+          check={editingCheck === 'new' ? null : editingCheck}
+          locale={locale()}
+          onClose={() => setEditingCheck(null)}
+          onSave={(c) => setChecks(editingCheck === 'new' ? [...checks, c] : checks.map((x) => (x.id === c.id ? c : x)))}
+          onRemove={editingCheck === 'new' ? undefined : () => setChecks(checks.filter((x) => x.id !== editingCheck.id))}
+        />
+      )}
     </>
+  )
+}
+
+/**
+ * Les relevés de l'étape, comme l'opérateur les lira (dans la langue de l'instruction) : le genre,
+ * le libellé, et ce qui juge la réponse. Un toucher ouvre le relevé.
+ */
+function ChecksBlock({ step, language, readOnly, onEdit }: { step: Step; language: string; readOnly?: boolean; onEdit: (c: StepCheck) => void }) {
+  const t = useMessages().editor.checks
+  const r = playerStrings(language).records
+  const detail = (c: StepCheck): string => {
+    const parts: string[] = []
+    if (c.kind === 'measure') parts.push(rangeText(c, r) ?? c.unit ?? t.kinds.measure)
+    else if (c.kind === 'yesno') parts.push(c.expected ? t.expectedLine(c.expected === 'yes' ? r.yes : r.no) : t.kinds.yesno)
+    else if (c.kind === 'choice') parts.push((c.options ?? []).map((o) => (o.bad ? `${o.label} (${t.bad.toLowerCase()})` : o.label)).join(' · '))
+    else parts.push(t.kinds[c.kind])
+    if (c.optional) parts.push(t.optional.toLowerCase())
+    return parts.join(' · ')
+  }
+  return (
+    <div className="rounded-3xl border-2 border-[var(--primary)]/25 bg-white/70 p-3 dark:bg-white/5">
+      <p className="label-caps mb-1 flex items-center gap-1.5 px-1 text-[var(--primary-strong)] dark:text-sky-300">
+        <ClipboardCheck className="h-4 w-4" /> {t.title}
+      </p>
+      <ul>
+        {(step.checks ?? []).map((c) => (
+          <li key={c.id}>
+            <button type="button" disabled={readOnly} onClick={() => onEdit(c)} aria-label={t.edit(c.label)} className="btn-press flex min-h-12 w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left hover:bg-slate-900/5 disabled:cursor-default dark:hover:bg-white/5">
+              <span className="text-[var(--primary)]">{CHECK_ICONS[c.kind]()}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-lg leading-snug font-black text-slate-900 dark:text-white">{c.label}</span>
+                <span className="block text-sm font-bold text-slate-500">{detail(c)}</span>
+              </span>
+              {!readOnly && <PencilLine className="h-4 w-4 shrink-0 text-slate-400" />}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

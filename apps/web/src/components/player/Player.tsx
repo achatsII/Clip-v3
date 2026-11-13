@@ -5,6 +5,8 @@ import {
   ArrowRight,
   BookOpen,
   Check,
+  ClipboardCheck,
+  CloudOff,
   ChevronDown,
   Clock,
   Languages,
@@ -34,6 +36,8 @@ import type { AiApi } from '@/lib/gateway/ai'
 import type { DataApi } from '@/lib/gateway/data'
 import type { FilesApi } from '@/lib/gateway/files'
 import { ENERGY, LANGUAGES, PPE, textDir, WARNINGS } from '@/lib/model/catalog'
+import { firstIncomplete, hasChecks, type Answers, type CheckAnswer } from '@/lib/model/checks'
+import { buildExecution, flushExecutions, saveExecution } from '@/lib/model/executions'
 import { logUsage } from '@/lib/model/repo'
 import { sectionGroups } from '@/lib/model/sections'
 import { localized } from '@/lib/model/translation'
@@ -41,7 +45,8 @@ import type { Branding, InstructionContent, Step } from '@/lib/model/types'
 import { LiveSpeaker, stepSpeech } from '@/lib/liveSpeech'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { FeedbackSheet } from './FeedbackSheet'
-import { strings, type PlayerStrings } from './i18n'
+import { StepChecks } from './StepChecks'
+import { rangeText, strings, type PlayerStrings } from './i18n'
 import { StepMediaArea } from './StepMediaArea'
 import { layoutOf } from '@/lib/model/media'
 import { VoiceAssistant } from './VoiceAssistant'
@@ -88,6 +93,13 @@ export interface PlayerProps {
   accessory?: ReactNode
   /** Qui travaille au poste (« Qui êtes-vous ? ») : il signe ce qu'il fait ici. */
   operator?: { id: string; name: string } | null
+  /**
+   * Les relevés s'écrivent dans le registre (`clip_execution`) : la page le permet (un lien qui ne
+   * peut pas l'écrire passe `false` ; on relève quand même, sans trace).
+   */
+  canRecord?: boolean
+  /** La personne connectée qui fait l'instruction dans l'app (pas une personne de l'équipe). */
+  recorder?: { id: string; name: string } | null
 }
 
 function deviceId(): string {
@@ -104,7 +116,7 @@ function deviceId(): string {
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder } = props
   const who = { operatorId: operator?.id ?? null, operatorName: operator?.name ?? null }
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
@@ -135,6 +147,17 @@ export function Player(props: PlayerProps) {
   const sectionsOn = useToggle('sections')
   const [summaryOpen, setSummaryOpen] = useState(false)
   const startedAt = useRef<number>(Date.now())
+  // Les relevés (toggle `records`) : les réponses de cette fois, ce qui manque, et la trace écrite.
+  const recordsOn = useToggle('records')
+  const [answers, setAnswers] = useState<Answers>({})
+  const [nudge, setNudge] = useState(0)
+  const [record, setRecord] = useState<{ state: 'saved' | 'queued'; deviations: number } | null>(null)
+  const recording = recordsOn && canRecord && !preview && hasChecks(props.content.steps)
+  const answerCheck = useCallback((id: string, a: CheckAnswer) => setAnswers((prev) => ({ ...prev, [id]: a })), [])
+  // Une trace restée dans l'appareil (réseau coupé) repart dès qu'une instruction s'ouvre.
+  useEffect(() => {
+    if (recordsOn && canRecord && !preview) void flushExecutions(deps.data)
+  }, [recordsOn, canRecord, preview, deps.data])
   // La voix en direct : elle s'ouvre au premier « Écouter » et lit chaque étape tout de suite.
   const speaker = useMemo(() => (deps.ai ? new LiveSpeaker(deps.ai) : null), [deps.ai])
   const touch = useRef<{ x: number; y: number } | null>(null)
@@ -211,17 +234,44 @@ export function Player(props: PlayerProps) {
 
   const go = useCallback(
     (i: number) => {
-      const clamped = Math.max(-1, Math.min(total, i))
+      let clamped = Math.max(-1, Math.min(total, i))
+      // On n'avance pas au-delà d'une étape dont les relevés manquent : on y revient, et ce qui manque se signale.
+      if (recordsOn && !preview && clamped > index) {
+        const stop = firstIncomplete(content.steps, answers, clamped)
+        if (stop >= 0) {
+          clamped = stop
+          setNudge((n) => n + 1)
+          haptic('error')
+          if (stop === index) return
+        }
+      }
       setIndex(clamped)
       haptic('light')
       speaker?.stop()
       if (clamped === total && !preview) {
         logUsage(deps.data, { type: 'complete', instructionId, stationId: stationId ?? null, version: version ?? null, source, deviceId: deviceId(), durationSec: Math.round((Date.now() - startedAt.current) / 1000), operatorId: operator?.id ?? null, operatorName: operator?.name ?? null })
         haptic('success')
+        if (recording) {
+          // La trace, dans la langue d'origine de l'instruction : celle que lit le responsable.
+          const exec = buildExecution(props.content, answers, {
+            instructionId,
+            version: version ?? null,
+            stationId: stationId ?? null,
+            source,
+            startedAt: new Date(startedAt.current).toISOString(),
+            language: lang,
+            deviceId: deviceId(),
+            operatorId: operator?.id ?? null,
+            operatorName: operator?.name ?? null,
+            userId: operator ? null : (recorder?.id ?? null),
+            userName: operator ? null : (recorder?.name ?? null),
+          })
+          void saveExecution(deps.data, exec).then((state) => setRecord({ state, deviations: exec.deviations }))
+        }
       }
       if (autoRead && clamped >= 0 && clamped < total) speakStep(content.steps[clamped])
     },
-    [total, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator],
+    [total, index, recordsOn, answers, recording, recorder, lang, props.content, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator],
   )
 
   useEffect(() => {
@@ -335,7 +385,7 @@ export function Player(props: PlayerProps) {
       >
         {view === 'document' ? (
           <div dir={textDir(lang)}>
-            <DocumentView content={content} t={t} energyById={energyById} sections={sectionsOn} />
+            <DocumentView content={content} t={t} energyById={energyById} sections={sectionsOn} records={recordsOn} />
           </div>
         ) : index === -1 ? (
           <Intro content={content} t={t} onStart={() => go(0)} />
@@ -344,8 +394,12 @@ export function Player(props: PlayerProps) {
             t={t}
             rated={rated}
             onRate={(v) => setRated(v)}
+            record={record}
             onRestart={() => {
               startedAt.current = Date.now()
+              setAnswers({})
+              setNudge(0)
+              setRecord(null)
               go(-1)
             }}
             onReport={() => setFeedbackOpen(true)}
@@ -390,6 +444,7 @@ export function Player(props: PlayerProps) {
                   </ul>
                 </div>
               )}
+              {recordsOn && !!step.checks?.length && <StepChecks step={step} answers={answers} onAnswer={answerCheck} t={t.records} files={deps.files} nudge={nudge} preview={preview} />}
               <div className="mt-auto flex flex-wrap gap-2 pt-2">
                 {!preview && (
                   <button type="button" onClick={() => setFeedbackOpen(true)} className="btn-press glass-card flex h-12 items-center gap-2 rounded-2xl px-4 text-sm font-black text-amber-700 dark:text-amber-300">
@@ -661,7 +716,7 @@ function Intro({ content, t, onStart }: { content: InstructionContent; t: Return
   )
 }
 
-function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, preview }: { t: ReturnType<typeof strings>; rated: 'up' | 'down' | null; onRate: (v: 'up' | 'down') => void; onRestart: () => void; onReport: () => void; onExit?: () => void; exitLabel?: string; preview?: boolean }) {
+function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, preview, record }: { t: ReturnType<typeof strings>; rated: 'up' | 'down' | null; onRate: (v: 'up' | 'down') => void; onRestart: () => void; onReport: () => void; onExit?: () => void; exitLabel?: string; preview?: boolean; record?: { state: 'saved' | 'queued'; deviations: number } | null }) {
   return (
     <div className="mx-auto flex min-h-full max-w-xl flex-col items-center justify-center gap-6 p-8 text-center">
       <span className="animate-pop-in flex h-28 w-28 items-center justify-center rounded-[36px] bg-gradient-to-br from-[#2EE59D] to-[#18c480] text-white shadow-[0_20px_40px_rgba(24,196,128,0.35)]">
@@ -671,6 +726,19 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
         <h2 className="text-5xl font-black tracking-tighter">{t.done}</h2>
         <p className="mt-2 text-xl font-bold text-slate-600 dark:text-slate-300">{t.doneText}</p>
       </div>
+      {/* La trace : enregistrée, ou gardée dans l'appareil ; et les écarts signalés. */}
+      {record && (
+        <div className="flex flex-col items-center gap-2">
+          <p className={cn('flex items-center gap-2 rounded-2xl px-4 py-2 text-base font-black', record.state === 'saved' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200')}>
+            {record.state === 'saved' ? <ClipboardCheck className="h-5 w-5" /> : <CloudOff className="h-5 w-5" />} {record.state === 'saved' ? t.records.saved : t.records.queued}
+          </p>
+          {record.deviations > 0 && (
+            <p className="flex items-center gap-2 text-base font-black text-rose-600 dark:text-rose-400">
+              <TriangleAlert className="h-5 w-5" /> {t.records.deviations(record.deviations)}
+            </p>
+          )}
+        </div>
+      )}
       {!preview && (
         <div className="w-full">
           <p className="label-caps mb-3 text-slate-500">{t.howWasIt}</p>
@@ -705,7 +773,7 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
   )
 }
 
-function DocumentView({ content, t, energyById, sections }: { content: InstructionContent; t: ReturnType<typeof strings>; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }>; sections: boolean }) {
+function DocumentView({ content, t, energyById, sections, records }: { content: InstructionContent; t: ReturnType<typeof strings>; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }>; sections: boolean; records: boolean }) {
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-5 sm:p-8">
       <Intro content={content} t={t} onStart={() => document.getElementById('doc-step-0')?.scrollIntoView({ behavior: 'smooth' })} />
@@ -731,6 +799,19 @@ function DocumentView({ content, t, energyById, sections }: { content: Instructi
                 {s.keyPoints.map((k) => (
                   <li key={k} className="flex gap-2">
                     <Check className="mt-1 h-4 w-4 text-[var(--primary)]" /> {k}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {records && !!s.checks?.length && (
+              <ul className="mt-3 space-y-1 text-base font-bold text-slate-700 dark:text-slate-200">
+                {s.checks.map((c) => (
+                  <li key={c.id} className="flex gap-2">
+                    <ClipboardCheck className="mt-1 h-4 w-4 shrink-0 text-[var(--primary)]" />
+                    <span>
+                      {c.label}
+                      {c.kind === 'measure' && rangeText(c, t.records) ? ` · ${rangeText(c, t.records)}` : ''}
+                    </span>
                   </li>
                 ))}
               </ul>

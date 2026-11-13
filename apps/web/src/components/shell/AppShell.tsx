@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   BookOpen,
+  ClipboardCheck,
   CreditCard,
   Home,
   LogOut,
@@ -65,6 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const deleteToggle = useToggle('deleteAccount')
   const operatorsOn = useToggle('operators')
+  const recordsOn = useToggle('records')
 
   const feedbackCount = useQuery({
     queryKey: ['feedback-count'],
@@ -79,6 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { href: '/postes', label: t.shell.nav.stations, icon: <MapPin className="h-5 w-5" />, show: can('stations') },
     { href: '/equipe', label: t.shell.nav.team, icon: <Users className="h-5 w-5" />, show: operatorsOn && can('stations', 'write') },
     { href: '/retours', label: t.shell.nav.feedback, icon: <MessageSquareWarning className="h-5 w-5" />, badge: feedbackCount.data || undefined, show: can('feedback', 'write') },
+    { href: '/registre', label: t.shell.nav.records, icon: <ClipboardCheck className="h-5 w-5" />, show: recordsOn && can('feedback') },
     { href: '/statistiques', label: t.shell.nav.stats, icon: <BarChart3 className="h-5 w-5" />, show: can('stats') },
   ].filter((n) => n.show)
 

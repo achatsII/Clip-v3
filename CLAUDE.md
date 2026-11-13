@@ -51,6 +51,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   la base n'en garde qu'une empreinte HMAC (clé `CLIP_PIN_SECRET`, sinon dérivée de `ABLY_KEY`). La
   portée d'un lien est figée à sa création : elle porte une version (`LINK_SCOPE_VERSION`), et un
   vieux lien se met à jour sans réimprimer le QR (`linkFollow`).
+- **Relevés et registre** (toggle `records`) : une étape peut demander une mesure, un oui ou non, un
+  choix, un texte ou une photo (`Step.checks`, `src/lib/model/checks.ts`) ; un écart exige une note,
+  et on ne passe pas une étape incomplète. La trace s'écrit à la fin dans `clip_execution`
+  (`src/lib/model/executions.ts`, file d'attente si le réseau manque) et se lit dans `/registre`.
+  Les limites d'une mesure ne s'inventent jamais.
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le

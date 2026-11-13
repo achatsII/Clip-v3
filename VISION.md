@@ -125,6 +125,9 @@ instructions publiées sont réellement consultées au plancher semaine après s
   pas plus.
 - Un MES ou un ERP (ordres de fabrication, temps de cycle) : on se branche sur leurs numéros
   (codes, étiquettes, QR), on ne les remplace pas.
+- Un logiciel qualité complet (cartes de contrôle, SPC, non-conformités et actions correctives) : à
+  une étape, on relève une valeur, on juge l'écart, on note ce qui a été fait et on garde la trace ;
+  l'analyse statistique et le suivi des actions restent ailleurs.
 - La génération de vidéos par l'IA.
 - Le hors ligne complet : la capture tolère un réseau instable, la consultation demande le réseau.
 

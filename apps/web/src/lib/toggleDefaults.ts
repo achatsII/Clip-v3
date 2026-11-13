@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -30,6 +30,8 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   renewal: true,
   // Qui travaille au poste : l'équipe (sans compte), son code à 4 chiffres, et « Qui êtes-vous ? » à la tablette.
   operators: true,
+  // Les relevés d'une étape (mesure, oui ou non, choix, texte, photo) et le registre du travail fait.
+  records: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -51,4 +53,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   deleteAccount: false,
   renewal: false,
   operators: false,
+  records: false,
 }

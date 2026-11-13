@@ -9,6 +9,7 @@ export const shell = {
     feedback: 'Retours',
     stats: 'Statistiques',
     team: 'Équipe',
+    records: 'Registre',
     import: 'Importer des documents',
     billing: 'Abonnement et crédits',
     settings: 'Réglages',

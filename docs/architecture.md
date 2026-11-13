@@ -56,7 +56,7 @@ document et filtré à chaque lecture). Le jour où l'identifiant `clip-v3` exis
 | `clip_import` | un lot d'import de documents | fichiers et leur état |
 | `clip_checkpoint` | un point de retour du brouillon (modifications enregistrées, pas publiées) | instruction, contenu complet, raison, empreinte, auteur, date |
 | `clip_operator` | une personne de l'équipe au poste, sans compte | nom, empreinte de son code (`pinHash`, jamais le code), quart, équipe, postes habituels, actif |
-| `clip_execution` | réservé : le travail fait au poste (étape 3 du plan) | — |
+| `clip_execution` | le travail fait au poste, écrit une fois à la fin d'une instruction qui a des relevés | instruction, version, poste, qui (personne de l'équipe ou connectée), début et fin, chaque réponse (valeur, limites, verdict, note d'écart), nombre d'écarts |
 | `clip_training` | réservé : les réponses d'une formation (étape 6 du plan) | — |
 
 Le contenu publié est séparé du brouillon : un lien public ne lit que `clip_published` (et ce qu'il
@@ -407,6 +407,35 @@ elle redemande. « Changer de personne » est toujours en haut de l'écran.
   les instructions publiées sans nom.
 - **Le travail ne s'arrête jamais** : lien d'avant la version 2, serveur sans clé ou équipe vide, la
   tablette propose « Continuer sans me nommer ».
+
+### Les relevés et le registre (toggle `records`, `src/lib/model/checks.ts`, `executions.ts`)
+
+Une étape peut demander à l'opérateur de noter quelque chose pour la trace (`Step.checks`, quatre
+au plus) : une **mesure** (unité, minimum, maximum, valeur visée), un **oui ou non** (avec la
+bonne réponse), un **choix** (dont certains sont des écarts), un **texte** (numéro de lot) ou une
+**photo** de preuve.
+
+- **La génération les prépare** : « vérifier que… » devient un oui ou non, une valeur à lire une
+  mesure avec son unité. Les limites viennent des sources, jamais d'une supposition ; sans elles,
+  la mesure n'a pas de limite et l'IA pose une question. L'assistant d'édition les change
+  (`set_checks`, la liste complète de l'étape ; un relevé gardé garde son id). Ils se traduisent
+  (libellés et choix) et s'impriment comme des cases à remplir.
+- **Dans l'éditeur**, comme au poste : le bloc « À relever » sous l'étape, « + Relevé » à côté de
+  « + Point clé », et une fenêtre qui ne montre que ce que le genre demande (`CheckDialog`).
+- **Au poste** (`StepChecks`) : grands champs, verdict tout de suite (« Dans la norme », « Hors
+  norme »). Un écart demande une note (« dites ce que vous avez fait ») pour continuer. On ne
+  passe pas une étape dont un relevé obligatoire manque : le lecteur y revient et le signale
+  (`firstIncomplete`), même par le sommaire, le glissement ou la voix. L'aperçu de l'éditeur
+  n'exige rien.
+- **La trace** (`clip_execution`) s'écrit à la fin, dans la langue d'origine de l'instruction, avec
+  qui l'a faite (la personne nommée à la tablette, sinon la personne connectée). Sans réseau, elle
+  attend dans l'appareil (`clip_exec_queue`, 50 au plus, 30 jours) et repart à la prochaine
+  instruction ouverte. Un lien d'avant la version 2 ne peut pas l'écrire : on relève quand même,
+  sans trace.
+- **Le registre** (`/registre`, ceux qui lisent les retours) : le travail fait, du plus récent, avec
+  « Écarts » d'un geste, la recherche, le détail de chaque relevé et sa fiche à imprimer
+  (`src/lib/pdf/executionSheet.ts`). L'accueil signale les écarts des 7 derniers jours ; le menu
+  d'une instruction qui a des relevés mène à son registre.
 
 ### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
 

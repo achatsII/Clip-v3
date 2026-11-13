@@ -5,7 +5,7 @@
  * Il s'écrit dans la langue de l'instruction (`content.language`), pas dans celle de l'outil : les
  * titres que le lecteur des opérateurs a déjà viennent de ses mots, le reste du groupe `print`.
  */
-import { strings, type PlayerStrings } from '@/components/player/i18n'
+import { rangeText, strings, type PlayerStrings } from '@/components/player/i18n'
 import { LANGS, messagesIn, type Messages } from '../i18n'
 import { annotationsMarkup } from '../annotations/markup'
 import { layoutOf } from '../model/media'
@@ -72,6 +72,24 @@ export interface PrintMeta {
   draft: boolean
   /** Largeur / hauteur de chaque image (par URL), lue avant l'impression : les annotations tombent juste. */
   ratios?: Record<string, number>
+  /** Les relevés s'impriment comme des cases à remplir (toggle `records`). */
+  records?: boolean
+}
+
+/** Les relevés d'une étape, à remplir à la main : une ligne pour la valeur, des cases pour cocher. */
+function checksBlock(s: Step, p: PlayerStrings): string {
+  const r = p.records
+  const box = '<span class="box"></span>'
+  const rows = (s.checks ?? []).map((c) => {
+    let field = ''
+    if (c.kind === 'measure') field = `<span class="fill"></span>${c.unit ? ` ${esc(c.unit)}` : ''}`
+    else if (c.kind === 'yesno') field = `${box}${esc(r.yes)} ${box}${esc(r.no)}`
+    else if (c.kind === 'choice') field = (c.options ?? []).map((o) => `${box}${esc(o.label)}`).join(' ')
+    else if (c.kind === 'text') field = '<span class="fill wide"></span>'
+    const range = c.kind === 'measure' ? rangeText(c, r) : null
+    return `<div class="ck"><b>${esc(c.label)}</b> ${field}${range ? `<small>${esc(range)}</small>` : ''}</div>`
+  })
+  return `<div class="checks"><p>${esc(r.title)}</p>${rows.join('')}</div>`
 }
 
 export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): string {
@@ -98,6 +116,7 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
           ${w ? `<p class="warn ${w.level}"><b>${t.warning(esc(cat.warnings[w.level]))}</b> ${esc(w.text)}</p>` : ''}
           ${s.text ? `<p class="text">${esc(s.text)}</p>` : ''}
           ${s.keyPoints?.length ? `<ul class="kp">${s.keyPoints.map((k) => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
+          ${meta.records && s.checks?.length ? checksBlock(s, p) : ''}
         </div>
       </article>`
     })
@@ -136,6 +155,8 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .steps .section{grid-column:1/-1;margin:10px 0 0;font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#0056D6;break-after:avoid;page-break-after:avoid}
 .step{border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
+.checks{margin-top:8px;border:1.5px solid #bfdbfe;border-radius:10px;padding:6px 8px}.checks p{margin:0 0 4px;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#0056D6}
+.ck{font-size:11px;margin:4px 0;line-height:1.6}.ck small{display:block;color:#64748b;font-size:9px}.fill{display:inline-block;width:70px;border-bottom:1.5px solid #334155;height:12px;vertical-align:bottom}.fill.wide{width:150px}.box{display:inline-block;width:10px;height:10px;border:1.5px solid #334155;border-radius:2px;margin:0 3px 0 6px;vertical-align:-1px}
 .media{position:relative;background:#0f172a;display:flex;justify-content:center}.frame{position:relative}.frame img{width:100%;height:100%;display:block}
 .ann{position:absolute;inset:0;container-type:inline-size}
 .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:3px;background:#0f172a}.tile{position:relative}.tile.do{outline:3px solid #10b981;outline-offset:-3px}.tile.dont{outline:3px solid #f43f5e;outline-offset:-3px}

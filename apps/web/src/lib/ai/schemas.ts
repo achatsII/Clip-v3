@@ -22,6 +22,23 @@ const mediaRef = {
   required: ['source'],
 }
 
+/** Un relevé : les limites sont des textes (« 4,5 »), vides quand les sources n'en donnent pas. */
+export const checkSchema = {
+  type: 'object',
+  properties: {
+    kind: { type: 'string', enum: ['measure', 'yesno', 'choice', 'text', 'photo'] },
+    label: str('Ce qu’on relève, 2 à 6 mots : « Pression du circuit », « Joint en place », « Numéro de lot »'),
+    unit: str('measure : l’unité (bar, °C, mm, N·m, psi…) ; vide sinon'),
+    min: str('measure : la limite basse dite par les sources, en chiffres ; vide si aucune'),
+    max: str('measure : la limite haute dite par les sources, en chiffres ; vide si aucune'),
+    target: str('measure : la valeur visée dite par les sources ; vide si aucune'),
+    expected: { type: 'string', enum: ['yes', 'no', 'none'], description: 'yesno : la bonne réponse (l’autre est un écart) ; none sinon' },
+    options: strList('choice : 2 à 5 choix courts ; vide sinon'),
+    bad: strList('choice : les choix qui sont un écart (« Sale », « À remplacer ») ; vide sinon'),
+  },
+  required: ['kind', 'label'],
+}
+
 const stepSchema = {
   type: 'object',
   properties: {
@@ -35,6 +52,7 @@ const stepSchema = {
     durationSec: num('Durée approximative de l’étape en secondes ; 0 si inconnue'),
     energyTag: str('Fiche de cadenassage : repère du point d’isolement traité (E1, P1…) ; vide sinon'),
     section: str('La phase où se trouve l’étape, 1 à 3 mots (« Démontage ») ; les étapes d’une même phase se suivent et portent le même nom ; vide si l’instruction a 8 étapes ou moins'),
+    checks: { type: 'array', items: checkSchema, description: 'Ce que l’opérateur doit relever à cette étape pour la trace : 0 à 2, le plus souvent aucun' },
   },
   required: ['title', 'text', 'keyPoints', 'warningLevel', 'warningText', 'media', 'section'],
 }

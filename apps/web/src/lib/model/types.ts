@@ -143,6 +143,40 @@ export interface Step {
    * le même nom forment une section (`src/lib/model/sections.ts`).
    */
   section?: string
+  /** Ce que l'opérateur relève à cette étape, pour la trace (toggle `records`, `src/lib/model/checks.ts`). */
+  checks?: Check[]
+}
+
+/**
+ * Un relevé : ce que l'opérateur note à une étape. `measure` : une valeur avec son unité, jugée
+ * entre `min` et `max` ; `yesno` : un oui ou un non, jugé sur `expected` ; `choice` : un choix,
+ * dont certains sont des écarts ; `text` : un numéro de lot, une remarque ; `photo` : une preuve.
+ * Les limites viennent des sources, jamais d'une supposition.
+ */
+export type CheckKind = 'measure' | 'yesno' | 'choice' | 'text' | 'photo'
+
+export interface CheckOption {
+  id: string
+  label: string
+  /** Ce choix est un écart (« Sale », « À remplacer »). */
+  bad?: boolean
+}
+
+export interface Check {
+  id: string
+  kind: CheckKind
+  /** Ce qu'on relève, en quelques mots : « Pression du circuit », « Joint en place ». */
+  label: string
+  unit?: string
+  min?: number | null
+  max?: number | null
+  /** La valeur visée, montrée à l'opérateur (elle ne juge rien : `min` et `max` jugent). */
+  target?: number | null
+  /** La bonne réponse d'un oui ou non ; l'autre est un écart. Sans elle, rien n'est jugé. */
+  expected?: 'yes' | 'no' | null
+  options?: CheckOption[]
+  /** Facultatif : on peut passer l'étape sans y répondre. */
+  optional?: boolean
 }
 
 export type EnergyType = 'electrique' | 'pneumatique' | 'hydraulique' | 'mecanique' | 'gravite' | 'thermique' | 'chimique' | 'vapeur' | 'eau' | 'autre'
@@ -208,6 +242,8 @@ export interface TranslatedContent {
     section?: string
     /** Les médias de l'étape dans cette langue, dans l'ordre des médias (null : rien à traduire). */
     media?: Array<MediaTranslation | null>
+    /** Les relevés dans cette langue : le libellé, et celui de chaque choix (par id). */
+    checks?: Array<{ id: string; label?: string; options?: Record<string, string> }>
   }>
   tools?: string[]
   equipment?: string
@@ -471,6 +507,47 @@ export interface UsageEvent extends OperatorRef {
   tokens?: number | null
   userId?: string | null
   at: string
+}
+
+/** Une réponse à un relevé, telle qu'au moment du travail (l'instruction peut changer ensuite). */
+export interface ExecutionAnswer {
+  stepId: string
+  stepTitle: string
+  checkId: string
+  label: string
+  kind: CheckKind
+  /** measure : un nombre ; yesno : true ou false ; choice et text : le texte ; photo : l'adresse. */
+  value: number | boolean | string | null
+  unit?: string
+  min?: number | null
+  max?: number | null
+  /** true : dans la norme ; false : un écart ; null : rien à juger (texte, photo, sans limites). */
+  ok: boolean | null
+  /** Ce que la personne a fait devant un écart (exigé pour continuer). */
+  note?: string
+}
+
+/**
+ * Le travail fait (`clip_execution`) : qui, quand, à quel poste, et chaque relevé. Écrit une fois, à
+ * la fin de l'instruction, par la tablette (jeton invité) ou par l'app ; jamais modifié ensuite.
+ */
+export interface Execution extends OperatorRef {
+  instructionId: string
+  instructionTitle: string
+  version: number | null
+  stationId: string | null
+  source: 'kiosk' | 'link' | 'app'
+  startedAt: string
+  finishedAt: string
+  answers: ExecutionAnswer[]
+  /** Le nombre de réponses hors norme. */
+  deviations: number
+  /** La langue dans laquelle la personne a lu l'instruction. */
+  language: string
+  deviceId?: string
+  /** La personne connectée, quand ce n'est pas une personne de l'équipe nommée à la tablette. */
+  userId?: string | null
+  userName?: string | null
 }
 
 export type MemberRole = 'admin' | 'author' | 'approver' | 'reader'

@@ -3,7 +3,7 @@
 import { useToggle } from '@/lib/toggles'
 import { needsRenewal } from '@/lib/model/renewal'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Check, CheckCircle2, ClipboardCheck, EyeOff, Flame, MapPin, MessageSquareWarning, Mic, Palette, PenLine, QrCode, ScanLine, Sparkles, Trophy, UserPlus, Video } from 'lucide-react'
+import { ArrowRight, Check, CheckCircle2, ClipboardCheck, EyeOff, Flame, MapPin, MessageSquareWarning, Mic, Palette, PenLine, QrCode, ScanLine, Sparkles, TriangleAlert, Trophy, UserPlus, Video } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo } from 'react'
@@ -17,6 +17,7 @@ import { Card, SectionTitle } from '@/components/ui/Surface'
 import { useFeedback, useInstructions, useStations } from '@/hooks/queries'
 import { num, useMessages, type Messages } from '@/lib/i18n'
 import { FEEDBACK_KINDS } from '@/lib/model/catalog'
+import { listExecutions } from '@/lib/model/executions'
 import { T } from '@/lib/model/repo'
 import { usePref, writePref } from '@/lib/prefs'
 import { cn, timeAgo } from '@/lib/util/cn'
@@ -71,6 +72,16 @@ export default function HomePage() {
     queryFn: () => data.count(T.event, { 'json_data.type': { $in: ['view'] }, 'json_data.at': { $gte: weekAgo } }),
     enabled: can('stats'),
   })
+
+  // Les écarts relevés aux postes ces 7 derniers jours (toggle `records`).
+  const recordsOn = useToggle('records')
+  const deviations = useQuery({
+    queryKey: ['executions-deviations-week'],
+    queryFn: async () => (await listExecutions(data, { deviations: true, since: weekAgo, limit: 100 })).reduce((n, d) => n + (d.json_data.deviations ?? 0), 0),
+    enabled: recordsOn && can('feedback'),
+    refetchInterval: 120_000,
+  })
+  const recordsT = useMessages().records
 
   // Première ouverture d'un administrateur : la configuration guidée.
   useEffect(() => {
@@ -182,6 +193,19 @@ export default function HomePage() {
             ))}
           </div>
         </Card>
+      )}
+
+      {!!deviations.data && (
+        <Link href="/registre?ecarts=1" className="btn-press lift flex items-center gap-4 rounded-[28px] bg-rose-50 p-5 text-rose-900 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-100 dark:ring-rose-500/30">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-lg">
+            <TriangleAlert className="h-6 w-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-black tracking-tight">{recordsT.homeTitle(deviations.data)}</span>
+            <span className="block text-sm font-bold opacity-80">{recordsT.homeHint}</span>
+          </span>
+          <ArrowRight className="h-5 w-5 shrink-0" aria-label={recordsT.open} />
+        </Link>
       )}
 
       <div className="grid gap-5 lg:grid-cols-3">

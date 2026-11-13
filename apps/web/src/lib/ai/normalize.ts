@@ -2,6 +2,7 @@
  * Transforme la sortie de l'IA en contenu sûr : identifiants stables, références de médias
  * vérifiées, temps bornés à la durée réelle, valeurs inconnues écartées.
  */
+import { cleanChecks } from '../model/checks'
 import { cleanSections } from '../model/sections'
 import { CATEGORY_KEYS, ENERGY, PPE } from '../model/catalog'
 import { uid } from '../model/repo'
@@ -39,6 +40,7 @@ export interface AiStep {
   durationSec?: number
   energyTag?: string
   section?: string
+  checks?: unknown[]
 }
 
 export interface AiInstruction {
@@ -119,6 +121,12 @@ function mediaKey(m: StepMedia): string {
   return `${m.kind}:${m.url}${m.kind === 'document' ? `#${m.page ?? 1}` : ''}`
 }
 
+/** Les relevés proposés par l'IA, rendus sûrs : `expected: "none"` et les champs vides ne comptent pas. */
+function withChecks(raw: unknown): Pick<Step, 'checks'> {
+  const checks = cleanChecks(Array.isArray(raw) ? raw.slice(0, 2) : [], 2)
+  return checks.length ? { checks } : {}
+}
+
 /** `marks` : reçoit, pour chaque image où l'IA veut un repère, ce qu'il faut y montrer. */
 export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<string, Source>, keepIds?: Set<string>, marks?: MarkHint[]): Step[] {
   const out: Step[] = []
@@ -147,6 +155,7 @@ export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<str
       durationSec: Number.isFinite(s.durationSec) && Number(s.durationSec) > 0 ? Math.round(Number(s.durationSec)) : null,
       energyPointId: clean(s.energyTag) || null,
       ...(clean(s.section) ? { section: clean(s.section) } : {}),
+      ...withChecks(s.checks),
     })
   }
   return cleanSections(out)

@@ -71,6 +71,9 @@ export default function ReadInstructionPage() {
     exitLabel: preview ? t.instructions.read.backToEditor : t.common.close,
     allowVoice: voice,
     allowQuestions: true,
+    // Dans l'app, la personne connectée signe ce qu'elle fait ; l'aperçu d'un brouillon n'écrit rien.
+    canRecord: !preview,
+    recorder: { id: session.profile.userId, name: session.displayName },
   }
   if (editable) return <PreviewEditing key={id} doc={doc} player={player} />
   return <Player content={content} {...player} />

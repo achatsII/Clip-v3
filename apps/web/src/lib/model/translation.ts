@@ -3,7 +3,7 @@
  * appliquées au contenu, médias compris. Fonctions pures, partagées par le lecteur et l'assistant.
  */
 import { hashText } from '../util/hash'
-import type { EnergyPoint, InstructionContent, LockoutData, MediaTranslation, StepMedia, TranslatedContent } from './types'
+import type { Check, EnergyPoint, InstructionContent, LockoutData, MediaTranslation, StepMedia, TranslatedContent } from './types'
 
 /**
  * Ce qui nomme un média : son adresse (et l'extrait ou la page), ou l'empreinte d'un schéma. Une
@@ -84,9 +84,21 @@ export function localized(content: InstructionContent, lang: string): Instructio
         warning: s.warning ? { ...s.warning, text: x.warning || s.warning.text } : null,
         ...(s.section ? { section: x.section || s.section } : {}),
         media: s.media.map((m, i) => localizeMedia(m, x.media?.[i])),
+        ...(s.checks ? { checks: localizeChecks(s.checks, x.checks) } : {}),
       }
     }),
   }
+}
+
+/** Les relevés dans la langue choisie : libellés et choix ; les ids, limites et unités ne changent pas. */
+function localizeChecks(checks: Check[], t: TranslatedContent['steps'][number]['checks']): Check[] {
+  if (!t?.length) return checks
+  const byId = new Map(t.map((c) => [c.id, c]))
+  return checks.map((c) => {
+    const x = byId.get(c.id)
+    if (!x) return c
+    return { ...c, label: x.label || c.label, ...(c.options ? { options: c.options.map((o) => ({ ...o, label: x.options?.[o.id] || o.label })) } : {}) }
+  })
 }
 
 /**

@@ -5,7 +5,7 @@
  * de types y veille), et une autre langue prend l'anglais.
  */
 import type { MediaLabels } from '@/components/media/MediaView'
-import type { EnergyType, FeedbackKind, WarningLevel } from '@/lib/model/types'
+import type { Check, EnergyType, FeedbackKind, WarningLevel } from '@/lib/model/types'
 
 const fr = {
   start: 'Commencer',
@@ -63,6 +63,35 @@ const fr = {
   method: 'Cadenassage',
   /** Une mise en garde en une ligne (vue d'ensemble) : son niveau, puis son texte. */
   warningLine: (level: string, text: string) => `${level} : ${text}`,
+  /** Les relevés d'une étape : ce que l'opérateur note pour la trace. */
+  records: {
+    title: 'À relever',
+    num: (n: number) => n.toLocaleString('fr-CA', { maximumFractionDigits: 3 }),
+    yes: 'Oui',
+    no: 'Non',
+    between: (min: string, max: string, unit: string) => `Entre ${min} et ${max}${unit ? ` ${unit}` : ''}`,
+    atLeast: (min: string, unit: string) => `Au moins ${min}${unit ? ` ${unit}` : ''}`,
+    atMost: (max: string, unit: string) => `Au plus ${max}${unit ? ` ${unit}` : ''}`,
+    target: (v: string, unit: string) => `Visé : ${v}${unit ? ` ${unit}` : ''}`,
+    expected: (answer: string) => `Attendu : ${answer}`,
+    valueLabel: (label: string) => `${label} : la valeur`,
+    ok: 'Dans la norme',
+    bad: 'Hors norme',
+    deviation: 'Écart',
+    noteLabel: 'Écart : dites ce que vous avez fait',
+    noteAsk: (what: string) => `${what} : dites ce que vous avez fait`,
+    notePlaceholder: 'Ex. : averti le chef d’équipe',
+    textPlaceholder: 'Écrivez ici',
+    takePhoto: 'Prendre la photo',
+    retakePhoto: 'Reprendre',
+    uploading: 'Envoi de la photo…',
+    photoFailed: 'La photo n’est pas partie. Réessayez.',
+    optional: 'Facultatif',
+    needed: 'Remplissez ce qui est à relever pour continuer.',
+    saved: 'Relevés enregistrés',
+    queued: 'Relevés gardés dans l’appareil : ils partiront dès que la connexion revient.',
+    deviations: (n: number) => (n > 1 ? `${n.toLocaleString('fr-CA')} écarts signalés` : '1 écart signalé'),
+  },
   /** Les motifs d'un retour, tels que l'opérateur les touche. */
   kinds: { unclear: 'Pas clair', error: 'Erreur', danger: 'Danger', idea: 'Idée', praise: 'Merci' } satisfies Record<FeedbackKind, string>,
   /** Les mots du métier tels que l'opérateur les lit (le catalogue de l'outil suit la langue de l'outil). */
@@ -191,6 +220,34 @@ const en: PlayerStrings = {
   location: 'Location',
   method: 'Lockout',
   warningLine: (level: string, text: string) => `${level}: ${text}`,
+  records: {
+    title: 'To record',
+    num: (n: number) => n.toLocaleString('en-CA', { maximumFractionDigits: 3 }),
+    yes: 'Yes',
+    no: 'No',
+    between: (min: string, max: string, unit: string) => `Between ${min} and ${max}${unit ? ` ${unit}` : ''}`,
+    atLeast: (min: string, unit: string) => `At least ${min}${unit ? ` ${unit}` : ''}`,
+    atMost: (max: string, unit: string) => `At most ${max}${unit ? ` ${unit}` : ''}`,
+    target: (v: string, unit: string) => `Target: ${v}${unit ? ` ${unit}` : ''}`,
+    expected: (answer: string) => `Expected: ${answer}`,
+    valueLabel: (label: string) => `${label}: value`,
+    ok: 'Within limits',
+    bad: 'Out of limits',
+    deviation: 'Deviation',
+    noteLabel: 'Deviation: say what you did',
+    noteAsk: (what: string) => `${what}: say what you did`,
+    notePlaceholder: 'E.g. told the team lead',
+    textPlaceholder: 'Type here',
+    takePhoto: 'Take the photo',
+    retakePhoto: 'Retake',
+    uploading: 'Sending the photo…',
+    photoFailed: 'The photo was not sent. Try again.',
+    optional: 'Optional',
+    needed: 'Fill in what needs to be recorded to continue.',
+    saved: 'Readings saved',
+    queued: 'Readings kept on this device: they will be sent as soon as the connection is back.',
+    deviations: (n: number) => (n > 1 ? `${n.toLocaleString('en-CA')} deviations reported` : '1 deviation reported'),
+  },
   kinds: { unclear: 'Not clear', error: 'Mistake', danger: 'Dangerous', idea: 'Better way', praise: 'Helpful' },
   warningLevels: { danger: 'Danger', caution: 'Caution', info: 'Good to know' },
   ppeNames: {
@@ -313,6 +370,34 @@ const es: PlayerStrings = {
   location: 'Ubicación',
   method: 'Bloqueo',
   warningLine: (level: string, text: string) => `${level}: ${text}`,
+  records: {
+    title: 'Por registrar',
+    num: (n: number) => n.toLocaleString('es', { maximumFractionDigits: 3 }),
+    yes: 'Sí',
+    no: 'No',
+    between: (min: string, max: string, unit: string) => `Entre ${min} y ${max}${unit ? ` ${unit}` : ''}`,
+    atLeast: (min: string, unit: string) => `Al menos ${min}${unit ? ` ${unit}` : ''}`,
+    atMost: (max: string, unit: string) => `Como máximo ${max}${unit ? ` ${unit}` : ''}`,
+    target: (v: string, unit: string) => `Objetivo: ${v}${unit ? ` ${unit}` : ''}`,
+    expected: (answer: string) => `Esperado: ${answer}`,
+    valueLabel: (label: string) => `${label}: valor`,
+    ok: 'Dentro de la norma',
+    bad: 'Fuera de la norma',
+    deviation: 'Desviación',
+    noteLabel: 'Desviación: diga lo que hizo',
+    noteAsk: (what: string) => `${what}: diga lo que hizo`,
+    notePlaceholder: 'Ej.: avisé al jefe de equipo',
+    textPlaceholder: 'Escriba aquí',
+    takePhoto: 'Tomar la foto',
+    retakePhoto: 'Repetir',
+    uploading: 'Enviando la foto…',
+    photoFailed: 'La foto no se envió. Inténtelo de nuevo.',
+    optional: 'Opcional',
+    needed: 'Complete lo que hay que registrar para continuar.',
+    saved: 'Registros guardados',
+    queued: 'Registros guardados en el dispositivo: se enviarán en cuanto vuelva la conexión.',
+    deviations: (n: number) => (n > 1 ? `${n.toLocaleString('es')} desviaciones señaladas` : '1 desviación señalada'),
+  },
   kinds: { unclear: 'No está claro', error: 'Error', danger: 'Peligroso', idea: 'Mejor manera', praise: 'Útil' },
   warningLevels: { danger: 'Peligro', caution: 'Precaución', info: 'Dato útil' },
   ppeNames: {
@@ -385,4 +470,15 @@ const STRINGS: Record<string, PlayerStrings> = { fr, en, es }
 
 export function strings(lang: string): PlayerStrings {
   return STRINGS[lang] ?? en
+}
+
+/** La limite d'une mesure, lisible dans la langue du poste : « Entre 4,5 et 5,5 bar », « Au moins 2 mm ». */
+export function rangeText(c: Check, t: PlayerStrings['records']): string | null {
+  const unit = c.unit ?? ''
+  const lo = typeof c.min === 'number' ? t.num(c.min) : null
+  const hi = typeof c.max === 'number' ? t.num(c.max) : null
+  if (lo && hi) return t.between(lo, hi, unit)
+  if (lo) return t.atLeast(lo, unit)
+  if (hi) return t.atMost(hi, unit)
+  return null
 }

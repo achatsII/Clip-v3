@@ -7,6 +7,7 @@ import {
   CalendarClock,
   Check,
   CircleCheck,
+  ClipboardCheck,
   Copy,
   CopyPlus,
   Eye,
@@ -46,6 +47,7 @@ import { deviceId, onRealtime, publishRealtime, useRealtimeState, writtenBy } fr
 import { changedSteps, followStep, readVersion, remoteDraftAction } from '@/lib/realtime/liveDraft'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
+import { hasChecks } from '@/lib/model/checks'
 import { diffSteps } from '@/lib/model/diff'
 import { inheritSection, moveStep as moveStepKeepingSections } from '@/lib/model/sections'
 import { RENEWAL_CHOICES, renewalFrom, renewalMonthsOf, renewalState } from '@/lib/model/renewal'
@@ -112,6 +114,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [publishing, setPublishing] = useState(false)
   const reelToggle = useToggle('stepReel')
   const sectionsToggle = useToggle('sections')
+  const recordsToggle = useToggle('records')
   // La relecture périodique : choisie en publiant, rappelée un mois avant (toggle `renewal`).
   const renewalToggle = useToggle('renewal')
   const [renewMonths, setRenewMonths] = useState<number | null>(() => renewalMonthsOf(instr, org.json_data))
@@ -552,6 +555,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     { label: tp.menu.share, icon: <Share2 className="h-4 w-4" />, onClick: () => setDialog('share') },
     { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle, hint: translations === 'locked' ? <LockBadge /> : undefined },
     { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history'), divider: true },
+    // Le travail fait avec cette instruction : ses relevés, ses écarts (toggle `records`).
+    { label: t.records.openForInstruction, icon: <ClipboardCheck className="h-4 w-4" />, onClick: () => router.push(`/registre?instruction=${doc._id}`), hidden: !recordsToggle || !hasChecks(content.steps) || !can('feedback') },
     { label: tp.menu.exportPdf, icon: <FileDown className="h-4 w-4" />, onClick: () => window.open(`/instructions/${doc._id}/imprimer`, '_blank') },
     { label: tp.menu.exportJson, icon: <FileJson className="h-4 w-4" />, onClick: exportJson },
     {
@@ -719,6 +724,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         history={history}
         onAssistant={() => setAgentOpen(true)}
         sections={sectionsToggle}
+        records={recordsToggle}
         onSteps={(next) => update({ ...content, steps: next })}
         onChange={setStep}
         onSelect={(id) => id && setSelected(id)}

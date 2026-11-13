@@ -16,6 +16,7 @@ import { billing } from './billing'
 import { importer } from './importer'
 import { publicLinks } from './publicLinks'
 import { team } from './team'
+import { records } from './records'
 
 /** L'anglais : les mêmes clés que le français (le contrôle de types y veille). */
-export const en: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team }
+export const en: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records }

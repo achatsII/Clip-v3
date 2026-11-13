@@ -12,6 +12,7 @@ import { ErrorState, Skeleton } from '@/components/ui/States'
 import { useInstruction, useStations, useVersions } from '@/hooks/queries'
 import { callNative, hasCapability } from '@/lib/bridge/native'
 import { BILLING_V2 } from '@/lib/config'
+import { useToggle } from '@/lib/toggles'
 import { buildPrintHtml } from '@/lib/pdf/printHtml'
 import { T } from '@/lib/model/repo'
 import type { Published } from '@/lib/model/types'
@@ -22,6 +23,7 @@ import { useMessages } from '@/lib/i18n'
 export default function PrintPage() {
   const { id } = useParams<{ id: string }>()
   const session = useSession()
+  const recordsOn = useToggle('records')
   const t = useMessages()
   const instruction = useInstruction(id)
   const stations = useStations()
@@ -86,8 +88,9 @@ export default function PrintPage() {
       showClipMention: BILLING_V2 && brandKit === 'locked',
       draft: !usePublished,
       ratios,
+      records: recordsOn,
     })
-  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios])
+  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn])
 
   async function print() {
     if (hasCapability('print')) {

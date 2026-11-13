@@ -18,7 +18,7 @@ import { messages } from '../i18n'
 import { LANGUAGES } from '../model/catalog'
 import { nowIso } from '../model/repo'
 import { mediaKey } from '../model/translation'
-import type { InstructionContent, LockoutTranslation, MediaTranslation, StepMedia, TranslatedContent } from '../model/types'
+import type { Check, InstructionContent, LockoutTranslation, MediaTranslation, StepMedia, TranslatedContent } from '../model/types'
 import { translateExtrasSystem, translatedImagePrompt, translateImageSystem, translatePrompt, translateSystem } from './prompts'
 import { extrasSchema, imageTextSchema, translationSchema } from './schemas'
 import { visualTexts, type VisualTexts } from './visualText'
@@ -142,7 +142,27 @@ export function contentSegments(content: InstructionContent): { segments: Segmen
       segments.push(...r.segments)
       if (r.visual) visuals.set(mediaBase(s.id, i), r.visual)
     })
+  // Les relevés : leur libellé et leurs choix (les unités et les nombres ne se traduisent pas).
+  for (const s of content.steps)
+    for (const c of s.checks ?? []) {
+      if (hasLetter(c.label)) segments.push({ id: `check:${s.id}:${c.id}`, text: c.label })
+      for (const o of c.options ?? []) if (hasLetter(o.label)) segments.push({ id: `check:${s.id}:${c.id}:${o.id}`, text: o.label })
+    }
   return { segments, visuals }
+}
+
+/** Les relevés d'une étape dans la langue traduite ; rien si aucun texte n'a été traduit. */
+function checksFrom(stepId: string, checks: Check[] | undefined, map: Map<string, string>): NonNullable<TranslatedContent['steps'][number]['checks']> | undefined {
+  const out = (checks ?? []).flatMap((c) => {
+    const label = map.get(`check:${stepId}:${c.id}`)
+    const options = Object.fromEntries((c.options ?? []).flatMap((o) => {
+      const x = map.get(`check:${stepId}:${c.id}:${o.id}`)
+      return x ? [[o.id, x]] : []
+    }))
+    if (!label && !Object.keys(options).length) return []
+    return [{ id: c.id, ...(label ? { label } : {}), ...(Object.keys(options).length ? { options } : {}) }]
+  })
+  return out.length ? out : undefined
 }
 
 type TranslationJson = {
@@ -172,8 +192,9 @@ export function buildTranslation(content: InstructionContent, j: TranslationJson
     const media = s.media.map((m, i) => mediaTranslationFrom(s.id, i, m, map, visuals.get(mediaBase(s.id, i)) ?? null))
     const withMedia = media.some(Boolean)
     const section = s.section?.trim() ? map.get(`section:${names.indexOf(s.section.trim())}`) : undefined
-    if (!x && !withMedia && !section) return []
-    return [{ id: s.id, title: x?.title ?? '', text: x?.text ?? '', keyPoints: x?.keyPoints ?? [], warning: x?.warning?.trim() || null, ...(section ? { section } : {}), ...(withMedia ? { media } : {}) }]
+    const checks = checksFrom(s.id, s.checks, map)
+    if (!x && !withMedia && !section && !checks) return []
+    return [{ id: s.id, title: x?.title ?? '', text: x?.text ?? '', keyPoints: x?.keyPoints ?? [], warning: x?.warning?.trim() || null, ...(section ? { section } : {}), ...(withMedia ? { media } : {}), ...(checks ? { checks } : {}) }]
   })
   const lo = content.lockout
   const lockout: LockoutTranslation | undefined = lo
