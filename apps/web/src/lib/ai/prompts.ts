@@ -58,6 +58,7 @@ RÈGLES D’ÉCRITURE — le moins de texte possible : l’opérateur lit une é
 - Mise en garde (warningLevel), en une phrase courte, seulement si un risque réel existe à cette étape : "danger" = blessure grave possible ; "caution" = blessure légère ou dommage ; "info" = astuce importante ; sinon "none". Une même mise en garde ne se répète pas d’une étape à l’autre : elle va à l’étape où le risque se présente. Les EPI et les consignes générales vont dans la fiche (ppe, safety), pas dans chaque étape.
 - N’invente JAMAIS une valeur (couple, pression, température, quantité, numéro de pièce, réglage) : si elle n’est ni dite ni visible, ne l’écris pas et pose une question.
 - Respecte l’ordre réel des gestes, tel qu’on le voit et l’entend dans les sources.
+- Au-delà de 8 étapes, regroupe-les en 3 à 8 phases (section : 1 à 3 mots, « Démontage », « Nettoyage », « Remontage ») ; les étapes d’une phase se suivent et portent le même nom. 8 étapes ou moins : aucune section.
 - Langue de sortie : ${opts.language === 'fr' ? 'français québécois clair, avec les termes du métier en usage au Québec (EPI, cadenassage, quart de travail…)' : opts.language === 'en' ? 'anglais nord-américain clair (English), avec les termes du métier en usage dans les usines (PPE, lockout/tagout, shift…)' : `la langue « ${opts.language} »`}.
 
 MÉDIAS :

@@ -169,6 +169,17 @@ export const editor: typeof Fr = {
       where: 'Where should it show?',
     },
     deleteStepTitle: (n: number) => `Delete step ${num(n)}?`,
+    renewal: {
+      label: 'Review in',
+      hint: 'CLIP will remind you a month before.',
+      soon: (date: string) => `To review before ${date}.`,
+      late: (date: string) => `Review overdue since ${date}.`,
+      question: 'Nothing changed?',
+      confirm: 'Still good',
+      confirmed: 'Review recorded',
+      confirmedDetail: (date: string) => `Next review on ${date}.`,
+      failed: 'The review wasn’t recorded',
+    },
     toasts: {
       stationNotSaved: 'The station wasn’t saved',
       stationCreated: 'Station created',
@@ -194,6 +205,10 @@ export const editor: typeof Fr = {
   },
   stage: {
     region: 'Edit the instruction',
+    newSection: 'New section here',
+    newSectionName: 'New section',
+    removeSection: 'Remove section',
+    sectionLabel: 'Section name',
     assistant: 'Assistant',
     askAssistant: 'Ask the assistant something else…',
     addKeyPointShort: 'Key point',

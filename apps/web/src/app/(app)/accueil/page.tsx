@@ -1,5 +1,7 @@
 'use client'
 
+import { useToggle } from '@/lib/toggles'
+import { needsRenewal } from '@/lib/model/renewal'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Check, CheckCircle2, ClipboardCheck, EyeOff, Flame, MapPin, MessageSquareWarning, Mic, Palette, PenLine, QrCode, ScanLine, Sparkles, Trophy, UserPlus, Video } from 'lucide-react'
 import Link from 'next/link'
@@ -78,6 +80,9 @@ export default function HomePage() {
   const all = instructions.data ?? []
   const published = all.filter((d) => d.json_data.publishedVersion)
   const review = all.filter((d) => d.json_data.status === 'review')
+  // Les instructions qui arrivent à leur date de relecture (un mois avant, ou en retard).
+  const renewalOn = useToggle('renewal')
+  const toRenew = renewalOn ? all.filter((d) => needsRenewal(d.json_data)).slice(0, 5) : []
   const myDrafts = all.filter((d) => d.json_data.authorId === profile.userId && (!d.json_data.publishedVersion || d.json_data.dirty) && d.json_data.status !== 'review').slice(0, 4)
   const covered = new Set(published.flatMap((d) => d.json_data.stationIds))
   const stationCount = stations.data?.length ?? 0
@@ -188,6 +193,17 @@ export default function HomePage() {
         )}
         <Tile className="from-orange-400 to-rose-500" icon={<Flame className="h-6 w-6" />} label={t.tiles.streak} value={instructions.isLoading ? null : streak} hint={streak ? t.tiles.streakWeeks(streak) : t.tiles.streakStart} />
       </div>
+
+      {can('instructions', 'write') && toRenew.length > 0 && (
+        <section>
+          <SectionTitle title={t.renewal.title(toRenew.length)} hint={t.renewal.hint} action={<Link href="/instructions?statut=revoir" className="text-sm font-black text-[var(--primary)]">{t.feedback.seeAll}</Link>} />
+          <div className="space-y-2">
+            {toRenew.map((d) => (
+              <InstructionRow key={d._id} doc={d} stationNames={d.json_data.stationIds.map((s) => stationName.get(s) ?? '').filter(Boolean)} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {can('approve', 'write') && review.length > 0 && (
         <section>

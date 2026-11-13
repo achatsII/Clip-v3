@@ -34,8 +34,9 @@ const stepSchema = {
     media: { type: 'array', items: mediaRef, description: '0 à 2 médias, le meilleur en premier' },
     durationSec: num('Durée approximative de l’étape en secondes ; 0 si inconnue'),
     energyTag: str('Fiche de cadenassage : repère du point d’isolement traité (E1, P1…) ; vide sinon'),
+    section: str('La phase où se trouve l’étape, 1 à 3 mots (« Démontage ») ; les étapes d’une même phase se suivent et portent le même nom ; vide si l’instruction a 8 étapes ou moins'),
   },
-  required: ['title', 'text', 'keyPoints', 'warningLevel', 'warningText', 'media'],
+  required: ['title', 'text', 'keyPoints', 'warningLevel', 'warningText', 'media', 'section'],
 }
 
 const lockoutSchema = {

@@ -12,7 +12,7 @@ export const instructions: typeof Fr = {
     searchByVoice: 'Search by voice',
     clear: 'Clear',
     scope: { mine: 'For me', all: 'All' },
-    filters: { all: 'All', published: 'Published', draft: 'Drafts', review: 'To approve' },
+    filters: { all: 'All', published: 'Published', draft: 'Drafts', review: 'To approve', renew: 'To review' },
     tiles: 'Tiles',
     rows: 'List',
     emptyTitle: 'Create your first instruction',
@@ -21,6 +21,11 @@ export const instructions: typeof Fr = {
     noMatchTitle: 'Nothing matches',
     noMatchText: 'Try another word, or remove a filter.',
     showAll: 'Show all',
+  },
+  renewal: {
+    choice: (months: number | null) => (months === null ? 'Never' : months === 12 ? '1 year' : months === 24 ? '2 years' : `${months.toLocaleString('en-CA')} months`),
+    soon: 'To review',
+    late: 'Review overdue',
   },
   card: {
     lockout: 'Lockout',

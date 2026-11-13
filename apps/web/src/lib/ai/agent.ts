@@ -17,6 +17,7 @@
  * le contenu dans celle de l'instruction (`content.language`). Les consignes données au modèle
  * restent en français ; ce que l'app montre (actions, erreurs) se lit dans le dictionnaire.
  */
+import { inheritSection } from '../model/sections'
 import type { AiApi, AiOperation, AskFile } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
 import { getLang, messages } from '../i18n'
@@ -411,7 +412,9 @@ export function applyOp(content: InstructionContent, op: AgentOp, ids: IdMap): O
         const i = content.steps.findIndex((s) => s.id === (ids.get(op.after!) ?? op.after))
         if (i >= 0) at = i + 1
       }
-      const steps = [...content.steps.slice(0, at), step, ...content.steps.slice(at)]
+      // Ajoutée au milieu d'une section, l'étape en fait partie.
+      const placed = at > 0 ? inheritSection(step, content.steps[at - 1]) : step
+      const steps = [...content.steps.slice(0, at), placed, ...content.steps.slice(at)]
       return { content: { ...content, steps }, label: t.done.stepAdded(at + 1, step.title), stepId: step.id }
     }
     case 'update_step': {

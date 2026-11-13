@@ -5,6 +5,7 @@
  * part sur `/api/v2/ai/ask` et la plateforme débite le prix de l'opération ; éteinte, il part sur
  * `/api/v4/assistant/ask`, à l'identique. Aucun repli d'une route vers l'autre.
  */
+import { requireAiConsent } from '../ai/consent'
 import { emitRefusal, emitSettled, refusalFrom } from '../billing/bus'
 import { BILLING_V2, PRODUCT_SLUG } from '../config'
 import { ApiError, GatewayClient } from './client'
@@ -90,6 +91,8 @@ export function onAiUsage(fn: AiUsageListener) {
 export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}) {
   const billing = options.billing ?? BILLING_V2
   async function ask<T = unknown>(operation: AiOperation, body: AskBody, opts: { scope?: string; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<AskResult<T>> {
+    // Rien ne part vers l'IA sans l'accord de la personne (une fois, au premier usage).
+    await requireAiConsent()
     const timeoutMs = opts.timeoutMs ?? 180_000
     let env: AskEnvelope
     try {
@@ -144,6 +147,7 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}
 
     /** Jeton éphémère Gemini Live (voix temps réel, ~15 min, usage unique). */
     async liveSession(): Promise<{ sessionId: string; model: string; accessToken: string }> {
+      await requireAiConsent()
       const res = await client.call<{ sessionId?: string; model?: string; accessToken?: string }>('/api/v1/ai/live/session', {
         method: 'POST',
         body: {},
@@ -167,6 +171,7 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean } = {}
      * fois, pour que l'illustration ne casse pas.
      */
     async generateImage(prompt: string, referenceImages: string[], size = { width: 1024, height: 1024 }): Promise<string> {
+      await requireAiConsent()
       type Out = { success?: boolean; error?: unknown; message?: string; results?: Array<{ imageURL?: string; url?: string }> }
       const once = async (provider: ImageProvider) => {
         const res = await client.call<Out[] | Out>('/api/v2/ai/generate/image', {

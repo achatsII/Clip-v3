@@ -1,5 +1,7 @@
 'use client'
 
+import { useToggle } from '@/lib/toggles'
+import { needsRenewal } from '@/lib/model/renewal'
 import { BookOpen, LayoutGrid, List, Plus, Search, SearchX, Upload, X } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
@@ -19,7 +21,7 @@ import { CATEGORIES, CATEGORY_KEYS } from '@/lib/model/catalog'
 import type { CategoryKey } from '@/lib/model/types'
 import { cn, normalizeText } from '@/lib/util/cn'
 
-type StatusFilter = 'all' | 'published' | 'draft' | 'review'
+type StatusFilter = 'all' | 'published' | 'draft' | 'review' | 'renew'
 
 function pref<T extends string>(key: string, fallback: T): T {
   try {
@@ -43,7 +45,8 @@ export default function InstructionsPage() {
   const hasFocus = me.categories.length > 0 || me.stationIds.length > 0
   const [scope, setScope] = useState<'mine' | 'all'>(hasFocus ? 'mine' : 'all')
   const [category, setCategory] = useState<CategoryKey | null>(null)
-  const [status, setStatus] = useState<StatusFilter>(params.get('statut') === 'review' ? 'review' : 'all')
+  const [status, setStatus] = useState<StatusFilter>(params.get('statut') === 'review' ? 'review' : params.get('statut') === 'revoir' ? 'renew' : 'all')
+  const renewalOn = useToggle('renewal')
   const [view, setView] = useState<'grid' | 'list'>('grid')
 
   useEffect(() => setView(pref('library_view', 'grid')), [])
@@ -70,6 +73,7 @@ export default function InstructionsPage() {
       if (status === 'published' && !i.publishedVersion) return false
       if (status === 'draft' && i.publishedVersion && !i.dirty) return false
       if (status === 'review' && i.status !== 'review') return false
+      if (status === 'renew' && !needsRenewal(i)) return false
       if (q) {
         const hay = normalizeText([i.title, i.tags.join(' '), ...i.stationIds.map((s) => stationText.get(s) ?? '')].join(' '))
         if (!hay.includes(q)) return false
@@ -142,6 +146,7 @@ export default function InstructionsPage() {
             { value: 'published', label: tl.filters.published },
             { value: 'draft', label: tl.filters.draft },
             { value: 'review', label: tl.filters.review },
+            ...(renewalOn ? [{ value: 'renew' as const, label: tl.filters.renew }] : []),
           ]}
         />
         {CATEGORY_KEYS.filter((k) => categoriesInUse.has(k)).map((k) => (

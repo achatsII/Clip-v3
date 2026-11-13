@@ -82,6 +82,7 @@ export function localized(content: InstructionContent, lang: string): Instructio
         text: x.text || s.text,
         keyPoints: x.keyPoints?.length ? x.keyPoints : s.keyPoints,
         warning: s.warning ? { ...s.warning, text: x.warning || s.warning.text } : null,
+        ...(s.section ? { section: x.section || s.section } : {}),
         media: s.media.map((m, i) => localizeMedia(m, x.media?.[i])),
       }
     }),

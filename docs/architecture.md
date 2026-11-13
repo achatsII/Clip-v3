@@ -329,6 +329,39 @@ s'effacent (`useImmersive`, `src/lib/ui/immersive.ts`).
 - **Téléphone** : la vue du téléphone ; en bas, sous le pouce, les étapes (précédente, le choix,
   suivante), le « … » de l'étape et l'Assistant. Cette barre se cache pendant qu'on écrit.
 
+### Les sections d'une longue instruction (toggle `sections`, `src/lib/model/sections.ts`)
+
+Au-delà de 8 étapes, l'IA regroupe les étapes en 3 à 8 phases (« Démontage », « Nettoyage »,
+« Remontage »). Chaque étape porte le nom de sa section (`Step.section`) ; une section, ce sont les
+étapes qui se suivent sous le même nom : rien d'autre à tenir à jour, et le nom se traduit avec le
+reste (un texte à part par nom). Dans l'éditeur, le nom s'écrit au-dessus du titre (il change pour
+toute la section) ; « Nouvelle section ici » et « Retirer la section » sont dans le « … » de
+l'étape ; la bande des étapes sépare les sections. Une étape déplacée prend la section de la place où
+elle arrive ; une étape ajoutée reste dans celle d'avant. Au poste, le nom s'affiche au-dessus du
+titre, et toucher « Étape 3 sur 12 » ouvre le sommaire : toutes les étapes, par section, pour aller
+directement à l'une d'elles. Le PDF met le nom en titre.
+
+### La relecture périodique (toggle `renewal`, `src/lib/model/renewal.ts`)
+
+En publiant, on choisit « À revoir dans » 6 mois, 1 an, 2 ans ou jamais ; le défaut vient de
+Réglages › Usine (1 an si rien n'est choisi). L'instruction garde `renewal` (période, échéance,
+dernière relecture). Un mois avant l'échéance, l'éditeur le rappelle (« Rien n'a changé ? Toujours
+bonne ») ; la liste porte « À revoir » ou « Révision en retard », avec un filtre ; l'accueil liste les
+instructions à revoir. « Toujours bonne » repousse l'échéance sans nouvelle version ; publier la
+repousse aussi. Rien ne bloque l'opérateur.
+
+### L'accord avant l'IA et la suppression du compte (exigences d'Apple)
+
+- **L'accord** (toggle `aiConsent`, `src/lib/ai/consent.ts`) : rien ne part vers l'IA (questions,
+  images, voix en direct, fichiers envoyés aux modèles, transcriptions) avant que la personne l'ait
+  accepté, une fois, par appareil. Le client de l'IA et l'envoi des fichiers passent par
+  `requireAiConsent()` ; la fenêtre (`AiConsentHost`) s'ouvre au premier usage, nomme Google et
+  OpenAI et mène à la politique de confidentialité. Refusé, l'appel ne part pas. L'accord se retire
+  dans Réglages › Données. Les liens publics n'ont pas de fenêtre (rien n'y part de la personne).
+- **Supprimer mon compte** (toggle `deleteAccount`) : dans le menu Mon compte et dans Réglages ›
+  Données ; on écrit son courriel pour confirmer, puis `DELETE /api/v1/auth/user/delete` révoque les
+  sessions et efface le compte. Les instructions de l'usine restent à l'équipe.
+
 ### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
 
 L'aperçu (`/instructions/{id}/lire?apercu=1`) montre le brouillon tel qu'au poste. Pour qui peut

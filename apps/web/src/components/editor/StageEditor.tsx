@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, ImagePlus, Loader2, MessageCircle, MessageCircleQuestion, MoreHorizontal, PencilLine, Plus, Radio, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Heading, ImagePlus, Loader2, MessageCircle, MessageCircleQuestion, MoreHorizontal, PencilLine, Plus, Radio, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { mediaThumb } from '@/components/media/MediaView'
@@ -13,6 +13,7 @@ import type { DraftHistory } from '@/hooks/useDraftHistory'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { WARNINGS } from '@/lib/model/catalog'
 import type { StepChange } from '@/lib/model/diff'
+import { removeSection, sectionAt, setSectionRange, settleSection, startSection, startsSection } from '@/lib/model/sections'
 import type { InstructionContent, Source, Step, WarningLevel } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
 import { ASSIST_ACTIONS, useStepAssist } from './StepAssist'
@@ -80,6 +81,10 @@ export interface StageEditorProps {
   changes?: Record<string, StepChange>
   /** Ouvre la conversation avec l'assistant. */
   onAssistant: () => void
+  /** Les sections (« Démontage », « Remontage ») : toggle `sections`. */
+  sections?: boolean
+  /** Toutes les étapes d'un coup (les sections touchent plusieurs étapes). */
+  onSteps: (steps: Step[]) => void
   onChange: (s: Step) => void
   onSelect: (id: string) => void
   onInsertAfter: () => void
@@ -102,8 +107,10 @@ export function StageEditor(props: StageEditorProps) {
   const t = useMessages()
   const wide = useWide()
   const [mediaOpen, setMediaOpen] = useState(false)
+  // Une section vient d'être créée : son nom s'ouvre à la saisie.
+  const [namingSection, setNamingSection] = useState(false)
   const assist = useStepAssist({ content: props.content, step: props.step ?? NO_STEP, onApply: props.onChange })
-  const p: Inner = { ...props, assist, openMedia: () => setMediaOpen(true) }
+  const p: Inner = { ...props, assist, openMedia: () => setMediaOpen(true), namingSection, setNamingSection }
   return (
     <>
       {wide ? <StageCanvas {...p} /> : <StagePhone {...p} />}
@@ -117,7 +124,7 @@ export function StageEditor(props: StageEditorProps) {
   )
 }
 
-type Inner = StageEditorProps & { assist: ReturnType<typeof useStepAssist>; openMedia: () => void }
+type Inner = StageEditorProps & { assist: ReturnType<typeof useStepAssist>; openMedia: () => void; namingSection: boolean; setNamingSection: (on: boolean) => void }
 
 /** Les actions sur l'étape, dans son « … » : média, ajout, copie, déplacement, suppression. */
 function stepMenu(p: Inner, step: Step, t: Messages): MenuItem[] {
@@ -128,8 +135,58 @@ function stepMenu(p: Inner, step: Step, t: Messages): MenuItem[] {
     { label: t.editor.step.duplicate, icon: <Copy className="h-4 w-4" />, onClick: p.onDuplicate },
     { label: t.editor.stage.moveBefore, icon: <ArrowLeft className="h-4 w-4" />, onClick: () => p.onMove(-1), hidden: p.index === 0 },
     { label: t.editor.stage.moveAfter, icon: <ArrowRight className="h-4 w-4" />, onClick: () => p.onMove(1), hidden: p.index >= total - 1 },
+    {
+      label: t.editor.stage.newSection,
+      icon: <Heading className="h-4 w-4" />,
+      hidden: !p.sections || startsSection(p.content.steps, p.index),
+      divider: true,
+      onClick: () => {
+        p.onSteps(startSection(p.content.steps, p.index, t.editor.stage.newSectionName))
+        p.setNamingSection(true)
+      },
+    },
+    { label: t.editor.stage.removeSection, icon: <X className="h-4 w-4" />, hidden: !p.sections || !step.section, onClick: () => p.onSteps(removeSection(p.content.steps, p.index)) },
     { label: t.editor.step.delete, icon: <Trash2 className="h-4 w-4" />, onClick: p.onDelete, danger: true, divider: true },
   ]
+}
+
+/**
+ * Le nom de la section de l'étape, modifiable sur place : il change pour toutes les étapes de la
+ * section. La plage est retenue au début de la saisie (un nom vidé ne fusionne pas deux sections).
+ */
+function SectionField({ p, index }: { p: Inner; index: number }) {
+  const t = useMessages()
+  const range = useRef<{ start: number; end: number } | null>(null)
+  const grab = () => {
+    const g = sectionAt(p.content.steps, index)
+    return g ? { start: g.start, end: g.end } : { start: index, end: index + 1 }
+  }
+  return (
+    <input
+      value={p.content.steps[index]?.section ?? ''}
+      readOnly={p.readOnly}
+      autoFocus={p.namingSection}
+      onFocus={(e) => {
+        range.current = grab()
+        if (p.namingSection) {
+          e.currentTarget.select()
+          p.setNamingSection(false)
+        }
+      }}
+      onChange={(e) => {
+        const r = range.current ?? grab()
+        range.current = r
+        p.onSteps(setSectionRange(p.content.steps, r.start, r.end, e.target.value))
+      }}
+      onBlur={() => {
+        const r = range.current
+        range.current = null
+        if (r) p.onSteps(settleSection(p.content.steps, r.start, r.end))
+      }}
+      aria-label={t.editor.stage.sectionLabel}
+      className="label-caps -mb-2 w-full rounded-xl bg-transparent px-2 py-1.5 text-[var(--primary-strong)] transition hover:bg-slate-900/[0.03] focus:bg-white/80 focus:ring-4 focus:ring-[rgba(var(--primary-rgb),0.18)] focus:outline-none dark:text-sky-300 dark:hover:bg-white/5 dark:focus:bg-slate-900/60"
+    />
+  )
 }
 
 function BackLink() {
@@ -290,6 +347,7 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
       )}
       {p.feedbackNote && <p className="rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">{t.editor.stepEditor.operatorFeedback(p.feedbackNote)}</p>}
 
+      {p.sections && !!step.section && <SectionField p={p} index={index} />}
       <div className="flex items-start gap-4">
         <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
         <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label={t.editor.stage.titleLabel} placeholder={t.editor.stage.titlePlaceholder} className={cn(editable, 'min-w-0 flex-1 px-2 pt-1 leading-[1.05] font-black tracking-tighter hyphens-auto text-slate-900 dark:text-white', p.agentOpen ? 'text-3xl' : 'text-3xl sm:text-4xl')} />
@@ -379,14 +437,17 @@ function StepStrip({ p }: { p: Inner }) {
       <button type="button" onClick={() => p.onSelect(content.steps[index - 1]?.id)} disabled={!step || index === 0} aria-label={t.editor.stage.previous} className={iconButton}>
         <ChevronLeft className="h-5 w-5" />
       </button>
-      <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-1 py-2">
+      <div className="no-scrollbar flex min-w-0 flex-1 items-end gap-2 overflow-x-auto px-1 py-2">
         {content.steps.map((s, i) => {
           const img = mediaThumb(s.media[0])
           const active = s.id === step?.id
           const fb = p.feedbackByStep?.[s.id] ?? 0
           const change = p.changes?.[s.id]
+          const opens = !!p.sections && startsSection(content.steps, i)
           return (
-            <button key={s.id} ref={active ? current : undefined} type="button" onClick={() => p.onSelect(s.id)} aria-current={active ? 'step' : undefined} title={t.editor.stage.thumbTitle(i + 1, s.title)} className={cn('btn-press relative h-16 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 text-left', active ? 'ring-4 ring-[var(--primary)]' : 'opacity-80 hover:opacity-100')}>
+            <div key={s.id} className={cn('flex shrink-0 flex-col gap-1', opens && i > 0 && 'ml-2 border-l-2 border-[var(--primary)]/30 pl-3')}>
+              <span className={cn('label-caps block h-3 max-w-28 truncate text-[10px] leading-3 text-[var(--primary-strong)] dark:text-sky-300', !opens && 'invisible')}>{opens ? s.section : '·'}</span>
+            <button ref={active ? current : undefined} type="button" onClick={() => p.onSelect(s.id)} aria-current={active ? 'step' : undefined} title={t.editor.stage.thumbTitle(i + 1, s.title)} className={cn('btn-press relative h-16 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 text-left', active ? 'ring-4 ring-[var(--primary)]' : 'opacity-80 hover:opacity-100')}>
               {img && <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />}
               <span className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
               {(change === 'added' || change === 'modified') && (
@@ -397,6 +458,7 @@ function StepStrip({ p }: { p: Inner }) {
                 {i + 1}. {s.title}
               </span>
             </button>
+            </div>
           )
         })}
         {!readOnly && (

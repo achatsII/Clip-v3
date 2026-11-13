@@ -47,6 +47,11 @@ export const home = {
     streakWeeks: (weeks: number) => `semaine${weeks > 1 ? 's' : ''} de suite avec une publication`,
     streakStart: 'Publiez cette semaine pour lancer votre série',
   },
+  /** Les instructions qui arrivent à leur date de relecture. */
+  renewal: {
+    title: (count: number) => `À revoir (${count.toLocaleString('fr-CA')})`,
+    hint: 'Elles arrivent à leur date de relecture. Rien n’a changé ? Confirmez-le d’un geste.',
+  },
   review: {
     title: (count: number) => `À approuver (${count.toLocaleString('fr-CA')})`,
     hint: 'Les étapes modifiées sont marquées dans l’éditeur.',

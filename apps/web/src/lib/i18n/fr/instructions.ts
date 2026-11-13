@@ -11,7 +11,7 @@ export const instructions = {
     searchByVoice: 'Chercher en parlant',
     clear: 'Effacer',
     scope: { mine: 'Pour moi', all: 'Tout' },
-    filters: { all: 'Toutes', published: 'Publiées', draft: 'Brouillons', review: 'À approuver' },
+    filters: { all: 'Toutes', published: 'Publiées', draft: 'Brouillons', review: 'À approuver', renew: 'À revoir' },
     tiles: 'Tuiles',
     rows: 'Liste',
     emptyTitle: 'Créez votre première instruction',
@@ -22,6 +22,12 @@ export const instructions = {
     showAll: 'Tout afficher',
   },
   /** Les tuiles et les lignes de la bibliothèque. */
+  /** La relecture périodique : « à revoir dans 1 an ». */
+  renewal: {
+    choice: (months: number | null) => (months === null ? 'Jamais' : months === 12 ? '1 an' : months === 24 ? '2 ans' : `${months.toLocaleString('fr-CA')} mois`),
+    soon: 'À revoir',
+    late: 'Révision en retard',
+  },
   card: {
     lockout: 'Cadenassage',
     noStation: 'Aucun poste',

@@ -184,6 +184,18 @@ export const editor = {
       where: 'Où l’afficher ?',
     },
     deleteStepTitle: (n: number) => `Supprimer l’étape ${num(n)} ?`,
+    /** La relecture périodique : choisie en publiant, rappelée un mois avant. */
+    renewal: {
+      label: 'À revoir dans',
+      hint: 'CLIP le rappellera un mois avant.',
+      soon: (date: string) => `À revoir avant le ${date}.`,
+      late: (date: string) => `Révision en retard depuis le ${date}.`,
+      question: 'Rien n’a changé ?',
+      confirm: 'Toujours bonne',
+      confirmed: 'Relecture notée',
+      confirmedDetail: (date: string) => `Prochaine relecture le ${date}.`,
+      failed: 'La relecture n’a pas été notée',
+    },
     toasts: {
       stationNotSaved: 'Le poste n’a pas été enregistré',
       stationCreated: 'Poste créé',
@@ -211,6 +223,11 @@ export const editor = {
   /** La vue « Comme au poste » : l’étape telle que l’opérateur la verra, modifiable sur place. */
   stage: {
     region: 'Modifier l’instruction',
+    /** Les sections : les phases d’une longue instruction (« Démontage »). */
+    newSection: 'Nouvelle section ici',
+    newSectionName: 'Nouvelle section',
+    removeSection: 'Retirer la section',
+    sectionLabel: 'Nom de la section',
     assistant: 'Assistant',
     askAssistant: 'Demander autre chose à l’assistant…',
     addKeyPointShort: 'Point clé',

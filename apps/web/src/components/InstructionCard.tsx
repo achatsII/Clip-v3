@@ -1,6 +1,8 @@
 'use client'
 
-import { Loader2, Lock, MapPin, Sparkles } from 'lucide-react'
+import { renewalState } from '@/lib/model/renewal'
+import { useToggle } from '@/lib/toggles'
+import { CalendarClock, Loader2, Lock, MapPin, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { CategoryIcon } from '@/components/icons'
 import { useCreations } from '@/hooks/useCreations'
@@ -43,6 +45,19 @@ function useRunningStage(id: string, i: Instruction): string | null {
  * Tuile « TV grid » : la couleur porte la catégorie, la pastille le statut. Une instruction en
  * création se voit de loin : le dégradé de la marque coule, un reflet passe, l'étape s'écrit.
  */
+/** « À revoir » un mois avant la date de relecture, « Révision en retard » après (toggle `renewal`). */
+function RenewalChip({ i, className }: { i: Instruction; className?: string }) {
+  const t = useMessages().instructions.renewal
+  const on = useToggle('renewal')
+  const state = on ? renewalState(i) : 'none'
+  if (state !== 'soon' && state !== 'late') return null
+  return (
+    <span className={cn('flex shrink-0 items-center gap-1 rounded-xl px-2 py-1 text-[10px] font-black tracking-widest uppercase shadow-sm', state === 'late' ? 'bg-rose-500 text-white' : 'bg-amber-400 text-amber-950', className)}>
+      <CalendarClock className="h-3 w-3" /> {state === 'late' ? t.late : t.soon}
+    </span>
+  )
+}
+
 export function InstructionTile({ doc, stationNames }: { doc: Doc<Instruction>; stationNames: string[] }) {
   const t = useMessages().instructions.card
   const i = doc.json_data
@@ -64,8 +79,11 @@ export function InstructionTile({ doc, stationNames }: { doc: Doc<Instruction>; 
         <span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/15 px-2.5 py-1.5 text-[10px] font-black tracking-widest uppercase backdrop-blur-md">
           {i.kind === 'lockout' ? <Lock className="h-3.5 w-3.5" /> : <CategoryIcon category={i.category} className="h-3.5 w-3.5" />} {i.kind === 'lockout' ? t.lockout : cat.short}
         </span>
-        <span className={cn('absolute top-3 right-3 flex items-center gap-1 rounded-xl border border-white/20 px-2.5 py-1.5 text-[10px] font-black tracking-widest uppercase shadow-lg', st.className)}>
-          {st.busy && <Loader2 className="h-3 w-3 animate-spin" />} {st.label}
+        <span className="absolute top-3 right-3 flex flex-col items-end gap-1">
+          <span className={cn('flex items-center gap-1 rounded-xl border border-white/20 px-2.5 py-1.5 text-[10px] font-black tracking-widest uppercase shadow-lg', st.className)}>
+            {st.busy && <Loader2 className="h-3 w-3 animate-spin" />} {st.label}
+          </span>
+          <RenewalChip i={i} />
         </span>
         {!i.coverUrl && !stage && <CategoryIcon category={i.category} className="absolute top-1/2 right-6 h-16 w-16 -translate-y-1/2 text-white/25" />}
         <span className="absolute inset-x-4 bottom-3">
@@ -103,8 +121,11 @@ export function InstructionRow({ doc, stationNames }: { doc: Doc<Instruction>; s
           {stage ?? `${cat.label} · ${stationNames.length ? stationNames.join(', ') : t.noStation} · ${timeAgo(i.updatedAt)}`}
         </span>
       </span>
-      <span className={cn('flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-1 text-[10px] font-black tracking-widest text-white uppercase', st.className)}>
-        {st.busy && <Loader2 className="h-3 w-3 animate-spin" />} {st.label}
+      <span className="flex shrink-0 flex-col items-end gap-1">
+        <span className={cn('flex items-center gap-1 rounded-xl px-2.5 py-1 text-[10px] font-black tracking-widest text-white uppercase', st.className)}>
+          {st.busy && <Loader2 className="h-3 w-3 animate-spin" />} {st.label}
+        </span>
+        <RenewalChip i={i} />
       </span>
     </Link>
   )

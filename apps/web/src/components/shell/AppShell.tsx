@@ -1,5 +1,7 @@
 'use client'
 
+import { useToggle } from '@/lib/toggles'
+import { AiConsentHost, DeleteAccountDialog } from '@/components/settings/Account'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
@@ -59,6 +61,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [scanOpen, setScanOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const deleteToggle = useToggle('deleteAccount')
 
   const feedbackCount = useQuery({
     queryKey: ['feedback-count'],
@@ -231,8 +235,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button type="button" onClick={signOut} className="btn-press flex h-14 items-center gap-3 rounded-2xl px-4 text-left font-black text-rose-600">
             <LogOut className="h-5 w-5" /> {t.shell.signOut}
           </button>
+          {/* Exigence d'Apple : supprimer son compte depuis l'app. */}
+          {deleteToggle && (
+            <button type="button" onClick={() => { setMoreOpen(false); setDeleteOpen(true) }} className="btn-press flex min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-bold text-slate-400 hover:text-rose-600">
+              {t.settings.account.delete}
+            </button>
+          )}
         </div>
       </Modal>
+      <DeleteAccountDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} />
+      {/* L'accord avant le premier envoi à l'IA. */}
+      <AiConsentHost />
 
       <AppearanceDialog open={appearanceOpen} onClose={() => setAppearanceOpen(false)} brandColor={org.json_data.color} />
       <ScanSheet open={scanOpen} onClose={() => setScanOpen(false)} onResult={handleScanValue} />

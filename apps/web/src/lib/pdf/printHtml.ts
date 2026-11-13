@@ -89,7 +89,9 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
   const steps = content.steps
     .map((s, i) => {
       const w = s.warning
-      return `<article class="step">
+      // Une section s'ouvre : son nom, en titre, sur toute la largeur.
+      const opens = !!s.section?.trim() && (i === 0 || content.steps[i - 1].section !== s.section)
+      return `${opens ? `<h2 class="section">${esc(s.section!.trim())}</h2>` : ''}<article class="step">
         ${stepMediaBlock(s, meta.ratios, String(i), words)}
         <div class="body">
           <h3><span class="n">${i + 1}</span>${esc(s.title)}</h3>
@@ -132,6 +134,7 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .chip{display:inline-block;background:#e0f2fe;color:#075985;border-radius:8px;padding:4px 8px;margin:0 6px 6px 0;font-size:12px;font-weight:800}
 .safety{background:#fff1f2;border-color:#fecdd3}.safety li{font-weight:700}
 .steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.steps .section{grid-column:1/-1;margin:10px 0 0;font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#0056D6;break-after:avoid;page-break-after:avoid}
 .step{border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
 .media{position:relative;background:#0f172a;display:flex;justify-content:center}.frame{position:relative}.frame img{width:100%;height:100%;display:block}
 .ann{position:absolute;inset:0;container-type:inline-size}

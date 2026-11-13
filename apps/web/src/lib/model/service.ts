@@ -7,7 +7,7 @@ import type { DataApi, Doc } from '../gateway/data'
 import { messages, messagesIn } from '../i18n'
 import { summarizeChanges } from './diff'
 import { coverOf, emptyContent, findPublished, nowIso, T } from './repo'
-import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Source, Version } from './types'
+import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Renewal, Source, Version } from './types'
 import { reuseSource } from './library'
 
 export interface Actor {
@@ -87,7 +87,7 @@ export async function publishInstruction(
   doc: Doc<Instruction>,
   org: OrgSettings,
   actor: Actor,
-  opts: { approvedBy?: Actor | null; previous?: InstructionContent | null } = {},
+  opts: { approvedBy?: Actor | null; previous?: InstructionContent | null; renewal?: Renewal | null } = {},
 ): Promise<{ number: number; publishedId: string }> {
   const instr = doc.json_data
   const content = instr.draft
@@ -134,11 +134,18 @@ export async function publishInstruction(
     publishedAt,
     dirty: false,
     review: null,
+    // Publier repousse la relecture périodique (toggle `renewal`).
+    ...(opts.renewal !== undefined ? { renewal: opts.renewal } : {}),
     updatedAt: publishedAt,
     updatedBy: actor.id,
     updatedByName: actor.name,
   })
   return { number, publishedId }
+}
+
+/** « Toujours bonne » : la relecture est faite, la prochaine est repoussée ; pas de nouvelle version. */
+export async function confirmRenewal(data: DataApi, id: string, renewal: Renewal): Promise<void> {
+  await data.patch(T.instruction, id, { renewal })
 }
 
 export async function requestReview(data: DataApi, doc: Doc<Instruction>, org: OrgSettings, actor: Actor, note?: string) {

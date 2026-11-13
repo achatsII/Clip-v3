@@ -1,5 +1,8 @@
 'use client'
 
+import { useToggle } from '@/lib/toggles'
+import { DEFAULT_RENEWAL_MONTHS, RENEWAL_CHOICES } from '@/lib/model/renewal'
+import { AccountCard } from '@/components/settings/Account'
 import { Check, CreditCard, Download, ImagePlus, Loader2, Lock, Smartphone } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -75,6 +78,7 @@ export default function SettingsPage() {
 
 function PlantTab() {
   const { org, updateOrg, files } = useSession()
+  const renewalOn = useToggle('renewal')
   const words = useMessages()
   const t = words.settings.plant
   const toast = useToast()
@@ -110,6 +114,18 @@ function PlantTab() {
             {words.common.save}
           </Button>
         </div>
+        {renewalOn && (
+          <div className="mt-5">
+            <Label>{t.renewal}</Label>
+            <Segmented
+              size="sm"
+              value={String(org.json_data.renewalMonths === undefined ? DEFAULT_RENEWAL_MONTHS : org.json_data.renewalMonths)}
+              onChange={(v) => void updateOrg({ renewalMonths: v === 'null' ? null : Number(v) }).then(() => toast.success(t.renewalSaved))}
+              options={RENEWAL_CHOICES.map((m) => ({ value: String(m), label: words.instructions.renewal.choice(m) }))}
+            />
+            <p className="mt-1.5 text-xs font-bold text-slate-400">{t.renewalHint}</p>
+          </div>
+        )}
       </Panel>
       <Panel>
         <h2 className="mb-1 flex items-center gap-2 text-xl font-black tracking-tight">{t.brandTitle} {brand === 'locked' && <LockBadge />}</h2>
@@ -233,6 +249,7 @@ function DataTab() {
           {t.exportAll} {fullExport === 'locked' && <LockBadge />}
         </Button>
       </Panel>
+      <AccountCard />
       <Panel>
         <h2 className="mb-2 text-lg font-black tracking-tight">{t.connection}</h2>
         <p className="text-sm font-medium text-slate-500">{t.gateway(GATEWAY_URL.replace('https://', ''), APP_IDENTIFIER)}</p>

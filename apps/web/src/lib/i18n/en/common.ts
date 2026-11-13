@@ -28,6 +28,7 @@ export const common: typeof Fr = {
   loadFailed: 'Couldn’t load',
   errors: {
     network: 'Can’t reach the server. Check your connection.',
+    aiConsent: 'You haven’t agreed to send data to the AI. Agree to it to use this feature.',
     timeout: 'The server took too long to respond.',
     forbidden: 'You don’t have access to this action.',
     noCredits: 'No credits left for this action.',

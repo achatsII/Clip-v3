@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
   Archive,
+  CalendarClock,
+  Check,
   CircleCheck,
   Copy,
   CopyPlus,
@@ -27,7 +29,7 @@ import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Confetti } from '@/components/ui/Celebrate'
 import { useConfirm } from '@/components/ui/Confirm'
-import { Input, Label, Textarea } from '@/components/ui/Field'
+import { Input, Label, Segmented, Textarea } from '@/components/ui/Field'
 import type { MenuItem } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
@@ -45,10 +47,13 @@ import { changedSteps, followStep, readVersion, remoteDraftAction } from '@/lib/
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
 import { diffSteps } from '@/lib/model/diff'
+import { inheritSection, moveStep as moveStepKeepingSections } from '@/lib/model/sections'
+import { RENEWAL_CHOICES, renewalFrom, renewalMonthsOf, renewalState } from '@/lib/model/renewal'
 import { FEEDBACK_KINDS } from '@/lib/model/catalog'
 import { nowIso, T, uid } from '@/lib/model/repo'
 import {
   archiveInstruction,
+  confirmRenewal,
   duplicateInstruction,
   newFromSources,
   needsApproval,
@@ -61,7 +66,7 @@ import {
 } from '@/lib/model/service'
 import type { Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
 import { markCreatedSeen } from '@/lib/prefs'
-import { formatDateTime, timeAgo } from '@/lib/util/cn'
+import { cn, formatDate, formatDateTime, timeAgo } from '@/lib/util/cn'
 import { AgentPanel, type AgentRequest } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
 import { LockoutEditor } from './LockoutEditor'
@@ -106,6 +111,11 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [publishing, setPublishing] = useState(false)
   const reelToggle = useToggle('stepReel')
+  const sectionsToggle = useToggle('sections')
+  // La relecture périodique : choisie en publiant, rappelée un mois avant (toggle `renewal`).
+  const renewalToggle = useToggle('renewal')
+  const [renewMonths, setRenewMonths] = useState<number | null>(() => renewalMonthsOf(instr, org.json_data))
+  const [renewedAt, setRenewedAt] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(false)
   const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks'>(null)
   const [comment, setComment] = useState('')
@@ -375,12 +385,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   function moveStep(dir: -1 | 1) {
     const j = idx + dir
     if (j < 0 || j >= steps.length) return
-    const next = [...steps]
-    ;[next[idx], next[j]] = [next[j], next[idx]]
-    update({ ...content, steps: next })
+    // Les sections restent à leur place : l'étape prend celle de la position où elle arrive.
+    update({ ...content, steps: moveStepKeepingSections(steps, idx, dir) })
   }
   function insertAfter(i: number) {
-    const s = newStep()
+    // Une étape ajoutée reste dans la section de celle d'avant.
+    const s = inheritSection(newStep(), steps[i])
     const next = [...steps.slice(0, i + 1), s, ...steps.slice(i + 1)]
     update({ ...content, steps: next })
     setSelected(s.id)
@@ -436,7 +446,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       const previous = published.data?.json_data.content ?? null
       const draft = reelToggle ? carryClips(latest.current, previous) : latest.current
       const current = { ...doc, json_data: { ...docRef.current.json_data, draft, stationIds } }
-      const { number: n, publishedId } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous })
+      const renewal = renewalToggle ? renewalFrom(renewMonths, nowIso(), actor.name) : undefined
+      const { number: n, publishedId } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous, renewal })
       if (reelToggle)
         void attachReel(files, data, { publishedId, version: n }, draft).then((ok) => {
           if (ok) void qc.invalidateQueries({ queryKey: ['published', doc._id] })
@@ -597,9 +608,33 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   ]
 
   // Sous l'en-tête, seulement quand il y a lieu : une modification en même temps ailleurs, l'approbation.
+  const renewal = renewalToggle && !readOnly && !renewedAt ? renewalState(instr) : 'none'
+  async function stillGood() {
+    const at = nowIso()
+    const next = renewalFrom(renewalMonthsOf(instr, org.json_data), at, actor.name)
+    try {
+      await confirmRenewal(data, doc._id, next)
+      setRenewedAt(at)
+      refresh()
+      toast.success(tp.renewal.confirmed, next.dueAt ? tp.renewal.confirmedDetail(formatDate(next.dueAt)) : undefined)
+    } catch (e) {
+      toast.error(tp.renewal.failed, errorText(e))
+    }
+  }
   const notices =
-    remote?.conflict || (inReview && instr.review) || (!inReview && instr.review?.changesRequested) ? (
+    remote?.conflict || (inReview && instr.review) || (!inReview && instr.review?.changesRequested) || renewal === 'soon' || renewal === 'late' ? (
       <>
+        {(renewal === 'soon' || renewal === 'late') && instr.renewal?.dueAt && (
+          <div className={cn('flex flex-col gap-2 rounded-2xl p-3 sm:flex-row sm:items-center', renewal === 'late' ? 'bg-rose-50 dark:bg-rose-500/10' : 'bg-amber-50 dark:bg-amber-500/10')} role="status">
+            <CalendarClock className={cn('h-5 w-5 shrink-0 max-sm:hidden', renewal === 'late' ? 'text-rose-600' : 'text-amber-600')} />
+            <p className={cn('min-w-0 flex-1 text-sm font-bold', renewal === 'late' ? 'text-rose-900 dark:text-rose-100' : 'text-amber-900 dark:text-amber-100')}>
+              {renewal === 'late' ? tp.renewal.late(formatDate(instr.renewal.dueAt)) : tp.renewal.soon(formatDate(instr.renewal.dueAt))} {tp.renewal.question}
+            </p>
+            <Button size="sm" variant="success" onClick={() => void stillGood()} icon={<Check className="h-4 w-4" />}>
+              {tp.renewal.confirm}
+            </Button>
+          </div>
+        )}
         {remote?.conflict && (
           <div className="flex flex-col gap-2 rounded-2xl bg-amber-50 p-3 sm:flex-row sm:items-center dark:bg-amber-500/10" role="status">
             <p className="flex-1 text-sm font-bold text-amber-900 dark:text-amber-100">{tp.live.conflict(remote.device, remote.byName)}</p>
@@ -683,6 +718,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         changes={inReview ? changes : undefined}
         history={history}
         onAssistant={() => setAgentOpen(true)}
+        sections={sectionsToggle}
+        onSteps={(next) => update({ ...content, steps: next })}
         onChange={setStep}
         onSelect={(id) => id && setSelected(id)}
         onInsertAfter={() => insertAfter(idx)}
@@ -773,10 +810,17 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         <p className="font-medium text-slate-600 dark:text-slate-300">
           {stationIds.length ? tp.publish.replaces(stationIds.length) : tp.publish.library}
         </p>
-        {/* Le bon moment pour dire où elle s'affiche. */}
+        {/* Le bon moment pour dire où elle s'affiche, et quand la relire. */}
         <div className="mt-4">
           <StationPicker label={tp.publish.where} stationIds={stationIds} stations={stations} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
         </div>
+        {renewalToggle && (
+          <div className="mt-4">
+            <Label>{tp.renewal.label}</Label>
+            <Segmented size="sm" value={String(renewMonths)} onChange={(v) => setRenewMonths(v === 'null' ? null : Number(v))} options={RENEWAL_CHOICES.map((m) => ({ value: String(m), label: t.instructions.renewal.choice(m) }))} />
+            <p className="mt-1.5 text-xs font-bold text-slate-400">{tp.renewal.hint}</p>
+          </div>
+        )}
         {notes.length > 0 && (
           <ul className="mt-4 space-y-2">
             {notes.map((n) => (

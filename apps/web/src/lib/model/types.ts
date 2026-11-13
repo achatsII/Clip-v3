@@ -138,6 +138,11 @@ export interface Step {
   durationSec?: number | null
   /** Pour une fiche de cadenassage : le point d'isolement que l'étape traite. */
   energyPointId?: string | null
+  /**
+   * La phase de l'instruction où se trouve l'étape (« Démontage ») : les étapes qui se suivent sous
+   * le même nom forment une section (`src/lib/model/sections.ts`).
+   */
+  section?: string
 }
 
 export type EnergyType = 'electrique' | 'pneumatique' | 'hydraulique' | 'mecanique' | 'gravite' | 'thermique' | 'chimique' | 'vapeur' | 'eau' | 'autre'
@@ -199,6 +204,8 @@ export interface TranslatedContent {
     text: string
     keyPoints?: string[]
     warning?: string | null
+    /** Le nom de sa section, dans cette langue. */
+    section?: string
     /** Les médias de l'étape dans cette langue, dans l'ordre des médias (null : rien à traduire). */
     media?: Array<MediaTranslation | null>
   }>
@@ -315,6 +322,8 @@ export interface Instruction {
   updatedAt: string
   /** Lien public direct (uuid d'un lien de redirection). */
   shareLinkId?: string | null
+  /** La relecture périodique (« à revoir dans 1 an ») ; absente avant la première publication. */
+  renewal?: Renewal | null
   /** Copies légères pour les listes (évite de lire le brouillon complet). */
   coverUrl?: string | null
   stepCount?: number
@@ -453,6 +462,17 @@ export interface WritingStandard {
   updatedByName?: string
 }
 
+/** La relecture périodique d'une instruction publiée (`src/lib/model/renewal.ts`). */
+export interface Renewal {
+  /** Tous les N mois ; null : jamais. */
+  months: number | null
+  /** La prochaine relecture ; null sans échéance. */
+  dueAt: string | null
+  /** La dernière publication ou confirmation « toujours bonne », et par qui. */
+  lastAt?: string | null
+  lastByName?: string | null
+}
+
 export interface OrgSettings {
   name: string
   logoUrl?: string | null
@@ -467,6 +487,8 @@ export interface OrgSettings {
   goals: CategoryKey[]
   onboardedAt?: string | null
   roi: { hoursSavedPerInstruction: number; hourlyRate: number; minutesSavedPerCompletion: number }
+  /** À revoir tous les N mois, par défaut, à la publication (null : jamais ; absent : chaque année). */
+  renewalMonths?: number | null
   /** Qui a ouvert CLIP le premier dans l'organisation : administrateur tant que personne d'autre ne l'est. */
   createdBy?: string
   createdAt: string

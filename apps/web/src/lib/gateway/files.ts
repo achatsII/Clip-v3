@@ -3,6 +3,7 @@
  * traitement vidéo, captures d'images, conversion Word → PDF, page de PDF en image.
  * Specs : skill api-plateforme-ii, références 09 (§2.7.10) et 10 (§2.8).
  */
+import { requireAiConsent } from '../ai/consent'
 import { APP_DATA_IDENTIFIER, GATEWAY_URL } from '../config'
 import { ApiError, GatewayClient } from './client'
 import { messages } from '@/lib/i18n'
@@ -133,6 +134,7 @@ export function filesApi(client: GatewayClient) {
     },
 
     async transcribe(audio: Blob, fileName: string): Promise<string> {
+      await requireAiConsent()
       const form = new FormData()
       form.append('file', audio, safeName(fileName))
       const res = await client.call<{ success?: boolean; text?: string }>('/api/v1/files/audio/transcribe', {
@@ -145,6 +147,7 @@ export function filesApi(client: GatewayClient) {
 
     /** Téléverse chez Gemini un fichier déjà en ligne (≤ 100 Mo). URI valable ~48 h. */
     async geminiUpload(url: string, mimeType: string, sizeBytes: number, filename: string): Promise<{ uri: string; expiresAt: string | null }> {
+      await requireAiConsent()
       const res = await client.call<{ results?: Array<{ geminiFileUri?: string; expirationTime?: string }> }>(
         '/api/v1/ai/gemini/upload/direct',
         { method: 'POST', body: { url, mimeType, fileSize: sizeBytes, filename: safeName(filename) }, timeoutMs: 180_000 },

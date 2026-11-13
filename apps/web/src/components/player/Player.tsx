@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BookOpen,
   Check,
+  ChevronDown,
   Clock,
   Languages,
   Layers,
@@ -34,6 +35,7 @@ import type { DataApi } from '@/lib/gateway/data'
 import type { FilesApi } from '@/lib/gateway/files'
 import { ENERGY, LANGUAGES, PPE, textDir, WARNINGS } from '@/lib/model/catalog'
 import { logUsage } from '@/lib/model/repo'
+import { sectionGroups } from '@/lib/model/sections'
 import { localized } from '@/lib/model/translation'
 import type { Branding, InstructionContent, Step } from '@/lib/model/types'
 import { LiveSpeaker, stepSpeech } from '@/lib/liveSpeech'
@@ -126,6 +128,9 @@ export function Player(props: PlayerProps) {
   const [langOpen, setLangOpen] = useState(false)
   const [voiceOpen, setVoiceOpen] = useState(false)
   const [rated, setRated] = useState<'up' | 'down' | null>(null)
+  // Le sommaire : toutes les étapes, par section (toggle `sections`).
+  const sectionsOn = useToggle('sections')
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const startedAt = useRef<number>(Date.now())
   // La voix en direct : elle s'ouvre au premier « Écouter » et lit chaque étape tout de suite.
   const speaker = useMemo(() => (deps.ai ? new LiveSpeaker(deps.ai) : null), [deps.ai])
@@ -272,14 +277,24 @@ export function Player(props: PlayerProps) {
             </button>
           )}
           {showBranding && branding?.logoUrl && <img src={branding.logoUrl} alt={branding.orgName} className="hidden h-9 max-w-28 object-contain sm:block" />}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
-            {index >= 0 && index < total && (
-              <p className="label-caps text-slate-500 tabular-nums">
-                {t.stepOf(index + 1, total)}
+          {sectionsOn && index >= 0 && index < total ? (
+            // Le titre et « Étape 3 sur 12 » ouvrent le sommaire : toute la zone se touche.
+            <button type="button" onClick={() => setSummaryOpen(true)} aria-label={t.openSummary} title={t.openSummary} className="btn-press min-w-0 flex-1 rounded-2xl px-1 py-1 text-left hover:bg-slate-900/5 dark:hover:bg-white/5">
+              <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
+              <p className="label-caps flex items-center gap-1 text-slate-500 tabular-nums">
+                {t.stepOf(index + 1, total)} <ChevronDown className="h-3.5 w-3.5" />
               </p>
-            )}
-          </div>
+            </button>
+          ) : (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
+              {index >= 0 && index < total && (
+                <p className="label-caps text-slate-500 tabular-nums">
+                  {t.stepOf(index + 1, total)}
+                </p>
+              )}
+            </div>
+          )}
           {languages.length > 1 && (
             <button type="button" onClick={() => setLangOpen(true)} className="btn-press flex h-12 items-center gap-1.5 rounded-2xl px-3 text-sm font-black hover:bg-slate-900/5" aria-label={t.language}>
               <Languages className="h-5 w-5" /> {lang.toUpperCase()}
@@ -316,7 +331,7 @@ export function Player(props: PlayerProps) {
       >
         {view === 'document' ? (
           <div dir={textDir(lang)}>
-            <DocumentView content={content} t={t} energyById={energyById} />
+            <DocumentView content={content} t={t} energyById={energyById} sections={sectionsOn} />
           </div>
         ) : index === -1 ? (
           <Intro content={content} t={t} onStart={() => go(0)} />
@@ -343,6 +358,7 @@ export function Player(props: PlayerProps) {
               </div>
             )}
             <div dir={textDir(lang)} className={cn('flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-8', step.media[0] ? 'lg:max-w-[560px] lg:overflow-y-auto' : 'mx-auto w-full max-w-3xl pt-8 sm:pt-12')}>
+              {sectionsOn && step.section && <p className="label-caps -mb-2 text-[var(--primary-strong)] dark:text-sky-300">{step.section}</p>}
               <div className="flex items-start gap-4">
                 <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
                 <h2 className="pt-1 text-3xl leading-[1.05] font-black tracking-tighter text-slate-900 sm:text-4xl dark:text-white">{step.title}</h2>
@@ -444,6 +460,37 @@ export function Player(props: PlayerProps) {
         {answer && (
           <div className="animate-slide-up mt-4 rounded-3xl bg-primary-soft p-5 text-lg font-bold text-slate-800 dark:text-slate-100">{answer.busy ? <span className="skeleton block h-6 w-3/4 rounded-xl" /> : answer.text}</div>
         )}
+      </Modal>
+
+      <Modal open={summaryOpen} onClose={() => setSummaryOpen(false)} title={t.summary} size="md">
+        <div dir={textDir(lang)} className="space-y-4">
+          {sectionGroups(content.steps).map((g) => (
+            <section key={g.start}>
+              {g.name && <p className="label-caps mb-1.5 px-1 text-[var(--primary-strong)] dark:text-sky-300">{g.name}</p>}
+              <div className="grid gap-1.5">
+                {content.steps.slice(g.start, g.end).map((s, k) => {
+                  const i = g.start + k
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        setSummaryOpen(false)
+                        go(i)
+                      }}
+                      aria-current={i === index ? 'step' : undefined}
+                      className={cn('btn-press flex min-h-14 items-center gap-3 rounded-2xl px-3 text-left', i === index ? 'bg-gradient-primary text-white shadow-primary' : 'glass-card')}
+                    >
+                      <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black tabular-nums', i === index ? 'bg-white/20' : 'bg-slate-900/5 dark:bg-white/10')}>{i + 1}</span>
+                      <span className="min-w-0 flex-1 text-[15px] leading-snug font-black">{s.title}</span>
+                      {i < index && <Check className="h-5 w-5 shrink-0 text-emerald-500" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
       </Modal>
 
       <Modal open={langOpen} onClose={() => setLangOpen(false)} title={t.language} size="sm">
@@ -652,12 +699,14 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
   )
 }
 
-function DocumentView({ content, t, energyById }: { content: InstructionContent; t: ReturnType<typeof strings>; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }> }) {
+function DocumentView({ content, t, energyById, sections }: { content: InstructionContent; t: ReturnType<typeof strings>; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }>; sections: boolean }) {
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-5 sm:p-8">
       <Intro content={content} t={t} onStart={() => document.getElementById('doc-step-0')?.scrollIntoView({ behavior: 'smooth' })} />
       {content.steps.map((s, i) => (
-        <article id={`doc-step-${i}`} key={s.id} className="glass-panel overflow-hidden rounded-[32px] p-0">
+        <div key={s.id} className="space-y-6">
+        {sections && s.section && (i === 0 || content.steps[i - 1].section !== s.section) && <h2 className="label-caps px-1 pt-2 text-base text-[var(--primary-strong)] dark:text-sky-300">{s.section}</h2>}
+        <article id={`doc-step-${i}`} className="glass-panel overflow-hidden rounded-[32px] p-0">
           {s.media[0] && (
             <div className={cn('bg-slate-900', layoutOf(s) === 'focus' ? 'aspect-video' : 'aspect-[16/7]')}>
               <StepMediaArea step={s} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
@@ -682,6 +731,7 @@ function DocumentView({ content, t, energyById }: { content: InstructionContent;
             )}
           </div>
         </article>
+        </div>
       ))}
       {content.kind === 'lockout' && !!content.lockout?.restartSteps?.length && (
         <section className="glass-panel rounded-[32px] p-6">

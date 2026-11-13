@@ -27,6 +27,8 @@ export const common = {
   loadFailed: 'Impossible de charger',
   errors: {
     network: 'Impossible de joindre le serveur. Vérifiez votre connexion.',
+    /** L'envoi à l'IA n'a pas été accepté (une fois, au premier usage). */
+    aiConsent: 'Vous n’avez pas accepté l’envoi à l’IA. Acceptez-le pour utiliser cette fonction.',
     timeout: 'Le serveur a mis trop de temps à répondre.',
     forbidden: 'Vous n’avez pas accès à cette action.',
     noCredits: 'Plus de crédits pour cette action.',

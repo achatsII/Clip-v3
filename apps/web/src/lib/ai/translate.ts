@@ -118,9 +118,13 @@ export function mediaTranslationFrom(stepId: string, index: number, m: StepMedia
 }
 
 /** Tout ce que l'opérateur lit en dehors des étapes et dans leurs médias, avec un id chacun. */
+/** Les noms de sections, chacun une fois, dans l'ordre : traduits comme des textes à part. */
+const sectionNames = (content: InstructionContent): string[] => [...new Set(content.steps.map((s) => s.section?.trim()).filter((x): x is string => !!x))]
+
 export function contentSegments(content: InstructionContent): { segments: Segment[]; visuals: Map<string, VisualTexts | null> } {
   const segments: Segment[] = []
   const visuals = new Map<string, VisualTexts | null>()
+  sectionNames(content).forEach((x, i) => hasLetter(x) && segments.push({ id: `section:${i}`, text: x }))
   content.tools.forEach((x, i) => hasLetter(x) && segments.push({ id: `tool:${i}`, text: x }))
   if (hasLetter(content.equipment)) segments.push({ id: 'equipment', text: content.equipment })
   const lo = content.lockout
@@ -162,12 +166,14 @@ const extrasMap = (extras: unknown): Map<string, string> =>
 export function buildTranslation(content: InstructionContent, j: TranslationJson, visuals: Map<string, VisualTexts | null>): TranslatedContent {
   const map = extrasMap(j.extras)
   const core = new Map((j.steps ?? []).filter((s) => s && typeof s.id === 'string').map((s) => [s.id, s]))
+  const names = sectionNames(content)
   const steps = content.steps.flatMap((s) => {
     const x = core.get(s.id)
     const media = s.media.map((m, i) => mediaTranslationFrom(s.id, i, m, map, visuals.get(mediaBase(s.id, i)) ?? null))
     const withMedia = media.some(Boolean)
-    if (!x && !withMedia) return []
-    return [{ id: s.id, title: x?.title ?? '', text: x?.text ?? '', keyPoints: x?.keyPoints ?? [], warning: x?.warning?.trim() || null, ...(withMedia ? { media } : {}) }]
+    const section = s.section?.trim() ? map.get(`section:${names.indexOf(s.section.trim())}`) : undefined
+    if (!x && !withMedia && !section) return []
+    return [{ id: s.id, title: x?.title ?? '', text: x?.text ?? '', keyPoints: x?.keyPoints ?? [], warning: x?.warning?.trim() || null, ...(section ? { section } : {}), ...(withMedia ? { media } : {}) }]
   })
   const lo = content.lockout
   const lockout: LockoutTranslation | undefined = lo

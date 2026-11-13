@@ -2,6 +2,7 @@
  * Transforme la sortie de l'IA en contenu sûr : identifiants stables, références de médias
  * vérifiées, temps bornés à la durée réelle, valeurs inconnues écartées.
  */
+import { cleanSections } from '../model/sections'
 import { CATEGORY_KEYS, ENERGY, PPE } from '../model/catalog'
 import { uid } from '../model/repo'
 import type { Annotation, CategoryKey, EnergyPoint, InstructionContent, LockoutData, Source, Step, StepMedia, WarningLevel } from '../model/types'
@@ -37,6 +38,7 @@ export interface AiStep {
   media?: AiMediaRef[]
   durationSec?: number
   energyTag?: string
+  section?: string
 }
 
 export interface AiInstruction {
@@ -144,9 +146,10 @@ export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<str
       media,
       durationSec: Number.isFinite(s.durationSec) && Number(s.durationSec) > 0 ? Math.round(Number(s.durationSec)) : null,
       energyPointId: clean(s.energyTag) || null,
+      ...(clean(s.section) ? { section: clean(s.section) } : {}),
     })
   }
-  return out
+  return cleanSections(out)
 }
 
 function normalizeLockout(raw: AiInstruction['lockout'], sourcesById: Map<string, Source>): LockoutData | null {
