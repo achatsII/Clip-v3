@@ -1,0 +1,38 @@
+<title>07 Photos, note vocale, PDF, Word</title>
+<div data-slot="world"><div id="w2" style="position:absolute;left:0;top:0"></div></div><!--/world-->
+<div data-slot="shape">
+  <div class="L" id="Lcam"></div>
+  <div class="L" id="Lwin"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_ui-cam.js"></script>
+<script data-include="_ui-capture.js"></script>
+<script data-include="_thumbs.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+useUI();
+const {T,W}=scene();
+$('Lcam').innerHTML=`<div class="ui" style="left:${-PW/2}px;top:${-PH/2}px;width:${PW}px;height:${PH}px;border-radius:62px;overflow:hidden">${ui('cam',{'live-jacques':'assets/live-jacques.jpg'})}</div>`;
+
+$('w2').innerHTML=CHIP('c2','video','Vidéo 720p, légère','',false); Object.assign($('c2').style,{left:'-210px',top:'350px'});
+$('Lwin').innerHTML=SCREEN('capture','s4',1120,880);
+CAPTURE_SETUP();
+const tW=0.4, ts=[W('v07','photos'),W('v07','vocale'),W('v07','pdf'),W('v07','word')].map(x=>x-0.12);
+// le son : le téléphone devient la fenêtre ; chaque carte tombe sur son mot (pop, plus haut une fois sur deux)
+SFX([tW-WH,'whoosh_court',-15]); ts.forEach((t0,i)=>SFX([t0+0.02,i%2?'pop_haut':'pop',-12]));
+const punch=PUNCH(ts.map(t0=>[t0+0.06,0.012]));
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{phl:SH_PHL, win:SH_WIN}, start:'phl', SEQ:[[tW,'win']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
+  layers:[
+    {el:'Lcam',tin:null,tout:tW+0.05,update:(t)=>M.setText($('camT'),mmss(136.47+t))},
+    {el:'Lwin',tin:tW,tout:null,o:{lin:0.3},update:(t)=>{
+      let n=1; CAP.cards.slice(1).forEach((c,i)=>{ POP(c,t,ts[i],{dy:16,from:0.82}); if(t>=ts[i]) n++; });
+      CAP.count(n);
+    }},
+  ],
+  extra:(t)=>{ $('c2').style.opacity=(1-M.clamp(t/0.3)).toFixed(3); },
+});
+</script>

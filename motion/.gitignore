@@ -1,0 +1,12 @@
+# Lourd et régénérable : pages construites, aperçus, médias Higgsfield (adresses dans plan.json « remote »),
+# clips .webm (bash clips-webm.sh), voix et piste mixée (voix.json → timeline.py cues).
+dist/
+out/
+inputs/
+clips/assets/hq/
+clips/assets/*.webm
+work/*
+!work/timeline.json
+!work/words.txt
+!work/captions.srt
+node_modules/

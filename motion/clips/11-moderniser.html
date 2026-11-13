@@ -1,0 +1,45 @@
+<title>11 Les anciennes instructions</title>
+<div data-slot="shape">
+  <div class="L" id="Lph"></div>
+  <div class="L" id="Lov"></div>
+  <div class="L" id="Lwin"></div>
+  <div class="L" id="Lov2"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_ui-importWin.js"></script>
+<script data-include="_thumbs.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+useUI();
+const {T,W}=scene();
+$('Lph').innerHTML=PHOTO('ph','assets/cartable.jpg');
+$('Lov').innerHTML=CHIP('c1','book','Le cartable d’aujourd’hui','',false,GRAD.danger); Object.assign($('c1').style,{left:'-590px',top:'-320px'});
+$('Lwin').innerHTML=SCREEN('importWin','s10',1120,880);
+document.querySelector('.ui.s10 .stack')?.remove();
+$('Lov2').innerHTML=CHIP('c2','file','40 documents','PDF et Word'); Object.assign($('c2').style,{left:'250px',top:'-330px'});
+const root=document.querySelector('.ui.s10'), cnt=root.querySelector('.cnt'), bar=root.querySelector('.pb i'), rows=[...root.querySelectorAll('.r')];
+const tI=W('v11','instructions')-0.3, tD=W('v11','deposez')-0.1, tDz=W('v11','dizaines')-0.1, tMo=W('v11','modernisees')+0.2;
+// le son : la coupe, la pastille, la fenêtre d'import, les fichiers qui arrivent (tics), l'IA qui travaille, 40 sur 40
+SFX([-WH,'whoosh_court',-15],[tD-WH,'whoosh_court',-14],[tD+0.45,'frappe_long',-20,{dur:2.2,fade:0.3}],[tMo,'succes',-9]);
+SFX_CHIP(tI); SFX_CHIP(tDz); rows.forEach((r,i)=>SFX([tD+0.25+0.12*i,'tick',-15]));
+const punch=PUNCH([[tMo+0.03,0.03]]);
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{card:SH_CARD, win:SH_WIN}, start:'card', SEQ:[[tD,'win']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
+  layers:[
+    {el:'Lph',tin:null,tout:tD+0.05,update:(t,g)=>fitPhoto($('ph'),g,1.04+0.05*M.eio(t/2.4))},
+    {el:'Lov',tin:null,tout:tD-0.1,o:{lout:0.15},update:(t)=>POP($('c1'),t,tI,{dy:-16})},
+    {el:'Lwin',tin:tD,tout:null,o:{lin:0.3},update:(t)=>{
+      const p=M.clamp((t-tD-0.3)/(tMo-tD-0.3)), n=Math.round(40*M.eio(p));
+      cnt.style.setProperty('--c10',String(n)); bar.style.transform=`scaleX(${Math.max(0.02,M.eio(p)).toFixed(4)})`;
+      rows.forEach((r,i)=>{ M.rise(r,t,tD+0.25+0.12*i,null,{dy:14,lin:0.22});
+        const a=tD+0.35+0.12*i, b=a+0.7+0.18*i, e=b+0.8;
+        const up=r.querySelector('.s-up'), ai=r.querySelector('.s-ai'), ok=r.querySelector('.s-ok');
+        up.style.opacity=(t>=a&&t<b)?1:0; ai.style.opacity=(t>=b&&t<e)?1:0; ok.style.opacity=t>=e?1:0; });
+    }},
+    {el:'Lov2',tin:tDz,tout:null,o:{lin:0.05},update:(t)=>POP($('c2'),t,tDz,{dy:16})},
+  ],
+});
+</script>

@@ -1,0 +1,49 @@
+<title>13 L’opérateur au poste</title>
+<style>.ui.s12 .qc{left:0!important;top:0!important}.ui.s6 .tablet{left:0!important;top:0!important;width:1324px!important;height:816px!important;box-shadow:none!important}</style>
+<div data-slot="shape">
+  <div class="L" id="Lph"></div>
+  <div class="L" id="Lov"></div>
+  <div class="L" id="Ltab"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_ui-tablet.js"></script>
+<script data-include="_ui-qr.js"></script>
+<script data-include="_thumbs.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+useUI(); document.head.insertAdjacentHTML('beforeend',`<style>${FB_CSS}</style>`);
+const {T,W}=scene();
+$('Lph').innerHTML=PHOTO('ph','assets/poste-tablette.jpg');
+$('Lov').innerHTML=CHIP('c1','pin','Machine 1234','tablette du poste')+`<div class="ui s12" id="qcw" style="left:-900px;top:150px;width:600px;height:260px">${ui('qr')}</div>`+CHIP('c3','shield','Sans compte, sans mot de passe','',false,'linear-gradient(135deg,#2EE59D,#18c480)');
+Object.assign($('c1').style,{left:'-880px',top:'-470px'}); Object.assign($('c3').style,{left:'-240px',top:'400px'});
+$('Ltab').innerHTML=SCREEN('tablet','s6',1324,816,{'rails-brosse':'assets/rails-brosse.jpg','rails-huile':'assets/rails-huile.jpg'});
+const R=document.querySelector('.ui.s6'), scr=R.querySelector('.scr');
+scr.insertAdjacentHTML('beforeend',FEEDBACK_SHEET('fb')+TOUCH('tp'));
+const st=[...R.querySelectorAll('.pl-step')], sub=[...R.querySelectorAll('.pl-sub .pl-st')], prog=R.querySelector('.pl-prog i'), lis=R.querySelector('.pl-hb.listen');
+const tTab=1.0, tZoom=0.0, tN=W('v13','etape')-0.05, tL=W('v13','voix')-0.1, tS=W('v13','signale')-0.08, tK=W('v13','clair')-0.1;
+// positions des touchers, dans l'écran (1280 × 772, origine en haut à gauche)
+const pos=(sel)=>{const a=scr.getBoundingClientRect(), b=R.querySelector(sel).getBoundingClientRect(), k=a.width/scr.offsetWidth; return [(b.left+b.width/2-a.left)/k, (b.top+b.height/2-a.top)/k];};
+let TAPS=null;
+// le son : la plongée dans la tablette (sommet à l'arrivée), trois touchers, la lecture à voix haute, la fiche qui monte
+SFX([tTab-WP,'whoosh_plongee',-9],[tN,'tap',-7],[tL,'tap',-7],[tL+0.12,'ecoute',-18],[tS,'tap',-7],[tS+0.1,'whoosh_court',-19],[tK,'tick',-12]);
+const punch=PUNCH([[tN,0.012],[tL,0.012],[tS,0.012]]);
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{bleed:SH_BLEED, tab:SH_TAB}, start:'bleed', SEQ:[[tTab,'tab']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
+  layers:[
+    {el:'Lph',tin:null,tout:tTab+0.14,o:{lout:0.1,flat:'out'},update:(t,g)=>{ M.dive($('ph'),g,ECRAN_TABLETTE,M.eio((t-tZoom)/1.0),{w:TW,h:TH},{push:1.03}); }},
+    {el:'Lov',tin:null,tout:0.4,o:{lout:0.3,flat:'out'}},
+    {el:'Ltab',tin:tTab-0.04,tout:null,o:{din:0,lin:0.16,flat:'in'},update:(t)=>{
+      if(!TAPS && t>=tTab+0.2){ TAPS=[[tN,...pos('.pl-next')],[tL,...pos('.pl-hb.listen')],[tS,...pos('.pl-step:last-child .pl-b.amber')]]; }
+      const two=t>=tN+0.12; st[0].style.opacity=two?0:1; st[1].style.opacity=two?1:0; sub[0].style.opacity=two?0:1; sub[1].style.opacity=two?1:0;
+      prog.style.width=(40+20*M.eio((t-tN-0.1)/0.5))+'%';
+      const on=t>=tL+0.1; lis.style.background=on?'#0078ff':''; lis.style.color=on?'#fff':''; lis.querySelector('svg').style.transform=on?`scale(${(1+0.15*Math.max(0,Math.sin((t-tL)*7))).toFixed(3)})`:'';
+      const sh=M.eio((t-tS-0.12)/0.4); $('fb').style.transform=`translateY(${((1-sh)*360).toFixed(1)}px)`; $('fb').style.opacity=sh>0?1:0;
+      $('fbk0').classList.toggle('sel',t>=tK);
+      if(TAPS) touchAt($('tp'),t,TAPS);
+    }},
+  ],
+});
+</script>
