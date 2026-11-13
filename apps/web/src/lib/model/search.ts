@@ -101,6 +101,8 @@ export interface LibraryQuery {
   stationIds?: string[] | null
   /** « Pour moi » : mes catégories, mes postes, et ce que j'ai écrit. */
   mine?: { userId: string; categories: string[]; stationIds: string[] } | null
+  /** Les blocs communs seulement ; sinon, ils n'y sont pas (ils ne s'affichent à aucun poste). */
+  blocks?: boolean
 }
 
 /** Un poste tel que la recherche le connaît : un mot qui le nomme trouve ses instructions. */
@@ -117,7 +119,7 @@ export interface StationRef {
  * strictement avant la dernière ligne vue (`updatedAt`).
  */
 export function libraryFilter(query: LibraryQuery, stations: StationRef[], now = Date.now(), cursor?: string | null): Record<string, unknown> {
-  const and: Record<string, unknown>[] = [{ 'json_data.status': { $ne: 'archived' } }]
+  const and: Record<string, unknown>[] = [{ 'json_data.status': { $ne: 'archived' } }, query.blocks ? { 'json_data.block': { $eq: true } } : { 'json_data.block': { $ne: true } }]
   const tokens = queryTokens(query.q ?? '')
   for (const tok of tokens) {
     const re = escapeRegex(tok)
@@ -169,7 +171,8 @@ export function countInstructions(data: DataApi, query: LibraryQuery, stations: 
 /* ───────────────────────── Ce que chaque écran demande ───────────────────────── */
 
 const live = { 'json_data.status': { $ne: 'archived' } }
-const publishedOnly = { $and: [live, { 'json_data.publishedVersion': { $gt: 0 } }] }
+/** Les instructions publiées, sans les blocs communs (ils ne sont à aucun poste et ne comptent pas dans la limite). */
+const publishedOnly = { $and: [live, { 'json_data.publishedVersion': { $gt: 0 } }, { 'json_data.block': { $ne: true } }] }
 
 /** Le nombre d'instructions publiées (la limite du plan). */
 export const countPublished = (data: DataApi) => data.count(T.instruction, publishedOnly)

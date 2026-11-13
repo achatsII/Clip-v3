@@ -92,10 +92,13 @@ export function MetaCard({
   onStations,
   onCreateStation,
   embedded = false,
+  noStations = false,
 }: StationProps & {
   content: InstructionContent
   onChange: (c: InstructionContent) => void
   embedded?: boolean
+  /** Un bloc commun ne va à aucun poste. */
+  noStations?: boolean
 }) {
   const t = useMessages().editor.meta
   const [openState, setOpen] = useState(false)
@@ -138,7 +141,7 @@ export function MetaCard({
 
       {open && (
         <div className={cn('grid gap-5', !embedded && 'animate-slide-up mt-6 lg:grid-cols-2')}>
-          <StationPicker stationIds={stationIds} stations={stations} readOnly={readOnly} onStations={onStations} onCreateStation={onCreateStation} />
+          {!noStations && <StationPicker stationIds={stationIds} stations={stations} readOnly={readOnly} onStations={onStations} onCreateStation={onCreateStation} />}
 
           <div className="grid grid-cols-2 gap-3">
             <div>

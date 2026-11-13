@@ -39,6 +39,7 @@ export type FeatureKey =
   | 'adoption_stats'
   | 'brand_kit'
   | 'full_export'
+  | 'shared_blocks'
 
 /** Les features qui plafonnent une quantité détenue (`kind: limit` au manifeste) : l'app les compte. */
 export const LIMIT_FEATURES = ['published_instructions', 'stations', 'editors'] as const satisfies readonly FeatureKey[]
@@ -65,6 +66,7 @@ export const FEATURE_LABELS: Record<FeatureKey, FeatureLabel> = {
   adoption_stats: { fr: 'Statistiques d’adoption et retour sur investissement', en: 'Adoption statistics and ROI' },
   brand_kit: { fr: 'Logo et couleurs de l’usine, PDF sans mention CLIP', en: 'Plant logo and colors, PDFs without CLIP branding' },
   full_export: { fr: 'Export complet de toutes les instructions', en: 'Full export of all instructions' },
+  shared_blocks: { fr: 'Blocs communs : des étapes rédigées une fois, à jour partout', en: 'Shared blocks: steps written once, up to date everywhere' },
 }
 
 /** Le libellé d'une feature dans la langue de l'outil ; l'anglais pour une langue que le catalogue n'a pas encore. */
@@ -91,6 +93,7 @@ export const FEATURE_ORDER: FeatureKey[] = [
   'bulk_import',
   'voice_assistant',
   'brand_kit',
+  'shared_blocks',
   'full_export',
 ]
 

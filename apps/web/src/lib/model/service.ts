@@ -93,16 +93,18 @@ export async function publishInstruction(
     approvals?: { list: NonNullable<Version['approvals']>; line: string } | null
     /** La formation (toggle `training`) : combien de questions sont publiées, et faut-il se re-former. */
     training?: { questions: number; retrain: boolean } | null
+    /** Une phrase en tête du résumé de la version (« Bloc commun « X » v3. »). */
+    note?: string
   } = {},
-): Promise<{ number: number; publishedId: string; docNumber: string | null }> {
+): Promise<{ number: number; publishedId: string | null; docNumber: string | null }> {
   const instr = doc.json_data
   const content = instr.draft
   if (!content || !content.steps.length) throw new Error(messages().instructions.errors.publishWithoutSteps)
   const number = (instr.publishedVersion ?? 0) + 1
   const publishedAt = nowIso()
   const previous = opts.previous ?? null
-  // Le numéro de document se donne à la première publication, et reste ensuite.
-  const docNumber = instr.number || (await allocateNumbers(data, 1).catch(() => []))[0] || null
+  // Le numéro de document se donne à la première publication, et reste ensuite (un bloc commun n'en a pas).
+  const docNumber = instr.number || (instr.block ? null : (await allocateNumbers(data, 1).catch(() => []))[0]) || null
 
   const version: Version = {
     instructionId: doc._id,
@@ -115,7 +117,7 @@ export async function publishInstruction(
     // À plusieurs : « Nathalie Roy (Qualité), Luc Gagnon (Production) », et chaque signature à part.
     approvedByName: opts.approvals?.line || (opts.approvedBy?.name ?? null),
     ...(opts.approvals?.list.length ? { approvals: opts.approvals.list } : {}),
-    changelog: summarizeChanges(previous, content),
+    changelog: [opts.note, summarizeChanges(previous, content)].filter(Boolean).join(' '),
     createdAt: publishedAt,
   }
   await data.insert<Version>(T.version, version, `${content.title} — v${number}`)
@@ -131,19 +133,22 @@ export async function publishInstruction(
     card: publishedCard(content, docNumber),
     searchText: instructionSearchText({ number: docNumber }, content),
   }
-  let publishedId = instr.publishedId
-  if (publishedId) {
-    const existing = await data.get<Published>(T.published, publishedId)
-    if (existing) await data.replace(T.published, publishedId, pub)
-    else publishedId = null
-  }
-  if (!publishedId) {
-    const found = await findPublished(data, doc._id)
-    if (found) {
-      publishedId = found._id
-      await data.replace(T.published, publishedId, pub)
-    } else {
-      publishedId = (await data.insert<Published>(T.published, pub, content.title))._id
+  // Un bloc commun ne s'affiche à aucun poste : pas de version publique ; ses instructions le portent.
+  let publishedId = instr.block ? null : instr.publishedId
+  if (!instr.block) {
+    if (publishedId) {
+      const existing = await data.get<Published>(T.published, publishedId)
+      if (existing) await data.replace(T.published, publishedId, pub)
+      else publishedId = null
+    }
+    if (!publishedId) {
+      const found = await findPublished(data, doc._id)
+      if (found) {
+        publishedId = found._id
+        await data.replace(T.published, publishedId, pub)
+      } else {
+        publishedId = (await data.insert<Published>(T.published, pub, content.title))._id
+      }
     }
   }
 
@@ -235,6 +240,7 @@ export async function duplicateInstruction(data: DataApi, doc: Doc<Instruction>,
     stationIds: src.stationIds,
     sources: src.sources,
     draft,
+    ...(src.block ? { block: true } : {}),
     origin: 'duplicate',
     coverUrl: coverOf(draft),
     stepCount: draft.steps.length,

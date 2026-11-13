@@ -52,6 +52,8 @@ export interface StageTop {
   /** Le reste, rangé dans « … ». */
   menu: MenuItem[]
   onInfo: () => void
+  /** Le nom de ce geste, quand ce n'est pas celui d'une instruction (un bloc commun n'a pas de poste). */
+  infoLabel?: string
   /** Les points que l'IA demande de vérifier : une pastille qui ouvre les questions. */
   questions: number
   onQuestions: () => void
@@ -207,7 +209,7 @@ function TitleButton({ p }: { p: Inner }) {
   const t = useMessages()
   const { top } = p
   return (
-    <button type="button" onClick={top.onInfo} title={t.editor.page.info.open} className="btn-press group flex min-h-11 max-w-full min-w-0 items-center gap-1.5 rounded-2xl px-2 text-left hover:bg-slate-900/5 dark:hover:bg-white/10">
+    <button type="button" onClick={top.onInfo} title={top.infoLabel ?? t.editor.page.info.open} className="btn-press group flex min-h-11 max-w-full min-w-0 items-center gap-1.5 rounded-2xl px-2 text-left hover:bg-slate-900/5 dark:hover:bg-white/10">
       <span className="min-w-0">
         <span className="block truncate text-sm font-black text-slate-900 dark:text-white">{top.title.trim() || t.editor.page.info.untitled}</span>
         <span className={cn('block truncate text-xs font-bold', top.statusTone === 'live' ? 'text-[var(--primary)]' : top.statusTone === 'error' ? 'text-rose-600' : 'text-slate-400')} aria-live="polite">
@@ -292,7 +294,7 @@ function StepNav({ p, className }: { p: Inner; className?: string }) {
 /** Sous l'image : ce qui touche le média de l'étape. */
 function MediaBar({ p }: { p: Inner }) {
   const t = useMessages()
-  if (p.readOnly) return null
+  if (p.readOnly || p.step?.fromBlock) return null
   return (
     <div className="flex h-14 shrink-0 items-center border-t border-white/10 bg-slate-900 px-2">
       <button type="button" onClick={p.openMedia} className="btn-press flex h-11 items-center gap-2 rounded-2xl px-3 text-sm font-black text-white/90 hover:bg-white/10">
@@ -333,7 +335,9 @@ function StepMenu({ p, step, side }: { p: Inner; step: Step; side?: 'up' }) {
  */
 function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boolean }) {
   const t = useMessages()
-  const { index, readOnly } = p
+  const { index } = p
+  // Une étape d'un bloc commun se modifie dans le bloc : ici, elle se lit seulement.
+  const readOnly = p.readOnly || !!step.fromBlock
   const set = (patch: Partial<Step>) => p.onChange({ ...step, ...patch })
   const keyPoints = step.keyPoints ?? []
   const warning = step.warning
@@ -518,6 +522,7 @@ function StepStrip({ p }: { p: Inner }) {
               {(change === 'added' || change === 'modified') && (
                 <span className={cn('absolute top-1 left-1 rounded-md px-1 text-[9px] font-black text-white uppercase', change === 'added' ? 'bg-emerald-500' : 'bg-amber-500')}>{change === 'added' ? t.editor.stepList.added : t.editor.stepList.modified}</span>
               )}
+              {s.fromBlock && !change && <span className="absolute top-1 left-1 rounded-md bg-violet-600 px-1 text-[9px] font-black text-white uppercase">{t.blocks.thumb}</span>}
               {fb > 0 && <span className="absolute top-1 right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white tabular-nums" title={t.editor.stepList.feedback(fb)}>{fb}</span>}
               <span className="absolute right-2 bottom-1 left-2 truncate text-[11px] font-black text-white">
                 {i + 1}. {s.title}
@@ -570,7 +575,7 @@ function StageCanvas(p: Inner) {
           </div>
           {p.badge}
           {!readOnly && p.history && <UndoButtons history={p.history} className="shrink-0" />}
-          {!readOnly && step && <AssistMenu p={p} compact={p.agentOpen} />}
+          {!readOnly && step && !step.fromBlock && <AssistMenu p={p} compact={p.agentOpen} />}
           <InstructionMenu p={p} />
           {top.primary(false)}
         </div>
@@ -591,7 +596,7 @@ function StageCanvas(p: Inner) {
             </div>
           )}
           <div className={cn('flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-8', hasMedia ? 'max-w-[560px]' : 'mx-auto w-full max-w-3xl pt-12')}>
-            {!hasMedia && !readOnly && (
+            {!hasMedia && !readOnly && !step.fromBlock && (
               <button type="button" onClick={p.openMedia} className="btn-press flex h-28 w-full flex-col items-center justify-center gap-1 rounded-3xl border-2 border-dashed border-slate-300 text-sm font-black text-slate-500 hover:border-[var(--primary)] hover:text-[var(--primary)] dark:border-slate-700">
                 <ImagePlus className="h-6 w-6" /> {t.editor.stage.addMediaHint}
               </button>
@@ -642,9 +647,9 @@ function StagePhone(p: Inner) {
                 {step.media.length ? (
                   <StepMediaArea key={step.id} step={step} labels={t.editor.mediaArea} />
                 ) : (
-                  <button type="button" disabled={readOnly} onClick={p.openMedia} className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/80">
+                  <button type="button" disabled={readOnly || !!step.fromBlock} onClick={p.openMedia} className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/80">
                     <ImagePlus className="h-10 w-10" />
-                    <span className="font-black">{readOnly ? t.editor.step.noMedia : t.editor.stage.addMediaHint}</span>
+                    <span className="font-black">{readOnly || step.fromBlock ? t.editor.step.noMedia : t.editor.stage.addMediaHint}</span>
                   </button>
                 )}
               </div>
@@ -666,8 +671,8 @@ function StagePhone(p: Inner) {
         <nav className="glass-nav pb-safe kb-hide fixed inset-x-0 bottom-0 z-30 border-t" aria-label={t.editor.stage.stepsNav}>
           <div className="mx-auto flex max-w-2xl items-center gap-1.5 px-2 py-2">
             <StepNav p={p} className="min-w-0 flex-1" />
-            {!readOnly && <StepMenu p={p} step={step} side="up" />}
-            {!readOnly && <AssistMenu p={p} compact side="up" />}
+            {!readOnly && !step.fromBlock && <StepMenu p={p} step={step} side="up" />}
+            {!readOnly && !step.fromBlock && <AssistMenu p={p} compact side="up" />}
           </div>
         </nav>
       )}

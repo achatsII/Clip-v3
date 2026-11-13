@@ -398,6 +398,11 @@ const cleanList = (l: string[] | undefined) => (l ?? []).map((x) => String(x).tr
 export function applyOp(content: InstructionContent, op: AgentOp, ids: IdMap): OpResult {
   const t = messages().editorTools.agent
   const part = t.parts
+  // Une étape d'un bloc commun se modifie dans le bloc, jamais dans l'instruction qui l'emprunte.
+  if (op.step && op.op !== 'add_step') {
+    const target = content.steps.find((s) => s.id === (ids.get(op.step!) ?? op.step))
+    if (target?.fromBlock) throw new AgentOpError(messages().blocks.errors.locked(target.fromBlock.title))
+  }
   switch (op.op) {
     case 'set_instruction': {
       const next: InstructionContent = { ...content }

@@ -20,7 +20,8 @@ import { records } from './records'
 import { inbox } from './inbox'
 import { notify } from './notify'
 import { training } from './training'
+import { blocks } from './blocks'
 
-export const fr = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training }
+export const fr = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks }
 
 export type Messages = typeof fr

@@ -517,6 +517,41 @@ Aucun écran ne lit la bibliothèque entière : à des milliers d'instructions, 
   complète, traductions comprises, se lit à l'ouverture. « Tout voir » et la recherche (deux lettres
   et plus) cherchent au serveur, dans la portée du lien, une page à la fois.
 
+### Les blocs communs (toggle `sharedBlocks`, feature `shared_blocks`, `src/lib/model/blocks.ts`)
+
+Des étapes qui reviennent dans beaucoup d'instructions (le cadenassage d'une presse, le démarrage
+d'une ligne, les EPI avant d'entrer) se rédigent une fois et se mettent à jour partout.
+
+- **Un bloc est une instruction marquée `block`** : il se rédige, s'approuve et a ses versions comme
+  elle, mais ne va à aucun poste : pas de version au poste (`clip_published`), pas de numéro, pas de
+  lien, de traduction ni de questions de formation. La liste le range à part (« Blocs communs »,
+  `?vue=blocs`, « Nouveau bloc ») ; la recherche, les comptes et les postes ne le voient pas.
+- **Dans une instruction, ses étapes sont des copies** de sa dernière version publiée
+  (`Step.fromBlock` : le bloc, sa version, son titre). Une copie porte un identifiant propre à son
+  bloc (`copyId`, `<étape>_<bloc>`) : il ne change pas d'une version à l'autre (la traduction d'une
+  étape inchangée reste bonne) et ne se confond ni avec une étape de l'instruction (une instruction
+  dupliquée garde les identifiants de ses étapes) ni avec la copie d'un autre bloc.
+- **Une copie ne se modifie pas sur place** : texte, médias, menu de l'étape et retouches de l'IA
+  sont fermés, et l'assistant d'édition refuse d'y toucher (`applyOp`). Un bandeau violet dit d'où
+  elle vient : « Ouvrir le bloc », et dans « … » « Détacher » (les étapes deviennent celles de
+  l'instruction, avec un identifiant à elles, traductions et questions comprises) ou « Retirer le
+  bloc ».
+- **Faire un bloc** (« … » › « Faire un bloc commun ») : on coche des étapes, on nomme le bloc ; il
+  est créé et publié (version 1) et ses copies prennent la place des étapes choisies, traductions et
+  questions comprises. Une usine qui exige une approbation passe par « Nouveau bloc », qui s'approuve
+  comme une instruction. **Insérer un bloc** : chercher parmi les blocs publiés ; il arrive après
+  l'étape affichée, une seule fois par instruction.
+- **Publier un bloc** (`propagateBlock`, dans le navigateur, une instruction après l'autre) : chaque
+  instruction dont le brouillon le contient prend la nouvelle version (`replaceBlock`, à la place de
+  la première suite de ses étapes). Une instruction publiée et à jour est republiée, avec « Bloc
+  commun « … » vN. » en tête du résumé de sa version ; une instruction en cours de modification ou
+  d'approbation ne reçoit que son brouillon. La traduction des étapes qui ont changé tombe :
+  l'opérateur lit l'original plutôt qu'un texte périmé, jusqu'à la prochaine traduction. Les échecs
+  se comptent (« republiez le bloc pour réessayer »).
+- **L'éditeur du bloc** dit combien d'instructions l'utilisent (`countUsing`, filtre sur
+  `json_data.draft.steps.fromBlock.id`) et ce que sa publication fera. Archivé, le bloc laisse ses
+  copies telles quelles : on les détache pour les modifier.
+
 ### La formation et la matrice de compétences (toggle `training`, `src/lib/model/training.ts`)
 
 Pas un LMS : on vérifie qu'une personne a compris une instruction, et on garde qui est formé, à

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
   Archive,
+  Blocks,
   CalendarClock,
   Check,
   CircleCheck,
@@ -25,6 +26,8 @@ import {
   ThumbsDown,
   ThumbsUp,
   RotateCcw,
+  Trash2,
+  Unlink,
   X,
 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -34,7 +37,7 @@ import { Button } from '@/components/ui/Button'
 import { Confetti } from '@/components/ui/Celebrate'
 import { useConfirm } from '@/components/ui/Confirm'
 import { Input, Label, Segmented, Switch, Textarea } from '@/components/ui/Field'
-import type { MenuItem } from '@/components/ui/Menu'
+import { Menu, type MenuItem } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
@@ -76,6 +79,8 @@ import { markCreatedSeen } from '@/lib/prefs'
 import { cn, formatDate, formatDateTime, timeAgo } from '@/lib/util/cn'
 import { AgentPanel, type AgentRequest } from './AgentPanel'
 import { HistoryDialog, ShareDialog, TranslateDialog } from './Dialogs'
+import { InsertBlockDialog, MakeBlockDialog } from './BlockDialogs'
+import { countUsing, detachBlock, propagateBlock, removeBlock } from '@/lib/model/blocks'
 import { LockoutEditor } from './LockoutEditor'
 import { MetaCard, StationPicker } from './MetaCard'
 import { QuestionsDialog, type QuestionAnswer } from './QuestionsDialog'
@@ -127,10 +132,15 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [renewMonths, setRenewMonths] = useState<number | null>(() => renewalMonthsOf(instr, org.json_data))
   const [renewedAt, setRenewedAt] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(false)
-  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz'>(null)
+  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz' | 'makeBlock' | 'insertBlock'>(null)
   // La formation (toggle `training`) : les questions, et « il faut se re-former » à la publication.
   const trainingToggle = useToggle('training')
   const [retrain, setRetrain] = useState(false)
+  // Les blocs communs (toggle `sharedBlocks`) : ce document en est-il un, et combien d'instructions l'utilisent.
+  const blocksToggle = useToggle('sharedBlocks')
+  const isBlock = !!instr.block
+  const usedBy = useQuery({ queryKey: ['instructions', 'block-use', doc._id], queryFn: () => countUsing(data, doc._id), enabled: isBlock && blocksToggle })
+  const [propagation, setPropagation] = useState<{ done: number; total: number } | null>(null)
   const [comment, setComment] = useState('')
   const [rating, setRating] = useState(instr.generation?.rating ?? null)
   const [ratingComment, setRatingComment] = useState<string | null>(null)
@@ -443,7 +453,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     const n: string[] = []
     const noMedia = steps.filter((s) => !s.media.length).length
     if (noMedia) n.push(tp.notes.noMedia(noMedia))
-    if (!stationIds.length) n.push(tp.notes.noStation)
+    if (!stationIds.length && !instr.block) n.push(tp.notes.noStation)
     if (questions.length) n.push(tp.notes.questions(questions.length))
     if (content.kind === 'lockout' && content.lockout?.energyPoints.some((e) => !e.isolationDevice || !e.verification)) n.push(tp.notes.lockoutIncomplete)
     const quizGaps = trainingToggle && content.quiz?.length ? content.quiz.length - cleanQuiz(content.quiz).length : 0
@@ -471,13 +481,23 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       if (docNumber) cacheInstruction(qc, doc._id, { number: docNumber })
       setRetrain(false)
       if (notifyOn && requester && requester !== actor.id) void notifyEvent({ kind: 'published', instructionId: doc._id, to: [requester] })
-      if (reelToggle)
+      if (reelToggle && publishedId)
         void attachReel(files, data, { publishedId, version: n }, draft).then((ok) => {
           if (ok) void qc.invalidateQueries({ queryKey: ['published', doc._id] })
         })
-      setCelebrate(true)
-      setTimeout(() => setCelebrate(false), 2800)
-      toast.success(tp.toasts.published(n), stationIds.length ? tp.toasts.visibleNow : tp.toasts.addStation, { label: tp.toasts.view, onClick: () => router.push(`/instructions/${doc._id}/lire`) })
+      if (docRef.current.json_data.block) {
+        // Un bloc commun : chaque instruction qui l'utilise prend sa nouvelle version.
+        setPropagation({ done: 0, total: usedBy.data ?? 0 })
+        const res = await propagateBlock(data, org.json_data, actor, { id: doc._id, version: n, title: draft.title, steps: draft.steps }, (done, total) => setPropagation({ done, total }))
+        setPropagation(null)
+        toast.success(tp.toasts.published(n), t.blocks.propagated(res.republished, res.drafts))
+        if (res.failed) toast.error(t.blocks.propagateFailed(res.failed))
+        void qc.invalidateQueries({ queryKey: qk.instructions })
+      } else {
+        setCelebrate(true)
+        setTimeout(() => setCelebrate(false), 2800)
+        toast.success(tp.toasts.published(n), stationIds.length ? tp.toasts.visibleNow : tp.toasts.addStation, { label: tp.toasts.view, onClick: () => router.push(`/instructions/${doc._id}/lire`) })
+      }
       setDialog(null)
       refresh()
       void qc.invalidateQueries({ queryKey: ['published', doc._id] })
@@ -581,6 +601,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const translations = useEntitlement('translations')
   const translateToggle = useToggle('translations')
   const gate = useGate()
+  const blocksEnt = useEntitlement('shared_blocks')
   const { openPaywall } = useBilling()
 
   // « Il faut se re-former » : seulement pour une nouvelle version d'une instruction qui a des questions.
@@ -606,17 +627,20 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     )
 
   // Sous le titre : où en est l'instruction, et l'enregistrement.
-  const publication = `${instr.number ? `${instr.number} · ` : ''}${inReview ? tp.status.review : !instr.publishedVersion ? tp.status.draft : isDirty ? tp.status.unpublished : tp.status.published(instr.publishedVersion)}`
+  const publication = `${instr.block ? `${t.blocks.chip} · ` : instr.number ? `${instr.number} · ` : ''}${inReview ? tp.status.review : !instr.publishedVersion ? tp.status.draft : isDirty ? tp.status.unpublished : tp.status.published(instr.publishedVersion)}`
   const status = liveLabel ?? (saveState === 'saved' ? `${publication} · ${saveLabel}` : saveLabel)
 
   // Tout ce qui touche l'instruction entière, rangé dans son « … ».
   const menu: MenuItem[] = [
-    { label: tp.info.menu, icon: <Info className="h-4 w-4" />, onClick: () => setDialog('info') },
+    { label: isBlock ? t.blocks.info : tp.info.menu, icon: <Info className="h-4 w-4" />, onClick: () => setDialog('info') },
     { label: tp.menu.test, icon: <Eye className="h-4 w-4" />, onClick: () => router.push(`/instructions/${doc._id}/lire?apercu=1`) },
-    { label: tp.menu.share, icon: <Share2 className="h-4 w-4" />, onClick: () => setDialog('share') },
-    { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle, hint: translations === 'locked' ? <LockBadge /> : undefined },
+    { label: tp.menu.share, icon: <Share2 className="h-4 w-4" />, onClick: () => setDialog('share'), hidden: isBlock },
+    { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle || isBlock, hint: translations === 'locked' ? <LockBadge /> : undefined },
+    // Les blocs communs : faire un bloc de quelques étapes (il se publie tout de suite), ou en insérer un.
+    { label: t.blocks.make, icon: <Blocks className="h-4 w-4" />, onClick: () => gate(blocksEnt, 'shared_blocks', () => setDialog('makeBlock')), hidden: !blocksToggle || isBlock || readOnly || approval || !content.steps.some((s) => !s.fromBlock), hint: blocksEnt === 'locked' ? <LockBadge /> : undefined },
+    { label: t.blocks.insert, icon: <Blocks className="h-4 w-4" />, onClick: () => gate(blocksEnt, 'shared_blocks', () => setDialog('insertBlock')), hidden: !blocksToggle || isBlock || readOnly, hint: blocksEnt === 'locked' ? <LockBadge /> : undefined },
     // Les questions de formation : préparées par l'IA, retouchées ici (toggle `training`).
-    { label: t.training.menu, icon: <GraduationCap className="h-4 w-4" />, onClick: () => setDialog('quiz'), hidden: !trainingToggle || (readOnly && !content.quiz?.length), hint: content.quiz?.length ? <span className="text-xs font-black text-slate-400 tabular-nums">{content.quiz.length}</span> : undefined },
+    { label: t.training.menu, icon: <GraduationCap className="h-4 w-4" />, onClick: () => setDialog('quiz'), hidden: !trainingToggle || isBlock || (readOnly && !content.quiz?.length), hint: content.quiz?.length ? <span className="text-xs font-black text-slate-400 tabular-nums">{content.quiz.length}</span> : undefined },
     { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history'), divider: true },
     // Le travail fait avec cette instruction : ses relevés, ses écarts (toggle `records`).
     { label: t.records.openForInstruction, icon: <ClipboardCheck className="h-4 w-4" />, onClick: () => router.push(`/registre?instruction=${doc._id}`), hidden: !recordsToggle || !hasChecks(content.steps) || !can('feedback') },
@@ -666,10 +690,11 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       divider: true,
       hidden: readOnly,
       onClick: async () => {
-        if (!(await confirm({ title: tp.menu.archiveConfirm.title(content.title), description: tp.menu.archiveConfirm.description, confirmLabel: tp.menu.archiveConfirm.confirm, danger: true }))) return
+        const description = isBlock ? t.blocks.archiveDescription(usedBy.data ?? (await countUsing(data, doc._id).catch(() => 0))) : tp.menu.archiveConfirm.description
+        if (!(await confirm({ title: tp.menu.archiveConfirm.title(content.title), description, confirmLabel: tp.menu.archiveConfirm.confirm, danger: true }))) return
         await archiveInstruction(data, doc)
         refresh()
-        toast.success(tp.menu.archived)
+        toast.success(isBlock ? t.blocks.archived : tp.menu.archived)
         router.push('/instructions')
       },
     },
@@ -773,6 +798,46 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setSelected(copy.id)
   }
 
+  // Une étape d'un bloc commun : on le dit, avec ce qu'on peut faire (ouvrir le bloc, détacher, retirer).
+  const fromBlock = blocksToggle ? step?.fromBlock : undefined
+  async function detach(id: string) {
+    if (!(await confirm({ title: t.blocks.detachConfirm.title, description: t.blocks.detachConfirm.description, confirmLabel: t.blocks.detachConfirm.confirm }))) return
+    update(detachBlock(content, id))
+  }
+  async function dropBlock(id: string) {
+    if (!(await confirm({ title: t.blocks.removeConfirm.title, description: t.blocks.removeConfirm.description, confirmLabel: t.blocks.removeConfirm.confirm, danger: true }))) return
+    const next = removeBlock(content, id)
+    update(next)
+    setSelected(next.steps[Math.max(0, Math.min(idx, next.steps.length - 1))]?.id ?? null)
+  }
+  const blockNotice = fromBlock ? (
+    <div className="flex flex-col gap-2 rounded-2xl bg-violet-50 p-2 pl-3 sm:flex-row sm:items-center dark:bg-violet-500/10" role="status">
+      <Blocks className="h-5 w-5 shrink-0 text-violet-600 max-sm:hidden" />
+      <p className="min-w-0 flex-1 text-sm font-bold text-violet-900 dark:text-violet-100">{t.blocks.stepNotice(fromBlock.title, fromBlock.version)}</p>
+      {/* À droite, au téléphone aussi : le menu « … » s'ouvre vers la gauche sans sortir de l'écran. */}
+      <div className="flex items-center gap-2 self-end sm:self-auto">
+        <Button size="sm" icon={<Blocks className="h-4 w-4" />} onClick={() => router.push(`/instructions/${fromBlock.id}`)}>
+          {t.blocks.open}
+        </Button>
+        {!readOnly && (
+          <Menu
+            label={t.blocks.more}
+            items={[
+              { label: t.blocks.detach, icon: <Unlink className="h-4 w-4" />, onClick: () => void detach(fromBlock.id) },
+              { label: t.blocks.remove, icon: <Trash2 className="h-4 w-4" />, danger: true, onClick: () => void dropBlock(fromBlock.id) },
+            ]}
+          />
+        )}
+      </div>
+    </div>
+  ) : isBlock && blocksToggle && usedBy.data !== undefined ? (
+    // Le bloc lui-même : on modifie une pièce partagée, et on le dit.
+    <div className="flex items-center gap-2 rounded-2xl bg-violet-50 p-3 dark:bg-violet-500/10" role="status">
+      <Blocks className="h-5 w-5 shrink-0 text-violet-600" />
+      <p className="min-w-0 flex-1 text-sm font-bold text-violet-900 dark:text-violet-100">{t.blocks.editing(usedBy.data)}</p>
+    </div>
+  ) : null
+
   async function deleteStep() {
     if (!step) return
     if (!(await confirm({ title: tp.deleteStepTitle(idx + 1), description: step.title, confirmLabel: t.editor.step.delete, danger: true }))) return
@@ -792,8 +857,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         readOnly={readOnly}
         agentWorking={!!step && agentStep === step.id}
         agentOpen={agentOpen}
-        top={{ title: content.title, status, statusTone: liveLabel ? 'live' : saveState === 'error' ? 'error' : undefined, primary, menu, onInfo: () => setDialog('info'), questions: readOnly ? 0 : questions.length, onQuestions: () => setQuestionsOpen(true) }}
-        notices={notices}
+        top={{ title: content.title, status, statusTone: liveLabel ? 'live' : saveState === 'error' ? 'error' : undefined, primary, menu, onInfo: () => setDialog('info'), infoLabel: isBlock ? t.blocks.infoOpen : undefined, questions: readOnly ? 0 : questions.length, onQuestions: () => setQuestionsOpen(true) }}
+        notices={blockNotice || notices ? <>{blockNotice}{notices}</> : null}
         badge={liveToggle ? <LiveBadge state={realtimeState} compact /> : null}
         remoteNote={step && flash?.stepId === step.id ? flash.note : null}
         feedbackNote={feedbackNote}
@@ -836,17 +901,17 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         />
       )}
 
-      <Modal open={dialog === 'info'} onClose={() => setDialog(null)} size="lg" title={tp.info.title}>
+      <Modal open={dialog === 'info'} onClose={() => setDialog(null)} size="lg" title={isBlock ? t.blocks.infoTitle : tp.info.title}>
         <div className="space-y-5">
           <div>
-            <Label htmlFor="instruction-title">{tp.header.titleLabel}</Label>
+            <Label htmlFor="instruction-title">{isBlock ? t.blocks.name : tp.header.titleLabel}</Label>
             <Input id="instruction-title" value={content.title} readOnly={readOnly} onChange={(e) => update({ ...content, title: e.target.value })} className="h-14 text-lg font-black" />
           </div>
           <div>
             <Label htmlFor="instruction-summary">{tp.header.summaryLabel}</Label>
-            <Textarea id="instruction-summary" rows={2} value={content.summary} readOnly={readOnly} onChange={(e) => update({ ...content, summary: e.target.value })} placeholder={tp.header.summaryPlaceholder} />
+            <Textarea id="instruction-summary" rows={2} value={content.summary} readOnly={readOnly} onChange={(e) => update({ ...content, summary: e.target.value })} placeholder={isBlock ? t.blocks.summaryPlaceholder : tp.header.summaryPlaceholder} />
           </div>
-          <MetaCard embedded content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={update} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
+          <MetaCard embedded noStations={isBlock} content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={update} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
           {content.kind === 'lockout' && content.lockout && <LockoutEditor value={content.lockout} readOnly={readOnly} onChange={(lockout) => update({ ...content, lockout })} />}
         </div>
       </Modal>
@@ -876,6 +941,34 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       />
       <UndoPill history={history} />
       <QuizDialog open={dialog === 'quiz'} onClose={() => setDialog(null)} content={content} ai={session.ai} readOnly={readOnly} published={!!instr.publishedVersion} onChange={(quiz) => update({ ...content, quiz })} />
+      {blocksToggle && !isBlock && (
+        <>
+          <MakeBlockDialog
+            open={dialog === 'makeBlock'}
+            onClose={() => setDialog(null)}
+            content={content}
+            current={step?.id ?? null}
+            onMade={(next) => {
+              update(next)
+              setDialog(null)
+              void qc.invalidateQueries({ queryKey: qk.instructions })
+            }}
+          />
+          <InsertBlockDialog
+            open={dialog === 'insertBlock'}
+            onClose={() => setDialog(null)}
+            content={content}
+            after={idx}
+            onInserted={(next, title) => {
+              const first = next.steps.find((s) => s.fromBlock && !content.steps.some((x) => x.id === s.id))
+              update(next)
+              if (first) setSelected(first.id)
+              setDialog(null)
+              toast.success(t.blocks.inserted(title))
+            }}
+          />
+        </>
+      )}
       <TranslateDialog open={dialog === 'translate'} onClose={() => setDialog(null)} content={content} onTranslated={(lang, translated) => update({ ...content, translations: { ...(content.translations ?? {}), [lang]: translated } })} />
 
       <Modal
@@ -892,24 +985,36 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           </>
         }
       >
-        <p className="font-medium text-slate-600 dark:text-slate-300">
-          {stationIds.length ? tp.publish.replaces(stationIds.length) : tp.publish.library}
-        </p>
-        {/* Le bon moment pour dire où elle s'affiche, et quand la relire. */}
-        <div className="mt-4">
-          <StationPicker label={tp.publish.where} stationIds={stationIds} stations={stations} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
-        </div>
-        {renewalToggle && (
-          <div className="mt-4">
-            <Label>{tp.renewal.label}</Label>
-            <Segmented size="sm" value={String(renewMonths)} onChange={(v) => setRenewMonths(v === 'null' ? null : Number(v))} options={RENEWAL_CHOICES.map((m) => ({ value: String(m), label: t.instructions.renewal.choice(m) }))} />
-            <p className="mt-1.5 text-xs font-bold text-slate-400">{tp.renewal.hint}</p>
-          </div>
-        )}
-        {askRetrain && (
-          <div className="mt-3">
-            <Switch checked={retrain} onChange={setRetrain} label={t.training.retrain} description={t.training.retrainHint} />
-          </div>
+        {isBlock ? (
+          // Un bloc commun ne va à aucun poste : on dit ce que sa publication met à jour.
+          <>
+            <p className="flex items-start gap-2 font-medium text-slate-600 dark:text-slate-300">
+              <Blocks className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" /> {t.blocks.publishImpact(usedBy.data ?? 0)}
+            </p>
+            {propagation && <p className="mt-3 text-sm font-black text-[var(--primary-strong)] dark:text-sky-300" role="status">{t.blocks.propagating(propagation.done, propagation.total)}</p>}
+          </>
+        ) : (
+          <>
+            <p className="font-medium text-slate-600 dark:text-slate-300">
+              {stationIds.length ? tp.publish.replaces(stationIds.length) : tp.publish.library}
+            </p>
+            {/* Le bon moment pour dire où elle s'affiche, et quand la relire. */}
+            <div className="mt-4">
+              <StationPicker label={tp.publish.where} stationIds={stationIds} stations={stations} onStations={changeStations} onCreateStation={can('stations', 'write') ? createStation : undefined} />
+            </div>
+            {renewalToggle && (
+              <div className="mt-4">
+                <Label>{tp.renewal.label}</Label>
+                <Segmented size="sm" value={String(renewMonths)} onChange={(v) => setRenewMonths(v === 'null' ? null : Number(v))} options={RENEWAL_CHOICES.map((m) => ({ value: String(m), label: t.instructions.renewal.choice(m) }))} />
+                <p className="mt-1.5 text-xs font-bold text-slate-400">{tp.renewal.hint}</p>
+              </div>
+            )}
+            {askRetrain && (
+              <div className="mt-3">
+                <Switch checked={retrain} onChange={setRetrain} label={t.training.retrain} description={t.training.retrainHint} />
+              </div>
+            )}
+          </>
         )}
         {notes.length > 0 && (
           <ul className="mt-4 space-y-2">

@@ -70,6 +70,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   sous la clé `instructions`). Les postes se regroupent en secteurs (`Station.area`) ; le numéro de
   document (`number`, « IT-0042 ») se donne à la première publication. Au poste, la liste lit la
   fiche des versions publiées (`Published.card`) ; l'instruction complète se lit à l'ouverture.
+- **Blocs communs** (toggle `sharedBlocks`, feature `shared_blocks`) : des étapes rédigées une fois
+  (cadenassage, démarrage, EPI) dans une instruction marquée `block`, qui ne va à aucun poste
+  (`src/lib/model/blocks.ts`). Dans une instruction, ses étapes sont des copies verrouillées
+  (`Step.fromBlock`, identifiant `copyId`) ; publier le bloc republie les instructions à jour et
+  met à jour le brouillon des autres (`propagateBlock`).
 - **Formation** (toggle `training`) : 3 à 5 questions par instruction, préparées par l'IA (`quiz`,
   `src/lib/ai/quiz.ts`) et retouchées par l'auteur ; elles vivent dans le brouillon et se traduisent
   avec lui. Au poste, une personne nommée les passe à la fin ; réussie à 80 %, la trace s'écrit dans
@@ -120,7 +125,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Ce qui se facture : `ai_credits`, une banque de crédits d'IA par mois · `published_instructions`,
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,
-  `full_export`, oui ou non selon le plan. Les opérateurs et les lecteurs ne se comptent jamais.
+  `full_export`, `shared_blocks`, oui ou non selon le plan. Les opérateurs et les lecteurs ne se comptent jamais.
 - Le prix en crédits de chaque opération d'IA, déclaré dans `ai_operations` du manifeste et débité
   par la plateforme (même liste et mêmes prix dans `AI_COSTS` de `src/lib/billing/catalog.ts`) :
 

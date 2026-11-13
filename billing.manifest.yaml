@@ -87,6 +87,11 @@ features:
   - key: full_export
     kind: boolean
     name: Export complet
+  # Les blocs communs : des étapes rédigées une fois, réutilisées dans plusieurs instructions et
+  # mises à jour partout. Utile dès qu'une bibliothèque grandit : Équipe et Usine.
+  - key: shared_blocks
+    kind: boolean
+    name: Blocs communs
 
 plans:
   # Un produit de magasin par prix, store_product_id = clip_v3_<plan>_<intervalle>_v<version> : les
@@ -110,7 +115,7 @@ plans:
     # Montré comme plan courant dans l'app ; rien à acheter.
     availability: { channels: [web, ios, android], audience: personal }
     entitlements:
-      features: { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false }
+      features: { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false }
       limits: { published_instructions: 3, stations: 1, editors: 1 }
       credits:
         - { feature: ai_credits, amount: 300, period: monthly, rollover: none }
@@ -128,7 +133,7 @@ plans:
       - { interval: monthly, currency: CAD, amount_cents: 4900, store_product_id: clip_v3_solo_monthly_v1 }
       - { interval: yearly, currency: CAD, amount_cents: 49000, store_product_id: clip_v3_solo_yearly_v1 }
     entitlements:
-      features: { translations: false, adoption_stats: true, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false }
+      features: { translations: false, adoption_stats: true, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false }
       limits: { published_instructions: 30, stations: 5, editors: 1 }
       credits:
         - { feature: ai_credits, amount: 2500, period: monthly, rollover: none }
@@ -145,7 +150,7 @@ plans:
       - { interval: monthly, currency: CAD, amount_cents: 29900, store_product_id: clip_v3_equipe_monthly_v1 }
       - { interval: yearly, currency: CAD, amount_cents: 299000, store_product_id: clip_v3_equipe_yearly_v1 }
     entitlements:
-      features: { translations: true, adoption_stats: true, approvals: true, bulk_import: false, voice_assistant: false, brand_kit: true, full_export: false }
+      features: { translations: true, adoption_stats: true, approvals: true, bulk_import: false, voice_assistant: false, brand_kit: true, full_export: false, shared_blocks: true }
       limits: { published_instructions: null, stations: 25, editors: 5 }
       credits:
         - { feature: ai_credits, amount: 12000, period: monthly, rollover: none }
@@ -162,7 +167,7 @@ plans:
       - { interval: monthly, currency: CAD, amount_cents: 89900, store_product_id: clip_v3_usine_monthly_v1 }
       - { interval: yearly, currency: CAD, amount_cents: 899000, store_product_id: clip_v3_usine_yearly_v1 }
     entitlements:
-      features: { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true }
+      features: { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true }
       limits: { published_instructions: null, stations: 100, editors: 15 }
       credits:
         - { feature: ai_credits, amount: 40000, period: monthly, rollover: none }

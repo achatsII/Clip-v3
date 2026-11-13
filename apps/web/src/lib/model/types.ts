@@ -145,6 +145,11 @@ export interface Step {
   section?: string
   /** Ce que l'opérateur relève à cette étape, pour la trace (toggle `records`, `src/lib/model/checks.ts`). */
   checks?: Check[]
+  /**
+   * L'étape vient d'un bloc commun (toggle `sharedBlocks`, `src/lib/model/blocks.ts`) : une copie de
+   * sa version publiée, qui ne se modifie pas ici et suit le bloc quand il change.
+   */
+  fromBlock?: { id: string; version: number; title: string }
 }
 
 /**
@@ -421,6 +426,12 @@ export interface Instruction {
   shareLinkId?: string | null
   /** La relecture périodique (« à revoir dans 1 an ») ; absente avant la première publication. */
   renewal?: Renewal | null
+  /**
+   * Un bloc commun : des étapes réutilisées dans plusieurs instructions. Il se rédige, s'approuve et
+   * se publie comme une instruction, mais ne s'affiche à aucun poste (pas de version publique) ; sa
+   * publication met à jour les instructions qui l'utilisent.
+   */
+  block?: boolean
   /** Le numéro de document (« IT-0042 »), donné à la première publication et gardé ensuite. */
   number?: string | null
   /**

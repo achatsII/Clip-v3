@@ -1,7 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { BookOpen, LayoutGrid, List, Loader2, Plus, Search, SearchX, Upload, X } from 'lucide-react'
+import { Blocks, BookOpen, LayoutGrid, List, Loader2, Plus, Search, SearchX, Upload, X } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CreditPill, LowBalanceBanner } from '@/components/billing/Billing'
@@ -18,7 +18,9 @@ import { qk, useCategoriesInUse, useInstructionCount, useInstructionSearch, useP
 import { useLimit } from '@/lib/billing/state'
 import { useMessages } from '@/lib/i18n'
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/model/catalog'
+import { emptyContent } from '@/lib/model/repo'
 import { backfillIndex, type LibraryQuery, type LibraryStatus } from '@/lib/model/search'
+import { createInstruction } from '@/lib/model/service'
 import type { CategoryKey } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
@@ -53,7 +55,7 @@ export default function InstructionsPage() {
   const router = useRouter()
   const params = useSearchParams()
   const qc = useQueryClient()
-  const { me, can, profile, data } = useSession()
+  const { me, can, profile, data, displayName } = useSession()
   const t = useMessages()
   const tl = t.instructions.list
   const stations = useStations()
@@ -70,6 +72,15 @@ export default function InstructionsPage() {
   const [status, setStatus] = useState<LibraryStatus>(params.get('statut') === 'review' ? 'review' : params.get('statut') === 'revoir' ? 'renew' : 'all')
   const [place, setPlace] = useState<Place>(() => (params.get('poste') ? { kind: 'station', id: params.get('poste')! } : params.get('secteur') ? { kind: 'sector', name: params.get('secteur')! } : null))
   const renewalOn = useToggle('renewal')
+  // Les blocs communs : une vue à part (ils ne vont à aucun poste).
+  const blocksOn = useToggle('sharedBlocks')
+  const [blocks, setBlocks] = useState(params.get('vue') === 'blocs')
+  // L'adresse suit la vue : « Instructions » (menu) ramène à la liste, et le retour revient aux blocs.
+  useEffect(() => setBlocks(params.get('vue') === 'blocs'), [params])
+  const showBlocks = (on: boolean) => {
+    setBlocks(on)
+    router.replace(on ? '/instructions?vue=blocs' : '/instructions', { scroll: false })
+  }
   const [view, setView] = useState<'grid' | 'list'>('grid')
 
   useEffect(() => setView(pref('library_view', 'grid')), [])
@@ -94,16 +105,18 @@ export default function InstructionsPage() {
 
   const noSector = tl.place.noSector
   const stationIds = useMemo(() => placeStations(place, stations.data ?? [], noSector), [place, stations.data, noSector])
+  // La vue des blocs communs : ils ne vont à aucun poste, « Pour moi » et « Où ? » n'y servent pas.
+  const blocksView = blocksOn && blocks
   const search: LibraryQuery = useMemo(
-    () => ({ q, status, category, stationIds, mine: scope === 'mine' && hasFocus ? { userId: profile.userId, categories: me.categories, stationIds: me.stationIds } : null }),
-    [q, status, category, stationIds, scope, hasFocus, profile.userId, me.categories, me.stationIds],
+    () => ({ q, status, category, stationIds: blocksView ? null : stationIds, blocks: blocksView, mine: scope === 'mine' && hasFocus && !blocksView ? { userId: profile.userId, categories: me.categories, stationIds: me.stationIds } : null }),
+    [q, status, category, stationIds, blocksView, scope, hasFocus, profile.userId, me.categories, me.stationIds],
   )
   const ready = !stations.isLoading
   const results = useInstructionSearch(search, refs, ready)
   const shown = useInstructionCount(search, refs, ready)
-  const total = useInstructionCount({}, refs, ready)
+  const total = useInstructionCount(blocksView ? { blocks: true } : {}, refs, ready)
   const list = useMemo(() => results.data?.pages.flatMap((p) => p.docs) ?? [], [results.data])
-  const filtered = !!(q || category || status !== 'all' || stationIds || (scope === 'mine' && hasFocus))
+  const filtered = !!(q || category || status !== 'all' || (!blocksView && (stationIds || (scope === 'mine' && hasFocus))))
 
   // Un code scanné qui correspond à une seule instruction l'ouvre directement.
   useEffect(() => {
@@ -130,12 +143,29 @@ export default function InstructionsPage() {
     setScope('all')
     setPlace(null)
   }
+  const blocksChip = (
+    <button type="button" aria-pressed={blocks} onClick={() => showBlocks(!blocks)} className={cn('btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-xs font-black', blocks ? 'bg-violet-600 text-white' : 'bg-violet-50 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200')}>
+      <Blocks className="h-4 w-4" /> {t.blocks.filter}
+      {blocks && <X className="h-3.5 w-3.5" aria-hidden />}
+    </button>
+  )
+  const [creatingBlock, setCreatingBlock] = useState(false)
+  async function newBlock() {
+    setCreatingBlock(true)
+    try {
+      const title = t.blocks.newTitle
+      const d = await createInstruction(data, { id: profile.userId, name: displayName }, { title, block: true, draft: emptyContent({ title }) })
+      router.push(`/instructions/${d._id}`)
+    } finally {
+      setCreatingBlock(false)
+    }
+  }
 
   return (
     <div>
       <PageHeader
-        title={tl.title}
-        subtitle={total.data === undefined ? undefined : filtered && shown.data !== undefined ? tl.count(shown.data, total.data) : tl.total(total.data)}
+        title={blocksView ? t.blocks.filter : tl.title}
+        subtitle={total.data === undefined ? undefined : filtered && shown.data !== undefined ? tl.count(shown.data, total.data) : blocksView ? t.blocks.total(total.data) : tl.total(total.data)}
         actions={
           <>
             <CreditPill />
@@ -145,9 +175,15 @@ export default function InstructionsPage() {
                   {tl.import}
                 </LinkButton>
                 {/* Sur téléphone, le « + » du bas suffit : une seule action principale à l'écran. */}
-                <LinkButton href="/instructions/nouvelle" variant="primary" icon={<Plus className="h-5 w-5" />} className="max-sm:hidden">
-                  {tl.new}
-                </LinkButton>
+                {blocksView ? (
+                  <Button variant="primary" loading={creatingBlock} onClick={() => void newBlock()} icon={<Blocks className="h-5 w-5" />}>
+                    {t.blocks.newBlock}
+                  </Button>
+                ) : (
+                  <LinkButton href="/instructions/nouvelle" variant="primary" icon={<Plus className="h-5 w-5" />} className="max-sm:hidden">
+                    {tl.new}
+                  </LinkButton>
+                )}
               </>
             )}
           </>
@@ -169,7 +205,9 @@ export default function InstructionsPage() {
       </div>
 
       <div className="no-scrollbar mb-6 flex items-center gap-2 overflow-x-auto pr-8 pb-1 [mask-image:linear-gradient(to_right,black_calc(100%-3rem),transparent)]">
-        {hasFocus && (
+        {/* Dans la vue des blocs, sa pastille vient en tête : on voit d'un coup d'œil comment en sortir. */}
+        {blocksView && blocksChip}
+        {hasFocus && !blocksView && (
           <Segmented
             size="sm"
             value={scope}
@@ -181,7 +219,7 @@ export default function InstructionsPage() {
           />
         )}
         {/* « Où ? » d'abord : au téléphone, il se voit sans faire défiler. */}
-        <PlacePicker value={place} onChange={setPlace} stations={stations.data ?? []} />
+        {!blocksView && <PlacePicker value={place} onChange={setPlace} stations={stations.data ?? []} />}
         <Segmented
           size="sm"
           value={status}
@@ -194,6 +232,7 @@ export default function InstructionsPage() {
             ...(renewalOn ? [{ value: 'renew' as const, label: tl.filters.renew }] : []),
           ]}
         />
+        {blocksOn && !blocksView && blocksChip}
         {CATEGORY_KEYS.filter((k) => categoriesInUse.data?.has(k)).map((k) => (
           <button key={k} type="button" onClick={() => setCategory(category === k ? null : k)} className={cn('btn-press h-11 shrink-0 rounded-2xl px-3 text-xs font-black', category === k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : CATEGORIES[k].soft)}>
             {CATEGORIES[k].label}
@@ -222,6 +261,13 @@ export default function InstructionsPage() {
         <SkeletonCards />
       ) : results.error ? (
         <ErrorState error={results.error} onRetry={() => results.refetch()} />
+      ) : !list.length && !filtered && total.data === 0 && blocksView ? (
+        <EmptyState
+          icon={<Blocks className="h-7 w-7" />}
+          title={t.blocks.empty}
+          description={t.blocks.emptyList}
+          action={can('instructions', 'write') ? <Button variant="primary" size="lg" loading={creatingBlock} onClick={() => void newBlock()} icon={<Blocks className="h-5 w-5" />}>{t.blocks.newBlock}</Button> : undefined}
+        />
       ) : !list.length && !filtered && total.data === 0 ? (
         <EmptyState
           icon={<BookOpen className="h-7 w-7" />}
