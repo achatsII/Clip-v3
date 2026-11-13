@@ -51,6 +51,7 @@ import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
 import { addSignatures, approvalsOf, contentHash, groupsToSign, needsApproval, signingGroups, signingState } from '@/lib/model/approvals'
 import { hasChecks } from '@/lib/model/checks'
+import { notifyEvent } from '@/lib/notify'
 import { diffSteps } from '@/lib/model/diff'
 import { inheritSection, moveStep as moveStepKeepingSections } from '@/lib/model/sections'
 import { RENEWAL_CHOICES, renewalFrom, renewalMonthsOf, renewalState } from '@/lib/model/renewal'
@@ -415,7 +416,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   async function createStation(name: string): Promise<string | null> {
     if (!name) return null
     try {
-      const d = await data.insert<Station>(T.station, { name, kind: 'poste', createdAt: nowIso(), linkMode: 'focus' }, name)
+      const d = await data.insert<Station>(T.station, { name, kind: 'poste', createdAt: nowIso(), linkMode: 'focus', ...(org.json_data.notify?.sealed ? { notifySeal: org.json_data.notify.sealed } : {}) }, name)
       void qc.invalidateQueries({ queryKey: qk.stations })
       toast.success(tp.toasts.stationCreated, name)
       return d._id
@@ -453,7 +454,10 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       const draft = reelToggle ? carryClips(latest.current, previous) : latest.current
       const current = { ...doc, json_data: { ...docRef.current.json_data, draft, stationIds } }
       const renewal = renewalToggle ? renewalFrom(renewMonths, nowIso(), actor.name) : undefined
+      // La personne qui avait demandé l'approbation : avertie de la publication.
+      const requester = docRef.current.json_data.review?.requestedBy
       const { number: n, publishedId } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous, renewal, approvals: approvals ?? null })
+      if (notifyOn && requester && requester !== actor.id) void notifyEvent({ kind: 'published', instructionId: doc._id, to: [requester] })
       if (reelToggle)
         void attachReel(files, data, { publishedId, version: n }, draft).then((ok) => {
           if (ok) void qc.invalidateQueries({ queryKey: ['published', doc._id] })
@@ -476,6 +480,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     try {
       await flush()
       await requestReview(data, { ...doc, json_data: { ...docRef.current.json_data, stationIds } }, org.json_data, actor, comment)
+      if (notifyOn) void notifyEvent({ kind: 'review', instructionId: doc._id })
       toast.success(tp.toasts.reviewSent, tp.toasts.reviewSentDetail)
       setDialog(null)
       setComment('')
@@ -492,6 +497,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setPublishing(true)
     try {
       await requestChanges(data, doc, actor, comment.trim())
+      if (notifyOn) void notifyEvent({ kind: 'changes', instructionId: doc._id })
       toast.success(tp.toasts.changesSent, tp.toasts.changesSentDetail(instr.review?.requestedByName))
       setDialog(null)
       setComment('')
@@ -547,6 +553,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   }
 
   const multiOn = useToggle('multiApproval')
+  const notifyOn = useToggle('notify')
   const groups = signingGroups(org.json_data, multiOn)
   const approval = needsApproval(org.json_data, role, multiOn)
   const canApprove = can('approve', 'write')

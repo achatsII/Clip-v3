@@ -58,6 +58,7 @@ document et filtré à chaque lecture). Le jour où l'identifiant `clip-v3` exis
 | `clip_operator` | une personne de l'équipe au poste, sans compte | nom, empreinte de son code (`pinHash`, jamais le code), quart, équipe, postes habituels, actif |
 | `clip_execution` | le travail fait au poste, écrit une fois à la fin d'une instruction qui a des relevés | instruction, version, poste, qui (personne de l'équipe ou connectée), début et fin, chaque réponse (valeur, limites, verdict, note d'écart), nombre d'écarts |
 | `clip_training` | réservé : les réponses d'une formation (étape 6 du plan) | — |
+| `clip_contact` | comment joindre une personne, tenu par son app | personne, nom, courriel, langue, jetons push de ses téléphones, courriel oui/non, téléphone oui/non |
 
 Le contenu publié est séparé du brouillon : un lien public ne lit que `clip_published` (et ce qu'il
 faut pour signaler un retour), jamais les brouillons.
@@ -455,6 +456,33 @@ n'importe quel approbateur). À plusieurs, même un approbateur demande les sign
   personne vient de poser reste. L'accueil ne liste à approuver que ce que mes groupes n'ont pas
   encore signé.
 - Toggle coupé, « plusieurs signatures » se comporte comme une approbation : rien ne se bloque.
+
+### Avertir les bonnes personnes (toggle `notify`, `src/lib/model/inbox.ts`, `src/lib/server/notify.ts`)
+
+- **« À voir »** (la cloche, en haut de la barre latérale et de l'en-tête du téléphone) : ce qui
+  attend la personne, tiré des données sans rien écrire de plus. Une instruction à approuver ou à
+  signer (mes groupes seulement), des changements demandés sur la mienne, un danger signalé, un
+  écart relevé. Le chiffre compte ce qui est arrivé depuis la dernière ouverture (par appareil).
+- **Courriels et téléphones** : le serveur avertit, par `POST /api/notify`. Il n'a pas de jeton à
+  lui. Il passe par le **lien de service** de l'usine : un administrateur l'active dans Réglages ›
+  Avertissements (`/api/notify/setup`), et le serveur crée alors, avec le jeton de cet
+  administrateur, un lien invité qui ne lit que `clip_org` et `clip_contact` et qui envoie des
+  courriels (`communication:send_email`, s'il en a le droit). Le serveur le **scelle**
+  (AES-256-GCM, clé dérivée de `CLIP_PIN_SECRET` ou de `ABLY_KEY`) et le range dans les réglages de
+  l'usine et sur chaque poste (`notifySeal`). Une tablette peut donc faire avertir sans jamais
+  pouvoir l'ouvrir, et le scellé d'une autre usine est refusé.
+- **Qui est averti** : une instruction à approuver, ses approbateurs (ou les membres des groupes
+  qui signent) ; des changements demandés ou une publication, la personne qui avait demandé ; un
+  danger ou un écart, les personnes que l'usine a nommées (au départ, les administrateurs et les
+  approbateurs). Jamais l'auteur de l'événement. Chacun choisit dans Réglages › Avertissements :
+  par courriel, sur ce téléphone (`push.register`), et un essai. Au plus 30 avertissements par
+  heure pour une tablette, 60 pour une personne.
+- **La fiche de contact** (`clip_contact`) se crée à la première visite et suit le nom, le courriel
+  et la langue : l'avertissement part dans la langue de la personne. Les notifications passent par
+  le service push d'Expo ; un toucher ouvre la page dans la coquille.
+- **Rien ne bloque** : un avertissement part sans attendre le travail, et son échec ne se voit pas
+  au poste. Le push demande la build qui contient `expo-notifications` (pas une mise à jour à
+  distance seule).
 
 ### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
 

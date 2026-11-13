@@ -10,6 +10,7 @@ import type { FilesApi } from '@/lib/gateway/files'
 import { compressImage } from '@/lib/media/image'
 import { FEEDBACK_KINDS } from '@/lib/model/catalog'
 import { createFeedback } from '@/lib/model/repo'
+import { notifyEvent } from '@/lib/notify'
 import type { Feedback, FeedbackKind } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
 import type { PlayerStrings } from './i18n'
@@ -25,6 +26,7 @@ export function FeedbackSheet({
   files,
   base,
   operatorName,
+  notify,
 }: {
   open: boolean
   onClose: () => void
@@ -35,6 +37,11 @@ export function FeedbackSheet({
   base: Omit<Feedback, 'createdAt' | 'status' | 'kind' | 'comment' | 'photoUrl' | 'authorName'>
   /** La personne identifiée au poste : son nom signe le retour. */
   operatorName?: string
+  /**
+   * Un danger signalé avertit les bonnes personnes (toggle `notify`) : `link`, le lien du poste
+   * (tablette) ; sans lien, la personne connectée.
+   */
+  notify?: { link?: string } | null
 }) {
   const [kind, setKind] = useState<FeedbackKind | null>(null)
   const [comment, setComment] = useState('')
@@ -72,6 +79,7 @@ export function FeedbackSheet({
         photoUrl = (await files.upload(blob, photo.name, 'feedback')).url
       }
       await createFeedback(data, { ...base, kind, comment: comment.trim() || undefined, photoUrl, authorName: name.trim() || null })
+      if (kind === 'danger' && notify) void notifyEvent({ kind: 'danger', instruction: base.instructionTitle, who: name.trim(), text: comment.trim() }, notify)
       try {
         if (name.trim()) localStorage.setItem('clip_pref_operator_name', name.trim())
       } catch {

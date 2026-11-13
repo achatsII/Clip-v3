@@ -38,12 +38,15 @@ export const CAPTURE_CAPABILITIES: readonly Capability[] = [
  * Les capacités annoncées à la page. Serveur injoignable (`config` nul) : le comportement de
  * base de la coquille, avec la capture native. Le repli n'ajoute jamais rien.
  */
-export function capabilitiesFor(config: PublicConfig | null, device: { store?: boolean } = {}): Capability[] {
+export function capabilitiesFor(config: PublicConfig | null, device: { store?: boolean; push?: boolean } = {}): Capability[] {
   const nativeCaptureOff = config?.toggles?.nativeCapture === false
   const caps = SHELL_CAPABILITIES.filter((c) => !(nativeCaptureOff && CAPTURE_CAPABILITIES.includes(c)))
   // L'achat dans le magasin : une fonction nouvelle, seulement si le serveur l'allume (toggle
   // `storePurchases`) et que cette version de l'app peut acheter (clé RevenueCat, hors Expo Go).
   if (device.store && config?.toggles?.storePurchases === true) caps.push(...STORE_CAPABILITIES)
+  // Les avertissements sur le téléphone : seulement si le serveur les allume (toggle `notify`) et
+  // que cette version de l'app a le module (hors Expo Go).
+  if (device.push && config?.toggles?.notify === true) caps.push('push.register')
   return caps
 }
 

@@ -445,6 +445,8 @@ export interface Published {
 export type StationKind = 'poste' | 'equipement' | 'zone'
 
 export interface Station {
+  /** Le lien de service des avertissements, scellé par le serveur (toggle `notify`) : la tablette le transmet sans pouvoir l'ouvrir. */
+  notifySeal?: string | null
   name: string
   code?: string
   kind: StationKind
@@ -615,6 +617,8 @@ export interface OrgSettings {
    * (toggle `multiApproval` ; coupé, `all` se comporte comme `one`).
    */
   approval: { mode: 'none' | 'one' | 'all'; approverIds: string[]; groups?: ApprovalGroup[] }
+  /** Avertir les bonnes personnes (toggle `notify`). */
+  notify?: NotifySettings
   feedback: { notifyDanger: boolean }
   standard: WritingStandard
   standardHistory: WritingStandard[]
@@ -629,4 +633,34 @@ export interface OrgSettings {
   /** Qui a ouvert CLIP le premier dans l'organisation : administrateur tant que personne d'autre ne l'est. */
   createdBy?: string
   createdAt: string
+}
+
+/** Les avertissements de l'usine : qui est averti d'un danger ou d'un écart, et le lien de service. */
+export interface NotifySettings {
+  on: boolean
+  danger: boolean
+  deviation: boolean
+  /** Ceux qu'un danger signalé ou un écart relevé avertit. */
+  recipients: string[]
+  /** Le lien de service, scellé par le serveur : seul lui peut l'ouvrir pour envoyer. */
+  sealed?: string | null
+  /** Le lien de service peut-il envoyer des courriels ? (le droit du compte qui l'a créé) */
+  email?: boolean
+  setAt?: string
+  setByName?: string
+}
+
+/** Comment joindre une personne (`clip_contact`) : une fiche par personne, tenue par son app. */
+export interface Contact {
+  userId: string
+  name: string
+  email?: string | null
+  /** La langue de ses avertissements (celle de son outil). */
+  lang: string
+  /** Les téléphones où la coquille a reçu le droit d'avertir. */
+  pushTokens: Array<{ token: string; platform: 'ios' | 'android'; updatedAt: string }>
+  /** Être averti par courriel, sur son téléphone. */
+  emails: boolean
+  push: boolean
+  updatedAt: string
 }

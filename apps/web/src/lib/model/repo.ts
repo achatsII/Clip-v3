@@ -31,6 +31,7 @@ export const T = {
   operator: 'clip_operator',
   /** Le travail fait au poste : qui, quand, les valeurs relevées et les photos de preuve. */
   execution: 'clip_execution',
+  contact: 'clip_contact',
   /** Les réponses aux questions de compréhension d'une instruction (formation). */
   training: 'clip_training',
 } as const

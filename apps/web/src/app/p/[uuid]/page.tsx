@@ -134,6 +134,7 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
         allowQuestions={link.permissions.includes('assistant:ask')}
         operator={who?.operator ?? null}
         canRecord={canRecord}
+        notifyLink={uuid}
       />
     )
   }

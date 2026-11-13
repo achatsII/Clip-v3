@@ -40,6 +40,11 @@ export type Capability =
   | 'store.offers'
   | 'store.purchase'
   | 'store.restore'
+  /**
+   * Les avertissements sur le téléphone (toggle `notify`) : la permission, puis le jeton push du
+   * téléphone, que la page range dans la fiche de contact de la personne. Hors Expo Go seulement.
+   */
+  | 'push.register'
 
 /** Injecté par la coquille dans `window.__CLIP_NATIVE__` avant le chargement de la page. */
 export interface NativeEnvironment {
@@ -148,6 +153,11 @@ export interface BridgeRequestMap {
   'store.purchase': { payload: { productId: string }; result: { outcome: 'purchased' | 'cancelled' | 'pending' | 'failed'; failure?: StoreFailure } }
   /** « Restaurer mes achats », que les magasins exigent. */
   'store.restore': { payload: Record<string, never>; result: { ok: boolean; failure?: StoreFailure } }
+  /**
+   * Demande la permission d'avertir, et rend le jeton push du téléphone (service push d'Expo).
+   * Refusée : `permission_denied`. Un toucher sur l'avertissement ouvre sa page dans la coquille.
+   */
+  'push.register': { payload: Record<string, never>; result: { token: string; platform: NativePlatform } }
 }
 
 /**

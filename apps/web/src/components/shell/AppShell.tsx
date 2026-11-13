@@ -24,6 +24,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Fragment, useCallback, useState, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { ScanSheet } from '@/components/ScanSheet'
+import { ContactSync, InboxButton } from '@/components/shell/Inbox'
 import { Logo } from '@/components/Logo'
 import { AppearanceControls } from '@/components/settings/Appearance'
 import { Modal } from '@/components/ui/Modal'
@@ -114,9 +115,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh lg:pl-72">
       {/* Barre latérale (grand écran) */}
       <aside className="glass-nav fixed inset-y-0 left-0 z-40 hidden w-72 flex-col border-r px-5 py-6 lg:flex">
-        <Link href="/accueil" className="px-2">
-          <Logo subtitle={org.json_data.name} />
-        </Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link href="/accueil" className="min-w-0 px-2">
+            <Logo subtitle={org.json_data.name} />
+          </Link>
+          {/* « À voir » : ce qui attend la personne (toggle `notify`). */}
+          <InboxButton />
+        </div>
         {canCreate && (
           <Link href="/instructions/nouvelle" className="btn-press bg-gradient-primary shadow-primary mt-8 flex h-14 items-center justify-center gap-2 rounded-full font-black text-white">
             <Plus className="h-5 w-5" /> {t.shell.newInstruction}
@@ -178,6 +183,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <ScanLine className="h-5 w-5" />
               </button>
             )}
+            <InboxButton />
             <button type="button" onClick={() => setMoreOpen(true)} className="bg-gradient-accent btn-press ml-1 flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-black text-white" aria-label={t.shell.account}>
               {initials(displayName)}
             </button>
@@ -194,6 +200,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {canCreate && <CreationWatcher />}
       {/* Le temps réel de l'usine (Ably), s'il est configuré : ce qui se crée ailleurs apparaît aussitôt. */}
       <RealtimeBridge />
+      {/* La fiche de contact de la personne, pour ses avertissements (toggle `notify`). */}
+      <ContactSync />
 
       {/* Navigation du bas (téléphone) */}
       <nav className="glass-nav pb-safe kb-hide shell-chrome fixed inset-x-0 bottom-0 z-40 border-t lg:hidden" aria-label={t.shell.mainNav}>

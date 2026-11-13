@@ -3,6 +3,7 @@
 import { useToggle } from '@/lib/toggles'
 import { DEFAULT_RENEWAL_MONTHS, RENEWAL_CHOICES } from '@/lib/model/renewal'
 import { AccountCard } from '@/components/settings/Account'
+import { AlertsTab } from '@/components/settings/AlertsTab'
 import { ApprovalGroups, defaultGroups } from '@/components/settings/ApprovalGroups'
 import { Check, CreditCard, Download, ImagePlus, Loader2, Lock, Smartphone, Users } from 'lucide-react'
 import Link from 'next/link'
@@ -26,7 +27,7 @@ import { applyBrandColor } from '@/lib/theme'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { cn } from '@/lib/util/cn'
 
-type Tab = 'usine' | 'standard' | 'approbation' | 'membres' | 'apparence' | 'donnees'
+type Tab = 'usine' | 'standard' | 'approbation' | 'membres' | 'avertissements' | 'apparence' | 'donnees'
 
 /** Les onglets : la valeur dans l'adresse, la clé du libellé (lu au rendu, dans la langue de l'outil). */
 const TABS: Array<{ value: Tab; label: keyof Messages['settings']['tabs']; admin?: boolean }> = [
@@ -34,6 +35,8 @@ const TABS: Array<{ value: Tab; label: keyof Messages['settings']['tabs']; admin
   { value: 'standard', label: 'standard' },
   { value: 'approbation', label: 'approval', admin: true },
   { value: 'membres', label: 'members', admin: true },
+  // Les avertissements : les miens pour chacun, ceux de l'usine pour un administrateur (toggle `notify`).
+  { value: 'avertissements', label: 'alerts' },
   { value: 'apparence', label: 'appearance' },
   { value: 'donnees', label: 'data' },
 ]
@@ -44,7 +47,8 @@ export default function SettingsPage() {
   const { can } = useSession()
   const t = useMessages().settings
   const isAdmin = can('settings', 'write')
-  const tabs = TABS.filter((x) => !x.admin || isAdmin)
+  const notifyOn = useToggle('notify')
+  const tabs = TABS.filter((x) => (!x.admin || isAdmin) && (x.value !== 'avertissements' || notifyOn))
   const requested = params.get('onglet') as Tab | null
   const tab: Tab = tabs.some((x) => x.value === requested) ? requested! : tabs[0].value
 
@@ -71,6 +75,7 @@ export default function SettingsPage() {
       {tab === 'standard' && <StandardTab />}
       {tab === 'approbation' && <ApprovalTab />}
       {tab === 'membres' && <MembersTab />}
+      {tab === 'avertissements' && <AlertsTab />}
       {tab === 'apparence' && <AppearanceTab />}
       {tab === 'donnees' && <DataTab />}
     </div>

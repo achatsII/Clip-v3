@@ -8,23 +8,10 @@
  * clé du temps réel du serveur (`ABLY_KEY`). L'empreinte porte l'identifiant de sa clé (`s1:`, `a1:`) :
  * ajouter `CLIP_PIN_SECRET` plus tard n'invalide pas les codes déjà donnés.
  */
-import { createHmac, hkdfSync, timingSafeEqual } from 'node:crypto'
+import { createHmac, timingSafeEqual } from 'node:crypto'
+import { currentKeyId, keyFor, type KeyId } from './keys'
 
-type KeyId = 's1' | 'a1'
-
-function keyFor(id: KeyId, purpose: string): Buffer | null {
-  if (id === 's1') {
-    const s = process.env.CLIP_PIN_SECRET
-    return s ? Buffer.from(hkdfSync('sha256', s, 'clip-v3', purpose, 32)) : null
-  }
-  const a = process.env.ABLY_KEY
-  return a ? Buffer.from(hkdfSync('sha256', a, 'clip-v3', purpose, 32)) : null
-}
-
-/** La clé des nouveaux codes ; null : le serveur n'en a aucune (l'identification est indisponible). */
-export function currentKeyId(): KeyId | null {
-  return process.env.CLIP_PIN_SECRET ? 's1' : process.env.ABLY_KEY ? 'a1' : null
-}
+export { currentKeyId }
 
 /** Un code valide : 4 chiffres. */
 export const PIN = /^\d{4}$/

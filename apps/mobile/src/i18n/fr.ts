@@ -99,6 +99,8 @@ export const fr = {
     shareUnavailable: 'Le partage de fichiers n’est pas disponible sur cet appareil.',
     printFailed: 'L’impression n’a pas pu s’ouvrir.',
     storeUnavailable: 'L’achat dans le magasin n’est pas offert dans cette version.',
+    pushUnavailable: 'Les avertissements sur le téléphone ne sont pas offerts dans cette version.',
+    pushDenied: 'Le téléphone refuse les notifications de CLIP : permettez-les dans ses réglages.',
     storeNoAnswer: 'Le magasin ne répond pas.',
     unknownRequest: (type: string) => `Cette version de l'app ne connaît pas « ${type} ».`,
     notNow: (type: string) => `« ${type} » n'est pas disponible en ce moment.`,

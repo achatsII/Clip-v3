@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { BRIDGE_VERSION, type NativeEnvironment, type NativePlatform, type PublicConfig } from './src/bridge/protocol'
 import { CaptureHost } from './src/capture/CaptureHost'
 import { capabilitiesFor } from './src/config/capabilities'
+import { pushAvailable } from './src/push/push'
 import { storeEnabled } from './src/store/store'
 import { getWebTarget } from './src/config/env'
 import { evaluateForceUpdate } from './src/config/forceUpdate'
@@ -106,7 +107,7 @@ export default function App() {
     return () => sub.remove()
   }, [])
 
-  const capabilities = useMemo(() => capabilitiesFor(config, { store: storeEnabled() }), [config])
+  const capabilities = useMemo(() => capabilitiesFor(config, { store: storeEnabled(), push: pushAvailable() }), [config])
   const environment = useMemo<Omit<NativeEnvironment, 'capabilities'> | null>(
     () =>
       installId

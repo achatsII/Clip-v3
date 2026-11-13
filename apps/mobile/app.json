@@ -78,7 +78,13 @@
         }
       ],
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "color": "#0078FF"
+        }
+      ]
     ],
     "locales": {
       "fr": "./locales/fr.json",

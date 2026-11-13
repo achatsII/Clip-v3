@@ -38,6 +38,7 @@ import type { FilesApi } from '@/lib/gateway/files'
 import { ENERGY, LANGUAGES, PPE, textDir, WARNINGS } from '@/lib/model/catalog'
 import { firstIncomplete, hasChecks, type Answers, type CheckAnswer } from '@/lib/model/checks'
 import { buildExecution, flushExecutions, saveExecution } from '@/lib/model/executions'
+import { notifyEvent } from '@/lib/notify'
 import { logUsage } from '@/lib/model/repo'
 import { sectionGroups } from '@/lib/model/sections'
 import { localized } from '@/lib/model/translation'
@@ -100,6 +101,8 @@ export interface PlayerProps {
   canRecord?: boolean
   /** La personne connectée qui fait l'instruction dans l'app (pas une personne de l'équipe). */
   recorder?: { id: string; name: string } | null
+  /** Le lien du poste ou de l'instruction : un danger ou un écart y avertit les bonnes personnes (toggle `notify`). */
+  notifyLink?: string
 }
 
 function deviceId(): string {
@@ -116,7 +119,7 @@ function deviceId(): string {
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink } = props
   const who = { operatorId: operator?.id ?? null, operatorName: operator?.name ?? null }
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
@@ -153,6 +156,9 @@ export function Player(props: PlayerProps) {
   const [nudge, setNudge] = useState(0)
   const [record, setRecord] = useState<{ state: 'saved' | 'queued'; deviations: number } | null>(null)
   const recording = recordsOn && canRecord && !preview && hasChecks(props.content.steps)
+  // Avertir (toggle `notify`) : depuis un poste, par son lien ; dans l'app, au nom de la personne.
+  const notifyOn = useToggle('notify')
+  const notifyVia = notifyOn && !preview ? (notifyLink ? { link: notifyLink } : source === 'app' ? {} : null) : null
   const answerCheck = useCallback((id: string, a: CheckAnswer) => setAnswers((prev) => ({ ...prev, [id]: a })), [])
   // Une trace restée dans l'appareil (réseau coupé) repart dès qu'une instruction s'ouvre.
   useEffect(() => {
@@ -267,11 +273,16 @@ export function Player(props: PlayerProps) {
             userName: operator ? null : (recorder?.name ?? null),
           })
           void saveExecution(deps.data, exec).then((state) => setRecord({ state, deviations: exec.deviations }))
+          if (exec.deviations && notifyVia) {
+            const first = exec.answers.find((a) => a.ok === false)
+            const value = first ? (typeof first.value === 'number' ? `${first.value}${first.unit ? ` ${first.unit}` : ''}` : typeof first.value === 'string' ? first.value : '') : ''
+            void notifyEvent({ kind: 'deviation', instruction: exec.instructionTitle, who: exec.operatorName ?? exec.userName ?? '', text: first ? [first.label, value, first.note].filter(Boolean).join(' · ') : '' }, notifyVia)
+          }
         }
       }
       if (autoRead && clamped >= 0 && clamped < total) speakStep(content.steps[clamped])
     },
-    [total, index, recordsOn, answers, recording, recorder, lang, props.content, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator],
+    [total, index, recordsOn, answers, recording, recorder, notifyVia, lang, props.content, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator],
   )
 
   useEffect(() => {
@@ -502,6 +513,7 @@ export function Player(props: PlayerProps) {
             ...who,
           }}
           operatorName={operator?.name}
+          notify={notifyVia}
         />
       )}
 

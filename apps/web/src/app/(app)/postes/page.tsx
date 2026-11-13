@@ -25,7 +25,7 @@ import { normalizeText } from '@/lib/util/cn'
 const KINDS: StationKind[] = ['poste', 'equipement', 'zone']
 
 export default function StationsPage() {
-  const { data, can } = useSession()
+  const { data, can, org } = useSession()
   const t = useMessages()
   const qc = useQueryClient()
   const toast = useToast()
@@ -63,7 +63,7 @@ export default function StationsPage() {
     if (!form.name.trim()) return
     setBusy(true)
     try {
-      await data.insert<Station>(T.station, { name: form.name.trim(), code: form.code.trim() || undefined, kind: form.kind, area: form.area.trim() || undefined, linkMode: 'focus', createdAt: nowIso() }, form.name.trim())
+      await data.insert<Station>(T.station, { name: form.name.trim(), code: form.code.trim() || undefined, kind: form.kind, area: form.area.trim() || undefined, linkMode: 'focus', createdAt: nowIso(), ...(org.json_data.notify?.sealed ? { notifySeal: org.json_data.notify.sealed } : {}) }, form.name.trim())
       await qc.invalidateQueries({ queryKey: qk.stations })
       toast.success(t.stations.list.created, t.stations.list.createdHint)
       setOpen(false)

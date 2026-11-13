@@ -57,6 +57,7 @@ function SharedInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; on
       onExit={() => setClosed(true)}
       exitLabel={(words) => words.close}
       canRecord={!!link.scope?.resources.some((r) => r.data_type === T.execution && r.actions.includes('insert'))}
+      notifyLink={uuid}
     />
   )
 }

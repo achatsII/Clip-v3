@@ -59,6 +59,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - **Approbation à plusieurs** (toggle `multiApproval`, mode `all`) : chaque groupe de l'usine signe
   (`src/lib/model/approvals.ts`) ; une signature vaut pour le contenu signé (empreinte), la dernière
   publie. Toggle coupé, le mode se comporte comme une seule approbation.
+- **Avertir les bonnes personnes** (toggle `notify`) : « À voir » (la cloche) se calcule des données ;
+  les courriels et notifications partent du serveur (`/api/notify`) par le lien de service de l'usine,
+  scellé par le serveur (`src/lib/server/keys.ts`) et recopié sur chaque poste (`notifySeal`).
+  Chaque personne tient sa fiche `clip_contact` (courriel, langue, téléphones). Le push sur le
+  téléphone (`push.register`, expo-notifications) demande une build EAS.
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le

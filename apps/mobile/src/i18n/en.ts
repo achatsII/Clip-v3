@@ -97,6 +97,8 @@ export const en: ShellStrings = {
     shareUnavailable: 'File sharing isn’t available on this device.',
     printFailed: 'Printing couldn’t open.',
     storeUnavailable: 'In-app purchase isn’t offered in this version.',
+    pushUnavailable: 'Phone alerts aren’t offered in this version.',
+    pushDenied: 'The phone refuses CLIP notifications: allow them in its settings.',
     storeNoAnswer: 'The store isn’t responding.',
     unknownRequest: (type: string) => `This version of the app doesn’t know “${type}”.`,
     notNow: (type: string) => `“${type}” isn’t available right now.`,
