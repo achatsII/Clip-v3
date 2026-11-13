@@ -7,6 +7,7 @@ import {
   CalendarClock,
   Check,
   CircleCheck,
+  CircleDashed,
   ClipboardCheck,
   Copy,
   CopyPlus,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  RotateCcw,
   X,
 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -47,6 +49,7 @@ import { deviceId, onRealtime, publishRealtime, useRealtimeState, writtenBy } fr
 import { changedSteps, followStep, readVersion, remoteDraftAction } from '@/lib/realtime/liveDraft'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
+import { addSignatures, approvalsOf, contentHash, groupsToSign, needsApproval, signingGroups, signingState } from '@/lib/model/approvals'
 import { hasChecks } from '@/lib/model/checks'
 import { diffSteps } from '@/lib/model/diff'
 import { inheritSection, moveStep as moveStepKeepingSections } from '@/lib/model/sections'
@@ -58,15 +61,15 @@ import {
   confirmRenewal,
   duplicateInstruction,
   newFromSources,
-  needsApproval,
   publishInstruction,
   requestChanges,
   requestReview,
+  saveSignatures,
   saveDraft,
   saveSources,
   updatePublishedStations,
 } from '@/lib/model/service'
-import type { Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
+import type { ApprovalGroup, Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
 import { markCreatedSeen } from '@/lib/prefs'
 import { cn, formatDate, formatDateTime, timeAgo } from '@/lib/util/cn'
 import { AgentPanel, type AgentRequest } from './AgentPanel'
@@ -439,7 +442,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     return n
   }, [steps, stationIds, questions, content, tp])
 
-  async function doPublish(approvedBy?: { id: string; name: string }) {
+  async function doPublish(approvedBy?: { id: string; name: string }, approvals?: { list: Array<{ group: string; byName: string; at: string }>; line: string }) {
     setPublishing(true)
     try {
       await flush()
@@ -450,7 +453,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       const draft = reelToggle ? carryClips(latest.current, previous) : latest.current
       const current = { ...doc, json_data: { ...docRef.current.json_data, draft, stationIds } }
       const renewal = renewalToggle ? renewalFrom(renewMonths, nowIso(), actor.name) : undefined
-      const { number: n, publishedId } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous, renewal })
+      const { number: n, publishedId } = await publishInstruction(data, current, org.json_data, actor, { approvedBy, previous, renewal, approvals: approvals ?? null })
       if (reelToggle)
         void attachReel(files, data, { publishedId, version: n }, draft).then((ok) => {
           if (ok) void qc.invalidateQueries({ queryKey: ['published', doc._id] })
@@ -500,6 +503,30 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     }
   }
 
+  /** Signer pour ses groupes ; la dernière signature publie. */
+  async function doSign(signing: ApprovalGroup[]) {
+    setPublishing(true)
+    try {
+      await flush()
+      const draft = latest.current
+      const hash = contentHash(draft)
+      const mine = addSignatures([], groups, signing, actor, hash, nowIso()).signatures
+      const all = await saveSignatures(data, doc._id, mine)
+      const pending = groups.filter((g) => !all.some((x) => x.groupId === g.id && x.hash === hash))
+      if (!pending.length) {
+        const { approvals, line } = approvalsOf(all, groups, hash)
+        await doPublish(actor, { list: approvals, line })
+        return
+      }
+      toast.success(tp.review.signed, tp.review.waitingFor(pending.map((g) => g.name).join(', ')))
+      refresh()
+    } catch (e) {
+      toast.error(tp.review.signFailed, errorText(e))
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   async function rate(value: 'up' | 'down', text?: string) {
     setRating(value)
     await data.patch(T.instruction, doc._id, { 'generation.rating': value, 'generation.comment': text ?? null }).catch(() => undefined)
@@ -519,9 +546,15 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setTimeout(() => URL.revokeObjectURL(a.href), 5000)
   }
 
-  const approval = needsApproval(org.json_data, role)
+  const multiOn = useToggle('multiApproval')
+  const groups = signingGroups(org.json_data, multiOn)
+  const approval = needsApproval(org.json_data, role, multiOn)
   const canApprove = can('approve', 'write')
   const inReview = instr.status === 'review'
+  // À plusieurs : où en est chaque groupe, et ceux que cette personne peut signer maintenant.
+  const signing = inReview && groups.length ? signingState(groups, instr.review, content) : []
+  const mySigns = groupsToSign(signing, profile.userId, canApprove)
+  const lastSignature = signing.length > 0 && signing.filter((x) => !x.signature).length === mySigns.length
   // Limite d'instructions publiées : une instruction déjà publiée se republie toujours.
   const publishLimit = useLimit('published_instructions', instructions.data?.filter((d) => d.json_data.publishedVersion).length)
   const blockedByLimit = !instr.publishedVersion && !!publishLimit?.reached
@@ -533,14 +566,20 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const askPublish = () => (blockedByLimit ? openPaywall({ feature: 'published_instructions', used: publishLimit?.used, retry: () => setDialog(approval ? 'review' : 'checks') }) : setDialog(approval ? 'review' : 'checks'))
   const primary = (compact: boolean) =>
     readOnly ? null : inReview ? (
-      canApprove ? (
+      groups.length ? (
+        mySigns.length ? (
+          <Button variant="success" size={compact ? 'sm' : 'md'} loading={publishing} onClick={() => void doSign(mySigns)} icon={<CircleCheck className="h-5 w-5" />}>
+            {lastSignature && !compact ? tp.actions.signAndPublish : tp.actions.sign(mySigns.map((g) => g.name).join(', '))}
+          </Button>
+        ) : null
+      ) : canApprove ? (
         <Button variant="success" size={compact ? 'sm' : 'md'} loading={publishing} onClick={() => doPublish(actor)} icon={<CircleCheck className="h-5 w-5" />}>
           {compact ? tp.actions.approve : tp.actions.approveAndPublish}
         </Button>
       ) : null
     ) : !isDirty ? null : (
       <Button variant="primary" size={compact ? 'sm' : 'md'} disabled={!!problems.length} title={problems.join(' ') || undefined} loading={publishing} onClick={askPublish} icon={<Send className="h-4 w-4" />}>
-        {approval ? (compact ? tp.actions.requestApprovalShort : tp.actions.requestApproval) : tp.actions.publish} {blockedByLimit && <LockBadge />}
+        {approval ? (groups.length ? (compact ? tp.actions.requestSignaturesShort : tp.actions.requestSignatures) : compact ? tp.actions.requestApprovalShort : tp.actions.requestApproval) : tp.actions.publish} {blockedByLimit && <LockBadge />}
       </Button>
     )
 
@@ -659,6 +698,16 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
             <div className="min-w-0 flex-1">
               <p className="text-sm font-black text-amber-900 dark:text-amber-200">{tp.review.requested(instr.review.requestedByName, timeAgo(instr.review.requestedAt))}</p>
               {instr.review.note && <p className="text-sm font-medium text-amber-800 dark:text-amber-300">{tp.review.quote(instr.review.note)}</p>}
+              {signing.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5" aria-label={tp.review.signatures}>
+                  {signing.map(({ group, signature, stale }) => (
+                    <span key={group.id} className={cn('inline-flex min-h-8 items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-black', signature ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200' : stale ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200' : 'bg-white/70 text-amber-900 dark:bg-white/10 dark:text-amber-100')}>
+                      {signature ? <Check className="h-3.5 w-3.5" /> : stale ? <RotateCcw className="h-3.5 w-3.5" /> : <CircleDashed className="h-3.5 w-3.5" />}
+                      {signature ? tp.review.signedBy(group.name, signature.byName) : stale ? tp.review.resign(group.name) : tp.review.waiting(group.name)}
+                    </span>
+                  ))}
+                </div>
+              )}
               {changes && <p className="text-xs font-bold text-amber-700">{tp.review.changesMarked}</p>}
             </div>
             {canApprove && (
@@ -879,7 +928,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           </>
         }
       >
-        <p className="mb-3 font-medium text-slate-600 dark:text-slate-300">{tp.review.intro}</p>
+        <p className="mb-3 font-medium text-slate-600 dark:text-slate-300">{groups.length ? tp.review.signaturesIntro : tp.review.intro}</p>
         <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={tp.review.notePlaceholder} />
         {notes.length > 0 && <p className="mt-3 text-sm font-bold text-amber-700">{notes.join(' ')}</p>}
       </Modal>

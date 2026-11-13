@@ -81,6 +81,11 @@ export const editor = {
       requestApprovalShort: 'Faire approuver',
       approve: 'Approuver',
       publish: 'Publier',
+      /** Approbation à plusieurs : chaque groupe signe. */
+      requestSignatures: 'Demander les signatures',
+      requestSignaturesShort: 'Faire signer',
+      sign: (groups: string) => `Signer (${groups})`,
+      signAndPublish: 'Signer et publier',
     },
     menu: {
       label: 'Plus d’actions sur l’instruction',
@@ -119,6 +124,15 @@ export const editor = {
       sendRequest: 'Envoyer la demande',
       changesPlaceholder: 'Ce qu’il faut corriger avant de publier',
       send: 'Envoyer',
+      /** Approbation à plusieurs. */
+      signatures: 'Signatures',
+      signedBy: (group: string, name: string) => `${group} · ${name}`,
+      waiting: (group: string) => `${group} · en attente`,
+      resign: (group: string) => `${group} · à refaire (modifiée depuis)`,
+      signed: 'Signature enregistrée',
+      waitingFor: (groups: string) => `En attente de : ${groups}`,
+      signFailed: 'La signature n’a pas été enregistrée',
+      signaturesIntro: 'Chaque groupe signe l’instruction ; elle se publie à la dernière signature. Un mot pour les signataires ?',
     },
     /** L’avis sur une instruction générée par l’IA. */
     rating: {

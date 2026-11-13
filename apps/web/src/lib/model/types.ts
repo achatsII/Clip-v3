@@ -305,6 +305,26 @@ export interface ReviewRequest {
   note?: string | null
   /** Retour d'un approbateur qui demande des changements. */
   changesRequested?: { by: string; byName: string; at: string; comment: string } | null
+  /** Approbation à plusieurs : la signature de chaque groupe, pour le contenu signé. */
+  signatures?: Signature[]
+}
+
+/** Un groupe qui signe les instructions (« Qualité », « Chef d'atelier ») et ceux qui le représentent. */
+export interface ApprovalGroup {
+  id: string
+  name: string
+  /** Les personnes (approbateurs ou administrateurs) qui signent pour le groupe ; vide : tout approbateur. */
+  memberIds: string[]
+}
+
+/** La signature d'un groupe : qui, quand, et l'empreinte du contenu signé (modifié ensuite : à refaire). */
+export interface Signature {
+  groupId: string
+  groupName: string
+  by: string
+  byName: string
+  at: string
+  hash: string
 }
 
 /**
@@ -375,6 +395,8 @@ export interface Version {
   publishedByName: string
   approvedBy?: string | null
   approvedByName?: string | null
+  /** Approbation à plusieurs : la signature de chaque groupe. */
+  approvals?: Array<{ group: string; byName: string; at: string }>
   changelog: string
   createdAt: string
 }
@@ -588,7 +610,11 @@ export interface OrgSettings {
   name: string
   logoUrl?: string | null
   color?: string | null
-  approval: { mode: 'none' | 'one'; approverIds: string[] }
+  /**
+   * `none` : on publie directement ; `one` : une approbation suffit ; `all` : chaque groupe signe
+   * (toggle `multiApproval` ; coupé, `all` se comporte comme `one`).
+   */
+  approval: { mode: 'none' | 'one' | 'all'; approverIds: string[]; groups?: ApprovalGroup[] }
   feedback: { notifyDanger: boolean }
   standard: WritingStandard
   standardHistory: WritingStandard[]

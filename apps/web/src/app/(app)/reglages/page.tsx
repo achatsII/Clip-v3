@@ -3,7 +3,8 @@
 import { useToggle } from '@/lib/toggles'
 import { DEFAULT_RENEWAL_MONTHS, RENEWAL_CHOICES } from '@/lib/model/renewal'
 import { AccountCard } from '@/components/settings/Account'
-import { Check, CreditCard, Download, ImagePlus, Loader2, Lock, Smartphone } from 'lucide-react'
+import { ApprovalGroups, defaultGroups } from '@/components/settings/ApprovalGroups'
+import { Check, CreditCard, Download, ImagePlus, Loader2, Lock, Smartphone, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useRef, useState } from 'react'
@@ -171,9 +172,16 @@ function ApprovalTab() {
   const toast = useToast()
   const approvals = useEntitlement('approvals')
   const gate = useGate()
-  const mode = org.json_data.approval.mode
-  const set = (m: 'none' | 'one') =>
-    void updateOrg({ approval: { ...org.json_data.approval, mode: m } }).then(() => toast.success(m === 'none' ? t.directOn : t.approvalOn, m === 'none' ? t.directOnHint : t.approvalOnHint))
+  const multiOn = useToggle('multiApproval')
+  // Toggle coupé, « plusieurs signatures » se comporte comme une approbation : la tuile le montre ainsi.
+  const mode = org.json_data.approval.mode === 'all' && !multiOn ? 'one' : org.json_data.approval.mode
+  const set = (m: 'none' | 'one' | 'all') => {
+    // La première fois : deux groupes de départ, à renommer.
+    const groups = m === 'all' && !org.json_data.approval.groups?.length ? defaultGroups(t.defaultGroups) : org.json_data.approval.groups
+    void updateOrg({ approval: { ...org.json_data.approval, mode: m, ...(groups ? { groups } : {}) } }).then(() =>
+      toast.success(m === 'none' ? t.directOn : m === 'all' ? t.allOn : t.approvalOn, m === 'none' ? t.directOnHint : m === 'all' ? t.allOnHint : t.approvalOnHint),
+    )
+  }
   return (
     <Panel className="max-w-3xl">
       <h2 className="mb-1 text-xl font-black tracking-tight">{t.title}</h2>
@@ -187,8 +195,18 @@ function ApprovalTab() {
           title={<span className="inline-flex items-center gap-2">{t.oneTitle} {approvals === 'locked' && <LockBadge />}</span>}
           description={t.oneDescription}
         />
+        {multiOn && (
+          <ChoiceTile
+            selected={mode === 'all'}
+            onClick={() => gate(approvals, 'approvals', () => set('all'))}
+            icon={<Users className="h-5 w-5" />}
+            title={<span className="inline-flex items-center gap-2">{t.allTitle} {approvals === 'locked' && <LockBadge />}</span>}
+            description={t.allDescription}
+          />
+        )}
       </div>
-      {mode === 'one' && <p className="mt-4 text-sm font-bold text-slate-500">{t.approversNote}</p>}
+      {mode !== 'none' && <p className="mt-4 text-sm font-bold text-slate-500">{t.approversNote}</p>}
+      {mode === 'all' && <ApprovalGroups />}
     </Panel>
   )
 }

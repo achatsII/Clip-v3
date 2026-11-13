@@ -437,6 +437,25 @@ bonne réponse), un **choix** (dont certains sont des écarts), un **texte** (nu
   (`src/lib/pdf/executionSheet.ts`). L'accueil signale les écarts des 7 derniers jours ; le menu
   d'une instruction qui a des relevés mène à son registre.
 
+### L'approbation à plusieurs (toggle `multiApproval`, `src/lib/model/approvals.ts`)
+
+Réglages › Approbation offre trois choix : publier directement, une approbation, ou **plusieurs
+signatures**. Dans ce dernier, l'usine nomme ses groupes (« Qualité », « Production », quatre au
+plus) et qui signe pour chacun (des approbateurs ou administrateurs ; un groupe sans personne :
+n'importe quel approbateur). À plusieurs, même un approbateur demande les signatures.
+
+- La revue (`review.signatures`) garde la signature de chaque groupe avec l'**empreinte du contenu
+  signé** (`contentHash`) : modifié ensuite, le groupe affiche « à refaire ». Des changements
+  demandés effacent les signatures ; une nouvelle demande repart sans signature et nomme les
+  membres des groupes comme approbateurs.
+- L'éditeur montre où en est chaque groupe et offre « Signer (Qualité) » à qui peut signer ; la
+  **dernière signature publie** (« Signer et publier »). La version garde chaque signature
+  (`Version.approvals`) et une ligne « approuvée par » qui les nomme.
+- La signature relit l'instruction juste avant d'écrire (`saveSignatures`) : celle qu'une autre
+  personne vient de poser reste. L'accueil ne liste à approuver que ce que mes groupes n'ont pas
+  encore signé.
+- Toggle coupé, « plusieurs signatures » se comporte comme une approbation : rien ne se bloque.
+
 ### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
 
 L'aperçu (`/instructions/{id}/lire?apercu=1`) montre le brouillon tel qu'au poste. Pour qui peut

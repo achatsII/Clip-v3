@@ -17,6 +17,7 @@ import { Card, SectionTitle } from '@/components/ui/Surface'
 import { useFeedback, useInstructions, useStations } from '@/hooks/queries'
 import { num, useMessages, type Messages } from '@/lib/i18n'
 import { FEEDBACK_KINDS } from '@/lib/model/catalog'
+import { canSign, signingGroups } from '@/lib/model/approvals'
 import { listExecutions } from '@/lib/model/executions'
 import { T } from '@/lib/model/repo'
 import { usePref, writePref } from '@/lib/prefs'
@@ -90,7 +91,15 @@ export default function HomePage() {
 
   const all = instructions.data ?? []
   const published = all.filter((d) => d.json_data.publishedVersion)
-  const review = all.filter((d) => d.json_data.status === 'review')
+  // À approuver : à plusieurs signatures, seulement ce que mes groupes n'ont pas encore signé.
+  const multiOn = useToggle('multiApproval')
+  const groups = signingGroups(org.json_data, multiOn)
+  const review = all.filter((d) => {
+    if (d.json_data.status !== 'review') return false
+    if (!groups.length) return true
+    const signed = new Set((d.json_data.review?.signatures ?? []).map((x) => x.groupId))
+    return groups.some((g) => !signed.has(g.id) && canSign(g, profile.userId, true))
+  })
   // Les instructions qui arrivent à leur date de relecture (un mois avant, ou en retard).
   const renewalOn = useToggle('renewal')
   const toRenew = renewalOn ? all.filter((d) => needsRenewal(d.json_data)).slice(0, 5) : []

@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -32,6 +32,8 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   operators: true,
   // Les relevés d'une étape (mesure, oui ou non, choix, texte, photo) et le registre du travail fait.
   records: true,
+  // L'approbation à plusieurs : chaque groupe (Qualité, chef d'atelier…) signe, publication à la dernière signature.
+  multiApproval: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -54,4 +56,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   renewal: false,
   operators: false,
   records: false,
+  multiApproval: false,
 }

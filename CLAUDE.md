@@ -56,6 +56,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   et on ne passe pas une étape incomplète. La trace s'écrit à la fin dans `clip_execution`
   (`src/lib/model/executions.ts`, file d'attente si le réseau manque) et se lit dans `/registre`.
   Les limites d'une mesure ne s'inventent jamais.
+- **Approbation à plusieurs** (toggle `multiApproval`, mode `all`) : chaque groupe de l'usine signe
+  (`src/lib/model/approvals.ts`) ; une signature vaut pour le contenu signé (empreinte), la dernière
+  publie. Toggle coupé, le mode se comporte comme une seule approbation.
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le

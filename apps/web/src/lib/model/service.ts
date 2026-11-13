@@ -7,7 +7,7 @@ import type { DataApi, Doc } from '../gateway/data'
 import { messages, messagesIn } from '../i18n'
 import { summarizeChanges } from './diff'
 import { coverOf, emptyContent, findPublished, nowIso, T } from './repo'
-import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Renewal, Source, Version } from './types'
+import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Renewal, Signature, Source, Version } from './types'
 import { reuseSource } from './library'
 
 export interface Actor {
@@ -73,11 +73,6 @@ export function brandingOf(org: OrgSettings): Branding {
   return { orgName: org.name, logoUrl: org.logoUrl ?? null, color: org.color ?? null }
 }
 
-export function needsApproval(org: OrgSettings, actorRole: string): boolean {
-  if (org.approval.mode === 'none') return false
-  return actorRole !== 'admin' && actorRole !== 'approver'
-}
-
 /**
  * Publie le brouillon : version immuable, document public remplacé, instruction à jour.
  * Rend le numéro de la nouvelle version et le document public.
@@ -87,7 +82,7 @@ export async function publishInstruction(
   doc: Doc<Instruction>,
   org: OrgSettings,
   actor: Actor,
-  opts: { approvedBy?: Actor | null; previous?: InstructionContent | null; renewal?: Renewal | null } = {},
+  opts: { approvedBy?: Actor | null; previous?: InstructionContent | null; renewal?: Renewal | null; approvals?: { list: NonNullable<Version['approvals']>; line: string } | null } = {},
 ): Promise<{ number: number; publishedId: string }> {
   const instr = doc.json_data
   const content = instr.draft
@@ -104,7 +99,9 @@ export async function publishInstruction(
     publishedBy: instr.review?.requestedBy ?? actor.id,
     publishedByName: instr.review?.requestedByName ?? actor.name,
     approvedBy: opts.approvedBy?.id ?? null,
-    approvedByName: opts.approvedBy?.name ?? null,
+    // À plusieurs : « Nathalie Roy (Qualité), Luc Gagnon (Production) », et chaque signature à part.
+    approvedByName: opts.approvals?.line || (opts.approvedBy?.name ?? null),
+    ...(opts.approvals?.list.length ? { approvals: opts.approvals.list } : {}),
     changelog: summarizeChanges(previous, content),
     createdAt: publishedAt,
   }
@@ -155,12 +152,26 @@ export async function requestReview(data: DataApi, doc: Doc<Instruction>, org: O
       requestedBy: actor.id,
       requestedByName: actor.name,
       requestedAt: nowIso(),
-      approverIds: org.approval.approverIds,
+      // À plusieurs, les approbateurs sont les membres des groupes ; une nouvelle demande repart sans signature.
+      approverIds: org.approval.mode === 'all' ? [...new Set((org.approval.groups ?? []).flatMap((g) => g.memberIds))] : org.approval.approverIds,
       note: note?.trim() || null,
       changesRequested: null,
+      signatures: [],
     },
     updatedAt: nowIso(),
   })
+}
+
+/**
+ * Range les signatures d'une revue. L'instruction est relue juste avant : une signature posée par
+ * quelqu'un d'autre entre-temps reste.
+ */
+export async function saveSignatures(data: DataApi, id: string, mine: Signature[]): Promise<Signature[]> {
+  const fresh = await data.get<Instruction>(T.instruction, id)
+  const others = (fresh?.json_data.review?.signatures ?? []).filter((s) => !mine.some((m) => m.groupId === s.groupId))
+  const signatures = [...others, ...mine]
+  await data.patch(T.instruction, id, { 'review.signatures': signatures, updatedAt: nowIso() })
+  return signatures
 }
 
 export async function requestChanges(data: DataApi, doc: Doc<Instruction>, actor: Actor, comment: string) {
@@ -168,7 +179,8 @@ export async function requestChanges(data: DataApi, doc: Doc<Instruction>, actor
   await data.patch(T.instruction, doc._id, {
     status: doc.json_data.publishedVersion ? 'published' : 'draft',
     dirty: !!doc.json_data.publishedVersion,
-    review: review ? { ...review, changesRequested: { by: actor.id, byName: actor.name, at: nowIso(), comment } } : null,
+    // Des changements demandés : les signatures déjà posées ne valent plus.
+    review: review ? { ...review, signatures: [], changesRequested: { by: actor.id, byName: actor.name, at: nowIso(), comment } } : null,
     updatedAt: nowIso(),
   })
 }
