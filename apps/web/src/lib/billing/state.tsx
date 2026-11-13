@@ -25,6 +25,8 @@ export interface PaywallRequest {
 
 interface BillingContextValue {
   enabled: boolean
+  /** L'aperçu (drapeau éteint) : l'état vient du catalogue de l'app, rien ne s'achète (`preview.ts`). */
+  preview: boolean
   state: BillingState | null
   loading: boolean
   refresh: () => Promise<BillingState | null>
@@ -37,6 +39,7 @@ interface BillingContextValue {
 
 const Ctx = createContext<BillingContextValue>({
   enabled: false,
+  preview: false,
   state: null,
   loading: false,
   refresh: async () => null,
@@ -48,7 +51,7 @@ const Ctx = createContext<BillingContextValue>({
 
 const QUIET_MS = 4000
 
-export function BillingProvider({ client, session, enabled = BILLING_V2, children }: { client: BillingClient; session: string | null; enabled?: boolean; children: ReactNode }) {
+export function BillingProvider({ client, session, enabled = BILLING_V2, preview = false, children }: { client: BillingClient; session: string | null; enabled?: boolean; preview?: boolean; children: ReactNode }) {
   const [read, setRead] = useState<{ session: string; state: BillingState | null } | null>(null)
   const [paywall, setPaywall] = useState<PaywallRequest | null>(null)
   const current = enabled && session && read?.session === session ? read : null
@@ -99,8 +102,8 @@ export function BillingProvider({ client, session, enabled = BILLING_V2, childre
   }, [enabled, refresh, session])
 
   const value = useMemo<BillingContextValue>(
-    () => ({ enabled, state, loading, refresh, paywall, openPaywall: setPaywall, closePaywall: () => setPaywall(null), noteTry: (feature: string) => session && recordTry(session, feature) }),
-    [enabled, state, loading, refresh, paywall, session],
+    () => ({ enabled, preview: enabled && preview, state, loading, refresh, paywall, openPaywall: setPaywall, closePaywall: () => setPaywall(null), noteTry: (feature: string) => session && recordTry(session, feature) }),
+    [enabled, preview, state, loading, refresh, paywall, session],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

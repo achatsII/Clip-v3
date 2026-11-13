@@ -11,7 +11,6 @@ import { agentBusy, agentTurn, runAgentOps, type AgentLogEntry, type VoiceTurnRe
 import { suggestEdits } from '@/lib/ai/suggest'
 import { AI_COSTS } from '@/lib/billing/catalog'
 import { useBilling, useEntitlement, useGate } from '@/lib/billing/state'
-import { BILLING_V2 } from '@/lib/config'
 import { useMessages } from '@/lib/i18n'
 import type { InstructionContent, Source } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
@@ -110,7 +109,7 @@ export function AgentPanel({
   const translateToggle = useToggle('translations')
   const translateRight = useEntitlement('translations')
   const canTranslate = translateToggle && translateRight !== 'locked'
-  const { openPaywall } = useBilling()
+  const { openPaywall, enabled: billingOn } = useBilling()
   const liveContent = useRef(content)
   liveContent.current = busy ? liveContent.current : content
   const scroller = useRef<HTMLDivElement>(null)
@@ -165,7 +164,7 @@ export function AgentPanel({
         onLook: (info) => {
           looked = info.sourceIds.join(', ')
           patch(agentId, (m) => ({
-            actions: [...(m.actions ?? []), { key: -1, label: `${ta.looking(looked!, info.videoSec > 0 ? formatDuration(info.videoSec) : null)}${BILLING_V2 ? ` · ${t.billing.credits(AI_COSTS[info.operation])}` : ''}`, stepId: null, state: 'working' as const }],
+            actions: [...(m.actions ?? []), { key: -1, label: `${ta.looking(looked!, info.videoSec > 0 ? formatDuration(info.videoSec) : null)}${billingOn ? ` · ${t.billing.credits(AI_COSTS[info.operation])}` : ''}`, stepId: null, state: 'working' as const }],
           }))
         },
         onSources: onSourcesChange,

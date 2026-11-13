@@ -186,6 +186,8 @@ export const billing = {
     /** Sous l’essai : « Puis 1 490 $ / an ». */
     after: (price: string) => `Puis ${price}`,
     active: 'Actif',
+    /** Un module actif : aller là où il vit dans l’app. */
+    open: 'Ouvrir',
     withPlans: 'S’ajoute à Équipe ou à Usine',
     /** Pourquoi la fenêtre s’ouvre pour un module que le plan ne reçoit pas. */
     needsPlan: (name: string, plan: string) => `Le module ${name} s’ajoute au plan ${plan}.`,
@@ -200,6 +202,22 @@ export const billing = {
       pitch: 'Des données fiables du plancher, sans papier.',
       points: ['Listes de vérification et mesures répétées', 'Tendances et limites de chaque mesure', 'Export pour la qualité et l’audit', 'Numéro de lot, photos et écart autorisé'],
     },
+  },
+  /** L’aperçu de la facturation (le paiement n’est pas encore ouvert) : voir l’app comme une usine abonnée. */
+  preview: {
+    eyebrow: 'Aperçu',
+    title: 'Voyez CLIP comme une usine abonnée',
+    text: 'Le paiement n’est pas encore ouvert. Choisissez ce que l’usine aurait : toute l’app suit, et rien n’est acheté.',
+    plan: 'Plan',
+    modules: 'Modules',
+    modulesNeed: 'Les modules s’ajoutent à Équipe ou à Usine.',
+    credits: 'Crédits IA',
+    creditLevels: { full: 'Plein', low: 'Bas', empty: 'Épuisés' },
+    deviceOnly: 'Seulement dans cet appareil.',
+    reset: 'Tout ouvrir de nouveau',
+    /** Au retour d’un « achat » dans l’aperçu. */
+    taken: (name: string) => `Aperçu : ${name} est maintenant actif`,
+    takenHint: 'Une fois le paiement ouvert, c’est ici que l’achat se fera.',
   },
   /** Le conseiller d’achat : de temps en temps, l’offre qui sert l’usine (à l’accueil). */
   advisor: {

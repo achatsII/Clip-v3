@@ -1,7 +1,8 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Check, ClipboardCheck, GraduationCap, Send } from 'lucide-react'
+import { ArrowRight, Check, ClipboardCheck, GraduationCap, Send } from 'lucide-react'
+import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -22,6 +23,9 @@ export const MODULE_ICONS: Record<ModuleKey, ReactNode> = {
   academy: <GraduationCap className="h-6 w-6" />,
   records: <ClipboardCheck className="h-6 w-6" />,
 }
+
+/** Où vit chaque module dans l'app : « Ouvrir » y mène. */
+export const MODULE_HREF: Record<ModuleKey, string> = { academy: '/equipe?vue=competences', records: '/registre' }
 
 /** Les modules bâtis (leur toggle allumé) : on ne montre, ni ne vend, ce qui n'existe pas encore. */
 export function useModules(): ModuleDef[] {
@@ -94,6 +98,11 @@ export function ModuleCard({ m, plans, state, interval, isAdmin, busy, onBuy }: 
           </li>
         ))}
       </ul>
+      {owned && (
+        <Link href={MODULE_HREF[m.key]} className="btn-press glass-card mt-6 flex h-12 items-center justify-center gap-2 rounded-full text-sm font-black">
+          {t.modules.open} <ArrowRight className="h-4 w-4" />
+        </Link>
+      )}
       {!owned &&
         (!eligible ? (
           <p className="mt-6 rounded-2xl bg-slate-900/5 p-3 text-center text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{t.modules.withPlans}</p>

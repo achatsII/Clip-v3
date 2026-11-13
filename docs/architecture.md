@@ -737,6 +737,17 @@ module propose son essai (`moduleOffer`, le module désigné par `upgrade_hint.a
 sur Gratuit et Solo, le plan qui le reçoit. Les prix se lisent toujours à la plateforme. Un module se
 montre et se vend seulement une fois bâti (toggles `academy`, `recordsPlus`, allumés tous les deux).
 
+**L'aperçu de la facturation** (toggle `billingPreview`, `src/lib/billing/preview.ts`, `mode.ts`). Tant
+que le catalogue n'est pas publié (drapeau éteint), le web montre quand même tout ce qui se vend : la
+page Abonnement (plans, modules, crédits, jauges), la pastille, les cadenas, les invitations à l'essai
+et le conseiller. L'état vient d'une copie du manifeste (`PREVIEW_PLANS`, que le test compare au
+manifeste plan par plan) et de ce que la personne choisit en tête de la page, dans cet appareil
+(`clip_pref_billing_preview`) : un plan, des modules, un niveau de crédits (plein, bas, épuisés). Par
+défaut, Usine avec tous les modules : rien ne se ferme pour personne. `billingClient` passe au client de
+l'aperçu (`createPreviewClient`) : « Choisir » ou « Essayer » change l'aperçu et revient à la page
+(`?essai-apercu=`, un message, puis l'adresse se nettoie) ; il n'y a ni paiement, ni portail, ni débit, et
+l'IA garde sa route d'avant. Pas d'aperçu dans la coquille : on y vend dans le magasin.
+
 **Le conseiller d'achat** (toggle `salesAdvisor`, `src/lib/billing/advisor.ts`). De temps en temps,
 l'offre qui sert vraiment l'usine, sur une carte de l'accueil (`OfferCard`), jamais au poste ni
 pendant une capture ou une publication.

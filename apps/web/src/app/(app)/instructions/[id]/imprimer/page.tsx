@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/Button'
 import { ErrorState, Skeleton } from '@/components/ui/States'
 import { useInstruction, useStations, useVersions } from '@/hooks/queries'
 import { callNative, hasCapability } from '@/lib/bridge/native'
-import { BILLING_V2 } from '@/lib/config'
 import { useToggle } from '@/lib/toggles'
 import { buildPrintHtml } from '@/lib/pdf/printHtml'
 import { T } from '@/lib/model/repo'
@@ -86,7 +85,8 @@ export default function PrintPage() {
       stationNames: (stations.data ?? []).filter((s) => doc.json_data.stationIds.includes(s._id)).map((s) => s.json_data.name),
       liveUrl: live,
       qrSvg: qr,
-      showClipMention: BILLING_V2 && brandKit === 'locked',
+      // Le droit se lit dans l'état (aperçu compris) ; facturation éteinte, rien n'est fermé.
+      showClipMention: brandKit === 'locked',
       draft: !usePublished,
       ratios,
       records: recordsOn,

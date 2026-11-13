@@ -168,6 +168,8 @@ export const billing: typeof Fr = {
     add: (name: string) => `Add ${name}`,
     after: (price: string) => `Then ${price}`,
     active: 'Active',
+    /** An active module: go where it lives in the app. */
+    open: 'Open',
     withPlans: 'Adds on to Team or Plant',
     needsPlan: (name: string, plan: string) => `The ${name} module adds on to the ${plan} plan.`,
     notOnSale: 'This module is not for sale yet.',
@@ -181,6 +183,22 @@ export const billing: typeof Fr = {
       pitch: 'Reliable data from the floor, without paper.',
       points: ['Checklists and repeated measurements', 'Trends and limits for each measurement', 'Export for quality and audits', 'Lot number, photos and authorized deviation'],
     },
+  },
+  /** The billing preview (payment not open yet): see the app as a subscribed plant. */
+  preview: {
+    eyebrow: 'Preview',
+    title: 'See CLIP as a subscribed plant',
+    text: 'Payment is not open yet. Choose what the plant would have: the whole app follows, and nothing is bought.',
+    plan: 'Plan',
+    modules: 'Modules',
+    modulesNeed: 'Modules add on to Team or Plant.',
+    credits: 'AI credits',
+    creditLevels: { full: 'Full', low: 'Low', empty: 'Used up' },
+    deviceOnly: 'On this device only.',
+    reset: 'Open everything again',
+    /** Back from a preview "purchase". */
+    taken: (name: string) => `Preview: ${name} is now active`,
+    takenHint: 'Once payment opens, this is where the purchase will happen.',
   },
   advisor: {
     eyebrow: 'For your plant',

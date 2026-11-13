@@ -30,7 +30,6 @@ import { AppearanceControls } from '@/components/settings/Appearance'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { callNative, hasCapability } from '@/lib/bridge/native'
-import { BILLING_V2 } from '@/lib/config'
 import { logout } from '@/lib/gateway/client'
 import { useLangVersion, useMessages } from '@/lib/i18n'
 import { canScan, clipPathFromScan, scanNative } from '@/lib/media/scan'
@@ -39,6 +38,7 @@ import { ROLES } from '@/lib/model/catalog'
 import { cn, initials } from '@/lib/util/cn'
 import { CreationWatcher } from '@/hooks/useCreations'
 import { RealtimeBridge } from '@/hooks/useRealtime'
+import { useBilling } from '@/lib/billing/state'
 
 interface NavItem {
   href: string
@@ -110,6 +110,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const canCreate = can('instructions', 'write')
+  // L'abonnement se montre dès que la facturation se montre (la vraie, ou l'aperçu).
+  const billingOn = useBilling().enabled
 
   return (
     <div className="min-h-dvh lg:pl-72">
@@ -155,7 +157,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Upload className="h-4 w-4" /> {t.shell.nav.import}
             </Link>
           )}
-          <Link href="/reglages" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/reglages') ? 'bg-primary-soft text-[var(--primary-strong)]' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
+          {billingOn && (
+            <Link href="/reglages/abonnement" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/reglages/abonnement') ? 'bg-primary-soft text-[var(--primary-strong)]' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
+              <CreditCard className="h-4 w-4" /> {t.shell.nav.billing}
+            </Link>
+          )}
+          <Link href="/reglages" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/reglages') && !isActive('/reglages/abonnement') ? 'bg-primary-soft text-[var(--primary-strong)]' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
             <Settings className="h-4 w-4" /> {t.shell.nav.settings}
           </Link>
           <div className="glass-card mt-3 flex items-center gap-3 rounded-[22px] p-3">
@@ -234,7 +241,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {profile.email} · {ROLES[role].label}
         </p>
         <div className="grid gap-2">
-          {([...nav.slice(3), { href: '/import', label: t.shell.nav.import, icon: <Upload className="h-5 w-5" />, show: canCreate }, { href: '/reglages/abonnement', label: t.shell.nav.billing, icon: <CreditCard className="h-5 w-5" />, show: BILLING_V2 }, { href: '/reglages', label: t.shell.nav.settings, icon: <Settings className="h-5 w-5" />, show: true }] as NavItem[])
+          {([...nav.slice(3), { href: '/import', label: t.shell.nav.import, icon: <Upload className="h-5 w-5" />, show: canCreate }, { href: '/reglages/abonnement', label: t.shell.nav.billing, icon: <CreditCard className="h-5 w-5" />, show: billingOn }, { href: '/reglages', label: t.shell.nav.settings, icon: <Settings className="h-5 w-5" />, show: true }] as NavItem[])
             .filter((n) => n.show)
             .map((n) => (
               <Link key={n.href} href={n.href} onClick={() => setMoreOpen(false)} className="glass-card btn-press flex h-14 items-center gap-3 rounded-2xl px-4 font-black text-slate-800 dark:text-slate-100">

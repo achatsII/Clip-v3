@@ -13,7 +13,6 @@ import { getCaptureSession, isHandledNative } from '@/lib/capture/session'
 import { setAutoAnnotate, useAutoAnnotate } from '@/lib/ai/autoAnnotate'
 import { generationTier } from '@/lib/ai/generate'
 import { AI_COSTS } from '@/lib/billing/catalog'
-import { BILLING_V2 } from '@/lib/config'
 import { useMessages } from '@/lib/i18n'
 import { ACCEPTED_FILES } from '@/lib/media/ingest'
 import { uid } from '@/lib/model/repo'
@@ -25,6 +24,7 @@ import { PendingCard, SourceCard } from './SourceCard'
 import { MediaLibraryDialog } from './MediaLibraryDialog'
 import { WebCamera } from './WebCamera'
 import { AiCost } from '@/components/billing/AiCost'
+import { useBilling } from '@/lib/billing/state'
 
 export type ForceKind = 'auto' | 'procedure' | 'lockout'
 
@@ -45,6 +45,7 @@ export function CaptureBoard({
 }) {
   const { data, files, profile, displayName } = useSession()
   const t = useMessages()
+  const billingOn = useBilling().enabled
   const tb = t.capture.board
   const toast = useToast()
   const [key] = useState(() => instructionId ?? uid('new_'))
@@ -314,7 +315,7 @@ export function CaptureBoard({
                   description={
                     <>
                       {t.capture.autoAnnotate.hint}
-                      {BILLING_V2 && <span className="font-bold"> {t.capture.autoAnnotate.perImage(t.billing.credits(AI_COSTS.annotate))}</span>}
+                      {billingOn && <span className="font-bold"> {t.capture.autoAnnotate.perImage(t.billing.credits(AI_COSTS.annotate))}</span>}
                     </>
                   }
                 />

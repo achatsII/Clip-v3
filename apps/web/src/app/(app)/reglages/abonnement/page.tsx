@@ -8,6 +8,7 @@ import { billingClient } from '@/components/billing/BillingRoot'
 import { entitlementLines, formatPrice, usePlans } from '@/components/billing/Billing'
 import { canBuyInStore, devicePlatform, StoreAccount, StoreBuy } from '@/components/billing/Store'
 import { ModuleCard, useModules } from '@/components/billing/Modules'
+import { PreviewPanel } from '@/components/billing/Preview'
 import { UsageMeter, useUsage } from '@/components/billing/Usage'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -19,12 +20,15 @@ import { nativeEnv } from '@/lib/bridge/native'
 import { FEATURED_PLAN, LIMIT_FEATURES, PLAN_PITCH } from '@/lib/billing/catalog'
 import { BillingError, creditsOf } from '@/lib/billing/client'
 import { useBilling } from '@/lib/billing/state'
-import { BILLING_V2 } from '@/lib/config'
+import { useBillingMode } from '@/lib/billing/mode'
 import { num, useMessages } from '@/lib/i18n'
 import { cn, formatDate } from '@/lib/util/cn'
 
 export default function SubscriptionPage() {
-  if (!BILLING_V2) notFound()
+  // La vraie facturation, ou son aperçu tant que le catalogue n'est pas publié (web).
+  const mode = useBillingMode()
+  if (mode === 'pending') return <Skeleton className="h-96" />
+  if (mode === 'off') notFound()
   return <Subscription />
 }
 
@@ -35,7 +39,7 @@ function Subscription() {
   const stateLabel = (code: string) => (w.states as Record<string, string | undefined>)[code] ?? code
   const { role } = useSession()
   const toast = useToast()
-  const { state, loading, refresh } = useBilling()
+  const { state, loading, refresh, preview } = useBilling()
   const plans = usePlans(billingClient)
   const [interval, setInterval] = useState<'monthly' | 'yearly'>('yearly')
   const [busy, setBusy] = useState<string | null>(null)
@@ -79,6 +83,7 @@ function Subscription() {
         <ArrowLeft className="h-4 w-4" /> {t.shell.nav.settings}
       </Link>
       <PageHeader title={w.title} subtitle={w.subtitle} />
+      {preview && <PreviewPanel />}
 
       {loading ? (
         <Skeleton className="h-40" />
@@ -91,7 +96,7 @@ function Subscription() {
               {stateLabel(state.state)}
               {state.cancel_at_period_end && state.current_period_end ? ` · ${w.endsOn(formatDate(state.current_period_end))}` : ''}
             </p>
-            {!inShell && isAdmin && state.channel === 'web' && (
+            {!inShell && isAdmin && state.channel === 'web' && !preview && (
               <Button className="mt-4" icon={<ExternalLink className="h-4 w-4" />} onClick={manage}>
                 {w.manage}
               </Button>
@@ -134,15 +139,15 @@ function Subscription() {
           {(!inShell || canBuyInStore()) && <Segmented value={interval} onChange={setInterval} options={[{ value: 'monthly', label: t.billing.interval.monthly }, { value: 'yearly', label: inShell ? t.billing.interval.yearly : t.billing.interval.yearlyTwoMonthsFree }]} />}
         </div>
         {plans.isLoading ? (
-          <div className="grid gap-5 md:grid-cols-3">
-            {[0, 1, 2].map((i) => (
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-96 rounded-[32px]" />
             ))}
           </div>
         ) : plans.error ? (
           <ErrorState error={plans.error} onRetry={() => plans.refetch()} />
         ) : (
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {(plans.data?.plans ?? [])
               .filter((p) => p.kind === 'base')
               .map((p) => {

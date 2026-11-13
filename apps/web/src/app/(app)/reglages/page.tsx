@@ -19,7 +19,7 @@ import { ChoiceTile, Input, Label, Segmented } from '@/components/ui/Field'
 import { errorText } from '@/components/ui/States'
 import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
-import { BILLING_V2, APP_IDENTIFIER, GATEWAY_URL } from '@/lib/config'
+import { APP_IDENTIFIER, GATEWAY_URL } from '@/lib/config'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { compressImage } from '@/lib/media/image'
 import { listVersions } from '@/lib/model/repo'
@@ -27,6 +27,7 @@ import { cleanPrefix, DEFAULT_PREFIX, everyInstruction, formatNumber } from '@/l
 import { applyBrandColor } from '@/lib/theme'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { cn } from '@/lib/util/cn'
+import { useBilling } from '@/lib/billing/state'
 
 type Tab = 'usine' | 'standard' | 'approbation' | 'membres' | 'avertissements' | 'apparence' | 'donnees'
 
@@ -46,6 +47,7 @@ export default function SettingsPage() {
   const params = useSearchParams()
   const router = useRouter()
   const { can } = useSession()
+  const billingOn = useBilling().enabled
   const t = useMessages().settings
   const isAdmin = can('settings', 'write')
   const notifyOn = useToggle('notify')
@@ -58,7 +60,7 @@ export default function SettingsPage() {
       <PageHeader
         title={t.title}
         actions={
-          BILLING_V2 ? (
+          billingOn ? (
             <Link href="/reglages/abonnement" className="btn-press glass-card inline-flex h-12 items-center gap-2 rounded-full px-5 text-sm font-black">
               <CreditCard className="h-4 w-4" /> {t.subscription}
             </Link>

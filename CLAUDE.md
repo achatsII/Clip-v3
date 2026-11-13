@@ -208,11 +208,19 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `src/lib/billing/catalog.ts` ; `tests/billing-manifest.test.ts` échoue si une feature ou une
   opération du manifeste n'y est pas, ou si un prix diffère.
 - Le branchement, app web : le drapeau public `NEXT_PUBLIC_BILLING_V2` (éteint par défaut) ; la page
-  `/reglages/abonnement` (introuvable drapeau éteint ; ouverte par « Abonnement et crédits » du menu
-  Mon compte et par la pastille de crédits), avec le paiement et le portail Stripe ; la fenêtre des
+  `/reglages/abonnement` (introuvable sans le drapeau ni l'aperçu ; ouverte par « Abonnement et crédits » du
+  menu et par la pastille de crédits), avec le paiement et le portail Stripe ; la fenêtre des
   refus `Paywall`, qui ne conseille jamais le plan actuel, seulement le moins cher des plans qui
   donnent vraiment plus (`src/lib/billing/advice.ts`). Pas de route serveur : le navigateur appelle
   la passerelle avec le jeton de l'utilisateur.
+- **L'aperçu** (toggle `billingPreview`, web seulement) : tant que le drapeau est éteint, la page
+  Abonnement, les modules, les cadenas, les jauges, la pastille et le conseiller se montrent quand même,
+  à partir d'une copie du manifeste (`src/lib/billing/preview.ts`, comparée par
+  `tests/billing-preview.test.ts`). En tête de la page, « Voyez CLIP comme une usine abonnée » choisit
+  le plan, les modules et le niveau de crédits, dans cet appareil (défaut : Usine et tous les modules,
+  rien ne se ferme). « Choisir » ou « Essayer » change l'aperçu au lieu de payer : rien n'est débité,
+  l'IA garde sa route d'avant, le serveur ne vérifie rien de plus. Le mode se lit par `useBillingMode()`
+  (`live`, `preview`, `off`) et le client `billingClient` passe à l'un ou l'autre.
 - Les leviers de vente, drapeau allumé. Une limite comptée par l'app (postes, rédacteurs, instructions
   publiées) a sa jauge `UsageMeter` (`src/components/billing/Usage.tsx`). La jauge s'allume à 80 %
   (`NEAR_RATIO`, `src/lib/billing/usage.ts`) et nomme le plan qui en donne plus. La fenêtre d'une
