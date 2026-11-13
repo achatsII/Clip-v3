@@ -5,11 +5,13 @@
  */
 import { FEATURE_LABELS, featureLabel, type FeatureKey } from '../billing/catalog'
 import { messages } from '../i18n/core'
+import { formatDate } from '../util/cn'
+import { DUE_SOON_DAYS, type Due } from './academy'
 import type { Doc } from '../gateway/data'
 import { canSign } from './approvals'
 import type { ApprovalGroup, Execution, Feedback, Instruction, UpgradeRequest } from './types'
 
-export type InboxKind = 'review' | 'changes' | 'danger' | 'deviation' | 'request'
+export type InboxKind = 'review' | 'changes' | 'danger' | 'deviation' | 'request' | 'requalify'
 
 export interface InboxItem {
   id: string
@@ -35,6 +37,8 @@ export interface InboxInput {
   requests?: Doc<UpgradeRequest>[]
   /** Ce que l'usine a déjà (l'état de facturation) : une demande comblée disparaît. */
   granted?: Record<string, boolean>
+  /** L'Académie : les qualifications à revalider (échues, ou dans le mois). */
+  due?: Due[]
 }
 
 export function buildInbox(x: InboxInput): InboxItem[] {
@@ -65,6 +69,16 @@ export function buildInbox(x: InboxInput): InboxItem[] {
       items.push({ id: `deviation:${d._id}`, kind: 'deviation', title: e.instructionTitle, who: e.operatorName ?? e.userName ?? null, text: first ? first.label : null, at: e.finishedAt, href: `/registre?ecarts=1` })
     }
   }
+  // L'Académie : à qui valide, les qualifications à revalider ; « nouvelles » dès que le rappel commence.
+  if (x.can.approve) {
+    const t = messages().academy.inbox
+    for (const d of x.due ?? []) {
+      const until = Date.parse(d.validUntil)
+      const start = new Date(d.expired ? until : until - DUE_SOON_DAYS * 86400_000).toISOString()
+      items.push({ id: `requalify:${d.operatorId}:${d.stationId}:${d.validUntil}`, kind: 'requalify', title: d.operatorName, text: (d.expired ? t.expired : t.due)(d.stationName, formatDate(d.validUntil)), at: start, href: '/equipe?vue=competences' })
+    }
+  }
+
   // Les demandes à l'administrateur : une ligne par fonction, tant que l'usine ne l'a pas.
   if (x.can.buy) {
     const byFeature = new Map<string, Array<Doc<UpgradeRequest>>>()

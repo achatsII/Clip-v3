@@ -13,6 +13,8 @@ import { Modal } from '@/components/ui/Modal'
 import { EmptyState, ErrorState, errorText, SkeletonRows } from '@/components/ui/States'
 import { PageHeader } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
+import { Academy, AcademyTeaser } from '@/components/team/Academy'
+import { useEntitlement } from '@/lib/billing/state'
 import { SkillsMatrix } from '@/components/team/SkillsMatrix'
 import { useStations } from '@/hooks/queries'
 import type { Doc } from '@/lib/gateway/data'
@@ -43,6 +45,9 @@ export default function TeamPage() {
   const on = config.data?.toggles.operators ?? FALLBACK_TOGGLES.operators
   // La matrice de compétences (toggle `training`) : un onglet, avec son lien (`?vue=competences`).
   const trainingOn = config.data?.toggles.training ?? FALLBACK_TOGGLES.training
+  // L'Académie (module) : le toggle dit qu'elle est bâtie, la feature que l'usine l'a.
+  const academyOn = config.data?.toggles.academy ?? FALLBACK_TOGGLES.academy
+  const academy = useEntitlement('academy')
   const params = useSearchParams()
   const router = useRouter()
   const view: 'people' | 'skills' = trainingOn && params.get('vue') === 'competences' ? 'skills' : 'people'
@@ -143,7 +148,15 @@ export default function TeamPage() {
           }
         />
       ) : view === 'skills' ? (
-        <SkillsMatrix operators={ops.data} query={matches} />
+        // L'Académie (module) : niveaux, validation sur le terrain, couverture ; sans elle, la matrice simple.
+        academyOn && academy !== 'locked' && academy !== 'pending' ? (
+          <Academy operators={ops.data} query={matches} />
+        ) : (
+          <div className="space-y-5">
+            <SkillsMatrix operators={ops.data} query={matches} />
+            {academyOn && academy === 'locked' && <AcademyTeaser />}
+          </div>
+        )
       ) : (
         <>
           <p className="label-caps mb-2 px-1 text-slate-500">{t.count(ops.data.length)}</p>

@@ -616,6 +616,30 @@ export interface UsageEvent extends OperatorRef {
   at: string
 }
 
+/** Une signature de l'Académie : qualifiée, peut former, ou la qualification retirée (`none`). */
+export type QualificationLevel = 'qualified' | 'trainer' | 'none'
+
+/**
+ * Une validation sur le terrain (`clip_qualification`, Académie) : un superviseur atteste qu'une
+ * personne sait tenir un poste. Un journal : la plus récente par personne et par poste fait foi.
+ */
+export interface Qualification {
+  operatorId: string
+  operatorName: string
+  stationId: string
+  stationName: string
+  level: QualificationLevel
+  /** Les questions du poste validées au moment de signer, sur celles qu'il demande. */
+  trainingsDone: number
+  trainingsRequired: number
+  note?: string | null
+  byId: string
+  byName: string
+  at: string
+  /** Jusqu'à quand elle vaut (la règle de l'usine au moment de signer) ; null : sans échéance. */
+  validUntil: string | null
+}
+
 /**
  * Une demande à l'administrateur (`clip_request`, conseiller d'achat) : une personne qui ne peut pas
  * acheter voudrait une fonction. « À voir » la montre aux administrateurs 30 jours, ou jusqu'à ce
@@ -707,6 +731,8 @@ export interface Renewal {
 
 export interface OrgSettings {
   name: string
+  /** L'Académie : après combien de mois une qualification se revalide (0 : jamais ; 12 par défaut). */
+  academy?: { revalidateMonths: number }
   /** La numérotation des documents : un préfixe (« IT ») et le prochain numéro. */
   numbering?: { prefix: string; next: number }
   logoUrl?: string | null

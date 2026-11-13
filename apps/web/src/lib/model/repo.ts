@@ -36,6 +36,8 @@ export const T = {
   training: 'clip_training',
   /** Les demandes à l'administrateur : une fonction que quelqu'un voudrait (conseiller d'achat). */
   request: 'clip_request',
+  /** L'Académie : les validations sur le terrain (le registre des qualifications). */
+  qualification: 'clip_qualification',
 } as const
 
 export const nowIso = () => new Date().toISOString()

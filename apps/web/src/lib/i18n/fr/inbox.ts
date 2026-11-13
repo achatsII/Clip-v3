@@ -12,6 +12,7 @@ export const inbox = {
     danger: 'Danger signalé',
     deviation: 'Écart relevé',
     request: 'Demandé',
+    requalify: 'À revalider',
   },
   by: (name: string) => `par ${name}`,
   /** Une demande à l’administrateur : ce qui ouvrirait la fonction. */

@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Bell, ClipboardCheck, Gem, MessageSquare, ShieldAlert, Stamp } from 'lucide-react'
+import { Bell, ClipboardCheck, Gem, MessageSquare, RotateCcw, ShieldAlert, Stamp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
@@ -11,7 +11,9 @@ import { useFeedback, useInboxInstructions } from '@/hooks/queries'
 import { ensureContact } from '@/lib/notify'
 import { useLang, useMessages } from '@/lib/i18n'
 import { signingGroups } from '@/lib/model/approvals'
-import { useBilling } from '@/lib/billing/state'
+import { useBilling, useEntitlement } from '@/lib/billing/state'
+import { dueQualifications, latestQualifications, listQualifications, QUALIFICATIONS_KEY } from '@/lib/model/academy'
+import { listOperators } from '@/lib/model/operators'
 import { listExecutions } from '@/lib/model/executions'
 import { recentRequests } from '@/lib/model/requests'
 import { buildInbox, unseenCount, type InboxItem, type InboxKind } from '@/lib/model/inbox'
@@ -24,6 +26,7 @@ const ICONS: Record<InboxKind, ReactNode> = {
   danger: <ShieldAlert className="h-5 w-5" />,
   deviation: <ClipboardCheck className="h-5 w-5" />,
   request: <Gem className="h-5 w-5" />,
+  requalify: <RotateCcw className="h-5 w-5" />,
 }
 const TONES: Record<InboxKind, string> = {
   review: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200',
@@ -31,6 +34,7 @@ const TONES: Record<InboxKind, string> = {
   danger: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200',
   deviation: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200',
   request: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200',
+  requalify: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200',
 }
 
 /** Ce qui a été vu, par personne et par appareil : sans visite, la dernière semaine compte. */
@@ -65,6 +69,13 @@ export function useInbox() {
   const billing = useBilling()
   const buyer = role === 'admin' && billing.enabled && advisorOn
   const requests = useQuery({ queryKey: ['requests'], queryFn: () => recentRequests(data), enabled: on && buyer, refetchInterval: 300_000 })
+  // L'Académie : les qualifications à revalider, pour qui valide (administrateurs, approbateurs).
+  const academyOn = useToggle('academy')
+  const academyEnt = useEntitlement('academy')
+  const academy = on && academyOn && (academyEnt === 'open' || academyEnt === 'off') && can('approve', 'write')
+  const quals = useQuery({ queryKey: QUALIFICATIONS_KEY, queryFn: () => listQualifications(data), enabled: academy, refetchInterval: 600_000 })
+  const team = useQuery({ queryKey: ['operators'], queryFn: () => listOperators(data), enabled: academy })
+  const due = useMemo(() => (quals.data && team.data ? dueQualifications(latestQualifications(quals.data), team.data, Date.now()) : []), [quals.data, team.data])
   const [seenAt, setSeenAt] = useState(() => readSeen(profile.userId))
   const items = useMemo(
     () =>
@@ -78,9 +89,10 @@ export function useInbox() {
             can: { approve: can('approve', 'write'), feedback: canFeedback, buy: buyer },
             requests: requests.data ?? [],
             granted: billing.state?.features,
+            due,
           })
         : [],
-    [on, profile.userId, instructions.data, feedback.data, executions.data, org.json_data, multiOn, can, canFeedback, buyer, requests.data, billing.state?.features],
+    [on, profile.userId, instructions.data, feedback.data, executions.data, org.json_data, multiOn, can, canFeedback, buyer, requests.data, billing.state?.features, due],
   )
   const markSeen = () => {
     const now = new Date().toISOString()

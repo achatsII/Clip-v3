@@ -580,6 +580,31 @@ quel poste.
   tout, en partie, pas formée ou à refaire ; touchée, elle nomme les instructions qui manquent. Le
   compte des formations à faire et « Seulement les écarts » mènent aux personnes à former.
 
+### L'Académie (module ; toggle `academy`, feature `academy`, `src/lib/model/academy.ts`)
+
+Former chaque personne et la garder qualifiée, poste par poste, sans quitter les instructions : ce
+n'est pas un LMS (pas de cours libres, de catalogue ni de palmarès, `VISION.md`).
+
+- **Le parcours d'un poste** est prêt d'avance : ce sont ses instructions publiées. Leurs questions
+  se valident au poste, à la fin, comme sans le module (`clip_training`).
+- **La validation sur le terrain** : un superviseur (droit `approve`) atteste qu'une personne sait
+  tenir le poste, « qualifié » ou « peut former », avec une note (`signOff`). Chaque signature est un
+  document de `clip_qualification` : la plus récente par personne et par poste fait foi
+  (`latestQualifications`), et le journal entier est le registre. Retirer la qualification signe aussi
+  (`level: 'none'`). La signature garde les questions validées à ce moment (`trainingsDone/Required`).
+- **Les niveaux** (`standingOf`) : pas formé, en formation (des questions validées), qualifié, peut
+  former, à revalider (échue). Une pastille dit « à revalider bientôt » (un mois avant) ou qu'une
+  instruction du poste demande de se re-former.
+- **La revalidation** : l'échéance se fixe à la signature, selon la règle de l'usine
+  (`OrgSettings.academy.revalidateMonths` : 6, 12 ou 24 mois, ou jamais ; 12 par défaut). « À voir »
+  le rappelle à qui valide un mois avant, et une fois échue (`dueQualifications`, type `requalify`).
+- **La couverture par quart** (`coverage`) : pour chaque poste et chaque quart de l'équipe, combien de
+  personnes qualifiées le tiennent (personne, une seule, au moins deux) et qui.
+- **Le registre** se télécharge en CSV (le journal entier, sans formule possible dans le tableur) ;
+  l'attestation d'une personne s'imprime (`/equipe/attestation/[id]`, `buildAttestationHtml`).
+- **Sans le module**, l'onglet garde la matrice simple, avec une carte qui propose l'essai
+  (`AcademyTeaser`, la fenêtre d'achat du module).
+
 ### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
 
 L'aperçu (`/instructions/{id}/lire?apercu=1`) montre le brouillon tel qu'au poste. Pour qui peut

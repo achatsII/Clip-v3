@@ -21,6 +21,7 @@ import { inbox } from './inbox'
 import { notify } from './notify'
 import { training } from './training'
 import { blocks } from './blocks'
+import { academy } from './academy'
 
 /** L'anglais : les mêmes clés que le français (le contrôle de types y veille). */
-export const en: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks }
+export const en: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy }

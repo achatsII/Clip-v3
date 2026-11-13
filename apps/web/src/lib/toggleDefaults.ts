@@ -43,8 +43,8 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // Le conseiller d'achat : de temps en temps, l'offre qui sert l'usine (accueil seulement), et la
   // demande à l'administrateur quand on ne peut pas acheter soi-même.
   salesAdvisor: true,
-  // Les modules en option, montrés et vendus seulement une fois bâtis : l'Académie, les Relevés avancés.
-  academy: false,
+  // Les modules en option, montrés et vendus seulement une fois bâtis : l'Académie (bâtie), les Relevés avancés.
+  academy: true,
   recordsPlus: false,
 }
 

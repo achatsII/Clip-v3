@@ -13,6 +13,7 @@ export const inbox: typeof Fr = {
     danger: 'Danger reported',
     deviation: 'Deviation recorded',
     request: 'Requested',
+    requalify: 'To revalidate',
   },
   by: (name: string) => `by ${name}`,
   comesWith: (name: string) => `With ${name}`,

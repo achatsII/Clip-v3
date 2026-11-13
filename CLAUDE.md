@@ -70,6 +70,13 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   sous la clé `instructions`). Les postes se regroupent en secteurs (`Station.area`) ; le numéro de
   document (`number`, « IT-0042 ») se donne à la première publication. Au poste, la liste lit la
   fiche des versions publiées (`Published.card`) ; l'instruction complète se lit à l'ouverture.
+- **Académie** (module ; toggle `academy`, feature `academy`), dans Équipe › Compétences : le
+  parcours d'un poste = ses instructions publiées ; un superviseur (droit `approve`) valide sur le
+  terrain, « qualifié » ou « peut former » (`clip_qualification`, un journal : la plus récente fait foi,
+  et c'est le registre) ; la qualification se revalide tous les 6, 12 ou 24 mois
+  (`OrgSettings.academy`), rappelée dans « À voir » un mois avant ; couverture par quart, registre
+  CSV, attestation à imprimer (`/equipe/attestation/[id]`). `src/lib/model/academy.ts`. Sans le
+  module, la matrice simple et une invitation à l'essai.
 - **Blocs communs** (toggle `sharedBlocks`, feature `shared_blocks`) : des étapes rédigées une fois
   (cadenassage, démarrage, EPI) dans une instruction marquée `block`, qui ne va à aucun poste
   (`src/lib/model/blocks.ts`). Dans une instruction, ses étapes sont des copies verrouillées
