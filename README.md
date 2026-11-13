@@ -58,8 +58,10 @@ npm run build
 |---|---|---|
 | `NEXT_PUBLIC_GATEWAY_URL` | Adresse de la Gateway Octopus | la QA |
 | `NEXT_PUBLIC_APP_IDENTIFIER` | Identifiant de connexion à la Gateway | `html` |
-| `NEXT_PUBLIC_SELF_SERVICE` | Inscription en libre-service sur `/connexion` | `false` |
-| `NEXT_PUBLIC_BILLING_V2` | Facturation v2 : plans, crédits, paywall | `false` |
+| `NEXT_PUBLIC_SELF_SERVICE` | Inscription en libre-service sur `/connexion` : `1` l'allume, toute autre valeur l'éteint. Allumée, le site invite à « Essayer gratuitement » plutôt qu'à « Réserver une démo » | éteinte |
+| `NEXT_PUBLIC_BILLING_V2` | Facturation v2 (plans, crédits, paywall) : `1` l'allume, toute autre valeur l'éteint | éteinte |
+| `NEXT_PUBLIC_SITE_URL` | Adresse du site public : canoniques, hreflang, plan du site, images Open Graph | `https://clip-v3.vercel.app` |
+| `NEXT_PUBLIC_HUBSPOT_ID` | Compte HubSpot du site, chargé seulement après consentement ; vide : aucun suivi | `3429410` |
 | `CLIP_TOGGLES` | Feature toggles servis par `GET /api/config` (JSON) | valeurs par défaut du code |
 | `CLIP_FORCE_UPDATE_IOS`, `CLIP_FORCE_UPDATE_ANDROID` | Versions de la coquille à bloquer (contrainte semver, ex. `<1.2.0`) | personne |
 | `CLIP_STORE_URL_IOS`, `CLIP_STORE_URL_ANDROID` | Lien « Mettre à jour » de l'écran bloquant | la page du magasin |
@@ -74,6 +76,22 @@ Chaque poussée sur la branche de production du dépôt redéploie l'app. L'app 
 serveur (`/api/config`, `/api/share`) et aucun secret de la Gateway ; sans variable, elle parle à la
 Gateway de QA, facturation éteinte. Seule l'adresse `clip-v3.vercel.app` est publique : les autres
 adresses de Vercel (alias d'équipe, déploiements) demandent une connexion à Vercel.
+
+### Le site public
+
+`/` et `/en` : le site de Clip (groupe de routes `apps/web/src/app/(site)`), statique et bilingue
+(français du Québec, anglais sous `/en` avec des adresses traduites). Pages, plan du site
+(`/sitemap.xml`), `robots.txt` et images Open Graph se font à la build. Les textes vivent dans
+`apps/web/src/lib/site/content` ; les prix ne viennent que de `billing.manifest.yaml`.
+
+- `/` garde son rôle pour l'app : une session ouverte mène à `/accueil`, et la coquille mobile ne
+  montre jamais le site (elle va à `/connexion`).
+- Le suivi HubSpot ne se charge qu'après « Accepter » dans la bannière des témoins (Loi 25) ;
+  « Refuser » efface ses témoins. `/rendez-vous` (`/en/book-a-demo`) intègre le calendrier HubSpot.
+- Libre-service éteint, chaque appel à l'action mène à `/rendez-vous`. Allumé, « Essayer
+  gratuitement » ouvre l'inscription (`/connexion?inscription=1`) et un forfait payant la garde en tête
+  (`&plan=…&interval=…`) : avec la facturation allumée, il s'ouvre présélectionné sur
+  `/reglages/abonnement` après `/bienvenue`.
 
 ## Démarrer la coquille mobile
 
@@ -97,6 +115,8 @@ le verrait pas). Sans `EXPO_PUBLIC_CLIP_WEB_URL`, la coquille affiche la product
   d'avoir de vraies données, ou les recopier.
 - **Publier le catalogue de facturation** (skill `billing-publish`) une fois l'application
   enregistrée, puis allumer `NEXT_PUBLIC_BILLING_V2` là où les routes `/api/v2/billing` répondent.
+- **Allumer le libre-service** (`NEXT_PUBLIC_SELF_SERVICE=1`) quand l'application enregistrée accepte
+  l'inscription : le site passe alors de « Réserver une démo » à « Essayer gratuitement ».
 - **Coquille mobile** : confirmer l'identifiant de bundle (`com.intelligenceindustrielle.clip`),
   décider de l'achat dans les magasins avant la soumission (voir `CLAUDE.md`, « Facturation »), faire
   les builds.

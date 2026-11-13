@@ -8,6 +8,8 @@ import { useSession } from '@/components/providers/Session'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { ChoiceTile, Input } from '@/components/ui/Field'
 import { ProgressBar } from '@/components/ui/States'
+import { clearPlanIntent, readPlanIntent, subscriptionPathFor } from '@/lib/billing/intent'
+import { BILLING_V2 } from '@/lib/config'
 import { useMessages } from '@/lib/i18n'
 import { CATEGORIES } from '@/lib/model/catalog'
 import { nowIso } from '@/lib/model/repo'
@@ -39,6 +41,14 @@ export default function WelcomePage() {
         [`members.${profile.userId}`]: { ...(org.json_data.members[profile.userId] ?? { stationIds: [] }), role: 'admin', categories: goals, stationIds: org.json_data.members[profile.userId]?.stationIds ?? [] },
         onboardedAt: nowIso(),
       })
+      // Venu du site avec un forfait choisi : la page Abonnement, ce forfait présélectionné, en
+      // facturation réelle seulement. L'intention s'efface une fois servie (ou ignorée).
+      const intent = readPlanIntent()
+      clearPlanIntent()
+      if (intent && BILLING_V2) {
+        router.replace(subscriptionPathFor(intent))
+        return
+      }
       setStep(3)
     } finally {
       setBusy(false)

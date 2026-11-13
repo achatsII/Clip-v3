@@ -2,8 +2,9 @@
  * Ce que l'app doit savoir du catalogue et que la plateforme ne rend pas : le prix de chaque
  * opération d'IA (copie de `ai_operations` du manifeste, comparée par un test) et les libellés
  * des features, dans l'ordre d'affichage. Aucun prix d'abonnement ici : ils se lisent à la plateforme.
+ * Le site public le lit au serveur (`src/lib/site/pricing.ts`) : d'où le cœur des langues, sans React.
  */
-import { getLang, messages } from '@/lib/i18n'
+import { getLang, messages } from '@/lib/i18n/core'
 import type { AiOperation } from '../gateway/ai'
 import type { ToggleName } from '../toggleDefaults'
 

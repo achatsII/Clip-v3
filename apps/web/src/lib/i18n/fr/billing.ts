@@ -277,6 +277,11 @@ export const billing = {
     choose: (plan: string) => `Choisir ${plan}`,
     askAdmin: 'Demandez à l’administrateur',
     enterprise: 'Besoin de plusieurs usines, de l’authentification unique ou d’un contrat ? Écrivez-nous : un plan Entreprise se prépare sur mesure.',
+    /** Le forfait choisi sur le site public, présélectionné après l’inscription. */
+    intent: {
+      label: 'Le forfait choisi sur notre site',
+      continue: 'Continuer vers le paiement',
+    },
   },
   /** Les erreurs du client de facturation. */
   errors: {
