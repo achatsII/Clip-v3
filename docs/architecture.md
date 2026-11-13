@@ -313,37 +313,61 @@ Sans signe de vie depuis deux minutes (app fermée, téléphone en veille), la c
 « interrompue » : on la relance ici, ou on revoit les médias. Dans l'app mobile, l'écran reste
 allumé pendant la génération.
 
-### L'éditeur (`StageEditor`)
+### L'éditeur : deux façons de modifier, et l'aperçu (`Editor`, toggle `editorViews`)
 
-Une seule façon de modifier : l'étape telle que l'opérateur la verra, chaque texte modifié là où il
-est. Il n'y a plus de fiche à côté (« c'est mélangeant ») : chaque outil apparaît au moment où il
-sert, à côté de ce qu'il touche. L'éditeur prend tout l'écran ; la barre et la navigation de l'app
-s'effacent (`useImmersive`, `src/lib/ui/immersive.ts`).
+Deux vues pour la même instruction, chacune complète : tout ce qu'on peut faire existe dans les deux,
+rangé autrement. Le choix se retient sur l'appareil (`clip_pref_editor_view`,
+`src/lib/ui/editorView.ts`) ; sans choix, l'ordinateur ouvre la **Fiche** (on y voit tout ce qu'on
+peut faire) et le téléphone, **Comme au poste**. L'éditeur prend tout l'écran ; la barre et la
+navigation de l'app s'effacent (`useImmersive`, `src/lib/ui/immersive.ts`). Toggle coupé (et repli) :
+« Comme au poste » seul, l'aperçu dans le « … », comme avant.
 
-- **En haut, l'instruction entière** : retour, le titre et son état (« Modifications à publier ·
-  Enregistré » ; le toucher ouvre la fenêtre des infos : titre, résumé, postes, fiche, cadenassage),
-  « N à vérifier » quand l'IA a des questions (une à la fois, ou « C'est déjà vérifié »), le témoin du
-  direct (un point), annuler/rétablir, le bouton **Assistant** (le seul de l'IA : simplifier, rendre
-  plus clair, ajouter un point clé, vérifier la sécurité, ou « Demander autre chose » qui ouvre la
-  conversation), le « … » (infos, tester comme l'opérateur, partager, traduire, historique, PDF,
-  JSON, dupliquer, nouvelle instruction avec ces médias, régénérer, archiver) et l'action principale
-  (Publier, Faire approuver, Approuver ; rien quand tout est publié).
-- **À côté de l'étape** : son « … » (média, ajouter, dupliquer, déplacer, supprimer), « Modifier le
-  média » dans une barre sous l'image, et, sous le texte, « + Mise en garde » et « + Point clé »
-  seulement quand ils manquent (trois points clés au plus). Le niveau d'une mise en garde se choisit
-  sur son étiquette. Un retour d'opérateur s'affiche au-dessus du titre.
-- **Le média** se règle dans une fenêtre (`StepMediaEditor`) : l'aperçu, les médias de l'étape (en
-  ajouter un), puis Annoter, Vidéo | Image, « Avec l'IA » (illustration à partir de la photo, schéma
-  de l'étape) et Retirer ; le verdict, la légende et la disposition attendent sous « Plus
-  d'options ».
+- **On voit dans quelle vue on est, et qu'il y en a une autre** : au bureau, dans l'en-tête, les deux
+  vues nommées côte à côte (la vue en cours en blanc), puis l'**Aperçu** (l'œil) ; au téléphone, un
+  seul bouton discret à gauche de la barre du bas, dont l'icône dit la vue en cours : il ouvre les
+  deux vues, chacune expliquée en une phrase, et l'aperçu (un point bleu l'annonce jusqu'à la première
+  ouverture). Changer de vue garde l'étape ouverte.
+- **L'Aperçu n'est pas une vue de l'éditeur** : c'est le lecteur du poste
+  (`/instructions/{id}/lire?apercu=1`, voir « L'aperçu qu'on modifie »). En revenant, l'éditeur
+  retrouve l'étape qu'on avait (`?etape=`).
+- **L'en-tête est le même dans les deux vues** (`EditorBar.tsx`) : retour, le titre et son état
+  (« Modifications à publier · Enregistré »), « N à vérifier » quand l'IA a des questions, les vues et
+  l'aperçu, le témoin du direct, annuler/rétablir, le bouton **Assistant** (le seul de l'IA :
+  simplifier, rendre plus clair, ajouter un point clé, vérifier la sécurité, ou « Demander autre
+  chose » qui ouvre la conversation), le « … » (infos, partager, traduire, blocs, formation,
+  historique, registre, PDF, JSON, dupliquer, nouvelle instruction avec ces médias, régénérer,
+  archiver) et l'action principale (Publier, Faire approuver, Approuver ; rien quand tout est publié).
+- **Comme au poste** (`StageEditor`) : l'étape telle que l'opérateur la verra, chaque texte modifié
+  là où il est ; chaque outil apparaît au moment où il sert, à côté de ce qu'il touche. Le « … » de
+  l'étape (média, ajouter, dupliquer, déplacer, sections, supprimer), « Modifier le média » sous
+  l'image, et sous le texte « + Mise en garde », « + Point clé » et « + Relevé » seulement quand ils
+  manquent. Le niveau d'une mise en garde se choisit sur son étiquette, à côté de « retirer ». Sur
+  ordinateur, la mise en page exacte du lecteur et, en bas, la bande des étapes (retours
+  d'opérateurs et, en approbation, étapes nouvelles ou modifiées sur les vignettes) ; les flèches du
+  clavier passent d'une étape à l'autre. Au téléphone, la vue du téléphone, le média à ses vraies
+  proportions (comme au poste, « La lecture au téléphone ») et, sous le pouce, la vue, les étapes
+  (précédente, le choix, suivante), le « … » de l'étape et l'Assistant.
+- **Fiche** (`FormEditor`, `StepForm`) : la liste des étapes, et tous les outils à découvert, rangés
+  en cartes. Au bureau, la liste à gauche — l'instruction en tête (son titre, ses étapes, ses postes),
+  puis chaque étape par section, avec sa vignette et ce qui la distingue (mise en garde, relevés,
+  retours, nouvelle ou modifiée, bloc) — et à droite ce qu'on a choisi. Au téléphone, la liste, puis
+  l'étape touchée en entier ; sous le pouce, la précédente, la liste (« Étape 3 sur 12 ») et la
+  suivante. **Une étape** : en tête, sa place et ses gestes (monter, descendre, dupliquer, supprimer),
+  puis une carte par sujet — le texte (action, comment faire, et les retouches par l'IA), le média
+  (`StepMediaEditor` ouvert : annoter, vidéo ou image, l'IA, retirer, verdict, légende, disposition),
+  la mise en garde (aucune, bon à savoir, attention, danger ; le texte dans la couleur du poste), les
+  points clés, les relevés, la section — et « Ajouter une étape après celle-ci ». **L'instruction** :
+  titre et résumé, où elle s'affiche, format, EPI et outils (`InstructionFields`), cadenassage, et ses
+  **outils** en tuiles, chacun ouvre sa fenêtre (`ToolsGrid`) : ce que le « … » range ailleurs. Une
+  étape d'un bloc commun s'y lit sans se modifier, comme dans l'autre vue.
+- **Le média** se règle dans une fenêtre dans « Comme au poste » (`StepMediaEditor` : l'aperçu, les
+  médias de l'étape, puis Annoter, Vidéo | Image, « Avec l'IA », Retirer ; verdict, légende et
+  disposition sous « Plus d'options ») ; dans la fiche, la même chose dans sa carte, tout ouvert.
 - **Publier** : la fenêtre dit où l'instruction s'affichera et laisse choisir les postes à ce
   moment-là ; l'avis sur la génération par l'IA s'y demande, quand la personne a tout relu.
-- **Ordinateur** : en plein écran, dans la mise en page exacte du lecteur (le grand média à gauche,
-  le texte à droite) ; en bas, la bande des étapes (retours d'opérateurs et, en approbation, étapes
-  nouvelles ou modifiées marqués sur les vignettes). Les flèches du clavier passent d'une étape à
-  l'autre. La vue laisse sa place au panneau de l'assistant.
-- **Téléphone** : la vue du téléphone ; en bas, sous le pouce, les étapes (précédente, le choix,
-  suivante), le « … » de l'étape et l'Assistant. Cette barre se cache pendant qu'on écrit.
+- L'assistant, un autre appareil et un lien (`?etape=`) amènent les deux vues à l'étape qui change ;
+  la fiche l'ouvre. La vue laisse sa place au panneau de l'assistant ; l'en-tête serré garde les vues
+  en icônes.
 
 ### Les sections d'une longue instruction (toggle `sections`, `src/lib/model/sections.ts`)
 
@@ -720,6 +744,30 @@ jetons, ni les données, ni la page. Le PDF le remplace par un renvoi vers l'app
 dessin seul, lisible d'un coup d'œil (`visualSystem`, `src/lib/ai/prompts.ts`) : une idée (la pièce et
 le geste de l'étape), ni en-tête ni texte d'explication, au plus 4 libellés de 1 à 3 mots, le bleu pour
 le geste et les couleurs de sécurité seulement quand l'étape porte un risque.
+
+### La lecture au téléphone (toggle `phoneReader`, repli éteint)
+
+Au téléphone tenu droit, le média prenait toujours près de la moitié de l'écran : une vidéo couchée y
+laissait des bandes noires, et le texte se lisait en défilant. Maintenant (`src/lib/media/fit.ts`) :
+
+- **Le média à ses vraies proportions** : sur toute la largeur, c'est sa plus grande taille possible
+  (plus haut, on n'ajoute que du noir). Les proportions s'apprennent en l'affichant — une photo à son
+  chargement, une vidéo à ses métadonnées (ou à son image d'attente, lue tout de suite), la page d'un
+  document à son image — et restent connues pour la séance (`src/lib/media/ratio.ts`).
+- **Au plus un peu plus de la moitié de la place** (0,52), pour une photo en hauteur.
+- **Le texte se lit sans défiler quand c'est possible** : une photo ou un document cède au texte ce
+  qu'il lui faut, sans descendre sous 38 % de la place ; « Agrandir » montre le média en plein écran.
+  Une vidéo garde toute sa largeur et, dessous, la bande de ses commandes (`[data-fit='top']`) :
+  rapetissée, ses commandes en cacheraient le geste. Le clavier ouvert (une note, une mesure) ne fait
+  pas bouger le média.
+- **Plus serré au téléphone** : la pastille du numéro rapetisse (il est déjà dans l'en-tête), et les
+  gestes de l'étape (« Pas clair ? », la question, la voix) tiennent sur une ligne qui glisse.
+- **Couché, côte à côte** : le média à gauche, le texte à droite qui défile seul ; l'en-tête et les
+  boutons du bas se font moins hauts (toujours bien plus de 44 px). Aucun bouton : on tourne le
+  téléphone.
+- **Tout voir sur une page** : au téléphone, depuis le sommaire (« Étape 3 sur 12 ») ; l'en-tête
+  offre alors « Pas à pas » pour revenir. Au bureau, comme avant, dans l'en-tête.
+- L'éditeur au téléphone (« Comme au poste ») donne au média les mêmes proportions.
 
 ### Les vidéos au poste, sur un réseau faible (toggle `stepReel`, repli éteint)
 

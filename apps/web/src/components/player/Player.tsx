@@ -25,7 +25,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { EnergyIcon, PpeIcon } from '@/components/icons'
 import { MediaLabelsProvider } from '@/components/media/MediaView'
 import { Confetti } from '@/components/ui/Celebrate'
@@ -56,9 +56,12 @@ import { layoutOf } from '@/lib/model/media'
 import { VoiceAssistant } from './VoiceAssistant'
 import { Input } from '@/components/ui/Field'
 import { DictationLanguage } from '@/lib/media/dictation'
+import { fitMediaHeight } from '@/lib/media/fit'
+import { probeImage, ratioKeys, useMediaRatio } from '@/lib/media/ratio'
 import { playable } from '@/lib/media/reel'
 import { MediaPlaybackProvider, slowConnection, VideoPool } from '@/lib/media/videoPool'
 import { useToggle } from '@/lib/toggles'
+import { useMediaQuery, useWide } from '@/lib/ui/screen'
 
 export interface PlayerDeps {
   data: DataApi
@@ -228,6 +231,43 @@ export function Player(props: PlayerProps) {
     pool.warm(p.url, p.start)
   }, [index, content.steps, reel, pool])
 
+  // Au téléphone (toggle `phoneReader`) : tenu droit, le média prend ses vraies proportions et cède
+  // au texte ce qu'il faut pour que l'étape se lise sans défiler (src/lib/media/fit.ts) ; couché,
+  // le média et le texte vont côte à côte. Sans le toggle, la mise en page d'avant.
+  const phoneReader = useToggle('phoneReader')
+  const wideScreen = useWide()
+  const portrait = useMediaQuery('(orientation: portrait)')
+  const layout: 'legacy' | 'column' | 'row' = !phoneReader || wideScreen ? 'legacy' : portrait ? 'column' : 'row'
+  const fitting = layout === 'column' && view === 'steps'
+  const mainRef = useRef<HTMLElement>(null)
+  const textRef = useRef<HTMLDivElement>(null)
+  const firstMedia = step?.media[0]
+  const focusLayout = !!step && layoutOf(step) === 'focus'
+  const ratio = useMediaRatio(fitting && focusLayout ? ratioKeys(firstMedia, reel) : [])
+  const [mediaBox, setMediaBox] = useState<number | null>(null)
+  useEffect(() => {
+    if (fitting && firstMedia?.kind === 'video' && firstMedia.posterUrl) probeImage(firstMedia.posterUrl)
+  }, [fitting, firstMedia])
+  useLayoutEffect(() => {
+    const main = mainRef.current
+    const text = textRef.current
+    if (!fitting || !firstMedia || !main || !text) {
+      setMediaBox(null)
+      return
+    }
+    const measure = () => {
+      // Le clavier ouvert (une note, une mesure) ne fait pas bouger le média sous les doigts.
+      if ((document.activeElement as HTMLElement | null)?.closest?.('input, textarea')) return
+      setMediaBox(fitMediaHeight({ width: main.clientWidth, avail: main.clientHeight, ratio: focusLayout ? ratio : null, text: text.offsetHeight, video: focusLayout && firstMedia.kind === 'video' }))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(main)
+    ro.observe(text)
+    return () => ro.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une nouvelle étape, c'est un nouveau texte à mesurer
+  }, [fitting, step?.id, firstMedia, focusLayout, ratio])
+
   // L'aperçu qu'on modifie : on va à l'étape demandée, et on dit laquelle est affichée.
   useEffect(() => {
     if (!focus) return
@@ -351,7 +391,7 @@ export function Player(props: PlayerProps) {
       <Confetti show={index === total && !quizOpen} />
       {/* En-tête */}
       <header className="pt-safe glass-nav z-10 border-b">
-        <div className="flex h-16 items-center gap-2 px-3 sm:px-5">
+        <div className={cn('flex items-center gap-2 px-3 sm:px-5', layout === 'row' ? 'h-12' : 'h-16')}>
           {onExit && (
             <button type="button" onClick={onExit} className="btn-press flex h-12 items-center gap-2 rounded-2xl px-3 font-black text-slate-700 hover:bg-slate-900/5 dark:text-slate-200" aria-label={exitText ?? t.close}>
               <X className="h-6 w-6" />
@@ -382,7 +422,8 @@ export function Player(props: PlayerProps) {
               <Languages className="h-5 w-5" /> {lang.toUpperCase()}
             </button>
           )}
-          <button type="button" onClick={() => setView(view === 'steps' ? 'document' : 'steps')} className="btn-press hidden h-12 items-center gap-1.5 rounded-2xl px-3 text-sm font-black hover:bg-slate-900/5 sm:flex">
+          {/* « Tout voir » : au bureau dans l'en-tête ; au téléphone, depuis le sommaire, et le retour au pas à pas ici. */}
+          <button type="button" onClick={() => setView(view === 'steps' ? 'document' : 'steps')} className={cn('btn-press h-12 items-center gap-1.5 rounded-2xl px-3 text-sm font-black hover:bg-slate-900/5', phoneReader && view === 'document' ? 'flex' : 'hidden sm:flex')}>
             {view === 'steps' ? <BookOpen className="h-5 w-5" /> : <Layers className="h-5 w-5" />} {view === 'steps' ? t.docView : t.stepView}
           </button>
           {speaker && (
@@ -401,6 +442,7 @@ export function Player(props: PlayerProps) {
 
       {/* Corps */}
       <main
+        ref={mainRef}
         className="relative min-h-0 flex-1 overflow-y-auto"
         onTouchStart={(e) => (touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
         onTouchEnd={(e) => {
@@ -461,18 +503,32 @@ export function Player(props: PlayerProps) {
             preview={preview}
           />
         ) : step ? (
-          <div key={step.id} className={cn('animate-fade-in flex h-full min-h-full flex-col', step.media[0] && 'lg:flex-row')}>
+          <div key={step.id} className={cn('animate-fade-in flex h-full min-h-full', step.media[0] && layout === 'row' ? 'flex-row' : 'flex-col', step.media[0] && 'lg:flex-row')}>
             {/* Sans photo ni vidéo, pas de panneau : le texte prend la place, en haut de l'écran. */}
             {step.media[0] && (
-              <div className="relative h-[46dvh] shrink-0 bg-slate-900 sm:h-[52dvh] lg:h-auto lg:flex-[1.5]">
+              <div
+                // Une vidéo à sa juste hauteur garde sous l'image la bande de ses commandes.
+                data-fit={mediaBox !== null && focusLayout && step.media[0].kind === 'video' ? 'top' : undefined}
+                style={mediaBox !== null ? { height: mediaBox } : undefined}
+                className={cn('relative shrink-0 bg-slate-900 lg:h-auto lg:flex-[1.5]', layout === 'row' ? 'min-w-0 flex-[1.2]' : mediaBox !== null ? 'transition-[height] duration-300 ease-out' : 'h-[46dvh] sm:h-[52dvh]')}
+              >
                 <StepMediaArea step={step} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
               </div>
             )}
-            <div dir={textDir(lang)} className={cn('flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-8', step.media[0] ? 'lg:max-w-[560px] lg:overflow-y-auto' : 'mx-auto w-full max-w-3xl pt-8 sm:pt-12')}>
+            <div
+              ref={textRef}
+              dir={textDir(lang)}
+              className={cn(
+                'flex min-w-0 flex-col',
+                layout === 'legacy' ? 'flex-1 gap-4 p-5 sm:p-8' : layout === 'row' ? 'flex-1 gap-3 overflow-y-auto p-4' : 'gap-3 p-4 sm:gap-4 sm:p-8',
+                !step.media[0] ? cn('mx-auto w-full max-w-3xl', layout === 'legacy' ? 'pt-8 sm:pt-12' : 'flex-1 pt-6 sm:pt-12') : layout === 'legacy' ? 'lg:max-w-[560px] lg:overflow-y-auto' : layout === 'row' && 'max-w-[48%]',
+              )}
+            >
               {sectionsOn && step.section && <p className="label-caps -mb-2 text-[var(--primary-strong)] dark:text-sky-300">{step.section}</p>}
-              <div className="flex items-start gap-4">
-                <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
-                <h2 className="pt-1 text-3xl leading-[1.05] font-black tracking-tighter text-slate-900 sm:text-4xl dark:text-white">{step.title}</h2>
+              <div className={cn('flex items-start', layout === 'legacy' ? 'gap-4' : 'gap-3')}>
+                {/* Au téléphone, le numéro est aussi dans l'en-tête : la pastille se fait plus petite et laisse la place au titre. */}
+                <span className={cn('bg-gradient-primary shadow-primary flex shrink-0 items-center justify-center font-black text-white tabular-nums', layout === 'legacy' ? 'h-16 w-16 rounded-3xl text-3xl' : 'h-12 w-12 rounded-2xl text-2xl sm:h-16 sm:w-16 sm:rounded-3xl sm:text-3xl')}>{index + 1}</span>
+                <h2 className={cn('leading-[1.05] font-black tracking-tighter text-slate-900 dark:text-white', layout === 'row' ? 'text-2xl' : 'pt-1 text-3xl sm:text-4xl')}>{step.title}</h2>
               </div>
               {step.energyPointId && energyById.get(step.energyPointId) && <EnergyChip point={energyById.get(step.energyPointId)!} />}
               {step.warning && (
@@ -498,7 +554,8 @@ export function Player(props: PlayerProps) {
                 </div>
               )}
               {recordsOn && !!step.checks?.length && <StepChecks step={step} answers={answers} onAnswer={answerCheck} t={t.records} files={deps.files} nudge={nudge} preview={preview} />}
-              <div className="mt-auto flex flex-wrap gap-2 pt-2">
+              {/* Au téléphone tenu droit, les gestes de l'étape tiennent sur une ligne (elle glisse au besoin). */}
+              <div className={cn('flex gap-2', layout === 'column' ? 'no-scrollbar -mx-4 overflow-x-auto px-4 pt-1 [&>button]:shrink-0' : 'mt-auto flex-wrap pt-2')}>
                 {!preview && (
                   <button type="button" onClick={() => setFeedbackOpen(true)} className="btn-press glass-card flex h-12 items-center gap-2 rounded-2xl px-4 text-sm font-black text-amber-700 dark:text-amber-300">
                     <MessageCircleQuestion className="h-5 w-5" /> {t.unclear}
@@ -524,11 +581,12 @@ export function Player(props: PlayerProps) {
       {accessory && !footer && <div className="kb-hide fixed right-4 bottom-[calc(7.5rem+env(safe-area-inset-bottom))] z-[60] lg:right-6">{accessory}</div>}
       {footer && (
         <footer className="pb-safe glass-nav z-10 border-t">
-          <div className="mx-auto flex max-w-5xl gap-3 px-3 py-3 sm:px-5">
-            <button type="button" onClick={() => go(index - 1)} className="btn-press glass-card flex h-20 flex-1 items-center justify-center gap-2 rounded-[28px] text-lg font-black text-slate-700 sm:flex-none sm:px-10 dark:text-slate-200" aria-label={t.previous}>
+          {/* Téléphone couché : des boutons moins hauts, pour laisser l'étape respirer (toujours bien plus de 44 px). */}
+          <div className={cn('mx-auto flex max-w-5xl gap-3 px-3 sm:px-5', layout === 'row' ? 'py-2' : 'py-3')}>
+            <button type="button" onClick={() => go(index - 1)} className={cn('btn-press glass-card flex flex-1 items-center justify-center gap-2 rounded-[28px] text-lg font-black text-slate-700 sm:flex-none sm:px-10 dark:text-slate-200', layout === 'row' ? 'h-14' : 'h-20')} aria-label={t.previous}>
               <ArrowLeft className="h-7 w-7" /> <span className="hidden sm:inline">{t.previous}</span>
             </button>
-            <button type="button" onClick={() => go(index + 1)} className="btn-press bg-gradient-primary shadow-primary flex h-20 flex-[2] items-center justify-center gap-3 rounded-[28px] text-xl font-black tracking-wide text-white sm:flex-1">
+            <button type="button" onClick={() => go(index + 1)} className={cn('btn-press bg-gradient-primary shadow-primary flex flex-[2] items-center justify-center gap-3 rounded-[28px] text-xl font-black tracking-wide text-white sm:flex-1', layout === 'row' ? 'h-14' : 'h-20')}>
               {index === total - 1 ? t.finish : t.next} {index === total - 1 ? <Check className="h-7 w-7" /> : <ArrowRight className="h-7 w-7" />}
             </button>
             {accessory && <div className="flex shrink-0 items-center">{accessory}</div>}
@@ -579,6 +637,19 @@ export function Player(props: PlayerProps) {
 
       <Modal open={summaryOpen} onClose={() => setSummaryOpen(false)} title={t.summary} size="md">
         <div dir={textDir(lang)} className="space-y-4">
+          {/* Toutes les étapes sur une seule page, à faire défiler : d'ici au téléphone (l'en-tête n'a pas la place). */}
+          {phoneReader && (
+            <button
+              type="button"
+              onClick={() => {
+                setSummaryOpen(false)
+                setView('document')
+              }}
+              className="btn-press glass-card flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-4 text-base font-black sm:hidden"
+            >
+              <BookOpen className="h-5 w-5 text-[var(--primary)]" /> {t.docView}
+            </button>
+          )}
           {sectionGroups(content.steps).map((g) => (
             <section key={g.start}>
               {g.name && <p className="label-caps mb-1.5 px-1 text-[var(--primary-strong)] dark:text-sky-300">{g.name}</p>}

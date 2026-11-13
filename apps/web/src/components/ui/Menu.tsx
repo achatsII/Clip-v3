@@ -1,6 +1,6 @@
 'use client'
 
-import { MoreHorizontal } from 'lucide-react'
+import { Check, MoreHorizontal } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/util/cn'
 import { useMessages } from '@/lib/i18n'
@@ -15,6 +15,10 @@ export interface MenuItem {
   hint?: ReactNode
   /** Un trait le sépare des choix d'avant : un autre groupe d'actions. */
   divider?: boolean
+  /** Une ligne de plus sous le libellé : ce que fait le choix. */
+  description?: string
+  /** Le choix en cours (une vue, un mode) : coché. */
+  checked?: boolean
 }
 
 /**
@@ -54,12 +58,13 @@ export function Menu({ items, label: givenLabel, trigger, align = 'right', bare 
         {trigger ?? <MoreHorizontal className="h-5 w-5" />}
       </button>
       {open && (
-        <div className={cn('animate-pop-in absolute z-50 max-h-[min(70dvh,560px)] w-64 overflow-y-auto overscroll-contain rounded-3xl border border-white/80 bg-white p-1.5 shadow-[0_20px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-slate-850', align === 'right' ? 'right-0' : 'left-0', side === 'up' ? 'bottom-full mb-2' : 'mt-2')} role="menu">
+        <div className={cn('animate-pop-in absolute z-50 max-h-[min(70dvh,560px)] overflow-y-auto overscroll-contain rounded-3xl border border-white/80 bg-white p-1.5 shadow-[0_20px_50px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-slate-850', visible.some((i) => i.description) ? 'w-72' : 'w-64', align === 'right' ? 'right-0' : 'left-0', side === 'up' ? 'bottom-full mb-2' : 'mt-2')} role="menu">
           {visible.map((item) => (
             <button
               key={item.label}
               type="button"
-              role="menuitem"
+              role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+              aria-checked={item.checked}
               disabled={item.disabled}
               onClick={() => {
                 setOpen(false)
@@ -72,8 +77,16 @@ export function Menu({ items, label: givenLabel, trigger, align = 'right', bare 
               )}
             >
               <span className="shrink-0 opacity-80">{item.icon}</span>
-              <span className="flex-1">{item.label}</span>
+              {item.description ? (
+                <span className="min-w-0 flex-1">
+                  <span className="block">{item.label}</span>
+                  <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">{item.description}</span>
+                </span>
+              ) : (
+                <span className="flex-1">{item.label}</span>
+              )}
               {item.hint}
+              {item.checked && <Check className="h-4 w-4 shrink-0 text-[var(--primary)]" />}
             </button>
           ))}
         </div>

@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'reports'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'reports' | 'editorViews' | 'phoneReader'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -52,6 +52,12 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // Les rapports : un répertoire de modèles prêts (temps, qui a fait quoi, écarts, formation…), et
   // l'IA qui commente des chiffres déjà calculés.
   reports: true,
+  // Les façons de modifier une instruction : « Comme au poste » ou « Fiche » (la liste des étapes et
+  // tous les outils de chacune), retenue sur l'appareil, et l'Aperçu en un geste dans l'en-tête.
+  editorViews: true,
+  // La lecture au téléphone : le média à ses vraies proportions, qui laisse au texte la place qu'il
+  // lui faut ; côte à côte quand on tourne le téléphone ; « Tout sur une page » depuis le sommaire.
+  phoneReader: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -83,4 +89,6 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   recordsPlus: false,
   billingPreview: false,
   reports: false,
+  editorViews: false,
+  phoneReader: false,
 }

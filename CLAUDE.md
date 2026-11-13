@@ -45,6 +45,16 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la publication
   sans jamais la retenir (`src/lib/media/reel.ts`). En novembre 2026, la route de montage répond 500
   en QA : le poste lit alors la vidéo d'origine.
+- **Deux façons de modifier** (toggle `editorViews`) : « Comme au poste » (l'étape telle qu'au poste,
+  modifiée sur place) et « Fiche » (la liste des étapes, tous les outils de l'étape choisie à
+  découvert, en cartes ; au téléphone, la liste puis l'étape), retenues sur l'appareil
+  (`clip_pref_editor_view` ; sans choix, la fiche au bureau, le poste au téléphone). Une fonction
+  nouvelle de l'éditeur existe dans les deux. L'Aperçu (l'œil) est le lecteur du poste, pas une vue.
+  En-tête commun : `src/components/editor/EditorBar.tsx`.
+- **La lecture au téléphone** (toggle `phoneReader`) : le média à ses vraies proportions, qui cède au
+  texte sans descendre sous 38 % de la place (une vidéo garde toute sa largeur et ses commandes
+  dessous) ; côte à côte quand on tourne le téléphone ; « Tout voir » depuis le sommaire
+  (`src/lib/media/fit.ts`, `ratio.ts`).
 - **Qui est à la tablette** (toggle `operators`) : l'opérateur n'a pas de compte, un nom et un code à
   4 chiffres (page `/equipe`, `clip_operator`, `src/lib/model/operators.ts`). Le code se donne et se
   vérifie au serveur (`/api/operators/pin`, `/api/operators/verify`, `src/lib/server/operators.ts`) ;
@@ -140,6 +150,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Une route du serveur (`src/app/api`) ne tire jamais `@/lib/i18n` : ses hooks React font échouer la
   build. Ce qu'une route peut atteindre (`gateway/client`, `gateway/data`, `model/repo`,
   `model/catalog`) importe `@/lib/i18n/core`.
+- jsdom n'a ni `matchMedia`, ni `ResizeObserver`, ni `scrollIntoView` : un test qui affiche une vue
+  de l'éditeur les remplace (`tests/form-view.test.tsx`).
+- `next dev` écrit `apps/web/AGENTS.md` et retouche `next-env.d.ts` : ne pas les committer.
 - Les enveloppes des routes Data ne sont pas uniformes (`result` sur `/one`, `count` sur `/count`) :
   passer par `dataApi`.
 - La valeur interne d'un crédit d'IA, en argent, ne s'écrit nulle part dans le dépôt (code, docs,
