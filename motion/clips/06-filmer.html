@@ -19,19 +19,23 @@ $('Lcam').innerHTML=`<div class="ui" style="left:${-PW/2}px;top:${-PH/2}px;width
 $('w2').innerHTML=CHIP('c2','video','Vidéo 720p, légère','',false);
 Object.assign($('c2').style,{left:'-210px',top:'350px'});
 const tF=W('v06','filmez')-0.1, tC=W('v06','clip'), tTab=tC+0.2, tZoom=tTab-1.0, tTel=W('v06','telephone')-0.1;
+// le son : la coupe, la pastille, la plongée dans le téléphone (son sommet à l'arrivée), le bip d'enregistrement
+SFX([-WH,'whoosh_court',-14],[tTab-WP,'whoosh_plongee',-9],[tTab+0.06,'rec',-11]); SFX_CHIP(tF); SFX_CHIP(tTel);
+const punch=PUNCH([[tTab+0.03,0.03]]);
 M.scene({
   W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
   SH:{bleed:SH_BLEED, phl:SH_PHL}, start:'bleed', SEQ:[[tTab,'phl']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
   layers:[
     {el:'Lph',tin:null,tout:tTab+0.14,o:{lout:0.1,flat:'out'},update:(t,g)=>{
       const z=M.eio((t-tZoom)/1.0); M.dive($('ph'),g,ECRAN_TELEPHONE,z,{w:PW,h:PH},{push:1.0+0.04*M.eio(t/2.2)});
     }},
-    {el:'Lov',tin:null,tout:tZoom+0.3,o:{lout:0.2},update:(t)=>{ M.rise($('c1'),t,tF,null,{dy:-18,lin:0.3}); }},
+    {el:'Lov',tin:null,tout:tZoom+0.3,o:{lout:0.2},update:(t)=>{ POP($('c1'),t,tF,{dy:-18}); }},
     {el:'Lcam',tin:tTab-0.04,tout:null,o:{din:0,lin:0.16,flat:'in'},update:(t)=>{
       M.setText($('camT'),mmss(134+Math.max(0,t-tTab)));
       const k=0.5-0.5*Math.cos(Math.max(0,t-tTab)*Math.PI*1.4); $('camStop').style.boxShadow=`0 0 0 ${(6+14*k).toFixed(1)}px rgba(255,43,94,${(0.45-0.35*k).toFixed(3)})`;
     }},
   ],
-  extra:(t)=>M.rise($('c2'),t,tTel,null,{dy:18,lin:0.3}),
+  extra:(t)=>POP($('c2'),t,tTel,{dy:18}),
 });
 </script>

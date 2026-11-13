@@ -172,3 +172,26 @@ const FEEDBACK_SHEET=(id)=>`<div class="fbs" id="${id}"><h4>Qu’est-ce qui ne v
  <span style="background:linear-gradient(135deg,#FF2B5E,#FF6B00)">${M.icon('shield',26,'#fff',2.4)} Danger</span>
  <span style="background:linear-gradient(135deg,#0ea5e9,#2563eb)">${M.icon('sparkle',26,'#fff',2.4)} Idée</span></div>
  <div class="ta">Expliquez en quelques mots (facultatif)</div></div>`;
+
+// ---------- l'énergie, comme le film K2 V2 : effets sonores, coups de caméra, apparitions qui claquent, éclats ----------
+// SFX(...) : les effets sonores de la scène (banque scripts/sfx.py, celle du film K2 V2), posés AUX MÊMES INSTANTS que
+// l'image : [t local (s), son, gain dB, {dur, fade}]. scripts/sfx-cues.mjs les relève dans chaque page et les place sur
+// la ligne de temps du film ; scripts/sfx-mix.py les mélange à la voix. Un whoosh culmine après son début : « court »
+// 0,28 s (WH), « long » 0,63 s (WL), « plongée » 0,6 s (WP) ; le « riser » finit 2,4 s après le sien (RISE).
+window.__SFX=window.__SFX||[];
+const SFX=(...cues)=>{ for(const c of cues) if(c&&Number.isFinite(c[0])) window.__SFX.push(c); };
+const WH=0.28, WL=0.63, WP=0.6, RISE=2.4;
+// une pastille qui tombe : un tic au départ, un pop quand elle se pose
+const SFX_CHIP=(t0,db=0)=>SFX([t0,'tick',-12+db],[t0+0.1,'pop',-14+db]);
+// PUNCH([[t, force]]) : un coup bref de caméra (zoom de quelques %) ; dans geom : g.s*=1+punch(t)
+const PUNCH=(list)=>M.track(0,list.flatMap(([t,a=0.025])=>[[t-0.035,a,[55,1]],[t+0.045,0,[16,1]]]));
+// POP(el,t,t0) : une apparition qui claque (monte, grossit, dépasse un peu, se pose) ; remplace M.rise pour les pastilles
+const SPRING=M.track(0,[[0,1,[24,0.5]]]);
+const POP=(el,t,t0,o={})=>{ const f=o.from??0.7, v=M.rise(el,t,t0,o.tout??null,{dy:14,lin:0.14,...o});
+  if(v.o>0.002&&t>=t0) el.style.transform+=` scale(${(f+(1-f)*SPRING(t-t0)).toFixed(4)})`; return v; };
+// FLASH() : un éclat plein cadre, au-dessus de tout et hors caméra ; dans extra : fl(t,[[t0, force, durée]])
+const FLASH=(color='#ffffff')=>{ const d=document.createElement('div');
+  d.style.cssText=`position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;background:${color};opacity:0;z-index:20`;
+  document.getElementById('stage').appendChild(d);
+  return (t,list)=>{ let o=0; for(const [t0,a=0.85,w=0.35] of list){ const u=t-t0; if(u>0) o=Math.max(o,a*Math.min(1,u/0.034)*Math.exp(-2.3*u/w)); }
+    d.style.opacity=o.toFixed(4); }; };

@@ -1,4 +1,5 @@
 <title>04 Nulle part par écrit → le logo</title>
+<div data-slot="world"><i id="gl" style="position:absolute;left:-520px;top:-520px;width:1040px;height:1040px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,198,255,.5),rgba(0,120,255,.16) 58%,rgba(0,120,255,0));opacity:0"></i></div><!--/world-->
 <div data-slot="shape">
   <div class="L" id="Lph"></div>
   <div class="L" id="Lov"></div>
@@ -15,12 +16,19 @@ Object.assign($('c1').style,{left:'120px',top:'300px'});
 // le logo : le dégradé de la marque, puis l'arc du « C » qui se dessine et son point
 $('Lic').innerHTML=`<div style="position:absolute;left:-120px;top:-120px;width:240px;height:240px;border-radius:68px;background:linear-gradient(135deg,#00C6FF,#0078FF)"></div><div style="position:absolute;left:0;top:0">${ARC(240,'arc')}</div>`;
 const tN=W('v04','nulle')-0.06, tEnd=E('v04'), tCard=tN+0.3, tIcon=tEnd, tDraw=tIcon+0.1;
+// le son : la pastille, la photo qui se referme, le logo qui s'allume ; le riser monte jusqu'au drop (la coupe vers 05)
+SFX([-WH,'whoosh_court',-16],[tN,'tick',-12],[tN+0.1,'pop',-13],[tCard-0.15,'whoosh_inverse',-15],
+    [tIcon,'pop_haut',-12],[tDraw,'sparkle',-17],[T-RISE,'riser',-10]);
+// l'attente : la caméra avance de plus en plus vite sur le logo, un halo grandit derrière lui, jusqu'au drop
+const build=t=>{ const u=M.clamp((t-tIcon)/(T-tIcon)); return u*u*u; };
 M.scene({
   W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
   SH:{bleed:SH_BLEED, card:SH_CARD, icon:SH_ICON}, start:'bleed', SEQ:[[tCard,'card'],[tIcon,'icon']],
+  geom:(t,g)=>{ g.s*=1+0.13*build(t); return g; },
+  extra:(t)=>{ const b=build(t); $('gl').style.opacity=(t<tIcon?0:0.25+0.75*b).toFixed(3); $('gl').style.transform=`scale(${(0.55+0.45*b).toFixed(4)})`; },
   layers:[
     {el:'Lph',tin:null,tout:tIcon+0.08,o:{lout:0.22},update:(t,g)=>{fitPhoto($('ph'),g,1.03+0.06*M.eio(t/3.2));}},
-    {el:'Lov',tin:null,tout:tCard+0.05,o:{lout:0.15},update:(t)=>{ M.rise($('c1'),t,tN,null,{dy:18,lin:0.28}); }},
+    {el:'Lov',tin:null,tout:tCard+0.05,o:{lout:0.15},update:(t)=>{ POP($('c1'),t,tN,{dy:18}); }},
     {el:'Lic',tin:tIcon,tout:null,o:{lin:0.2},update:(t)=>{
       const k=M.eio((t-tDraw)/0.55); $('arc').setAttribute('stroke-dashoffset',(70*(1-k)).toFixed(2));
       $('arcd').setAttribute('opacity',M.clamp((t-tDraw-0.45)/0.15).toFixed(3));

@@ -26,16 +26,22 @@ $('Lic').innerHTML=`<div style="position:absolute;left:-120px;top:-120px;width:2
 $('mk').innerHTML=LOGO(120); $('wm').innerHTML=WORDMARK(112); $('cti').innerHTML=M.icon('arrow',34,'#fff',2.6);
 const SHP={w:560,h:724,r:8,bg:'#FFFFFF',cam:1.1};
 const tI=W('v15','clip')-0.2, tF=tI+0.55, tg=[W('v15','savoir-faire'),W('v15','poste'),W('v15','quelques')].map(x=>x-0.25), tD=W('v16','demandez')-0.15;
+// le son : la page devient le logo (étincelles), la carte finale frappe, un tic par temps de la promesse, l'appel ; l'accord final reste à la musique
+SFX([tI-WH,'whoosh_court',-14],[tI,'sparkle',-12],[tF-WH,'whoosh_court',-17],[tF,'impact_moyen',-13],[tD,'pop_haut',-11]);
+tg.forEach(x=>SFX([x,'tick',-13]));
+const punch=PUNCH([[tF+0.02,0.035],[tD+0.05,0.02]]), fl=FLASH();
 M.scene({
   W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
   SH:{pdf:SHP, icon:SH_ICON, fin:SH_FIN}, start:'pdf', SEQ:[[tI,'icon'],[tF,'fin']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
+  extra:(t)=>fl(t,[[tF,0.22,0.3]]),
   shapePress:[tD+0.05],
   layers:[
     {el:'Lpdf',tin:null,tout:tI+0.05},
     {el:'Lic',tin:tI,tout:tF},
     {el:'Lfin',tin:tF,tout:null,o:{lin:0.3},update:(t)=>{
-      tg.forEach((t0,i)=>M.rise($('g'+i),t,t0,null,{dy:16,lin:0.3}));
-      M.rise($('cta'),t,tD,null,{dy:18,lin:0.3}); $('cta').style.transform+=` scale(${(1+0.04*M.pulse(t,tD+0.5,0.25)).toFixed(4)})`;
+      tg.forEach((t0,i)=>POP($('g'+i),t,t0,{dy:16,from:0.88}));
+      POP($('cta'),t,tD,{dy:18,from:0.8}); $('cta').style.transform+=` scale(${(1+0.04*M.pulse(t,tD+0.5,0.25)).toFixed(4)})`;
     }},
   ],
 });

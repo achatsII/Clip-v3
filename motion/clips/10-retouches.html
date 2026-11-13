@@ -1,5 +1,6 @@
 <title>10 Retoucher, annoter, traduire</title>
 <style>.ui.s9 .phone{left:0!important;top:0!important}.ui.s8 .an{box-shadow:none}</style>
+<div data-slot="over"><div id="ks" style="position:absolute;left:0;top:0"></div></div><!--/over-->
 <div data-slot="shape">
   <div class="L" id="Lag"></div>
   <div class="L" id="Lan"></div>
@@ -22,9 +23,19 @@ const A=AGENT_SETUP(), N=ANNOT_SETUP(), L=[...document.querySelectorAll('#Lph .l
 const tR=W('v10','retouchez')-0.1, tMot=W('v10','mot')-0.1, tAn=W('v10','annotez')-0.25, tClic=W('v10','annotez')+0.38, tTr=W('v10','traduisez')-0.25;
 const langT=[tTr, W('v10','traduisez')+0.35, W('v10','quelques')-0.05, W('v10','secondes')-0.05]; // FR, ES, ZH, AR
 const order=[0,3,1,2];
+// les trois verbes qui claquent : une pastille par geste, posée sur son mot, devant l'écran
+$('ks').innerHTML=CHIP('k1','sparkle','Retouchez d’un mot','',false,GRAD.ai)+CHIP('k2','pencil','Annotez d’un clic','',false,GRAD.ai)+CHIP('k3','globe','Traduisez en quelques secondes','',false,GRAD.blue);
+Object.assign($('k1').style,{left:'-610px',top:'350px'}); Object.assign($('k2').style,{left:'-610px',top:'340px'}); Object.assign($('k3').style,{left:'250px',top:'-33px'});
+// le son : la coupe, la demande à l'assistant, sa réécriture (étincelles), le clic et les cercles de l'IA, chaque langue
+SFX([-WH,'whoosh_court',-15],[tR+0.32,'frappe',-18,{dur:0.5,fade:0.05}],[tMot,'sparkle',-12],
+    [tAn-WH,'whoosh_court',-15],[tAn+0.25,'tick',-9],[tClic+0.02,'sparkle',-14],[tClic+0.42,'pop',-15],
+    [tTr-WH,'whoosh_court',-15]);
+SFX([tR+0.14,'pop',-13],[tAn+0.16,'pop',-13],[tTr+0.16,'pop',-13]); langT.slice(1).forEach(x=>SFX([x,'tick',-11]));
+const punch=PUNCH([[tAn+0.25,0.015],[tClic+0.05,0.02],...langT.slice(1).map(x=>[x,0.015])]);
 M.scene({
   W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
   SH:{ag:SH_WIN7, an:SH_ANNOT, ph:SH_PHONE}, start:'ag', SEQ:[[tAn,'an'],[tTr,'ph']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
   layers:[
     {el:'Lag',tin:null,tout:tAn+0.05,update:(t)=>A.update(t,tR,tMot)},
     {el:'Lan',tin:tAn,tout:tTr+0.05,o:{lin:0.25},update:(t)=>N.update(t,tAn+0.25,tClic)},
@@ -34,6 +45,7 @@ M.scene({
     }},
   ],
   cursor:{size:46,clicks:[tAn+0.25],keys:[[0,520,300],[tAn-0.1,330,-360],[tAn+0.25,305,-395],[tAn+0.6,305,-395],[tTr,330,-300]]},
-  extra:(t)=>{ $('cursor').style.opacity=(M.clamp((t-tAn+0.3)/0.2)*(1-M.clamp((t-tTr+0.15)/0.15))).toFixed(3); },
+  extra:(t)=>{ $('cursor').style.opacity=(M.clamp((t-tAn+0.3)/0.2)*(1-M.clamp((t-tTr+0.15)/0.15))).toFixed(3);
+    POP($('k1'),t,tR+0.04,{dy:16,tout:tAn,lout:0.12}); POP($('k2'),t,tAn+0.06,{dy:16,tout:tTr,lout:0.12}); POP($('k3'),t,tTr+0.06,{dy:16}); },
 });
 </script>

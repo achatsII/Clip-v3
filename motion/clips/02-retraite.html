@@ -12,12 +12,13 @@ $('Lv').innerHTML=VIDEO('v','assets/c2-brosse.webm','assets/c2-brosse.jpg');
 $('Lov').innerHTML=CHIP('c1','timer','Retraite','l’an prochain',false,GRAD.danger);
 Object.assign($('c1').style,{left:'-700px',top:'-380px'});
 const tR=W('v02','retraite')-0.08;
+SFX([-WH,'whoosh_court',-16],[tR-0.02,'battement',-7]); SFX_CHIP(tR);
 M.scene({
   W:1920,H:1080,bg:'#0f172a',center:CENTER,T,intro:null,
   SH:{bleed:SH_BLEED}, start:'bleed', SEQ:[],
   layers:[
     {el:'Lv',tin:null,tout:null,update:(t,g)=>{fitPhoto($('v'),g,1.04+0.04*M.eio(t/2.6)); syncVideo($('v'),t);}},
-    {el:'Lov',tin:null,tout:null,update:(t)=>{ M.rise($('c1'),t,tR,null,{dy:-18,lin:0.3}); }},
+    {el:'Lov',tin:null,tout:null,update:(t)=>{ POP($('c1'),t,tR,{dy:-18}); }},
   ],
 });
 </script>

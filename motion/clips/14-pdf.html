@@ -25,13 +25,17 @@ $('Lpdf').innerHTML=SCREEN('pdfPage','s14',560,724);
 $('fw').innerHTML=ui('pdfFile');
 const SHP={w:560,h:724,r:8,bg:'#FFFFFF',cam:1.22};
 const tC=W('v14','clic')-0.25, tP=W('v14','pdf')-0.1;
+// le son : la page qui sort (déclic), le fichier enregistré
+SFX([tC-WH,'whoosh_court',-14],[tC+0.05,'shutter',-15],[tP,'pop',-12],[tP+0.04,'chime',-16]);
+const punch=PUNCH([[tP+0.05,0.02]]);
 M.scene({
   W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
   SH:{tab:SH_TAB, pdf:SHP, pdf2:{...SHP,cam:1.1}}, start:'tab', SEQ:[[tC,'pdf'],[tP-0.2,'pdf2']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
   layers:[
     {el:'Ltab',tin:null,tout:tC+0.05},
     {el:'Lpdf',tin:tC,tout:null,o:{lin:0.3},anchor:'c'},
   ],
-  extra:(t)=>M.rise($('fw'),t,tP,null,{dy:20,lin:0.3}),
+  extra:(t)=>POP($('fw'),t,tP,{dy:20,from:0.8}),
 });
 </script>

@@ -26,12 +26,17 @@ $('Lp1').innerHTML=SCR('player1',{'cadenas':'assets/cadenas.jpg'}); $('vs1').inn
 const rows=[...document.querySelectorAll('#Lres .st')];
 const tRes=W('v09','action')-0.3, tE=W('v09','etape')-0.15, tX=W('v09','extrait')-0.2, tM=W('v09','mises')-0.15, tG=W('v09','garde')-0.06;
 const w1=document.querySelector('#Lp1 .pl-warn'), w3=document.querySelector('#Lp3 .pl-warn');
+// le son : l'instruction s'ouvre, les cinq étapes tombent (tic-tic-tic), l'extrait, la mise en garde qui frappe
+SFX([tRes-WH,'whoosh_court',-15],[tX-WH,'whoosh_court',-14],[tX+0.35,'pop',-14],[tM-WH,'whoosh_court',-16],[tG,'pop_haut',-11],[tG+0.02,'impact_moyen',-16]);
+rows.forEach((r,i)=>SFX([tE+0.09*i,'tick',-13]));
+const punch=PUNCH([[tG+0.05,0.03]]);
 M.scene({
   W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
   SH:{gen:SH_GEN, res:SH_RES, tab:SH_TAB}, start:'gen', SEQ:[[tRes,'res'],[tX,'tab']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
   layers:[
     {el:'Lgen',tin:null,tout:tRes+0.05},
-    {el:'Lres',tin:tRes,tout:tX+0.05,o:{lin:0.3},update:(t)=>{ rows.forEach((r,i)=>M.rise(r,t,tE+0.09*i,null,{dy:18,lin:0.26})); }},
+    {el:'Lres',tin:tRes,tout:tX+0.05,o:{lin:0.3},update:(t)=>{ rows.forEach((r,i)=>POP(r,t,tE+0.09*i,{dy:22,from:0.9,lin:0.16})); }},
     {el:'Lp3',tin:tX,tout:tM,o:{lin:0.3},update:(t)=>{ M.video($('v4'),t-tX); M.rise(w3,t,tX+0.35,null,{dy:12,lin:0.25}); }},
     {el:'Lp1',tin:tM,tout:null,o:{lin:0.25},update:(t)=>{
       M.video($('v5'),t-tM);

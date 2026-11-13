@@ -25,9 +25,13 @@ const tTab=1.0, tZoom=0.0, tN=W('v13','etape')-0.05, tL=W('v13','voix')-0.1, tS=
 // positions des touchers, dans l'écran (1280 × 772, origine en haut à gauche)
 const pos=(sel)=>{const a=scr.getBoundingClientRect(), b=R.querySelector(sel).getBoundingClientRect(), k=a.width/scr.offsetWidth; return [(b.left+b.width/2-a.left)/k, (b.top+b.height/2-a.top)/k];};
 let TAPS=null;
+// le son : la plongée dans la tablette (sommet à l'arrivée), trois touchers, la lecture à voix haute, la fiche qui monte
+SFX([tTab-WP,'whoosh_plongee',-9],[tN,'tap',-7],[tL,'tap',-7],[tL+0.12,'ecoute',-18],[tS,'tap',-7],[tS+0.1,'whoosh_court',-19],[tK,'tick',-12]);
+const punch=PUNCH([[tN,0.012],[tL,0.012],[tS,0.012]]);
 M.scene({
   W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
   SH:{bleed:SH_BLEED, tab:SH_TAB}, start:'bleed', SEQ:[[tTab,'tab']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
   layers:[
     {el:'Lph',tin:null,tout:tTab+0.14,o:{lout:0.1,flat:'out'},update:(t,g)=>{ M.dive($('ph'),g,ECRAN_TABLETTE,M.eio((t-tZoom)/1.0),{w:TW,h:TH},{push:1.03}); }},
     {el:'Lov',tin:null,tout:0.4,o:{lout:0.3,flat:'out'}},

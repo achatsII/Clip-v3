@@ -20,9 +20,14 @@ const G=GEN_SETUP();
 const tB=W('v08','bouton')-0.05, tIA=W('v08',"l'IA")-0.15;
 const st=[[tIA+0.15,W('v08','redige')],[W('v08','redige'),W('v08',"l'instruction")],[W('v08',"l'instruction"),W('v08','travail')+0.1],[W('v08','travail')+0.1,T-0.15]];
 const press=M.track(0,[[tB-0.07,1,[45,1]],[tB+0.05,0,[22,.72]]]);
+// le son : le clic, la carte de l'IA qui arrive (étincelles), la rédaction (frappe), une coche par étape
+SFX([tB-0.01,'tick',-8],[tB+0.02,'tap',-15],[tIA-WH,'whoosh_court',-15],[tIA,'sparkle',-11],[tIA+0.25,'frappe_long',-19,{dur:2.0,fade:0.25}]);
+st.slice(0,3).forEach(([a,b])=>SFX([b,'tick',-13]));
+const punch=PUNCH([[tB,0.018],[tIA+0.05,0.03]]);
 M.scene({
   W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
   SH:{win:SH_WIN, gen:SH_GEN}, start:'win', SEQ:[[tIA,'gen']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
   layers:[
     {el:'Lwin',tin:null,tout:tIA+0.05,update:(t)=>{
       CAP.gen.style.transform=`scale(${(1-0.05*press(t)).toFixed(4)})`; CAP.loading(t>=tB+0.05, t);

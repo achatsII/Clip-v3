@@ -26,18 +26,24 @@ const {T,W}=scene();
 $('Lv').innerHTML=VIDEO('v','assets/c3-usine.webm','assets/c3-usine.jpg');
 const t30=W('v03','2030')-0.05, tV=W('v03','vingt')-0.05, tT=W('v03','trente')-0.05, tTech=W('v03','technologues')-0.1, tPar=W('v03','partiront');
 const ca=M.track(0,[[tV,20,[9,1]]]), cb=M.track(0,[[tT,30,[9,1]]]);
+// le son : l'usine, la barre qui part vers 2030 (alarme sourde), les compteurs qui défilent, un battement sur « partiront »
+SFX([-WH,'whoosh_court',-16],[0,'usine',-24,{dur:5.6,fade:0.5}],[t30,'tick',-12],[t30,'alarme',-25,{dur:2.4,fade:0.4}],
+    [tV-0.08,'pop',-12],[tV,'frappe',-17,{dur:0.42,fade:0.04}],[tT,'pop_haut',-12],[tT,'frappe',-17,{dur:0.42,fade:0.04}],
+    [tTech,'tick',-13],[tPar,'battement',-9]);
+const punch=PUNCH([[tV,0.012],[tT,0.022]]);
 M.scene({
   W:1920,H:1080,bg:'#0f172a',center:CENTER,T,intro:null,
   SH:{bleed:SH_BLEED}, start:'bleed', SEQ:[],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
   layers:[
     {el:'Lv',tin:null,tout:null,update:(t,g)=>{fitPhoto($('v'),g,1.02+0.04*M.eio(t/5)); syncVideo($('v'),t,{rate:0.82});}},
     {el:'Lov',tin:null,tout:null,update:(t)=>{
       $('sh').style.opacity=(0.35+0.65*M.clamp((t-t30+0.3)/0.6)).toFixed(3);
       M.rise($('tl'),t,t30,null,{dy:16,lin:0.3});
       $('bi').style.transform=`scaleX(${(0.04+0.96*M.eio((t-t30)/(tPar+0.6-t30))).toFixed(4)})`;
-      M.rise($('st'),t,tV-0.08,null,{dy:24,lin:0.28});
+      POP($('st'),t,tV-0.08,{dy:24,from:0.8});
       M.setText($('a'),String(Math.round(M.clamp(ca(t),0,20)))); M.setText($('b'),String(Math.round(M.clamp(cb(t),0,30))));
-      M.rise($('sl'),t,tTech,null,{dy:16,lin:0.3});
+      POP($('sl'),t,tTech,{dy:16,from:0.9});
     }},
   ],
 });

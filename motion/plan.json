@@ -13,8 +13,8 @@
    "id": "01",
    "title": "Jacques à sa machine",
    "line": "« Jacques connaît sa machine mieux que personne. »",
-   "in": 0,
-   "out": 3.15,
+   "in": 0.0,
+   "out": 3.337,
    "html": "dist/01-jacques.html",
    "file": "out/01-jacques.mp4",
    "raccord": "franc"
@@ -23,8 +23,8 @@
    "id": "02",
    "title": "Ses mains, la retraite",
    "line": "« Dans un an, il prend sa retraite. »",
-   "in": 3.15,
-   "out": 5.78,
+   "in": 3.337,
+   "out": 6.151,
    "html": "dist/02-retraite.html",
    "file": "out/02-retraite.mp4",
    "raccord": "franc"
@@ -33,8 +33,8 @@
    "id": "03",
    "title": "20 à 30 % d’ici 2030",
    "line": "« Et d’ici 2030, de vingt à trente pour cent des technologues partiront aussi. »",
-   "in": 5.78,
-   "out": 10.98,
+   "in": 6.151,
+   "out": 11.549,
    "html": "dist/03-constat.html",
    "file": "out/03-constat.mp4",
    "raccord": "franc"
@@ -43,8 +43,8 @@
    "id": "04",
    "title": "Nulle part par écrit → le logo",
    "line": "« Leur savoir-faire n’est écrit nulle part. »",
-   "in": 10.98,
-   "out": 15.1,
+   "in": 11.549,
+   "out": 15.36,
    "html": "dist/04-cartable.html",
    "file": "out/04-cartable.mp4",
    "raccord": "franc"
@@ -53,17 +53,18 @@
    "id": "05",
    "title": "Voici Clip",
    "line": "« Voici… Clip. »",
-   "in": 15.1,
-   "out": 17.4,
+   "in": 15.36,
+   "out": 18.234,
    "html": "dist/05-voici.html",
-   "file": "out/05-voici.mp4"
+   "file": "out/05-voici.mp4",
+   "raccord": "franc"
   },
   {
    "id": "06",
    "title": "Filmer l’expert → la caméra de Clip",
    "line": "« Filmez l’expert pendant qu’il explique. Clip enregistre tout, sur le téléphone. »",
-   "in": 17.4,
-   "out": 23.08,
+   "in": 18.234,
+   "out": 23.995,
    "html": "dist/06-filmer.html",
    "file": "out/06-filmer.mp4",
    "raccord": "franc"
@@ -72,8 +73,8 @@
    "id": "07",
    "title": "Photos, note vocale, PDF, Word",
    "line": "« Ajoutez des photos, une note vocale, ou vos vieilles procédures en PDF et en Word. »",
-   "in": 23.08,
-   "out": 29.2,
+   "in": 23.995,
+   "out": 30.106,
    "html": "dist/07-capture.html",
    "file": "out/07-capture.mp4"
   },
@@ -81,8 +82,8 @@
    "id": "08",
    "title": "Générer : l’IA rédige",
    "line": "« Puis, d’un seul bouton, l’IA rédige l’instruction de travail. »",
-   "in": 29.2,
-   "out": 33.66,
+   "in": 30.106,
+   "out": 34.556,
    "html": "dist/08-generer.html",
    "file": "out/08-generer.mp4"
   },
@@ -90,8 +91,8 @@
    "id": "09",
    "title": "Étapes, extrait, mises en garde",
    "line": "« Une action par étape, le bon extrait vidéo, les mises en garde au bon moment. »",
-   "in": 33.66,
-   "out": 39.05,
+   "in": 34.556,
+   "out": 39.836,
    "html": "dist/09-etapes.html",
    "file": "out/09-etapes.mp4"
   },
@@ -99,8 +100,8 @@
    "id": "10",
    "title": "Retoucher, annoter, traduire",
    "line": "« Retouchez d’un mot. Annotez d’un clic. Traduisez en quelques secondes. »",
-   "in": 39.05,
-   "out": 44.5,
+   "in": 39.836,
+   "out": 45.233,
    "html": "dist/10-retouches.html",
    "file": "out/10-retouches.mp4",
    "raccord": "franc"
@@ -109,8 +110,8 @@
    "id": "11",
    "title": "Les anciennes instructions",
    "line": "« Et vos anciennes instructions? Déposez-les par dizaines, elles ressortent modernisées. »",
-   "in": 44.5,
-   "out": 50.9,
+   "in": 45.233,
+   "out": 51.372,
    "html": "dist/11-moderniser.html",
    "file": "out/11-moderniser.mp4",
    "raccord": "franc"
@@ -119,8 +120,8 @@
    "id": "12",
    "title": "Approuver, déployer au poste",
    "line": "« Faites-la approuver, puis déployez-la au poste, sur une tablette ou par code QR, sans compte. »",
-   "in": 50.9,
-   "out": 57.15,
+   "in": 51.372,
+   "out": 57.6,
    "html": "dist/12-approuver.html",
    "file": "out/12-approuver.mp4",
    "raccord": "franc"
@@ -129,8 +130,8 @@
    "id": "13",
    "title": "L’opérateur au poste",
    "line": "« L’opérateur suit chaque étape, l’écoute à voix haute, et signale ce qui n’est pas clair. »",
-   "in": 57.15,
-   "out": 62.95,
+   "in": 57.6,
+   "out": 63.361,
    "html": "dist/13-poste.html",
    "file": "out/13-poste.mp4"
   },
@@ -138,8 +139,8 @@
    "id": "14",
    "title": "Export PDF",
    "line": "« Et d’un clic, elle s’exporte en PDF. »",
-   "in": 62.95,
-   "out": 66.3,
+   "in": 63.361,
+   "out": 66.721,
    "html": "dist/14-pdf.html",
    "file": "out/14-pdf.mp4",
    "raccord": "franc"
@@ -148,8 +149,8 @@
    "id": "15",
    "title": "Clip, la promesse, la démo",
    "line": "« Clip. Le savoir-faire de vos experts, au poste, en quelques minutes. » « Demandez une démo. »",
-   "in": 66.3,
-   "out": 74.09,
+   "in": 66.721,
+   "out": 74.96,
    "html": "dist/15-fin.html",
    "file": "out/15-fin.mp4",
    "raccord": "franc"
@@ -203,6 +204,56 @@
   "inputs/gen/c2-brosse.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165526_448367fd-7fef-4d9b-8fb9-19f2710b69fa.mp4",
   "inputs/gen/c3-usine.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165525_421da8df-35cd-436c-8f12-1ee4450e4492.mp4",
   "inputs/gen/c4-huile.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165525_6a5ceab2-abc3-44fa-bf19-e7a76adb1e49.mp4",
-  "inputs/gen/c5-cadenas.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165525_9057c4ad-c3dc-496b-9252-86d25086138a.mp4"
+  "inputs/gen/c5-cadenas.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165525_9057c4ad-c3dc-496b-9252-86d25086138a.mp4",
+  "inputs/musique-source.mp3": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Musique-IA/music-2026-11-13T05-50-24-786-t9jvn5.mp3"
+ },
+ "music": {
+  "file": "inputs/musique-source.mp3",
+  "fade_in": 0.3,
+  "fade_out": 0.5,
+  "sous": -11.0,
+  "ouvert": -5.0,
+  "song_id": "K3ossto0Lj3qKP0M7H2e",
+  "source": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Musique-IA/music-2026-11-13T05-50-24-786-t9jvn5.mp3",
+  "empreinte": "3e5a07c6aac1",
+  "duree": 76.824,
+  "bpm": 124.99,
+  "offset": -0.062,
+  "sections": [
+   {
+    "nom": "Tension",
+    "debut": 0.0
+   },
+   {
+    "nom": "Tension · montée",
+    "debut": 11.582
+   },
+   {
+    "nom": "Révélation",
+    "debut": 15.422,
+    "franche": true,
+    "entree": 15.36
+   },
+   {
+    "nom": "Fonctions",
+    "debut": 40.382
+   },
+   {
+    "nom": "Au poste",
+    "debut": 51.902
+   },
+   {
+    "nom": "Fin",
+    "debut": 67.262
+   },
+   {
+    "nom": "Sortie",
+    "debut": 73.022,
+    "sortie": true,
+    "entree": 72.961
+   }
+  ],
+  "loop": false,
+  "voix_lufs": -20.0
  }
 }
