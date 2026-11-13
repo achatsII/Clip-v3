@@ -134,6 +134,10 @@ instructions publiées sont réellement consultées au plancher semaine après s
   Le module Relevés (novembre 2026) montre la tendance de chaque mesure avec ses limites et exporte
   le registre pour le tableur ; l'analyse statistique (capabilité, cartes de contrôle) et le suivi
   des actions restent ailleurs.
+- Un outil de BI ou de surveillance des personnes : les rapports (novembre 2026) répondent à des
+  questions de l'usine (combien de temps, qui a fait quoi, où ça accroche, qui est formé) ; les
+  personnes y vont par ordre alphabétique, comme dans un registre, jamais en palmarès ni en note de
+  performance. Le code calcule les chiffres ; l'IA les commente, elle n'en invente pas.
 - La génération de vidéos par l'IA.
 - Le hors ligne complet : la capture tolère un réseau instable, la consultation demande le réseau.
 

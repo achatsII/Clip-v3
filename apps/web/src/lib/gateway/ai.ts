@@ -31,6 +31,8 @@ export const AI_OPERATIONS = [
   'look_m',
   'look_l',
   'quiz',
+  'report_summary',
+  'report_question',
 ] as const
 export type AiOperation = (typeof AI_OPERATIONS)[number]
 

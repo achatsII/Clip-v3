@@ -76,6 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     refetchInterval: 120_000,
   })
 
+  const reportsOn = useToggle('reports')
   const nav: NavItem[] = [
     { href: '/accueil', label: t.shell.nav.home, icon: <Home className="h-5 w-5" />, show: true },
     { href: '/instructions', label: t.shell.nav.instructions, icon: <BookOpen className="h-5 w-5" />, show: true },
@@ -83,10 +84,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     { href: '/equipe', label: t.shell.nav.team, icon: <Users className="h-5 w-5" />, show: operatorsOn && can('stations', 'write') },
     { href: '/retours', label: t.shell.nav.feedback, icon: <MessageSquareWarning className="h-5 w-5" />, badge: feedbackCount.data || undefined, show: can('feedback', 'write') },
     { href: '/registre', label: t.shell.nav.records, icon: <ClipboardCheck className="h-5 w-5" />, show: recordsOn && can('feedback') },
-    { href: '/statistiques', label: t.shell.nav.stats, icon: <BarChart3 className="h-5 w-5" />, show: can('stats') },
+    // Les rapports (toggle `reports`) remplacent les statistiques, qui deviennent l'un d'eux.
+    reportsOn ? { href: '/rapports', label: t.reports.nav, icon: <BarChart3 className="h-5 w-5" />, show: can('stats') } : { href: '/statistiques', label: t.shell.nav.stats, icon: <BarChart3 className="h-5 w-5" />, show: can('stats') },
   ].filter((n) => n.show)
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`) || (href === '/rapports' && pathname.startsWith('/statistiques'))
 
   const handleScanValue = useCallback(
     (value: string) => {

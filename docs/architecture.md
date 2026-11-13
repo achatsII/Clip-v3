@@ -635,6 +635,55 @@ n'est pas un LMS (pas de cours libres, de catalogue ni de palmarès, `VISION.md`
 - **Sans le module**, l'onglet garde la matrice simple, avec une carte qui propose l'essai
   (`AcademyTeaser`, la fenêtre d'achat du module).
 
+### Les rapports (toggle `reports`, `src/lib/reports`, pages `/rapports`)
+
+Un répertoire de modèles prêts, inspiré de K2 Cadence : chaque rapport répond à une question d'une
+personne de l'usine, et l'IA commente des chiffres que le code a calculés. Les rapports remplacent
+« Statistiques » dans le menu ; l'adoption et la valeur restent sur `/statistiques`, une carte du
+répertoire y mène.
+
+- **Le répertoire** (`/rapports`) : les rapports par sujet (au poste, qualité, formation,
+  bibliothèque, direction), « Pour vous » d'abord selon le rôle (`forRoles`, quatre au plus, sans les
+  répéter plus bas), et une recherche. Neuf rapports : la revue de la semaine, le temps par
+  instruction, qui a fait quoi, par poste et secteur, les écarts et relevés, avant / après une
+  révision, la formation et la qualification, les retours des opérateurs, la santé de la bibliothèque.
+- **Les filtres** : 7, 30 ou 90 jours de calendrier, aujourd'hui compris, comparés à la même fenêtre
+  N jours plus tôt (`periodOf`, `previousOf`) ; le lieu (`PlacePicker`) ; le quart, celui de la
+  personne nommée (`clip_operator.shift`) : un fait sans personne n'est d'aucun quart. Là où le quart
+  ne change rien (retours, bibliothèque : `byShift: false`), son filtre ne se montre pas.
+- **Les chiffres** (`facts.ts`, fonctions pures et testées) : une instruction faite vient de
+  l'événement `complete` (qui, où, quelle version, combien de temps). Une durée de moins de 10 s ou
+  de plus de 12 h (une tablette oubliée) ne compte pas dans les temps, mais la réalisation compte. Un
+  temps se dit en médiane (« temps habituel ») et au 90e centile (« 9 fois sur 10 ») ; un taux se
+  calcule en somme sur somme, jamais en moyenne de taux ; sous 5 réalisations, la valeur porte une
+  astérisque et une note « peu de données ».
+- **Les blocs** (`catalog.ts`) : chiffres clés (la valeur, celle d'avant, le changement en couleur
+  selon ce qu'il veut dire), barres par jour, tableaux et « à regarder ». Un tableau se trie en
+  touchant une colonne, montre 25 lignes puis « + N », s'exporte en CSV (un nombre reste un nombre,
+  pas dans la coquille) et chaque ligne mène à l'instruction, au registre ou à l'Équipe. Une
+  instruction qui n'est plus publiée se dit « Instruction retirée ».
+- **Avant / après une révision** : chaque version avec ses propres réalisations sur la période. Une
+  seule mesure qui se dégrade (temps +10 %, écarts +2 points, retours « pas clair » ou « erreur »
+  +5 pour 100) met l'instruction « à surveiller », même plus rapide ; sinon, une qui s'améliore la dit
+  « mieux » ; sans assez de données, pas de bilan (`verdictOf`, `movesOf`).
+- **La formation** : formé veut dire les questions réussies sur la version à jour
+  (`trainingVersion`) avant le travail ; qualifié, la plus récente signature de l'Académie d'avant
+  le travail, pas retirée ni échue.
+- **Ce qu'un rapport lit** (`load.ts`) : seulement ce dont il a besoin (`needs`), depuis le début de
+  la période précédente : les événements (projection, 20 000 au plus ; au-delà, le rapport le dit),
+  les travaux avec relevés (5 000), les retours (3 000), les fiches publiées pour les titres et les
+  temps prévus, la formation, et des comptes faits au serveur pour la bibliothèque. Jamais
+  l'instruction complète ni toute la bibliothèque.
+- **L'IA** (`narrative.ts`) : elle reçoit le texte des blocs (`blocksText`, 15 lignes par tableau au
+  plus) et rend l'essentiel, ce qu'il faut surveiller et des pistes, trois au plus chacun, par un
+  schéma JSON (`report_summary`, 10 crédits) ; une question sur le rapport coûte `report_question`
+  (5 crédits). Les deux passent par `aiApi.ask` (l'accord pour l'IA ; le débit par la plateforme une fois la facturation branchée). Si l'IA
+  ne répond pas, l'analyse automatique (`autoNarrative`) dit les changements depuis avant. Une
+  analyse disparaît quand la période, le lieu ou le quart change.
+- **Les droits** : le droit `stats` ; la revue de la semaine est ouverte à tous les plans
+  (`free`), les autres rapports viennent avec la feature `adoption_stats` (cadenas et fenêtre
+  d'achat par `useGate`). Un rapport s'imprime (`print.ts`, tout le texte échappé).
+
 ### L'aperçu qu'on modifie (`PreviewEditing`, toggle `previewAgent`)
 
 L'aperçu (`/instructions/{id}/lire?apercu=1`) montre le brouillon tel qu'au poste. Pour qui peut

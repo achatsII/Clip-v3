@@ -271,3 +271,7 @@ ai_operations:
   - { key: look_l, capability: assistant.ask, feature: ai_credits, credits: 300, provider: google, level: mid }
   # Les questions de formation d'une instruction (3 à 5) : lire l'instruction et écrire les questions.
   - { key: quiz, capability: assistant.ask, feature: ai_credits, credits: 10, provider: google, level: mid }
+  # Les rapports : l'IA commente des chiffres déjà calculés (l'essentiel, à surveiller, des pistes),
+  # et répond à une question sur le rapport.
+  - { key: report_summary, capability: assistant.ask, feature: ai_credits, credits: 10, provider: google, level: mid }
+  - { key: report_question, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }

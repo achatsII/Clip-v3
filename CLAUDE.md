@@ -96,6 +96,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `clip_training` (`src/lib/model/training.ts`). La matrice (Équipe › Compétences) croise personnes
   et postes ; « Il faut se re-former » à la publication (`trainingVersion`) fait tomber les
   formations d'avant. Pas un LMS (`VISION.md`).
+- **Rapports** (toggle `reports`, page `/rapports`, à la place de Statistiques dans le menu) : un
+  répertoire à la K2 Cadence, des modèles prêts qui répondent chacun à une question (revue de la
+  semaine, temps par instruction, qui a fait quoi, par poste, écarts, avant / après une révision,
+  formation, retours, bibliothèque ; l'adoption reste `/statistiques`), sur 7, 30 ou 90 jours de
+  calendrier comparés à la même fenêtre d'avant, par lieu et par quart. Le code calcule chaque chiffre
+  (`src/lib/reports/facts.ts`, `catalog.ts`) : un taux en somme sur somme, un temps en médiane et
+  « 9 fois sur 10 », une durée hors de 10 s à 12 h exclue des temps, « peu de données » sous 5
+  réalisations. L'IA ne fait que les commenter (`narrative.ts`, `report_summary` et
+  `report_question`), avec une analyse automatique en repli. Les personnes vont par ordre
+  alphabétique : un registre, jamais un palmarès. La revue de la semaine est ouverte à tous ; les
+  autres viennent avec `adoption_stats`. Un rapport lit au plus 20 000 événements et 5 000 travaux
+  (`load.ts`), et le dit.
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le
@@ -176,6 +188,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   | `look_m` | Revoir des sources moyennes | 120 |
   | `look_l` | Revoir beaucoup de médias | 300 |
   | `quiz` | Préparer les questions de formation d'une instruction (3 à 5) | 10 |
+  | `report_summary` | Commenter un rapport : l'essentiel, à surveiller, des pistes (les chiffres viennent du code) | 10 |
+  | `report_question` | Répondre à une question sur un rapport | 5 |
 
   La taille d'une génération ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) se décide sur
   la durée des vidéos et des notes vocales, le nombre de photos et de pages ; au-delà de la plus grande
