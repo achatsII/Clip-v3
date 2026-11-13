@@ -1,0 +1,121 @@
+{
+  "id": "00-film",
+  "title": "Clip en 75 secondes",
+  "summary": "Capturer le savoir-faire d’un expert, l’IA qui rédige, l’instruction au poste.",
+  "durationSec": 74.97,
+  "chapters": [
+    {
+      "t": 0,
+      "title": "Le savoir-faire qui part à la retraite"
+    },
+    {
+      "t": 15.4,
+      "title": "Voici Clip"
+    },
+    {
+      "t": 18.2,
+      "title": "Filmer l'expert"
+    },
+    {
+      "t": 24.0,
+      "title": "Photos, notes vocales, PDF et Word"
+    },
+    {
+      "t": 30.1,
+      "title": "L'IA rédige l'instruction"
+    },
+    {
+      "t": 39.8,
+      "title": "Retoucher, annoter, traduire"
+    },
+    {
+      "t": 45.2,
+      "title": "Moderniser les anciennes instructions"
+    },
+    {
+      "t": 51.4,
+      "title": "Approuver et déployer au poste"
+    },
+    {
+      "t": 57.6,
+      "title": "L'opérateur au poste"
+    },
+    {
+      "t": 63.4,
+      "title": "Export PDF"
+    },
+    {
+      "t": 66.7,
+      "title": "Clip"
+    }
+  ],
+  "transcript": [
+    {
+      "t": 0.63,
+      "text": "Jacques connaît sa machine mieux que personne."
+    },
+    {
+      "t": 3.7,
+      "text": "Dans un an, il prend sa retraite."
+    },
+    {
+      "t": 6.45,
+      "text": "Et d'ici 2030, de vingt à trente pour cent des technologues partiront aussi."
+    },
+    {
+      "t": 11.85,
+      "text": "Leur savoir-faire n'est écrit nulle part."
+    },
+    {
+      "t": 16.36,
+      "text": "Voici Clip."
+    },
+    {
+      "t": 18.65,
+      "text": "Filmez l'expert pendant qu'il explique. Clip enregistre tout, sur le téléphone."
+    },
+    {
+      "t": 24.31,
+      "text": "Ajoutez des photos, une note vocale, ou vos vieilles procédures en PDF et en Word."
+    },
+    {
+      "t": 30.43,
+      "text": "Puis, d'un seul bouton, l'IA rédige l'instruction de travail."
+    },
+    {
+      "t": 34.88,
+      "text": "Une action par étape, le bon extrait vidéo, les mises en garde au bon moment."
+    },
+    {
+      "t": 40.32,
+      "text": "Retouchez d'un mot. Annotez d'un clic. Traduisez en quelques secondes."
+    },
+    {
+      "t": 45.53,
+      "text": "Et vos anciennes instructions ? Déposez-les par dizaines, elles ressortent modernisées."
+    },
+    {
+      "t": 51.84,
+      "text": "Faites-la approuver, puis déployez-la au poste, sur une tablette ou par code QR, sans compte."
+    },
+    {
+      "t": 58.03,
+      "text": "L'opérateur suit chaque étape, l'écoute à voix haute, et signale ce qui n'est pas clair."
+    },
+    {
+      "t": 63.88,
+      "text": "Et d'un clic, elle s'exporte en PDF."
+    },
+    {
+      "t": 67.2,
+      "text": "Clip. Le savoir-faire de vos experts, au poste, en quelques minutes."
+    },
+    {
+      "t": 72.37,
+      "text": "Demandez une démo."
+    }
+  ],
+  "mp4": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/82167b0c-8d5c-4acf-97ea-bf0dc294cb8a/clip-site/video/clip-film-1080_1794606644127_b6279f68-ebd7-426c-bd2f-be7d3664dd6b.mp4",
+  "poster": "/decouvrir/videos/00-film.jpg",
+  "vtt": "/decouvrir/videos/00-film.vtt"
+}
