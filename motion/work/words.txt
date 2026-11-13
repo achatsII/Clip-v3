@@ -1,0 +1,16 @@
+[v01] 0.63–2.85  0.63:Jacques 0.95:connaît 1.49:sa 1.57:machine 1.95:mieux 2.33:que 2.49:personne.
+[v02] 3.70–5.77  3.70:Dans 3.91:un 4.19:an, 4.75:il 4.85:prend 5.07:sa 5.23:retraite.
+[v03] 6.45–11.12  6.45:Et 7.07:d'ici 7.57:2030, 8.06:de 8.24:vingt 8.52:à 8.88:trente 9.04:pour 9.20:cent 9.36:des 9.58:technologues 10.20:partiront 10.78:aussi.
+[v04] 11.85–14.52  11.85:Leur 12.54:savoir-faire 12.96:n'est 13.38:écrit 13.68:nulle 14.36:part.
+[v05] 16.36–17.89  16.36:Voici 16.95:Clip.
+[v06] 18.65–23.66  18.65:Filmez 19.48:l'expert 19.82:pendant 20.33:qu'il 20.44:explique. 21.32:Clip 21.74:enregistre 22.56:tout, 22.72:sur 23.20:le 23.32:téléphone.
+[v07] 24.31–29.82  24.31:Ajoutez 24.72:des 24.92:photos, 25.78:une 25.98:note 26.20:vocale, 26.94:ou 27.22:vos 27.40:vieilles 27.74:procédures 28.40:en 28.52:PDF 28.90:et 29.46:en 29.58:Word.
+[v08] 30.43–34.29  30.43:Puis, 30.92:d'un 31.25:seul 31.47:bouton, 32.33:l'IA 32.73:rédige 33.59:l'instruction 33.87:de 34.01:travail.
+[v09] 34.88–39.49  34.88:Une 35.03:action 35.31:par 35.55:étape, 36.31:le 36.41:bon 36.70:extrait 37.08:vidéo, 37.41:les 37.98:mises 38.27:en 38.41:garde 38.76:au 38.99:bon 39.27:moment.
+[v10] 40.32–45.15  40.32:Retouchez 40.65:d'un 40.97:mot. 41.62:Annotez 42.05:d'un 42.47:clic. 43.19:Traduisez 43.97:en 44.19:quelques 44.49:secondes.
+[v11] 45.53–51.17  45.53:Et 45.63:vos 45.81:anciennes 46.37:instructions? 47.63:Déposez-les 48.37:par 48.67:dizaines, 49.61:elles 49.87:ressortent 50.47:modernisées.
+[v12] 51.84–57.34  51.84:Faites-la 52.16:approuver, 52.96:puis 53.44:déployez-la 53.82:au 53.98:poste, 54.60:sur 54.84:une 54.98:tablette 55.64:ou 55.78:par 55.96:code 56.14:QR, 56.80:sans 57.04:compte.
+[v13] 58.03–63.00  58.03:L'opérateur 58.56:suit 58.94:chaque 59.26:étape, 60.11:l'écoute 60.46:à 60.60:voix 60.74:haute, 61.48:et 61.64:signale 62.00:ce 62.32:qui 62.51:n'est 62.58:pas 62.72:clair.
+[v14] 63.88–66.17  63.88:Et 64.14:d'un 64.29:clic, 64.81:elle 65.37:s'exporte 65.67:en 65.83:PDF.
+[v15] 67.20–71.63  67.20:Clip. 68.05:Le 68.64:savoir-faire 68.97:de 69.09:vos 69.21:experts, 69.73:au 70.23:poste, 70.91:en 71.01:quelques 71.25:minutes.
+[v16] 72.37–73.31  72.37:Demandez 72.81:une 72.99:démo.

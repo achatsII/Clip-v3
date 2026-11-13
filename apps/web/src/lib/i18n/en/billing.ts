@@ -199,6 +199,9 @@ export const billing: typeof Fr = {
     /** Back from a preview "purchase". */
     taken: (name: string) => `Preview: ${name} is now active`,
     takenHint: 'Once payment opens, this is where the purchase will happen.',
+    appHint: 'Nothing is bought in this preview: change the plan, modules or credits at the top of the page, and the whole app follows.',
+    moduleOff: 'Not in this preview: add it at the top of the page.',
+    seeWith: (name: string) => `See CLIP with ${name}`,
   },
   advisor: {
     eyebrow: 'For your plant',

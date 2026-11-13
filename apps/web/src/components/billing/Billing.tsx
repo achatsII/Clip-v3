@@ -153,7 +153,7 @@ export function LowBalanceBanner() {
 /** La feuille par-dessus la tâche : pourquoi, ce que le plan conseillé donne, l'achat. */
 export function Paywall({ client }: { client: BillingClient }) {
   const t = useMessages()
-  const { paywall, closePaywall, state, refresh } = useBilling()
+  const { paywall, closePaywall, state, refresh, preview } = useBilling()
   const { role, can } = useSession()
   // Qui n'achète pas peut quand même plaider : le dossier pour la direction, avec ce plan proposé.
   const reportOn = useToggle('valueReport')
@@ -169,12 +169,16 @@ export function Paywall({ client }: { client: BillingClient }) {
   const refusedCredits = paywall.refusal?.code === 'insufficient_credits'
   const credits = refusedCredits || feature === 'ai_credits'
   const inShell = !!nativeEnv()
+  // Dans l'app, la vraie vente passe par le magasin. L'aperçu, lui, ne vend rien : « Voir CLIP avec … »
+  // change l'aperçu, sans prix ni essai du web (règles des magasins).
+  const storeSale = inShell && !preview
+  const previewInApp = inShell && preview
   // Un module (Académie, Relevés) : son essai si le plan le reçoit, sinon le plan qui le reçoit. Un
   // module ne se vend pas dans les magasins : dans l'app, rien à acheter pour lui.
   const mod = credits ? null : moduleOf(feature)
   const shownModule = mod && modulesOn.some((m) => m.key === mod.key) ? mod : null
   const mo = shownModule && plans.data ? moduleOffer(plans.data.plans, state, shownModule, paywall.refusal?.upgradeAddon) : null
-  const addon = inShell ? null : (mo?.addon ?? null)
+  const addon = storeSale ? null : (mo?.addon ?? null)
   const plan = plans.data ? (shownModule ? (mo?.plan ?? null) : planFor(plans.data.plans, state, credits ? 'ai_credits' : feature, paywall.refusal?.upgradePlan)) : null
   /** Ce qui s'achète : le module, sinon le plan. */
   const offer = addon ?? plan
@@ -251,7 +255,7 @@ export function Paywall({ client }: { client: BillingClient }) {
               {t.billing.modules.eyebrow} · {mt.name}
             </p>
             <p className="flex items-center gap-2 text-3xl font-black tracking-tighter">
-              {MODULE_ICONS[shownModule.key]} {trialDays > 0 ? t.billing.modules.trial(trialDays) : mt.name}
+              {MODULE_ICONS[shownModule.key]} {trialDays > 0 && !inShell ? t.billing.modules.trial(trialDays) : mt.name}
             </p>
             <ul className="mt-4 space-y-1.5">
               {mt.points.map((l) => (
@@ -260,7 +264,7 @@ export function Paywall({ client }: { client: BillingClient }) {
                 </li>
               ))}
             </ul>
-            {price && (
+            {price && !inShell && (
               <p className={cn('mt-4 font-black tabular-nums', trialDays > 0 ? 'text-lg' : 'text-2xl')}>
                 {trialDays > 0 ? t.billing.modules.after(`${formatPrice(price.amount_cents, price.currency)} ${price.interval === 'yearly' ? t.billing.perYear : t.billing.perMonth}`) : formatPrice(price.amount_cents, price.currency)}
                 {trialDays === 0 && <span className="text-sm font-bold opacity-80"> {price.interval === 'yearly' ? t.billing.perYear : t.billing.perMonth}</span>}
@@ -290,14 +294,14 @@ export function Paywall({ client }: { client: BillingClient }) {
             )}
           </div>
         </div>
-      ) : shownModule && inShell ? (
+      ) : shownModule && storeSale ? (
         <p className="mt-4 font-bold text-slate-500">{t.billing.managedByAdmin}</p>
       ) : credits && plans.data ? (
         <p className="mt-4 font-bold text-slate-500">{renewalText(c)}</p>
       ) : (
         <p className="mt-4 font-bold text-slate-500">{w.seePlansPage}</p>
       )}
-      {offer && monthly && yearly && (!inShell || platform) && (
+      {offer && monthly && yearly && (!inShell || (storeSale && platform)) && (
         <div className="mt-4 flex justify-center gap-2">
           {(['monthly', 'yearly'] as const).map((iv) => (
             <button key={iv} type="button" onClick={() => setInterval(iv)} className={cn('btn-press h-10 rounded-xl px-4 text-sm font-black', interval === iv ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'glass-card')}>
@@ -311,14 +315,14 @@ export function Paywall({ client }: { client: BillingClient }) {
         {addon && mt && shownModule ? (
           isAdmin ? (
             <Button variant="primary" size="lg" block loading={busy} onClick={buy}>
-              {trialDays > 0 ? t.billing.modules.tryFree(trialDays) : t.billing.modules.add(mt.name)}
+              {previewInApp ? t.billing.preview.seeWith(mt.name) : trialDays > 0 ? t.billing.modules.tryFree(trialDays) : t.billing.modules.add(mt.name)}
             </Button>
           ) : advisorOn ? (
             <AskAdmin primary feature={shownModule.feature} targetName={mt.name} offerId={`module:${shownModule.key}`} />
           ) : (
             <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{t.billing.subscription.askAdmin}</p>
           )
-        ) : !plan ? null : inShell && platform ? (
+        ) : !plan ? null : storeSale && platform ? (
           // Dans l'app : l'achat dans le magasin, s'il est permis ; sinon une phrase, sans lien ni prix.
           <StoreBuy
             client={client}
@@ -332,11 +336,11 @@ export function Paywall({ client }: { client: BillingClient }) {
               retry?.()
             }}
           />
-        ) : inShell ? (
+        ) : storeSale ? (
           <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{w.managedByAdmin}</p>
         ) : isAdmin ? (
           <Button variant="primary" size="lg" block loading={busy} onClick={buy}>
-            {w.upgradeTo(plan.name)}
+            {previewInApp ? t.billing.preview.seeWith(plan.name) : w.upgradeTo(plan.name)}
           </Button>
         ) : (
           <>

@@ -117,8 +117,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   réalisations. L'IA ne fait que les commenter (`narrative.ts`, `report_summary` et
   `report_question`), avec une analyse automatique en repli. Les personnes vont par ordre
   alphabétique : un registre, jamais un palmarès. La revue de la semaine est ouverte à tous ; les
-  autres viennent avec `adoption_stats`. Un rapport lit au plus 20 000 événements et 5 000 travaux
-  (`load.ts`), et le dit.
+  autres viennent avec `adoption_stats`. Un rapport lit au plus 30 000 événements, par pages de
+  10 000, et 5 000 travaux (`load.ts`), et le dit.
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le
@@ -156,6 +156,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - `next dev` écrit `apps/web/AGENTS.md` et retouche `next-env.d.ts` : ne pas les committer.
 - Les enveloppes des routes Data ne sont pas uniformes (`result` sur `/one`, `count` sur `/count`) :
   passer par `dataApi`.
+- Une requête Data rend au plus 10 000 documents : un `limit` plus grand répond 400 (« limit must be
+  an integer between 0 and 10000 ») et l'écran tombe en erreur. Au-delà, paginer avec `skip`
+  (`loadEvents`, `src/lib/reports/load.ts`) ; le test se fait contre une fausse Gateway qui refuse
+  comme la vraie (`tests/reports-load.test.ts`).
 - La valeur interne d'un crédit d'IA, en argent, ne s'écrit nulle part dans le dépôt (code, docs,
   commits) : les prix se disent en crédits.
 
@@ -247,14 +251,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   refus `Paywall`, qui ne conseille jamais le plan actuel, seulement le moins cher des plans qui
   donnent vraiment plus (`src/lib/billing/advice.ts`). Pas de route serveur : le navigateur appelle
   la passerelle avec le jeton de l'utilisateur.
-- **L'aperçu** (toggle `billingPreview`, web seulement) : tant que le drapeau est éteint, la page
+- **L'aperçu** (toggle `billingPreview` ; dans l'app mobile, aussi `billingPreviewApp`) : tant que le drapeau est éteint, la page
   Abonnement, les modules, les cadenas, les jauges, la pastille et le conseiller se montrent quand même,
   à partir d'une copie du manifeste (`src/lib/billing/preview.ts`, comparée par
   `tests/billing-preview.test.ts`). En tête de la page, « Voyez CLIP comme une usine abonnée » choisit
   le plan, les modules et le niveau de crédits, dans cet appareil (défaut : Usine et tous les modules,
   rien ne se ferme). « Choisir » ou « Essayer » change l'aperçu au lieu de payer : rien n'est débité,
   l'IA garde sa route d'avant, le serveur ne vérifie rien de plus. Le mode se lit par `useBillingMode()`
-  (`live`, `preview`, `off`) et le client `billingClient` passe à l'un ou l'autre.
+  (`live`, `preview`, `off` ; la décision dans `billingModeOf`) et le client `billingClient` passe à l'un
+  ou l'autre. Dans l'app mobile (Expo Go, TestFlight), l'aperçu ne montre aucun prix ni achat d'ailleurs
+  (règles des magasins) : plans et modules sans prix, « Voir CLIP avec … » au lieu de payer. On coupe
+  `billingPreviewApp` (`CLIP_TOGGLES`) avant une soumission aux magasins tant que la vraie facturation
+  n'y est pas.
 - Les leviers de vente, drapeau allumé. Une limite comptée par l'app (postes, rédacteurs, instructions
   publiées) a sa jauge `UsageMeter` (`src/components/billing/Usage.tsx`). La jauge s'allume à 80 %
   (`NEAR_RATIO`, `src/lib/billing/usage.ts`) et nomme le plan qui en donne plus. La fenêtre d'une

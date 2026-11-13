@@ -1,0 +1,54 @@
+<title>12 Approuver, déployer au poste</title>
+<style>.ui.s12 .qc{left:0!important;top:0!important}.cf{position:absolute;width:12px;height:18px;border-radius:3px}</style>
+<div data-slot="shape">
+  <div class="L" id="Lwin"></div>
+  <div class="L" id="Lph"></div>
+  <div class="L" id="Lov"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_ui-approve.js"></script>
+<script data-include="_ui-qr.js"></script>
+<script data-include="_thumbs.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+useUI();
+const {T,W}=scene();
+$('Lwin').innerHTML=SCREEN('approve','s11',1120,880);
+const R=document.querySelector('.ui.s11'), bw=R.querySelector('.vb .bw'), bp=R.querySelector('.vb .bp'), toast=R.querySelector('.toast'), btn=R.querySelector('.req .btn-p');
+R.querySelector('.confetti')?.remove(); bw.style.opacity=1; bp.style.opacity=0;
+// confettis : des morceaux lancés du bouton, avec la gravité
+const COLS=['#0078ff','#00c6ff','#18c480','#ffc800','#9b2cfa','#ff2b5e'];
+const CF=Array.from({length:34},(_,i)=>({x:120+((i*53)%120)-60,y:-230,vx:((i*37)%21-10)*55,vy:-520-((i*29)%9)*55,r:(i*47)%360,c:COLS[i%6]}));
+$('Lwin').insertAdjacentHTML('beforeend',CF.map((c,i)=>`<i class="cf" id="cf${i}" style="background:${c.c};opacity:0"></i>`).join(''));
+$('Lph').innerHTML=PHOTO('ph','assets/poste-tablette.jpg');
+$('Lov').innerHTML=CHIP('c1','pin','Machine 1234','tablette du poste')+`<div class="ui s12" id="qcw" style="left:-900px;top:150px;width:600px;height:260px">${ui('qr')}</div>`+CHIP('c3','shield','Sans compte, sans mot de passe','',false,'linear-gradient(135deg,#2EE59D,#18c480)');
+Object.assign($('c1').style,{left:'-880px',top:'-470px'}); Object.assign($('c3').style,{left:'-240px',top:'400px'});
+const tA=W('v12','approuver')-0.05, tD=W('v12','deployez')-0.15, tPo=W('v12','poste')-0.08, tQ=W('v12','qr')-0.1, tCo=W('v12','compte')-0.08;
+const press=M.track(0,[[tA-0.07,1,[45,1]],[tA+0.05,0,[22,.72]]]);
+// le son : la coupe, le clic, les confettis (récompense), la coupe vers le poste, les pastilles, le code QR
+SFX([-WH,'whoosh_court',-15],[tA-0.01,'tick',-8],[tA+0.05,'recompense',-9],[tD-WH,'whoosh_court',-14],[tQ,'pop_haut',-12],[tQ+0.1,'shutter',-16]);
+SFX_CHIP(tPo); SFX_CHIP(tCo);
+const punch=PUNCH([[tA+0.04,0.03]]);
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{win:SH_WIN, bleed:SH_BLEED}, start:'win', SEQ:[[tD,'bleed']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
+  layers:[
+    {el:'Lwin',tin:null,tout:tD+0.05,update:(t)=>{
+      btn.style.transform=`scale(${(1-0.05*press(t)).toFixed(4)})`;
+      bw.style.opacity=t<tA+0.15?1:0; M.rise(bp,t,tA+0.15,null,{dy:6,lin:0.2});
+      toast.style.opacity=M.clamp((t-tA-0.2)/0.2).toFixed(3);
+      const u=t-tA-0.05; CF.forEach((c,i)=>{ const el=$('cf'+i); if(u<0){el.style.opacity=0;return;}
+        el.style.opacity=(1-M.clamp((u-0.9)/0.5)).toFixed(3);
+        el.style.left=(c.x+c.vx*u)+'px'; el.style.top=(c.y+c.vy*u+900*u*u)+'px'; el.style.transform=`rotate(${(c.r+500*u).toFixed(1)}deg)`; });
+    }},
+    {el:'Lph',tin:tD,tout:null,o:{lin:0.35},update:(t,g)=>M.dive($('ph'),g,ECRAN_TABLETTE,0,{w:TW,h:TH},{push:1.0+0.03*M.eio(M.clamp((t-tD)/3.2))})},
+    {el:'Lov',tin:tPo-0.3,tout:null,o:{lin:0.05},update:(t)=>{
+      POP($('c1'),t,tPo,{dy:-16}); POP($('qcw'),t,tQ,{dy:20,from:0.8}); POP($('c3'),t,tCo,{dy:16});
+    }},
+  ],
+  cursor:{size:46,clicks:[tA],keys:[[0,420,60],[tA-0.32,151,-229],[tA+0.25,151,-229],[tD,220,-150]]},
+  extra:(t)=>{ $('cursor').style.opacity=(M.clamp(t/0.2)*(1-M.clamp((t-tD+0.2)/0.2))).toFixed(3); },
+});
+</script>

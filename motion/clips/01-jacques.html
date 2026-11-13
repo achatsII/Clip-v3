@@ -1,0 +1,31 @@
+<title>01 Jacques à sa machine</title>
+<div data-slot="shape">
+  <div class="L" id="Lv"></div>
+  <div class="L" id="Lov"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_shared.js"></script>
+<script>
+useChips();
+const {T,W}=scene();
+$('Lv').innerHTML=VIDEO('v','assets/c1-expert.webm','assets/c1-expert.jpg');
+$('Lov').innerHTML=CHIP('c1','user','Jacques','machiniste')+`<i class="dot2" id="d1" style="left:-470px;top:282px"></i>`+CHIP('c2','wrench','Machine 1234','les rails');
+Object.assign($('c1').style,{left:'-250px',top:'-432px'}); Object.assign($('c2').style,{left:'-430px',top:'326px'});
+const tJ=W('v01','jacques')-0.05, tM=W('v01','machine')-0.05, tP=W('v01','personne')-0.05;
+// le son : l'atelier et la broche de la machine, un tic et un pop par pastille
+SFX([0,'usine',-21,{dur:6.4,fade:0.5}],[0.04,'broche',-15,{dur:2.6,fade:0.25}]);
+SFX_CHIP(tJ); SFX([tM,'tick',-12],[tM+0.22,'pop',-14]);
+M.scene({
+  W:1920,H:1080,bg:'#0f172a',center:CENTER,T,intro:null,
+  SH:{bleed:SH_BLEED}, start:'bleed', SEQ:[],
+  layers:[
+    {el:'Lv',tin:null,tout:null,update:(t,g)=>{fitPhoto($('v'),g,1.0+0.045*M.eio(t/3.2)); syncVideo($('v'),t);}},
+    {el:'Lov',tin:null,tout:null,update:(t)=>{
+      POP($('c1'),t,tJ,{dy:-18});
+      POP($('d1'),t,tM,{dy:0,from:0.2});
+      POP($('c2'),t,tM+0.12,{dy:18});
+      $('c1').querySelector('i').style.transform=`scale(${(1+0.12*M.pulse(t,tP+0.1,0.25)).toFixed(4)})`;
+    }},
+  ],
+});
+</script>

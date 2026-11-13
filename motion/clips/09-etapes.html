@@ -1,0 +1,47 @@
+<title>09 Étapes, extrait, mises en garde</title>
+<style>.ui.s5 .gp{top:0!important;left:0!important}.ui.s5 .res{left:0!important;top:0!important}
+.vfill{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}</style>
+<div data-slot="shape">
+  <div class="L" id="Lgen"></div>
+  <div class="L" id="Lres"></div>
+  <div class="L" id="Lp3"></div>
+  <div class="L" id="Lp1"></div>
+</div><!--/shape-->
+<style data-include="_shared.css"></style>
+<script data-include="_ui.js"></script>
+<script data-include="_ui-gen.js"></script>
+<script data-include="_ui-result.js"></script>
+<script data-include="_ui-player3.js"></script>
+<script data-include="_ui-player1.js"></script>
+<script data-include="_thumbs.js"></script>
+<script data-include="_shared.js"></script>
+<script>
+useUI();
+const {T,W}=scene();
+$('Lgen').innerHTML=SCREEN('gen','s5',540,600); GEN_SETUP().done();
+$('Lres').innerHTML=SCREEN('result','s5',525,790);
+const SCR=(name,big)=>`<div class="ui" style="left:${-TW/2}px;top:${-TH/2}px;width:${TW}px;height:${TH}px;border-radius:28px;overflow:hidden">${ui(name,big)}</div>`;
+$('Lp3').innerHTML=SCR('player3',{'rails-huile':'assets/rails-huile.jpg'}); $('vs3').innerHTML=VIDEO('v4','assets/c4-huile.webm','assets/c4-huile.jpg'); $('v4').className='vfill';
+$('Lp1').innerHTML=SCR('player1',{'cadenas':'assets/cadenas.jpg'}); $('vs1').innerHTML=VIDEO('v5','assets/c5-cadenas.webm','assets/c5-cadenas.jpg'); $('v5').className='vfill';
+const rows=[...document.querySelectorAll('#Lres .st')];
+const tRes=W('v09','action')-0.3, tE=W('v09','etape')-0.15, tX=W('v09','extrait')-0.2, tM=W('v09','mises')-0.15, tG=W('v09','garde')-0.06;
+const w1=document.querySelector('#Lp1 .pl-warn'), w3=document.querySelector('#Lp3 .pl-warn');
+// le son : l'instruction s'ouvre, les cinq étapes tombent (tic-tic-tic), l'extrait, la mise en garde qui frappe
+SFX([tRes-WH,'whoosh_court',-15],[tX-WH,'whoosh_court',-14],[tX+0.35,'pop',-14],[tM-WH,'whoosh_court',-16],[tG,'pop_haut',-11],[tG+0.02,'impact_moyen',-16]);
+rows.forEach((r,i)=>SFX([tE+0.09*i,'tick',-13]));
+const punch=PUNCH([[tG+0.05,0.03]]);
+M.scene({
+  W:1920,H:1080,bg:BG,center:CENTER,T,intro:null,
+  SH:{gen:SH_GEN, res:SH_RES, tab:SH_TAB}, start:'gen', SEQ:[[tRes,'res'],[tX,'tab']],
+  geom:(t,g)=>{ g.s*=1+punch(t); return g; },
+  layers:[
+    {el:'Lgen',tin:null,tout:tRes+0.05},
+    {el:'Lres',tin:tRes,tout:tX+0.05,o:{lin:0.3},update:(t)=>{ rows.forEach((r,i)=>POP(r,t,tE+0.09*i,{dy:22,from:0.9,lin:0.16})); }},
+    {el:'Lp3',tin:tX,tout:tM,o:{lin:0.3},update:(t)=>{ M.video($('v4'),t-tX); M.rise(w3,t,tX+0.35,null,{dy:12,lin:0.25}); }},
+    {el:'Lp1',tin:tM,tout:null,o:{lin:0.25},update:(t)=>{
+      M.video($('v5'),t-tM);
+      M.rise(w1,t,tG,null,{dy:22,lin:0.25}); w1.style.transform+=` scale(${(1+0.06*M.pulse(t,tG+0.25,0.22)).toFixed(4)})`;
+    }},
+  ],
+});
+</script>
