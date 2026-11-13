@@ -13,6 +13,7 @@
  * Pas un LMS : ni cours libres, ni catalogue, ni palmarès (VISION.md).
  */
 import type { DataApi, Doc } from '../gateway/data'
+import { toCsv, type CsvSep } from '../util/csv'
 import { T } from './repo'
 import type { MatrixCell } from './training'
 import type { Operator, OrgSettings, Qualification, QualificationLevel, Shift } from './types'
@@ -146,17 +147,13 @@ export function dueQualifications(latest: Map<string, Qualification>, operators:
 
 /* ───────────────────────── Le registre ───────────────────────── */
 
-const cell = (v: unknown) => {
-  const s = v === null || v === undefined ? '' : String(v)
-  // Une cellule qui commence par = + - @ ne devient jamais une formule dans le tableur.
-  const safe = /^[=+\-@]/.test(s) ? `'${s}` : s
-  return /[",;\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
-}
-
-/** Le registre pour l'audit, en CSV : chaque signature, la plus récente d'abord (le journal entier). */
-export function registerCsv(docs: Array<Doc<Qualification>>, head: string[], levelName: (l: QualificationLevel) => string, date: (iso: string | null) => string): string {
-  const rows = [...docs].sort((a, b) => b.json_data.at.localeCompare(a.json_data.at)).map(({ json_data: q }) => [q.operatorName, q.stationName, levelName(q.level), q.byName, date(q.at), date(q.validUntil), `${q.trainingsDone}/${q.trainingsRequired}`, q.note ?? ''])
-  return [head, ...rows].map((r) => r.map(cell).join(',')).join('\n')
+/**
+ * Le registre pour l'audit, en CSV : chaque signature, la plus récente d'abord (le journal entier).
+ * Les questions en deux colonnes de nombres : « 2/3 » deviendrait une date dans le tableur.
+ */
+export function registerCsv(docs: Array<Doc<Qualification>>, head: string[], levelName: (l: QualificationLevel) => string, date: (iso: string | null) => string, sep: CsvSep = ','): string {
+  const rows = [...docs].sort((a, b) => b.json_data.at.localeCompare(a.json_data.at)).map(({ json_data: q }) => [q.operatorName, q.stationName, levelName(q.level), q.byName, date(q.at), date(q.validUntil), q.trainingsDone, q.trainingsRequired, q.note ?? ''])
+  return toCsv([head, ...rows], sep)
 }
 
 /* ───────────────────────── Lire, signer ───────────────────────── */

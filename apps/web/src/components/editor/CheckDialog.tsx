@@ -1,12 +1,15 @@
 'use client'
 
-import { Camera, Gauge, ListChecks, Plus, ToggleRight, Trash2, Type, X } from 'lucide-react'
+import { Camera, Gauge, ListChecks, ListTodo, Plus, Ruler, ToggleRight, Trash2, Type, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { LockBadge } from '@/components/billing/Billing'
 import { Button } from '@/components/ui/Button'
-import { Input, Label, Switch } from '@/components/ui/Field'
+import { Input, Label, Select, Switch } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
+import { useEntitlement, useGate } from '@/lib/billing/state'
 import { useMessages } from '@/lib/i18n'
-import { CHECK_KINDS, cleanChecks, newCheck, parseNumber } from '@/lib/model/checks'
+import { CHECK_KINDS, cleanChecks, newCheck, parseNumber, PLUS_KINDS } from '@/lib/model/checks'
+import { useToggle } from '@/lib/toggles'
 import { uid } from '@/lib/model/repo'
 import type { Check, CheckKind } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
@@ -18,6 +21,8 @@ export const CHECK_ICONS: Record<CheckKind, (cls?: string) => ReactNode> = {
   choice: (cls = 'h-5 w-5') => <ListChecks className={cls} />,
   text: (cls = 'h-5 w-5') => <Type className={cls} />,
   photo: (cls = 'h-5 w-5') => <Camera className={cls} />,
+  checklist: (cls = 'h-5 w-5') => <ListTodo className={cls} />,
+  measures: (cls = 'h-5 w-5') => <Ruler className={cls} />,
 }
 
 /** Un nombre tel que l'éditeur l'affiche dans un champ (« 4,5 » en français). */
@@ -36,6 +41,11 @@ export function CheckDialog({ check, locale, onSave, onRemove, onClose }: { chec
   const [max, setMax] = useState(() => asText(check?.max, locale))
   const [target, setTarget] = useState(() => asText(check?.target, locale))
   const [invalid, setInvalid] = useState(false)
+  // Le module Relevés : ses genres et ses options, une fois bâti ; hors plan, un cadenas qui mène à l'essai.
+  const plusOn = useToggle('recordsPlus')
+  const plus = useEntitlement('records_plus')
+  const gate = useGate()
+  const plusOpen = plusOn && (plus === 'open' || plus === 'off')
   const set = (patch: Partial<Check>) => {
     setInvalid(false)
     setDraft((d) => ({ ...d, ...patch }))
@@ -45,21 +55,26 @@ export function CheckDialog({ check, locale, onSave, onRemove, onClose }: { chec
   function changeKind(k: CheckKind) {
     // Le libellé reste ; ce qui ne sert qu'à l'ancien genre part.
     const fresh = newCheck(k, draft.label)
-    setDraft({ ...fresh, id: draft.id, ...(draft.optional ? { optional: true } : {}) })
+    setDraft({ ...fresh, id: draft.id, ...(draft.optional ? { optional: true } : {}), ...(draft.how ? { how: draft.how } : {}) })
     setInvalid(false)
   }
 
   function save() {
+    // Enregistrer un relevé que l'IA a proposé, c'est le garder.
+    const { proposed: _p, ...rest } = draft
     const candidate = {
-      ...draft,
-      ...(kind === 'measure' ? { min: parseNumber(min), max: parseNumber(max), target: parseNumber(target) } : {}),
+      ...rest,
+      ...(kind === 'measure' || kind === 'measures' ? { min: parseNumber(min), max: parseNumber(max), target: parseNumber(target) } : {}),
       ...(kind === 'choice' ? { options: (draft.options ?? []).filter((o) => o.label.trim()) } : {}),
+      ...(kind === 'checklist' ? { items: (draft.items ?? []).filter((o) => o.label.trim()) } : {}),
     }
     const [clean] = cleanChecks([candidate], 1)
     if (!clean) return setInvalid(true)
     onSave(clean)
     onClose()
   }
+  const items = draft.items ?? []
+  const judged = kind !== 'text' && kind !== 'photo'
 
   const options = draft.options ?? []
   return (
@@ -92,14 +107,14 @@ export function CheckDialog({ check, locale, onSave, onRemove, onClose }: { chec
         <div>
           <Label>{t.kind}</Label>
           <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t.kind}>
-            {CHECK_KINDS.map((k) => (
+            {[...CHECK_KINDS, ...(plusOn ? PLUS_KINDS : [])].map((k) => (
               <button
                 key={k}
                 type="button"
                 role="radio"
                 aria-checked={kind === k}
-                onClick={() => changeKind(k)}
-                className={cn('btn-press flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-center sm:min-h-16 sm:flex-row sm:justify-start sm:gap-2.5 sm:px-3 sm:text-left', kind === k ? 'bg-gradient-primary shadow-primary text-white' : 'glass-card text-slate-700 dark:text-slate-200')}
+                onClick={() => (PLUS_KINDS.includes(k) && !plusOpen ? gate(plus, 'records_plus', () => changeKind(k)) : changeKind(k))}
+                className={cn('btn-press relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-center sm:min-h-16 sm:flex-row sm:justify-start sm:gap-2.5 sm:px-3 sm:text-left', kind === k ? 'bg-gradient-primary shadow-primary text-white' : 'glass-card text-slate-700 dark:text-slate-200')}
               >
                 {CHECK_ICONS[k]('h-5 w-5 shrink-0')}
                 <span className="min-w-0">
@@ -107,6 +122,8 @@ export function CheckDialog({ check, locale, onSave, onRemove, onClose }: { chec
                   {/* L'explication, sur un écran qui a la place. */}
                   <span className={cn('block text-[11px] leading-tight font-bold max-sm:hidden', kind === k ? 'text-white/80' : 'text-slate-500')}>{t.kindHints[k]}</span>
                 </span>
+                {/* Le cadenas sur le bord de la tuile : le texte garde toute sa place. */}
+                {PLUS_KINDS.includes(k) && !plusOpen && <LockBadge className="absolute -top-2 right-2 shadow" />}
               </button>
             ))}
           </div>
@@ -117,7 +134,7 @@ export function CheckDialog({ check, locale, onSave, onRemove, onClose }: { chec
           <Input id="check-label" autoFocus={!check} value={draft.label} onChange={(e) => set({ label: e.target.value })} placeholder={t.labelPlaceholders[kind]} invalid={invalid && !draft.label.trim()} />
         </div>
 
-        {kind === 'measure' && (
+        {(kind === 'measure' || kind === 'measures') && (
           <div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
@@ -138,6 +155,41 @@ export function CheckDialog({ check, locale, onSave, onRemove, onClose }: { chec
               ))}
             </div>
             <p className="mt-2 text-sm font-medium text-slate-500">{t.limitsHint}</p>
+            {kind === 'measures' && (
+              <div className="mt-3 max-w-48">
+                <Label htmlFor="check-count">{t.count}</Label>
+                <Select id="check-count" value={String(draft.count ?? 3)} onChange={(e) => set({ count: Number(e.target.value) })}>
+                  {[2, 3, 4, 5, 6, 8, 10].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
+
+        {kind === 'checklist' && (
+          <div>
+            <Label>{t.items}</Label>
+            <div className="space-y-2">
+              {items.map((o, i) => (
+                <div key={o.id} className="flex items-center gap-2">
+                  <Input value={o.label} onChange={(e) => set({ items: items.map((x) => (x.id === o.id ? { ...x, label: e.target.value } : x)) })} placeholder={t.item(i + 1)} aria-label={t.item(i + 1)} wrapperClassName="flex-1" invalid={invalid && items.filter((x) => x.label.trim()).length < 2 && !o.label.trim()} />
+                  {items.length > 2 && (
+                    <button type="button" onClick={() => set({ items: items.filter((x) => x.id !== o.id) })} aria-label={t.removeItem} className="btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-900/5">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {items.length < 12 && (
+                <button type="button" onClick={() => set({ items: [...items, { id: uid('it_'), label: '' }] })} className="btn-press hover:bg-primary-soft flex h-11 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-[var(--primary)]">
+                  <Plus className="h-4 w-4" /> {t.addItem}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -184,6 +236,31 @@ export function CheckDialog({ check, locale, onSave, onRemove, onClose }: { chec
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Les options du module Relevés, regroupées : la base reste courte. */}
+        {plusOpen && (
+          <div className="space-y-4 rounded-[24px] bg-violet-50/70 p-4 dark:bg-violet-500/10">
+            <p className="label-caps text-violet-700 dark:text-violet-300">{t.plus}</p>
+            <div>
+              <Label htmlFor="check-how">{t.how}</Label>
+              <Input id="check-how" value={draft.how ?? ''} onChange={(e) => set({ how: e.target.value || null })} placeholder={t.howPlaceholder} />
+            </div>
+            {kind === 'text' && <Switch checked={!!draft.scan} onChange={(v) => set({ scan: v || undefined })} label={t.scan} description={t.scanHint} />}
+            {kind === 'photo' && (
+              <div className="max-w-48">
+                <Label htmlFor="check-photos">{t.photos}</Label>
+                <Select id="check-photos" value={String(draft.photos ?? 1)} onChange={(e) => set({ photos: Number(e.target.value) > 1 ? Number(e.target.value) : null })}>
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+            {judged && <Switch checked={!!draft.authorize} onChange={(v) => set({ authorize: v || undefined })} label={t.authorize} description={t.authorizeHint} />}
           </div>
         )}
 

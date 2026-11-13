@@ -56,7 +56,7 @@ document et filtré à chaque lecture). Le jour où l'identifiant `clip-v3` exis
 | `clip_import` | un lot d'import de documents | fichiers et leur état |
 | `clip_checkpoint` | un point de retour du brouillon (modifications enregistrées, pas publiées) | instruction, contenu complet, raison, empreinte, auteur, date |
 | `clip_operator` | une personne de l'équipe au poste, sans compte | nom, empreinte de son code (`pinHash`, jamais le code), quart, équipe, postes habituels, actif |
-| `clip_execution` | le travail fait au poste, écrit une fois à la fin d'une instruction qui a des relevés | instruction, version, poste, qui (personne de l'équipe ou connectée), début et fin, chaque réponse (valeur, limites, verdict, note d'écart), nombre d'écarts |
+| `clip_execution` | le travail fait au poste, écrit une fois à la fin d'une instruction qui a des relevés | instruction, version, poste, qui (personne de l'équipe ou connectée), début et fin, chaque réponse (valeur, limites, verdict, note d'écart ; avec le module : chaque lecture, l'état de chaque point, les photos, qui a autorisé l'écart), nombre d'écarts |
 | `clip_training` | une formation validée au poste, écrite une fois quand la personne réussit | instruction, version, poste, qui (personne de l'équipe), note, chaque réponse (question, choix, juste ou non), langue, date |
 | `clip_contact` | comment joindre une personne, tenu par son app | personne, nom, courriel, langue, jetons push de ses téléphones, courriel oui/non, téléphone oui/non |
 
@@ -416,9 +416,13 @@ au plus) : une **mesure** (unité, minimum, maximum, valeur visée), un **oui ou
 bonne réponse), un **choix** (dont certains sont des écarts), un **texte** (numéro de lot) ou une
 **photo** de preuve.
 
-- **La génération les prépare** : « vérifier que… » devient un oui ou non, une valeur à lire une
+- **La génération les propose** : « vérifier que… » devient un oui ou non, une valeur à lire une
   mesure avec son unité. Les limites viennent des sources, jamais d'une supposition ; sans elles,
-  la mesure n'a pas de limite et l'IA pose une question. L'assistant d'édition les change
+  la mesure n'a pas de limite et l'IA pose une question. Un relevé de l'IA reste une proposition
+  (`proposed`, deux au plus par étape) : encadré en violet sous l'étape, l'auteur le **garde** ou le
+  **retire** ; l'ouvrir et l'enregistrer, c'est le garder. Une proposition ne va jamais au poste
+  (`liveChecks`) ni dans une version publiée (`withoutProposals`, à la publication, qui en dit le
+  nombre) ; elle reste au brouillon. L'assistant d'édition les change
   (`set_checks`, la liste complète de l'étape ; un relevé gardé garde son id). Ils se traduisent
   (libellés et choix) et s'impriment comme des cases à remplir.
 - **Dans l'éditeur**, comme au poste : le bloc « À relever » sous l'étape, « + Relevé » à côté de
@@ -437,6 +441,32 @@ bonne réponse), un **choix** (dont certains sont des écarts), un **texte** (nu
   « Écarts » d'un geste, la recherche, le détail de chaque relevé et sa fiche à imprimer
   (`src/lib/pdf/executionSheet.ts`). L'accueil signale les écarts des 7 derniers jours ; le menu
   d'une instruction qui a des relevés mène à son registre.
+
+### Le module Relevés (toggle `recordsPlus`, feature `records_plus`)
+
+Pour l'usine qui fait de ses instructions sa saisie de données (inspiré de CLIP V2, plus simple). La
+base reste courte : le module ajoute deux genres et quelques options, regroupés à part.
+
+- **Deux genres** : la **liste à cocher** (2 à 12 points ; au poste, chaque point ✓, ✗ ou S. O. ; un
+  ✗ est un écart) et les **mesures répétées** (2 à 10 lectures, chacune jugée par les limites ; le
+  poste montre la plus basse, la plus haute et la moyenne ; la trace garde chaque lecture et la
+  moyenne).
+- **Les options** (encadré « Relevés avancés » de `CheckDialog`) : « comment mesurer » (une ligne
+  sous le relevé, au poste) ; un texte qui **se scanne** (numéro de lot ou de série, par le lecteur
+  de codes) ; **plusieurs photos** (2 à 6) ; un écart **à faire autoriser** (au poste, le nom de qui
+  a autorisé de continuer, exigé avec la note ; pas pour un texte ni une photo).
+- **Au registre** : « Travaux | Tendances ». Une carte par mesure (instruction × relevé) : la valeur
+  dans le temps, la bande des limites d'aujourd'hui, l'écart d'une mesure répétée, les écarts en
+  rouge, une bulle au survol (`trendsOf`, sur les 300 travaux les plus récents de la vue).
+  « Exporter (CSV) » prend jusqu'à 5 000 travaux de la vue (`executionsCsv`) : une ligne par relevé,
+  la mesure en nombre avec son unité et ses limites, une colonne « Détail » (les lectures, les points,
+  les liens des photos). En français, point-virgule et virgule décimale (Excel en français) ; les
+  dates en `2026-11-13 14:05` ; un texte qui commence par = + - @ prend une apostrophe (jamais une
+  formule). Le même module CSV sert au registre de l'Académie. L'export ne paraît pas dans la
+  coquille.
+- **Sans le module** : les genres du module ont un cadenas qui ouvre l'essai, les options ne
+  paraissent pas, et le registre invite à l'essai. Un relevé déjà écrit marche toujours au poste :
+  un module échu ne casse jamais une instruction publiée.
 
 ### L'approbation à plusieurs (toggle `multiApproval`, `src/lib/model/approvals.ts`)
 
@@ -705,7 +735,7 @@ une fois par organisation. Leur prix suit le plan de base : un module par plan d
 `addonFor`). La page Abonnement a sa section « Modules » ; la fenêtre des refus d'une feature de
 module propose son essai (`moduleOffer`, le module désigné par `upgrade_hint.addon_code` d'abord) ou,
 sur Gratuit et Solo, le plan qui le reçoit. Les prix se lisent toujours à la plateforme. Un module se
-montre et se vend seulement une fois bâti (toggles `academy`, `recordsPlus`).
+montre et se vend seulement une fois bâti (toggles `academy`, `recordsPlus`, allumés tous les deux).
 
 **Le conseiller d'achat** (toggle `salesAdvisor`, `src/lib/billing/advisor.ts`). De temps en temps,
 l'offre qui sert vraiment l'usine, sur une carte de l'accueil (`OfferCard`), jamais au poste ni

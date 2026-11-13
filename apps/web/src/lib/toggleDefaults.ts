@@ -45,7 +45,7 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   salesAdvisor: true,
   // Les modules en option, montrés et vendus seulement une fois bâtis : l'Académie (bâtie), les Relevés avancés.
   academy: true,
-  recordsPlus: false,
+  recordsPlus: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */

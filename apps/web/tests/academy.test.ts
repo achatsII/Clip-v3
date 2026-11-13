@@ -70,12 +70,14 @@ describe('les rappels et le registre', () => {
     expect(due.map((d) => [d.operatorId, d.expired])).toEqual([['ana', true], ['ben', false]])
   })
 
-  it('le registre est le journal entier, en CSV, sans formule possible dans le tableur', () => {
-    const csv = registerCsv([q('ana', 'p12', '2026-01-01T00:00:00Z', { note: '=HYPERLINK("x")' }), q('ben', 'p12', '2026-02-01T00:00:00Z', { level: 'none' })], ['Personne', 'Poste', 'Niveau', 'Par', 'Le', 'Jusqu’au', 'Questions', 'Note'], (l) => ({ qualified: 'Qualifiée', trainer: 'Peut former', none: 'Retirée' })[l], (d) => d?.slice(0, 10) ?? '')
+  it('le registre est le journal entier, en CSV, sans formule possible, les questions en nombres', () => {
+    const csv = registerCsv([q('ana', 'p12', '2026-01-01T00:00:00Z', { note: '=HYPERLINK("x")' }), q('ben', 'p12', '2026-02-01T00:00:00Z', { level: 'none' })], ['Personne', 'Poste', 'Niveau', 'Par', 'Le', 'Jusqu’au', 'Questions validées', 'Questions du poste', 'Note'], (l) => ({ qualified: 'Qualifiée', trainer: 'Peut former', none: 'Retirée' })[l], (d) => d?.slice(0, 10) ?? '')
     const lines = csv.split('\n')
     expect(lines).toHaveLength(3)
-    expect(lines[1]).toBe('BEN,Poste p12,Retirée,Mélanie,2026-02-01,,2/2,')
-    expect(lines[2]).toBe(`ANA,Poste p12,Qualifiée,Mélanie,2026-01-01,,2/2,"'=HYPERLINK(""x"")"`)
+    expect(lines[1]).toBe('BEN,Poste p12,Retirée,Mélanie,2026-02-01,,2,2,')
+    expect(lines[2]).toBe(`ANA,Poste p12,Qualifiée,Mélanie,2026-01-01,,2,2,"'=HYPERLINK(""x"")"`)
+    // En français : le point-virgule, que le tableur attend.
+    expect(registerCsv([q('ana', 'p12', '2026-01-01T00:00:00Z')], ['a'], () => 'Qualifiée', (d) => d?.slice(0, 10) ?? '', ';').split('\n')[1]).toBe('ANA;Poste p12;Qualifiée;Mélanie;2026-01-01;;2;2;')
   })
 
   it('signer écrit une signature au journal, avec l’échéance de l’usine ; un retrait n’en a pas', async () => {

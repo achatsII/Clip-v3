@@ -130,8 +130,10 @@ instructions publiées sont réellement consultées au plancher semaine après s
 - Un MES ou un ERP (ordres de fabrication, temps de cycle) : on se branche sur leurs numéros
   (codes, étiquettes, QR), on ne les remplace pas.
 - Un logiciel qualité complet (cartes de contrôle, SPC, non-conformités et actions correctives) : à
-  une étape, on relève une valeur, on juge l'écart, on note ce qui a été fait et on garde la trace ;
-  l'analyse statistique et le suivi des actions restent ailleurs.
+  une étape, on relève une valeur, on juge l'écart, on note ce qui a été fait et on garde la trace.
+  Le module Relevés (novembre 2026) montre la tendance de chaque mesure avec ses limites et exporte
+  le registre pour le tableur ; l'analyse statistique (capabilité, cartes de contrôle) et le suivi
+  des actions restent ailleurs.
 - La génération de vidéos par l'IA.
 - Le hors ligne complet : la capture tolère un réseau instable, la consultation demande le réseau.
 

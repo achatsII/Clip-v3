@@ -121,9 +121,13 @@ function mediaKey(m: StepMedia): string {
   return `${m.kind}:${m.url}${m.kind === 'document' ? `#${m.page ?? 1}` : ''}`
 }
 
-/** Les relevés proposés par l'IA, rendus sûrs : `expected: "none"` et les champs vides ne comptent pas. */
+/**
+ * Les relevés proposés par l'IA, rendus sûrs : `expected: "none"` et les champs vides ne comptent pas.
+ * Ils restent des propositions (`proposed`) : l'auteur les garde ou les retire, et seuls ceux qu'il
+ * garde vont au poste (l'IA propose, l'humain dispose).
+ */
 function withChecks(raw: unknown): Pick<Step, 'checks'> {
-  const checks = cleanChecks(Array.isArray(raw) ? raw.slice(0, 2) : [], 2)
+  const checks = cleanChecks(Array.isArray(raw) ? raw.slice(0, 2) : [], 2).map((c) => ({ ...c, proposed: true }))
   return checks.length ? { checks } : {}
 }
 

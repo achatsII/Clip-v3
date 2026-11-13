@@ -3,6 +3,7 @@
  * Toutes les écritures passent par PATCH (seules les clés touchées changent), sauf le document
  * publié, remplacé en entier à chaque publication.
  */
+import { withoutProposals } from './checks'
 import type { DataApi, Doc } from '../gateway/data'
 import { messages, messagesIn } from '../i18n'
 import { summarizeChanges } from './diff'
@@ -98,7 +99,8 @@ export async function publishInstruction(
   } = {},
 ): Promise<{ number: number; publishedId: string | null; docNumber: string | null }> {
   const instr = doc.json_data
-  const content = instr.draft
+  // Ce qui part au poste : les relevés que l'IA a proposés et que l'auteur n'a pas gardés restent au brouillon.
+  const content = instr.draft ? withoutProposals(instr.draft) : null
   if (!content || !content.steps.length) throw new Error(messages().instructions.errors.publishWithoutSteps)
   const number = (instr.publishedVersion ?? 0) + 1
   const publishedAt = nowIso()

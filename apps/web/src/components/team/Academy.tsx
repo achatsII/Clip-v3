@@ -15,12 +15,13 @@ import { useStationInstructions, useStations, useTrainingCatalog } from '@/hooks
 import { nativeEnv } from '@/lib/bridge/native'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import type { Doc } from '@/lib/gateway/data'
-import { useMessages } from '@/lib/i18n'
+import { getLang, useMessages } from '@/lib/i18n'
 import { coverage, dueQualifications, latestQualifications, listQualifications, QUALIFICATIONS_KEY, registerCsv, revalidateMonths, REVALIDATE_CHOICES, signOff, standingOf, type CoverageCell, type Level, type ShiftKey, type Standing } from '@/lib/model/academy'
 import { coveredStations } from '@/lib/model/search'
 import { buildMatrix, listTrainings } from '@/lib/model/training'
 import type { Operator, QualificationLevel } from '@/lib/model/types'
 import { cn, formatDate } from '@/lib/util/cn'
+import { csvDate, csvSeparator, downloadCsv } from '@/lib/util/csv'
 import { TRAININGS_KEY } from './SkillsMatrix'
 
 /** L'apparence de chaque niveau : une couleur, et toujours une icône ou un compte (jamais la couleur seule). */
@@ -91,12 +92,8 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
 
   function downloadRegister() {
     const levels: Record<QualificationLevel, string> = t.signatures
-    const csv = registerCsv(quals.data ?? [], [...t.registerHead], (l) => levels[l], (d) => (d ? formatDate(d) : ''))
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' }))
-    a.download = t.registerFile(new Date().toISOString().slice(0, 10))
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+    const csv = registerCsv(quals.data ?? [], [...t.registerHead], (l) => levels[l], (d) => csvDate(d, false), csvSeparator(getLang()))
+    downloadCsv(t.registerFile(csvDate(new Date().toISOString(), false)), csv)
   }
 
   return (

@@ -47,4 +47,29 @@ export const records = {
   open: 'Voir le registre',
   /** Dans l'éditeur : le registre de cette instruction. */
   openForInstruction: 'Voir le registre',
+  /** Les genres du module Relevés, dans le registre. */
+  readingList: (values: number[], unit: string) => `${values.map(num).join(' · ')}${unit ? ` ${unit}` : ''}`,
+  checklistSummary: (ok: number, ko: number, na: number) =>
+    [ok ? `${num(ok)} conforme${ok > 1 ? 's' : ''}` : '', ko ? `${num(ko)} pas conforme${ko > 1 ? 's' : ''}` : '', na ? `${num(na)} sans objet` : ''].filter(Boolean).join(' · '),
+  itemStates: { ok: 'Conforme', ko: 'Pas conforme', na: 'Sans objet' },
+  itemLine: (label: string, state: string) => `${label} : ${state}`,
+  authorizedBy: 'Autorisé par',
+  /** Le module Relevés : les tendances et l’export. */
+  views: { list: 'Travaux', trends: 'Tendances' },
+  trendsHint: 'Chaque mesure relevée dans le temps, avec ses limites. Un point rouge est un écart.',
+  trendsEmpty: 'Aucune mesure relevée pour l’instant',
+  trendsEmptyHint: 'Ajoutez une mesure à une étape : chaque relevé fait au poste arrivera ici, dans le temps.',
+  trendCount: (n: number) => `${num(n)} relevé${n > 1 ? 's' : ''}`,
+  trendDeviations: (n: number) => (n > 1 ? `${num(n)} écarts` : n === 1 ? '1 écart' : 'Aucun écart'),
+  last: 'Dernier relevé',
+  mean: 'moyenne',
+  pointLabel: (value: string, date: string) => `${value} · ${date}`,
+  export: 'Exporter (CSV)',
+  exportHead: ['Fini le', 'Instruction', 'Poste', 'Fait par', 'Étape', 'Relevé', 'Valeur', 'Unité', 'Minimum', 'Maximum', 'Jugement', 'Détail', 'Ce qui a été fait', 'Autorisé par'],
+  exportFile: (date: string) => `registre-releves-${date}.csv`,
+  teaser: {
+    title: 'Les tendances et l’export avec le module Relevés',
+    text: 'Chaque mesure dans le temps avec ses limites, et le registre en CSV pour la qualité et l’audit.',
+    cta: 'Voir l’offre',
+  },
 }

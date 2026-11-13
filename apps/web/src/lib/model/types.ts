@@ -158,7 +158,11 @@ export interface Step {
  * dont certains sont des écarts ; `text` : un numéro de lot, une remarque ; `photo` : une preuve.
  * Les limites viennent des sources, jamais d'une supposition.
  */
-export type CheckKind = 'measure' | 'yesno' | 'choice' | 'text' | 'photo'
+/** Les cinq genres de base ; `checklist` et `measures` viennent avec le module Relevés. */
+export type CheckKind = 'measure' | 'yesno' | 'choice' | 'text' | 'photo' | 'checklist' | 'measures'
+
+/** Un point d'une liste de vérification, au poste : conforme, pas conforme (un écart), sans objet. */
+export type ItemState = 'ok' | 'ko' | 'na'
 
 export interface CheckOption {
   id: string
@@ -182,6 +186,21 @@ export interface Check {
   options?: CheckOption[]
   /** Facultatif : on peut passer l'étape sans y répondre. */
   optional?: boolean
+  /** Proposé par l'IA, pas encore gardé par l'auteur : ne va pas au poste. */
+  proposed?: boolean
+  // ── Le module Relevés ──
+  /** Comment mesurer : l'outil, l'endroit, montré sous le libellé. */
+  how?: string | null
+  /** Un texte qui se scanne (numéro de lot, de série) : « Scanner » au poste. */
+  scan?: boolean
+  /** Plusieurs photos de preuve : combien, au plus (2 à 6). */
+  photos?: number | null
+  /** Une liste de vérification : ses points (2 à 12). */
+  items?: Array<{ id: string; label: string }>
+  /** Des mesures répétées : combien de lectures (2 à 10), jugées une à une par `min` et `max`. */
+  count?: number | null
+  /** Un écart doit être autorisé par quelqu'un (son nom), en plus de la note. */
+  authorize?: boolean
 }
 
 export type EnergyType = 'electrique' | 'pneumatique' | 'hydraulique' | 'mecanique' | 'gravite' | 'thermique' | 'chimique' | 'vapeur' | 'eau' | 'autre'
@@ -661,7 +680,10 @@ export interface ExecutionAnswer {
   checkId: string
   label: string
   kind: CheckKind
-  /** measure : un nombre ; yesno : true ou false ; choice et text : le texte ; photo : l'adresse. */
+  /**
+   * measure : un nombre ; yesno : true ou false ; choice et text : le texte ; photo : l'adresse (la
+   * première) ; measures : la moyenne des lectures ; checklist : null (les points sont dans `items`).
+   */
   value: number | boolean | string | null
   unit?: string
   min?: number | null
@@ -670,6 +692,14 @@ export interface ExecutionAnswer {
   ok: boolean | null
   /** Ce que la personne a fait devant un écart (exigé pour continuer). */
   note?: string
+  /** Qui a autorisé l'écart (quand le relevé le demande). */
+  authorizedBy?: string
+  /** Des mesures répétées : chaque lecture. */
+  values?: number[]
+  /** Une liste de vérification : chaque point et son état. */
+  items?: Array<{ label: string; state: ItemState }>
+  /** Plusieurs photos : leurs adresses. */
+  photos?: string[]
 }
 
 /**

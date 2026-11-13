@@ -37,7 +37,7 @@ import type { AiApi } from '@/lib/gateway/ai'
 import type { DataApi } from '@/lib/gateway/data'
 import type { FilesApi } from '@/lib/gateway/files'
 import { ENERGY, LANGUAGES, PPE, textDir, WARNINGS } from '@/lib/model/catalog'
-import { firstIncomplete, hasChecks, type Answers, type CheckAnswer } from '@/lib/model/checks'
+import { firstIncomplete, hasChecks, type Answers, type CheckAnswer, liveChecks } from '@/lib/model/checks'
 import { buildExecution, flushExecutions, saveExecution } from '@/lib/model/executions'
 import { buildTraining, cleanQuiz, flushTrainings, saveTraining } from '@/lib/model/training'
 import { notifyEvent } from '@/lib/notify'
@@ -875,14 +875,14 @@ function DocumentView({ content, t, energyById, sections, records }: { content: 
                 ))}
               </ul>
             )}
-            {records && !!s.checks?.length && (
+            {records && liveChecks(s).length > 0 && (
               <ul className="mt-3 space-y-1 text-base font-bold text-slate-700 dark:text-slate-200">
-                {s.checks.map((c) => (
+                {liveChecks(s).map((c) => (
                   <li key={c.id} className="flex gap-2">
                     <ClipboardCheck className="mt-1 h-4 w-4 shrink-0 text-[var(--primary)]" />
                     <span>
                       {c.label}
-                      {c.kind === 'measure' && rangeText(c, t.records) ? ` · ${rangeText(c, t.records)}` : ''}
+                      {(c.kind === 'measure' || c.kind === 'measures') && rangeText(c, t.records) ? ` · ${rangeText(c, t.records)}` : ''}
                     </span>
                   </li>
                 ))}

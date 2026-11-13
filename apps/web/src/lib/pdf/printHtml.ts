@@ -5,6 +5,7 @@
  * Il s'écrit dans la langue de l'instruction (`content.language`), pas dans celle de l'outil : les
  * titres que le lecteur des opérateurs a déjà viennent de ses mots, le reste du groupe `print`.
  */
+import { liveChecks } from '../model/checks'
 import { rangeText, strings, type PlayerStrings } from '@/components/player/i18n'
 import { LANGS, messagesIn, type Messages } from '../i18n'
 import { annotationsMarkup } from '../annotations/markup'
@@ -82,13 +83,15 @@ export interface PrintMeta {
 function checksBlock(s: Step, p: PlayerStrings): string {
   const r = p.records
   const box = '<span class="box"></span>'
-  const rows = (s.checks ?? []).map((c) => {
+  const rows = liveChecks(s).map((c) => {
     let field = ''
     if (c.kind === 'measure') field = `<span class="fill"></span>${c.unit ? ` ${esc(c.unit)}` : ''}`
+    else if (c.kind === 'measures') field = Array.from({ length: c.count ?? 3 }, () => '<span class="fill"></span>').join(' ') + (c.unit ? ` ${esc(c.unit)}` : '')
+    else if (c.kind === 'checklist') field = (c.items ?? []).map((i) => `<br>${box}${esc(i.label)}`).join('')
     else if (c.kind === 'yesno') field = `${box}${esc(r.yes)} ${box}${esc(r.no)}`
     else if (c.kind === 'choice') field = (c.options ?? []).map((o) => `${box}${esc(o.label)}`).join(' ')
     else if (c.kind === 'text') field = '<span class="fill wide"></span>'
-    const range = c.kind === 'measure' ? rangeText(c, r) : null
+    const range = c.kind === 'measure' || c.kind === 'measures' ? rangeText(c, r) : null
     return `<div class="ck"><b>${esc(c.label)}</b> ${field}${range ? `<small>${esc(range)}</small>` : ''}</div>`
   })
   return `<div class="checks"><p>${esc(r.title)}</p>${rows.join('')}</div>`
@@ -118,7 +121,7 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
           ${w ? `<p class="warn ${w.level}"><b>${t.warning(esc(cat.warnings[w.level]))}</b> ${esc(w.text)}</p>` : ''}
           ${s.text ? `<p class="text">${esc(s.text)}</p>` : ''}
           ${s.keyPoints?.length ? `<ul class="kp">${s.keyPoints.map((k) => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
-          ${meta.records && s.checks?.length ? checksBlock(s, p) : ''}
+          ${meta.records && liveChecks(s).length ? checksBlock(s, p) : ''}
         </div>
       </article>`
     })

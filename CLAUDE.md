@@ -55,7 +55,15 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   choix, un texte ou une photo (`Step.checks`, `src/lib/model/checks.ts`) ; un écart exige une note,
   et on ne passe pas une étape incomplète. La trace s'écrit à la fin dans `clip_execution`
   (`src/lib/model/executions.ts`, file d'attente si le réseau manque) et se lit dans `/registre`.
-  Les limites d'une mesure ne s'inventent jamais.
+  Les limites d'une mesure ne s'inventent jamais. Les relevés que l'IA prépare sont des propositions
+  (`proposed`) : l'auteur les garde ou les retire ; ni le poste ni la publication n'en voient une
+  (`liveChecks`, `withoutProposals`).
+- **Module Relevés** (toggle `recordsPlus`, feature `records_plus`) : la liste à cocher (conforme,
+  pas conforme, sans objet), les mesures répétées (chaque lecture jugée), « comment mesurer », le
+  scan d'un numéro de lot, plusieurs photos, l'écart à faire autoriser ; au registre, les tendances
+  de chaque mesure et l'export CSV (`src/lib/model/trends.ts`, `src/lib/util/csv.ts` : point-virgule
+  et virgule décimale en français, un nombre reste un nombre, jamais une formule). Module échu : les
+  relevés déjà écrits marchent toujours au poste.
 - **Approbation à plusieurs** (toggle `multiApproval`, mode `all`) : chaque groupe de l'usine signe
   (`src/lib/model/approvals.ts`) ; une signature vaut pour le contenu signé (empreinte), la dernière
   publie. Toggle coupé, le mode se comporte comme une seule approbation.
@@ -134,7 +142,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   299 $). Un module par plan de base (`academie_equipe`…) ; l'app ne propose que celui de son plan
   (`MODULES`, `src/lib/billing/catalog.ts`, comparé au manifeste par le test). Le rattachement au plan de
   base n'a pas de champ documenté : la simulation de `billing-publish` le confirme. Un module se montre
-  et se vend seulement une fois bâti (toggles `academy`, `recordsPlus`, éteints jusque-là).
+  et se vend seulement une fois bâti (toggles `academy` et `recordsPlus`, allumés : les deux le sont).
 - Ce qui se facture : `ai_credits`, une banque de crédits d'IA par mois · `published_instructions`,
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,

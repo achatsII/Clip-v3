@@ -43,7 +43,7 @@ export const academy: typeof Fr = {
   revalidateEvery: 'Revalidate',
   every: (months: number) => (months ? `every ${num(months)} months` : 'never'),
   register: 'Register (CSV)',
-  registerHead: ['Person', 'Station', 'Level', 'Signed off by', 'On', 'Valid until', 'Questions validated', 'Note'],
+  registerHead: ['Person', 'Station', 'Level', 'Signed off by', 'On', 'Valid until', 'Questions validated', 'Questions required', 'Note'],
   registerFile: (date: string) => `qualification-register-${date}.csv`,
   registerEmpty: 'No sign-off in the register yet.',
   attestation: 'Print the certificate',

@@ -5,35 +5,58 @@
  */
 import type { DataApi, Doc } from '../gateway/data'
 import type { Messages } from '../i18n/core'
-import { answered, verdict, type Answers } from './checks'
+import { answered, liveChecks, readingsStats, verdict, type Answers } from './checks'
 import { nowIso, T } from './repo'
-import type { Execution, ExecutionAnswer, InstructionContent } from './types'
+import type { Check, Execution, ExecutionAnswer, InstructionContent, ItemState } from './types'
 import { outbox } from '../util/outbox'
 
 export type ExecutionMeta = Omit<Execution, 'answers' | 'deviations' | 'instructionTitle' | 'finishedAt'> & { finishedAt?: string }
 
+/** Ce que la trace garde d'une réponse, selon le genre : la valeur lisible, et le détail des genres du module. */
+function recorded(c: Check, v: NonNullable<Answers[string]>['value']): Pick<ExecutionAnswer, 'value' | 'values' | 'items' | 'photos'> {
+  switch (c.kind) {
+    case 'choice':
+      return { value: c.options?.find((o) => o.id === v)?.label ?? null }
+    case 'measures': {
+      const values = (v as number[]).slice(0, c.count ?? undefined)
+      return { value: readingsStats(values)?.mean ?? null, values }
+    }
+    case 'checklist': {
+      const states = v as Record<string, ItemState>
+      return { value: null, items: (c.items ?? []).map((i) => ({ label: i.label, state: states[i.id] })) }
+    }
+    case 'photo':
+      return Array.isArray(v) ? { value: (v as string[]).find((x) => !!x) ?? null, photos: (v as string[]).filter(Boolean) } : { value: v as string }
+    default:
+      return { value: v as number | boolean | string }
+  }
+}
+
 /**
  * La trace, à partir du contenu dans sa langue d'origine (celle que lit le responsable) et des
- * réponses. Un relevé facultatif laissé vide n'y figure pas ; un choix s'écrit par son libellé.
+ * réponses. Un relevé facultatif laissé vide n'y figure pas ; un choix s'écrit par son libellé ; une
+ * proposition de l'IA pas encore gardée n'existe pas au poste.
  */
 export function buildExecution(content: InstructionContent, answers: Answers, meta: ExecutionMeta): Execution {
   const list: ExecutionAnswer[] = []
   for (const step of content.steps)
-    for (const c of step.checks ?? []) {
+    for (const c of liveChecks(step)) {
       const a = answers[c.id]
       const v = a?.value ?? null
       if (!answered(c, v)) continue
+      const ok = verdict(c, v)
       list.push({
         stepId: step.id,
         stepTitle: step.title,
         checkId: c.id,
         label: c.label,
         kind: c.kind,
-        value: c.kind === 'choice' ? (c.options?.find((o) => o.id === v)?.label ?? null) : v,
+        ...recorded(c, v),
         ...(c.unit ? { unit: c.unit } : {}),
-        ...(c.kind === 'measure' ? { min: c.min ?? null, max: c.max ?? null } : {}),
-        ok: verdict(c, v),
+        ...(c.kind === 'measure' || c.kind === 'measures' ? { min: c.min ?? null, max: c.max ?? null } : {}),
+        ok,
         ...(a?.note?.trim() ? { note: a.note.trim() } : {}),
+        ...(ok === false && c.authorize && a?.authorizedBy?.trim() ? { authorizedBy: a.authorizedBy.trim() } : {}),
       })
     }
   const { finishedAt, ...rest } = meta
@@ -93,6 +116,8 @@ type RecordsText = Messages['records']
 /** La valeur relevée, lisible : « 4,8 bar », « Oui », « Sale », le texte ; une photo se montre à part. */
 export function answerValue(a: ExecutionAnswer, t: RecordsText): string {
   if (a.kind === 'measure' && typeof a.value === 'number') return t.value(a.value, a.unit ?? '')
+  if (a.kind === 'measures' && a.values?.length) return t.readingList(a.values, a.unit ?? "")
+  if (a.kind === 'checklist' && a.items) return t.checklistSummary(a.items.filter((i) => i.state === 'ok').length, a.items.filter((i) => i.state === 'ko').length, a.items.filter((i) => i.state === 'na').length)
   if (a.kind === 'yesno' && typeof a.value === 'boolean') return a.value ? t.yes : t.no
   if (a.kind === 'photo') return t.photo
   return typeof a.value === 'string' ? a.value : ''
@@ -100,7 +125,7 @@ export function answerValue(a: ExecutionAnswer, t: RecordsText): string {
 
 /** Les limites d'une mesure au moment du travail : « entre 4,5 et 5,5 bar » ; null sans limites. */
 export function answerLimits(a: ExecutionAnswer, t: RecordsText): string | null {
-  if (a.kind !== 'measure') return null
+  if (a.kind !== 'measure' && a.kind !== 'measures') return null
   const unit = a.unit ?? ''
   const lo = typeof a.min === 'number' ? a.min : null
   const hi = typeof a.max === 'number' ? a.max : null

@@ -49,7 +49,7 @@ export const academy = {
   every: (months: number) => (months ? `tous les ${num(months)} mois` : 'jamais'),
   /** Le registre et l’attestation. */
   register: 'Registre (CSV)',
-  registerHead: ['Personne', 'Poste', 'Niveau', 'Validé par', 'Le', 'Valide jusqu’au', 'Questions validées', 'Note'],
+  registerHead: ['Personne', 'Poste', 'Niveau', 'Validé par', 'Le', 'Valide jusqu’au', 'Questions validées', 'Questions du poste', 'Note'],
   registerFile: (date: string) => `registre-qualifications-${date}.csv`,
   registerEmpty: 'Aucune validation au registre pour l’instant.',
   attestation: 'Imprimer l’attestation',

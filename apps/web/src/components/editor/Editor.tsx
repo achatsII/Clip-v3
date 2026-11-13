@@ -54,7 +54,7 @@ import { changedSteps, followStep, readVersion, remoteDraftAction } from '@/lib/
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
 import { addSignatures, approvalsOf, contentHash, groupsToSign, needsApproval, signingGroups, signingState } from '@/lib/model/approvals'
-import { hasChecks } from '@/lib/model/checks'
+import { hasChecks, proposedChecks } from '@/lib/model/checks'
 import { notifyEvent } from '@/lib/notify'
 import { diffSteps } from '@/lib/model/diff'
 import { inheritSection, moveStep as moveStepKeepingSections } from '@/lib/model/sections'
@@ -985,6 +985,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           </>
         }
       >
+        {/* Les relevés que l'IA a proposés et que l'auteur n'a pas gardés restent au brouillon. */}
+        {recordsToggle && proposedChecks(content.steps) > 0 && (
+          <p className="mb-4 flex items-start gap-2 rounded-2xl bg-violet-50 p-3 text-sm font-bold text-violet-900 dark:bg-violet-500/10 dark:text-violet-100">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0" /> {t.editor.checks.proposedPublish(proposedChecks(content.steps))}
+          </p>
+        )}
         {isBlock ? (
           // Un bloc commun ne va à aucun poste : on dit ce que sa publication met à jour.
           <>

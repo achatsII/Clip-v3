@@ -417,7 +417,16 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
         </div>
       )}
 
-      {p.records && checks.length > 0 && <ChecksBlock step={step} language={p.content.language} readOnly={readOnly} onEdit={setEditingCheck} />}
+      {p.records && checks.length > 0 && (
+        <ChecksBlock
+          step={step}
+          language={p.content.language}
+          readOnly={readOnly}
+          onEdit={setEditingCheck}
+          onKeep={(c) => setChecks(checks.map((x) => (x.id === c.id ? (({ proposed: _p, ...rest }) => rest)(x) : x)))}
+          onDismiss={(c) => setChecks(checks.filter((x) => x.id !== c.id))}
+        />
+      )}
 
       {/* Ajouter seulement ce qui manque : une mise en garde, un point clé (trois au plus), un relevé. */}
       {!readOnly && (!warning || keyPoints.length < 3 || canAddCheck) && (
@@ -457,7 +466,7 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
  * Les relevés de l'étape, comme l'opérateur les lira (dans la langue de l'instruction) : le genre,
  * le libellé, et ce qui juge la réponse. Un toucher ouvre le relevé.
  */
-function ChecksBlock({ step, language, readOnly, onEdit }: { step: Step; language: string; readOnly?: boolean; onEdit: (c: StepCheck) => void }) {
+function ChecksBlock({ step, language, readOnly, onEdit, onKeep, onDismiss }: { step: Step; language: string; readOnly?: boolean; onEdit: (c: StepCheck) => void; onKeep: (c: StepCheck) => void; onDismiss: (c: StepCheck) => void }) {
   const t = useMessages().editor.checks
   const r = playerStrings(language).records
   const detail = (c: StepCheck): string => {
@@ -465,6 +474,8 @@ function ChecksBlock({ step, language, readOnly, onEdit }: { step: Step; languag
     if (c.kind === 'measure') parts.push(rangeText(c, r) ?? c.unit ?? t.kinds.measure)
     else if (c.kind === 'yesno') parts.push(c.expected ? t.expectedLine(c.expected === 'yes' ? r.yes : r.no) : t.kinds.yesno)
     else if (c.kind === 'choice') parts.push((c.options ?? []).map((o) => (o.bad ? `${o.label} (${t.bad.toLowerCase()})` : o.label)).join(' · '))
+    else if (c.kind === 'checklist') parts.push((c.items ?? []).map((i) => i.label).join(' · '))
+    else if (c.kind === 'measures') parts.push([`${c.count ?? 3} × ${t.kinds.measure.toLowerCase()}`, rangeText(c, r) ?? c.unit].filter(Boolean).join(' · '))
     else parts.push(t.kinds[c.kind])
     if (c.optional) parts.push(t.optional.toLowerCase())
     return parts.join(' · ')
@@ -476,15 +487,35 @@ function ChecksBlock({ step, language, readOnly, onEdit }: { step: Step; languag
       </p>
       <ul>
         {(step.checks ?? []).map((c) => (
-          <li key={c.id}>
-            <button type="button" disabled={readOnly} onClick={() => onEdit(c)} aria-label={t.edit(c.label)} className="btn-press flex min-h-12 w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left hover:bg-slate-900/5 disabled:cursor-default dark:hover:bg-white/5">
-              <span className="text-[var(--primary)]">{CHECK_ICONS[c.kind]()}</span>
+          <li key={c.id} className={cn(c.proposed && 'my-1 rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50/60 dark:border-violet-500/40 dark:bg-violet-500/10')}>
+            <button type="button" disabled={readOnly} onClick={() => onEdit(c)} aria-label={t.edit(c.label)} className={cn('btn-press flex min-h-12 w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left hover:bg-slate-900/5 disabled:cursor-default dark:hover:bg-white/5', c.proposed && 'opacity-80')}>
+              <span className={c.proposed ? 'text-violet-600' : 'text-[var(--primary)]'}>{CHECK_ICONS[c.kind]()}</span>
               <span className="min-w-0 flex-1">
+                {c.proposed && (
+                  <span className="mb-0.5 inline-flex items-center gap-1 rounded-md bg-violet-600 px-1.5 py-0.5 text-[10px] font-black tracking-wide text-white uppercase">
+                    <Sparkles className="h-3 w-3" /> {t.proposed}
+                  </span>
+                )}
                 <span className="block text-lg leading-snug font-black text-slate-900 dark:text-white">{c.label}</span>
                 <span className="block text-sm font-bold text-slate-500">{detail(c)}</span>
               </span>
-              {!readOnly && <PencilLine className="h-4 w-4 shrink-0 text-slate-400" />}
+              {!readOnly && !c.proposed && <PencilLine className="h-4 w-4 shrink-0 text-slate-400" />}
             </button>
+            {/* L'IA propose, l'auteur dispose : gardé, il ira au poste ; retiré, il disparaît. */}
+            {c.proposed && !readOnly && (
+              <div className="flex flex-wrap items-center gap-2 px-2 pb-2">
+                <p className="min-w-40 flex-1 text-xs font-bold text-violet-800 dark:text-violet-200">{t.proposedHint}</p>
+                {/* Les deux gestes restent ensemble, à droite, même quand la phrase prend toute la ligne. */}
+                <span className="ml-auto flex shrink-0 items-center gap-2">
+                  <button type="button" onClick={() => onDismiss(c)} className="btn-press h-11 rounded-2xl px-3 text-sm font-black text-slate-500 hover:bg-white/70">
+                    {t.dismiss}
+                  </button>
+                  <button type="button" onClick={() => onKeep(c)} className="btn-press flex h-11 items-center gap-1.5 rounded-2xl bg-violet-600 px-4 text-sm font-black text-white">
+                    <Check className="h-4 w-4" strokeWidth={3} /> {t.keep}
+                  </button>
+                </span>
+              </div>
+            )}
           </li>
         ))}
       </ul>
