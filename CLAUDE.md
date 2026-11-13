@@ -52,6 +52,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la publication
   sans jamais la retenir (`src/lib/media/reel.ts`). En novembre 2026, la route de montage répond 500
   en QA : le poste lit alors la vidéo d'origine.
+- **Capturer** (« Nouvelle instruction », `CaptureBoard`) : d'un seul écran au téléphone, qui prend tout
+  l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
+  ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher.
 - **Deux façons de modifier** (toggle `editorViews`) : « Comme au poste » (l'étape telle qu'au poste,
   modifiée sur place) et « Fiche » (la liste des étapes, tous les outils de l'étape choisie à
   découvert, en cartes ; au téléphone, la liste puis l'étape ; une étape se glisse par sa poignée et

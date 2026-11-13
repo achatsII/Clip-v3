@@ -313,6 +313,22 @@ Sans signe de vie depuis deux minutes (app fermée, téléphone en veille), la c
 « interrompue » : on la relance ici, ou on revoit les médias. Dans l'app mobile, l'écran reste
 allumé pendant la génération.
 
+### Capturer (« Nouvelle instruction », `CaptureBoard`)
+
+La page la plus importante, d'un seul écran au téléphone (« Créer = un geste », `VISION.md`). Au
+téléphone, elle prend tout l'écran comme l'éditeur (`useImmersive`) : sa propre barre garde le retour et
+le titre, la navigation de l'app s'efface.
+
+- **Rien de capturé** : « Filmer le geste » en grand (le plus rapide), les quatre autres façons sur une
+  ligne (« Photos », « Note vocale », « Note », « Fichiers »), puis « De quoi s'agit-il ? » sur une ligne
+  (facultatif) et « Médias déjà pris ». Aucun bouton « Générer » grisé : il n'a rien à faire encore.
+- **Quelque chose de capturé ou en route** : ce qu'on a ajouté (« Vos notes ») en tête, « Ajouter » en
+  une rangée compacte, les options repliées, et « Générer l'instruction » avec ce que ça coûte : au
+  téléphone dans une barre en bas, qui cache au clavier, et la page lui laisse sa place (rien ne passe
+  dessous sans pouvoir remonter) ; au bureau, en bas de la colonne. Un envoi raté le dit sur sa carte.
+- Au bureau, la même hiérarchie sur une ligne (filmer sur deux colonnes, les quatre autres), et l'on peut
+  glisser des fichiers sur la page.
+
 ### L'éditeur : deux façons de modifier, et l'aperçu (`Editor`, toggle `editorViews`)
 
 Deux vues pour la même instruction, chacune complète : tout ce qu'on peut faire existe dans les deux,

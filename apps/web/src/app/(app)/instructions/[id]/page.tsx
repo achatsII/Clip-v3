@@ -1,8 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Loader2, PauseCircle, SearchX, Sparkles } from 'lucide-react'
-import Link from 'next/link'
+import { Loader2, PauseCircle, SearchX, Sparkles } from 'lucide-react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { CaptureBoard, type ForceKind } from '@/components/capture/CaptureBoard'
@@ -10,7 +9,6 @@ import { GenerationProgress, launchedFrom } from '@/components/capture/Generatio
 import { Editor } from '@/components/editor/Editor'
 import { useSession } from '@/components/providers/Session'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
-import { PageHeader } from '@/components/ui/Surface'
 import { qk, useInstruction, useStations } from '@/hooks/queries'
 import { useCreations } from '@/hooks/useCreations'
 import { creationOf } from '@/lib/ai/creation'
@@ -186,14 +184,13 @@ export default function InstructionPage() {
   if (!doc.json_data.draft) {
     return (
       <div className="mx-auto max-w-4xl">
-        <Link href="/instructions" className="mb-4 inline-flex items-center gap-1 text-sm font-black text-slate-500">
-          <ArrowLeft className="h-4 w-4" /> {t.instructions.detail.back}
-        </Link>
         <CaptureBoard
           instructionId={id}
           initialSources={doc.json_data.sources}
           initialIntent={doc.json_data.intent}
-          heading={<PageHeader title={t.instructions.detail.completeTitle} subtitle={t.instructions.detail.completeSubtitle} />}
+          title={t.instructions.detail.completeTitle}
+          subtitle={t.instructions.detail.completeSubtitle}
+          back={{ href: '/instructions', label: t.instructions.detail.back }}
           onGenerate={(_, kind) => void generate(kind)}
         />
       </div>

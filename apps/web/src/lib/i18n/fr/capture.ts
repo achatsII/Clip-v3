@@ -8,7 +8,7 @@ export const capture = {
     ignore: 'Ignorer',
     intent: 'De quoi s’agit-il ?',
     optional: '(facultatif)',
-    intentPlaceholder: 'Ex. : nettoyage des rails de la machine 1234, une fois par mois',
+    intentPlaceholder: 'Ex. : nettoyage des rails, machine 1234',
     actions: {
       video: { label: 'Vidéo', hint: 'Filmez le geste' },
       photo: { label: 'Photos', hint: 'Pièces, réglages' },
@@ -23,10 +23,15 @@ export const capture = {
     autoHint: 'L’IA choisit le format',
     procedureHint: 'Étape par étape',
     lockoutHint: 'Énergies et isolement',
-    empty: 'Ajoutez une vidéo, des photos ou une note pour commencer.',
+    /** La première façon de capturer, en grand : filmer quelqu’un qui montre et explique. */
+    heroLabel: 'Filmer le geste',
+    heroHint: 'Montrez et expliquez à voix haute : c’est le plus rapide.',
+    /** Les autres façons, sur une ligne ; puis, une fois quelque chose capturé, « Ajouter ». */
+    others: 'Ou ajouter',
+    addMore: 'Ajouter',
     uploading: 'Envoi en cours… vous pouvez continuer à capturer.',
     tooBig: 'C’est beaucoup pour une seule instruction : séparez-la en plusieurs.',
-    ready: (n: number) => `${n.toLocaleString('fr-CA')} note${n > 1 ? 's' : ''} prête${n > 1 ? 's' : ''}. L’IA va les analyser.`,
+    ready: (n: number) => `${n.toLocaleString('fr-CA')} note${n > 1 ? 's' : ''} prête${n > 1 ? 's' : ''}. L’IA va ${n > 1 ? 'les' : 'l’'}analyser.`,
     generate: 'Générer l’instruction',
     dropFiles: 'Déposez vos fichiers',
     noteTitle: 'Note écrite',
