@@ -54,7 +54,6 @@ export const common = {
     videoForAi: 'La vidéo n\'a pas pu être préparée pour l\'IA',
     videoOptimize: 'La vidéo n\'a pas pu être optimisée',
     aiNoCredits: 'Plus de crédits d’IA. Rien n’a été débité.',
-    aiBillingSetup: 'La facturation de l’IA n’est pas encore réglée : rien n’est parti. Prévenez l’équipe CLIP.',
     aiNotInPlan: 'Cette fonction n’est pas incluse dans votre plan.',
     aiUnavailable: 'L\'IA n\'a pas répondu. Rien n\'a été débité : réessayez.',
     aiUnreadable: 'L\'IA a rendu une réponse illisible. Réessayez.',

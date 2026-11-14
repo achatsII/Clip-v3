@@ -832,7 +832,7 @@ Branchée derrière `NEXT_PUBLIC_BILLING_V2=1`, éteinte par défaut tant que le
 `/api/v2/billing/*` répondent `404`. Chaque appel d'IA part sur `/api/v4/assistant/ask`, drapeau
 allumé ou non. Allumé, il est facturé au coût réel, après : le solde de `ai_credits` relu avant
 (refus 402 à zéro, sans appel), puis le coût que rend la réponse (`billing.costs.cad`), converti en
-crédits au taux de `NEXT_PUBLIC_AI_CREDIT_RATE` (réglé dans Vercel, jamais dans le dépôt) et débité
+crédits au taux standard de la plateforme (`AI_CREDITS_PER_CAD`, `src/lib/config.ts`) et débité
 par `/api/v2/billing/consume` avec la clé de l'appel. Rien ne se prédit : aucun bouton ne montre de
 prix, et `CostChip` dit après coup ce qui a été débité. Une réponse lancée est payée en entier, même
 sous zéro (`enforce_denial: false`) ; un débit en panne se réessaie avec la même clé, puis va au

@@ -170,8 +170,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   an integer between 0 and 10000 ») et l'écran tombe en erreur. Au-delà, paginer avec `skip`
   (`loadEvents`, `src/lib/reports/load.ts`) ; le test se fait contre une fausse Gateway qui refuse
   comme la vraie (`tests/reports-load.test.ts`).
-- La valeur interne d'un crédit d'IA, en argent, ne s'écrit nulle part dans le dépôt (code, docs,
-  commits) : les prix se disent en crédits.
+- Le prix d'un crédit d'IA en argent ne s'affiche jamais : ni à l'écran, ni dans les textes, ni sur le
+  site ; les prix se disent en crédits. Il ne vit qu'à un endroit du code, la constante
+  `AI_CREDITS_PER_CAD` (`src/lib/config.ts`), le taux standard de la plateforme.
 
 ## Facturation
 
@@ -206,9 +207,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   la personne garde sa réponse. Après coup, l'écran dit ce qui a été débité (`CostChip`, « IA · 23
   crédits utilisés »). Compromis accepté : c'est l'app qui débite, une app modifiée pourrait sauter le
   débit. Drapeau éteint, l'appel d'avant ne change pas et rien n'est débité.
-- **Le taux** (crédits par dollar de coût réel) se règle dans `NEXT_PUBLIC_AI_CREDIT_RATE` (Vercel),
-  jamais dans le dépôt ; drapeau allumé sans taux valide, l'IA refuse (`billing_misconfigured`)
-  plutôt que de s'ouvrir sans débit. Le nom de chaque usage (`AI_OPERATIONS` : `generate_m`,
+- **Le taux** (crédits par dollar de coût réel) est la constante `AI_CREDITS_PER_CAD`
+  (`src/lib/config.ts`), le taux standard de la plateforme ; rien à régler dans Vercel. Dans l'aperçu,
+  `CostChip` montre aussi ce qu'une réponse aurait coûté, sans rien débiter. Le nom de chaque usage (`AI_OPERATIONS` : `generate_m`,
   `report_summary`…) va au registre avec le coût, le modèle et les tokens. La taille d'une génération
   ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) ne fixe plus de prix : au-delà de la
   plus grande taille, l'app demande toujours de séparer l'instruction.

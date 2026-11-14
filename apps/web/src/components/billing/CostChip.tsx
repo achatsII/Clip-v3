@@ -4,7 +4,7 @@ import { Coins } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { onAiCost } from '@/lib/billing/bus'
 import type { BillingMode } from '@/lib/billing/mode'
-import { AI_CREDIT_RATE } from '@/lib/config'
+import { AI_CREDITS_PER_CAD } from '@/lib/config'
 import { creditsForCost } from '@/lib/gateway/ai'
 import { useMessages } from '@/lib/i18n'
 
@@ -14,8 +14,7 @@ const SHOWN_MS = 5000
 /**
  * Après une réponse de l'IA, ce qu'elle a coûté, en crédits : jamais avant (le coût est réel, il ne
  * se prédit pas). Discret, quelques secondes, au-dessus de la barre du bas au téléphone. En vrai :
- * les crédits débités. Dans l'aperçu : rien n'est débité, et le coût ne se montre que si le taux est
- * réglé dans l'environnement.
+ * les crédits débités. Dans l'aperçu : ce que la réponse aurait coûté, et rien n'est débité.
  */
 export function CostChip({ mode }: { mode: BillingMode }) {
   const t = useMessages().billing.spent
@@ -24,7 +23,7 @@ export function CostChip({ mode }: { mode: BillingMode }) {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     const off = onAiCost((c) => {
-      const credits = mode === 'live' ? c.charged : mode === 'preview' && c.costCad !== null && AI_CREDIT_RATE !== null ? creditsForCost(c.costCad, AI_CREDIT_RATE) : null
+      const credits = mode === 'live' ? c.charged : mode === 'preview' && c.costCad !== null ? creditsForCost(c.costCad, AI_CREDITS_PER_CAD) : null
       if (credits === null || credits <= 0) return
       setShown((prev) => ({ credits: (prev?.credits ?? 0) + credits, preview: mode === 'preview' }))
       clearTimeout(timer)

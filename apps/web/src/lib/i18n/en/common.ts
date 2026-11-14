@@ -54,7 +54,6 @@ export const common: typeof Fr = {
     videoForAi: 'The video couldn’t be prepared for the AI',
     videoOptimize: 'The video couldn’t be optimized',
     aiNoCredits: 'No AI credits left. Nothing was charged.',
-    aiBillingSetup: 'AI billing isn’t set up yet: nothing was sent. Let the CLIP team know.',
     aiNotInPlan: 'This feature isn’t included in your plan.',
     aiUnavailable: 'The AI didn’t respond. Nothing was charged: try again.',
     aiUnreadable: 'The AI returned an unreadable answer. Try again.',

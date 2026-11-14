@@ -7,7 +7,7 @@
  * 1. avant : le solde des crédits d'IA est relu ; à zéro ou en dessous, refus 402 sans appel ;
  * 2. la réponse de l'assistant porte son coût réel (`billing.costs.cad`, `billing_merged` pour
  *    plusieurs lots de fichiers) ;
- * 3. après : ce coût, converti en crédits au taux de l'environnement (`AI_CREDIT_RATE`), est débité
+ * 3. après : ce coût, converti en crédits au taux de la plateforme (`AI_CREDITS_PER_CAD`), est débité
  *    par `/api/v2/billing/consume` avec la clé de l'appel. Une réponse lancée est payée en entier,
  *    même sous zéro ; une réponse en échec qui rend un coût est débitée de ce coût ; sans coût
  *    (délai, coupure), rien n'est débité.
@@ -15,7 +15,7 @@
  */
 import { requireAiConsent } from '../ai/consent'
 import { emitAiCost, emitRefusal, emitSettled } from '../billing/bus'
-import { AI_CREDIT_RATE, BILLING_V2, PRODUCT_SLUG } from '../config'
+import { AI_CREDITS_PER_CAD, BILLING_V2, PRODUCT_SLUG } from '../config'
 import { ApiError, GatewayClient } from './client'
 import { messages } from '@/lib/i18n'
 
@@ -149,15 +149,13 @@ export function onAiUsage(fn: AiUsageListener) {
   return () => usageListeners.delete(fn)
 }
 
-export function aiApi(client: GatewayClient, options: { billing?: boolean; creditRate?: number | null } = {}) {
+export function aiApi(client: GatewayClient, options: { billing?: boolean; creditRate?: number } = {}) {
   const billing = options.billing ?? BILLING_V2
-  const rate = options.creditRate === undefined ? AI_CREDIT_RATE : options.creditRate
+  const rate = options.creditRate ?? AI_CREDITS_PER_CAD
   const billingHeaders = { 'X-Product': PRODUCT_SLUG }
 
-  /** Refuse avant l'appel : facturation mal réglée, crédits d'IA hors du plan, ou solde à zéro. */
+  /** Refuse avant l'appel : crédits d'IA hors du plan, ou solde à zéro. */
   async function ensureCredits(): Promise<void> {
-    // Sans taux, l'IA facturée ne s'ouvre pas sans débit : elle refuse, et le journal le dit.
-    if (rate === null) throw new ApiError(messages().common.errors.aiBillingSetup, 503, null, 'billing_misconfigured')
     const state = await client.call<{ credits?: Array<{ feature_key: string; available: number }> }>('/api/v2/billing/context', { method: 'GET', headers: billingHeaders, timeoutMs: 20_000 })
     const bucket = state.credits?.find((c) => c.feature_key === AI_FEATURE)
     const refuse = (status: 402 | 403, code: 'insufficient_credits' | 'not_entitled') => {
@@ -176,7 +174,7 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean; credi
    */
   async function debit(operation: AiOperation, body: unknown, key: string): Promise<{ costCad: number | null; charged: number | null }> {
     const costCad = aiCostCad(body)
-    if (costCad === null || rate === null) return { costCad, charged: null }
+    if (costCad === null) return { costCad, charged: null }
     const credits = creditsForCost(costCad, rate)
     if (credits === 0) return { costCad, charged: 0 }
     let lastError: unknown = null

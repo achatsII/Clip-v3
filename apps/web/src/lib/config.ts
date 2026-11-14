@@ -24,14 +24,10 @@ export const SELF_SERVICE = process.env.NEXT_PUBLIC_SELF_SERVICE === '1'
 export const BILLING_V2 = process.env.NEXT_PUBLIC_BILLING_V2 === '1'
 
 /**
- * Le taux de l'IA facturée : combien de crédits pour un dollar canadien de coût réel. Il se règle
- * dans l'environnement (Vercel), jamais dans le dépôt : la valeur d'un crédit ne s'écrit nulle part.
- * Sans taux valide, l'IA facturée refuse plutôt que de s'ouvrir sans débit.
+ * Le taux de l'IA facturée : combien de crédits pour un dollar canadien de coût réel (le taux
+ * standard de la plateforme, celui d'askAi). Il ne s'affiche jamais : l'écran parle en crédits.
  */
-export const AI_CREDIT_RATE: number | null = (() => {
-  const n = Number(process.env.NEXT_PUBLIC_AI_CREDIT_RATE)
-  return Number.isFinite(n) && n > 0 ? n : null
-})()
+export const AI_CREDITS_PER_CAD = 1000
 
 /** Slug du produit pour la facturation (`X-Product`) : l'identifiant à enregistrer. */
 export const PRODUCT_SLUG = 'clip-v3'

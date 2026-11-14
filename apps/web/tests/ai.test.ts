@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { onAiCost, onRefusal, onSettled } from '@/lib/billing/bus'
+import { AI_CREDITS_PER_CAD } from '@/lib/config'
 import { aiApi, aiCostCad, creditsForCost, onAiDebitError, type AskBody } from '@/lib/gateway/ai'
 import { ApiError } from '@/lib/gateway/client'
 import { fakeGateway } from './fakeClient'
@@ -24,7 +25,7 @@ describe('aiApi.ask', () => {
 
 /**
  * L'IA facturée au coût réel : le solde relu avant, la réponse, puis son coût réel débité après.
- * Le taux des tests est arbitraire : la valeur réelle d'un crédit ne s'écrit nulle part dans le dépôt.
+ * Le taux des tests est arbitraire, pour des comptes faciles ; le vrai est `AI_CREDITS_PER_CAD`.
  */
 describe('aiApi.ask, facturation allumée : débitée de son coût réel, après', () => {
   const RATE = 400
@@ -73,6 +74,12 @@ describe('aiApi.ask, facturation allumée : débitée de son coût réel, après
     expect(settled).toBe(1)
   })
 
+  it('sans taux donné, le taux de la plateforme (AI_CREDITS_PER_CAD)', async () => {
+    const gw = routed({ ask: answer(0.0231), consume: debited(24) })
+    await aiApi(gw, { billing: true }).ask('step_assist', body)
+    expect((gw.calls[2].options.body as Record<string, unknown>).quantity).toBe(creditsForCost(0.0231, AI_CREDITS_PER_CAD))
+  })
+
   it('plusieurs lots de fichiers : le coût fusionné (billing_merged)', async () => {
     const gw = routed({ ask: answer(0.1, true), consume: debited(40) })
     await aiApi(gw, { billing: true, creditRate: RATE }).ask('generate_l', body)
@@ -95,12 +102,6 @@ describe('aiApi.ask, facturation allumée : débitée de son coût réel, après
     const gw = routed({ available: null, ask: answer(0.01) })
     await expect(aiApi(gw, { billing: true, creditRate: RATE }).ask('quiz', body)).rejects.toMatchObject({ status: 403, code: 'not_entitled' })
     expect(gw.calls.map((c) => c.endpoint)).toEqual(['/api/v2/billing/context'])
-  })
-
-  it('sans taux réglé dans l’environnement : refus, rien ne part (jamais d’IA ouverte sans débit)', async () => {
-    const gw = routed({ ask: answer(0.01) })
-    await expect(aiApi(gw, { billing: true, creditRate: null }).ask('annotate', body)).rejects.toMatchObject({ code: 'billing_misconfigured' })
-    expect(gw.calls).toHaveLength(0)
   })
 
   it('une réponse en échec qui rend un coût est débitée de ce coût, puis l’erreur remonte', async () => {
