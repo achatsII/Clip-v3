@@ -25,6 +25,8 @@ export const importer = {
     uploading: 'Envoi et conversion…',
     uploaded: 'Prêt à analyser',
     analyzing: 'L’IA restructure…',
+    /** L'analyse tourne au serveur (toggle `serverGeneration`) : on peut fermer l'app. */
+    server: 'L’IA l’analyse au serveur : vous pouvez fermer l’app',
     done: 'Brouillon créé',
     error: 'Échec',
   },

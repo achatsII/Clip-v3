@@ -58,6 +58,7 @@ export const common: typeof Fr = {
     aiUnavailable: 'The AI didn’t respond. Nothing was charged: try again.',
     aiUnreadable: 'The AI returned an unreadable answer. Try again.',
     aiFailed: 'The AI couldn’t answer. Try again.',
+    serverJobRefused: 'The server didn’t take the generation. Try again: it will run on this device.',
     imageRefused: (why: string) => `The image service refused: ${why}`,
     imageNone: 'The image service returned no image',
   },

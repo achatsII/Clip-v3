@@ -12,6 +12,11 @@ import type { GeneratingInfo, Instruction } from '../model/types'
 
 export const HEARTBEAT_MS = 30_000
 export const STALE_MS = 120_000
+/**
+ * Une génération au serveur ne bat pas toutes les 30 s (l'appareil qui l'a lancée peut être fermé) :
+ * elle n'est « interrompue » qu'après 30 minutes sans nouvelle.
+ */
+export const SERVER_STALE_MS = 30 * 60_000
 /** Relire les créations : toutes les 10 s pendant l'une d'elles, toutes les 60 s sinon (accueil et liste). */
 export const POLL_BUSY_MS = 10_000
 export const POLL_IDLE_MS = 60_000
@@ -22,7 +27,8 @@ export function creationOf(i: Pick<Instruction, 'generating'> | null | undefined
   const info = i?.generating
   if (!info) return { kind: 'none' }
   const last = Date.parse(info.heartbeatAt || info.startedAt)
-  return Number.isFinite(last) && now - last <= STALE_MS ? { kind: 'running', info } : { kind: 'stale', info }
+  const limit = info.mode === 'server' ? SERVER_STALE_MS : STALE_MS
+  return Number.isFinite(last) && now - last <= limit ? { kind: 'running', info } : { kind: 'stale', info }
 }
 
 /** Les créations apparues et disparues entre deux lectures. */

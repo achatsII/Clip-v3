@@ -40,6 +40,23 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (Vercel, serveur), le temps réel annonce début, étapes et fin sur le canal de l'organisation
   (`/api/realtime/token`, `src/lib/realtime`) : l'autre appareil se met à jour aussitôt. Les images
   générées passent par OpenAI, niveau mid (`IMAGE_MODEL`, repli Google si la passerelle refuse).
+- **Génération au serveur** (toggle `serverGeneration`, choix de l'usine `OrgSettings.generation.server`
+  dans Réglages › Usine ; sans choix, sur l'appareil) : la requête AskAI v4 se prépare une seule fois
+  pour les deux chemins (`prepareGeneration`, `importAsk`) et part à `POST /api/v1/ai/job/start`
+  avec `appIdentifier: 'clip-v3'`, jamais de grant dans le corps. Dans n8n, la branche clip-v3 de
+  Job_start crée `clip_job` avec les droits de l'appelant et lance `Job_Generate_CLIP_V3`, qui roule
+  Ask_AI_V4 tel quel et écrit le résultat et son coût. L'appareil peut alors se fermer ; le premier
+  appareil ouvert qui voit le travail fini termine l'instruction avec le code de l'app
+  (`finishServerGeneration` dans `CreationWatcher` : verrou `generating.finishing`, même fin que sur
+  l'appareil) et débite le coût réel avec la clé du travail (`jobDebitKey`, une seule fois). Si le
+  serveur ne prend pas la génération, elle tourne sur l'appareil ; après un échec au serveur, la
+  relance aussi. « Générer » se touche pendant les envois : la génération part toute seule à leur fin
+  (`whenUploaded`). L'import en lot crée chaque instruction et confie son analyse au serveur
+  (`startServerImport`). **Une modification de la façon d'analyser se reporte dans la branche
+  clip-v3** quand elle change ce que n8n fait : un nouveau champ de la requête s'ajoute au nœud
+  « Run AskAI V4 » (`JOB_RELAYED_FIELDS`, un test échoue sinon), une passe d'IA de plus ou un
+  traitement nouveau au serveur se reporte dans `Job_Generate_CLIP_V3`. Les consignes, le schéma et
+  les fichiers passent tels quels : les changer ne demande rien dans n8n.
 - **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
   (`src/lib/model/translation.ts`), médias compris : légendes, annotations, texte des schémas, et
   en option les images refaites avec leur texte traduit. Un média traduit nomme l'original (`of`).

@@ -18,7 +18,8 @@ product:
   application:
     # Les routes que l'app appelle, au plus juste. assistant:ask : chaque appel d'IA part sur
     # /api/v4/assistant/ask avec le jeton du compte, puis l'app débite son coût réel (consume).
-    default_scopes: [data:*, files:write, files:read, files:process, files:transcribe, ai:upload, ai:live, ai:generate_image, assistant:ask]
+    # ai:job : la génération au serveur (Job_start, branche clip-v3).
+    default_scopes: [data:*, files:write, files:read, files:process, files:transcribe, ai:upload, ai:live, ai:generate_image, ai:job, assistant:ask]
   # L'IA FACTURÉE AU COÛT RÉEL : le débit d'une réponse lancée ne refuse jamais, même sous zéro ; c'est la
   # réponse suivante qui est refusée tant que le solde est à zéro ou en dessous. Vaut pour toute feature à
   # crédits du produit (CLIP n'en a qu'une, ai_credits).

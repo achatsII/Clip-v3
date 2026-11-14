@@ -27,7 +27,20 @@ export function launchedFrom(device: 'app' | 'web', byName?: string | null, inli
  * La génération en cours. `remote` : elle tourne sur un autre appareil ; cet écran la suit (étape
  * et durée relues toutes les 10 s) et s'efface tout seul quand l'instruction est prête.
  */
-export function GenerationProgress({ job, onRetry, onCancel, remote }: { job: JobState | undefined; onRetry: () => void; onCancel?: () => void; remote?: { device: 'app' | 'web'; byName?: string | null } }) {
+export function GenerationProgress({
+  job,
+  onRetry,
+  onCancel,
+  remote,
+  server,
+}: {
+  job: JobState | undefined
+  onRetry: () => void
+  onCancel?: () => void
+  remote?: { device: 'app' | 'web'; byName?: string | null }
+  /** L'analyse tourne au serveur : on peut fermer l'app. */
+  server?: boolean
+}) {
   const t = useMessages()
   const tp = t.capture.progress
   const [now, setNow] = useState(() => Date.now())
@@ -90,9 +103,14 @@ export function GenerationProgress({ job, onRetry, onCancel, remote }: { job: Jo
         ))}
       </ol>
       <p className="relative mt-8 min-h-12 text-center text-sm font-medium text-slate-500 transition-opacity">💡 {tp.tips[tip % tp.tips.length]}</p>
-      <p className="relative mt-2 text-center text-xs font-medium text-slate-400">
-        {remote ? tp.remote(launchedFrom(remote.device, remote.byName)) : inNativeShell() ? tp.keepAppOpen : tp.canLeave}
-      </p>
+      {server ? (
+        // Au serveur, c'est ce qui compte : on peut s'en aller.
+        <p className="relative mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm font-bold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+          {remote ? tp.serverRemote(launchedFrom(remote.device, remote.byName)) : tp.serverCanClose}
+        </p>
+      ) : (
+        <p className="relative mt-2 text-center text-xs font-medium text-slate-400">{remote ? tp.remote(launchedFrom(remote.device, remote.byName)) : inNativeShell() ? tp.keepAppOpen : tp.canLeave}</p>
+      )}
     </div>
   )
 }

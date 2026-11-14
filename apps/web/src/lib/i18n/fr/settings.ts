@@ -34,6 +34,12 @@ export const settings = {
     apply: 'Appliquer',
     colorApplied: 'Couleur appliquée',
     defaultBlue: 'Bleu par défaut',
+    /** Où tourne la génération par l'IA (toggle `serverGeneration`). */
+    generationTitle: 'Génération par l’IA',
+    generationDevice: 'Sur l’appareil',
+    generationServer: 'Sur le serveur',
+    generationHint: 'Sur le serveur, on peut fermer l’app pendant que l’IA écrit l’instruction : elle se termine sur le premier appareil ouvert.',
+    generationSaved: 'Réglage enregistré',
   },
   /** L'onglet Standard de rédaction, son assistant d'IA et ses versions. */
   standard: {

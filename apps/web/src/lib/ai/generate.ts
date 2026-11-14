@@ -2,7 +2,7 @@
  * La génération d'une instruction à partir des sources capturées : un seul appel multimodal à
  * AskAI v4 (Gemini, seul fournisseur qui lit la vidéo), puis le post-traitement.
  */
-import type { AiApi, AiOperation, AskFile } from '../gateway/ai'
+import type { AiApi, AiOperation, AskBody, AskFile } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
 import { contentLanguage, messages } from '../i18n'
 import type { FilesApi } from '../gateway/files'
@@ -146,7 +146,23 @@ export interface GenerateOutput {
   operation: AiOperation
 }
 
-export async function generateInstruction(input: GenerateInput): Promise<GenerateOutput> {
+/** La génération prête à partir : la même requête, qu'elle tourne sur l'appareil ou au serveur. */
+export interface PreparedGeneration {
+  operation: Tier['op']
+  language: string
+  /** Les sources envoyées à l'IA, mises à jour (URI Gemini), dans l'ordre : S1 = la première. */
+  sources: Source[]
+  /** Toutes les sources de l'instruction, avec ces mises à jour (à enregistrer). */
+  allSources: Source[]
+  ask: AskBody
+}
+
+/**
+ * Prépare la génération : les vidéos chez Gemini, puis la requête AskAI v4 (consignes, sources,
+ * schéma). Un seul endroit pour les deux chemins : sur l'appareil (`generateInstruction`) et au
+ * serveur (Job_start, branche clip-v3, qui roule cette requête telle quelle).
+ */
+export async function prepareGeneration(input: Omit<GenerateInput, 'ai' | 'signal'>): Promise<PreparedGeneration> {
   const language = input.language ?? contentLanguage()
   const t = messages().capture.generate
   const usable = input.sources.filter((s) => s.url || s.text)
@@ -158,11 +174,12 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
   // Le détail s'écrit sans mots (« 2/5 ») : chaque appareil le lit dans sa langue.
   const prepared = await prepareForAi(usable, input.files, (i, n) => input.onStage?.('prepare', sourceDetail(i + 1, n)))
   const m = measureSources(prepared.sources)
-
-  input.onStage?.('analyze')
-  const result = await input.ai.ask<AiInstruction>(
-    tier.op,
-    {
+  return {
+    operation: tier.op,
+    language,
+    sources: prepared.sources,
+    allSources: mergeSources(input.sources, prepared.sources),
+    ask: {
       provider: 'google',
       level: 'mid',
       thinking: 'enabled',
@@ -174,20 +191,62 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
       files: prepared.askFiles,
       json_schema: instructionSchema,
     },
-    { scope: 'generation', timeoutMs: 300_000, signal: input.signal },
-  )
+  }
+}
+
+/**
+ * Ce que l'IA a rendu, mis en forme ; le même traitement que la réponse vienne de l'appareil ou du
+ * serveur. Les sources gardent leur ordre : S1 = la première source envoyée.
+ */
+export function finishGeneration(json: AiInstruction | null | undefined, sources: Source[], language: string) {
+  if (!json) throw new ApiError(messages().capture.generate.noInstruction, 502)
+  const out = normalizeInstruction(json, sources, language)
+  if (!out.content.steps.length) throw new ApiError(messages().capture.generate.noSteps, 422)
+  return out
+}
+
+export async function generateInstruction(input: GenerateInput): Promise<GenerateOutput> {
+  const p = await prepareGeneration(input)
+  input.onStage?.('analyze')
+  const result = await input.ai.ask<AiInstruction>(p.operation, p.ask, { scope: 'generation', timeoutMs: 300_000, signal: input.signal })
   if (!result.json) throw new ApiError(messages().capture.generate.noInstruction, 502)
 
   input.onStage?.('finish')
-  // Les sources gardent leur ordre : S1 = première source utilisable.
-  const { content, stationGuess, questions, choices, marks } = normalizeInstruction(result.json, prepared.sources, language)
-  if (!content.steps.length) throw new ApiError(messages().capture.generate.noSteps, 422)
-  return { content, marks, sources: mergeSources(input.sources, prepared.sources), stationGuess, questions, choices, model: result.model, operation: tier.op }
+  const { content, stationGuess, questions, choices, marks } = finishGeneration(result.json, p.sources, p.language)
+  return { content, marks, sources: p.allSources, stationGuess, questions, choices, model: result.model, operation: p.operation }
 }
 
 function mergeSources(all: Source[], updated: Source[]): Source[] {
   const byId = new Map(updated.map((s) => [s.id, s]))
   return all.map((s) => byId.get(s.id) ?? s)
+}
+
+/**
+ * La requête d'un import (une ancienne instruction en PDF) : la même pour l'appareil et le serveur
+ * (Job_start, branche clip-v3). Le document est S1.
+ */
+export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learnings'>; source: Source; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {
+  const language = input.language ?? contentLanguage()
+  const pages = input.source.pageCount ?? 5
+  const operation: AiOperation = pages > 12 ? 'import_l' : 'import_s'
+  return {
+    operation,
+    language,
+    ask: {
+      provider: 'google',
+      level: 'mid',
+      thinking: 'enabled',
+      effort: 'low',
+      maxOutputTokens: 24000,
+      system_instruction: importSystem(input.org, language),
+      prompt: generationPrompt({
+        stations: input.stationNames,
+        sources: [{ id: 'S1', line: `S1 — ancienne instruction PDF « ${input.source.originalName ?? input.source.name ?? 'document'} »${input.source.pageCount ? `, ${input.source.pageCount} pages` : ''} (fichier joint n° 1)` }],
+      }),
+      files: [{ url: input.source.url, filename: input.source.name ?? 'document.pdf', mimeType: 'application/pdf', sizeBytes: input.source.sizeBytes }],
+      json_schema: instructionSchema,
+    },
+  }
 }
 
 /** Import d'une ancienne instruction (PDF) : même résultat qu'une génération. */
@@ -197,28 +256,10 @@ export async function importDocument(input: {
   source: Source
   stationNames: string[]
 }): Promise<{ content: InstructionContent; stationGuess: string | null; questions: string[]; choices: Record<string, string[]>; model: string | null; operation: AiOperation }> {
-  const pages = input.source.pageCount ?? 5
-  const operation: AiOperation = pages > 12 ? 'import_l' : 'import_s'
-  const result = await input.ai.ask<AiInstruction>(
-    operation,
-    {
-      provider: 'google',
-      level: 'mid',
-      thinking: 'enabled',
-      effort: 'low',
-      maxOutputTokens: 24000,
-      system_instruction: importSystem(input.org, contentLanguage()),
-      prompt: generationPrompt({
-        stations: input.stationNames,
-        sources: [{ id: 'S1', line: `S1 — ancienne instruction PDF « ${input.source.originalName ?? input.source.name ?? 'document'} »${input.source.pageCount ? `, ${input.source.pageCount} pages` : ''} (fichier joint n° 1)` }],
-      }),
-      files: [{ url: input.source.url, filename: input.source.name ?? 'document.pdf', mimeType: 'application/pdf', sizeBytes: input.source.sizeBytes }],
-      json_schema: instructionSchema,
-    },
-    { scope: 'import', timeoutMs: 300_000 },
-  )
+  const { operation, language, ask } = importAsk(input)
+  const result = await input.ai.ask<AiInstruction>(operation, ask, { scope: 'import', timeoutMs: 300_000 })
   if (!result.json) throw new ApiError(messages().capture.generate.unreadableDocument, 502)
-  const n = normalizeInstruction(result.json, [input.source], contentLanguage())
+  const n = normalizeInstruction(result.json, [input.source], language)
   return { ...n, model: result.model, operation }
 }
 

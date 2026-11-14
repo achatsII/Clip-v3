@@ -34,6 +34,11 @@ export const settings: typeof Fr = {
     apply: 'Apply',
     colorApplied: 'Color applied',
     defaultBlue: 'Default blue',
+    generationTitle: 'AI generation',
+    generationDevice: 'On the device',
+    generationServer: 'On the server',
+    generationHint: 'On the server, you can close the app while the AI writes the instruction: it finishes on the first device that opens.',
+    generationSaved: 'Setting saved',
   },
   standard: {
     title: 'Your writing standard',

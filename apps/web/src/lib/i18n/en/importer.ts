@@ -24,6 +24,7 @@ export const importer: typeof Fr = {
     uploading: 'Uploading and converting…',
     uploaded: 'Ready to analyze',
     analyzing: 'The AI is restructuring…',
+    server: 'The AI is analyzing it on the server: you can close the app',
     done: 'Draft created',
     error: 'Failed',
   },

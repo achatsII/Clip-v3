@@ -38,6 +38,11 @@ export const T = {
   request: 'clip_request',
   /** L'Académie : les validations sur le terrain (le registre des qualifications). */
   qualification: 'clip_qualification',
+  /**
+   * Une génération qui tourne au serveur (branche clip-v3 de Job_start, n8n) : son état et le
+   * résultat de l'IA. n8n l'écrit avec les droits de la personne qui l'a lancée ; l'app la relit.
+   */
+  serverJob: 'clip_job',
 } as const
 
 export const nowIso = () => new Date().toISOString()

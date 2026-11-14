@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -61,6 +61,9 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // La lecture au téléphone : le média à ses vraies proportions, qui laisse au texte la place qu'il
   // lui faut ; côte à côte quand on tourne le téléphone ; « Tout sur une page » depuis le sommaire.
   phoneReader: true,
+  // La génération au serveur (Job_start, branche clip-v3 dans n8n) : le réglage de l'usine paraît,
+  // et une fois choisi, on peut fermer l'app pendant que l'IA écrit l'instruction.
+  serverGeneration: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -95,4 +98,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   reports: false,
   editorViews: false,
   phoneReader: false,
+  serverGeneration: false,
 }

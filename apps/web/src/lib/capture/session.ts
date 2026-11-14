@@ -182,6 +182,18 @@ export class CaptureSession {
     this.set({ pending: this.snap.pending.filter((p) => p.tempId !== tempId) })
   }
 
+  /** Attend la fin des envois en cours, réussis ou ratés : « Générer » peut se toucher avant. */
+  whenUploaded(): Promise<void> {
+    if (!this.busy) return Promise.resolve()
+    return new Promise((resolve) => {
+      const off = this.subscribe(() => {
+        if (this.busy) return
+        off()
+        resolve()
+      })
+    })
+  }
+
   /** Attend la fin des envois et de l'enregistrement. */
   async settled(): Promise<string> {
     await this.saving

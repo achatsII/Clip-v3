@@ -15,7 +15,7 @@
  */
 import { requireAiConsent } from '../ai/consent'
 import { emitAiCost, emitRefusal, emitSettled } from '../billing/bus'
-import { AI_CREDITS_PER_CAD, BILLING_V2, PRODUCT_SLUG } from '../config'
+import { AI_CREDITS_PER_CAD, APP_DATA_IDENTIFIER, APP_IDENTIFIER, BILLING_V2, PRODUCT_SLUG } from '../config'
 import { ApiError, GatewayClient } from './client'
 import { messages } from '@/lib/i18n'
 
@@ -113,6 +113,22 @@ function debitMetadata(operation: string, body: unknown, costCad: number): Recor
 }
 
 const DEBIT_ATTEMPTS = 3
+
+/**
+ * L'identifiant du travail que rend `POST /api/v1/ai/job/start` : son nom change selon la branche
+ * de Job_start (`record_id`, `inserted_id`, `slideshow_id`). Null s'il n'y en a aucun.
+ */
+export function jobRecordId(res: unknown): string | null {
+  if (!res || typeof res !== 'object') return null
+  const r = res as Record<string, unknown>
+  const id = r.record_id ?? r.inserted_id ?? r.slideshow_id
+  return typeof id === 'string' && id.trim() ? id : null
+}
+
+/** La clé de débit d'un travail au serveur : la même partout, pour qu'il ne soit débité qu'une fois. */
+export function jobDebitKey(operation: string, jobId: string): string {
+  return `clip:${operation}:job:${jobId}`.replace(/[^A-Za-z0-9:._#-]/g, '-').slice(0, 200)
+}
 
 export type AiDebitErrorListener = (error: unknown, debit: { operation: AiOperation; idempotencyKey: string; credits: number }) => void
 const debitErrorListeners = new Set<AiDebitErrorListener>()
@@ -250,8 +266,49 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean; credi
     return { text: r.assistant_response ?? '', json, model: r.model ?? null, usage, charged: cost.charged }
   }
 
+  /**
+   * Lance une génération au serveur (Job_start, branche clip-v3) : la même requête AskAI v4 que sur
+   * l'appareil, roulée par n8n, qui écrit son résultat dans `clip_job`. Les mêmes vérifications
+   * qu'avant un appel : l'accord de la personne, puis le solde des crédits (facturation allumée).
+   * Rend l'identifiant du travail ; le coût se débite à la fin, par l'appareil qui termine (`chargeCost`).
+   */
+  async function startJob(input: { operation: AiOperation; instructionId: string; ask: AskBody }): Promise<string> {
+    await requireAiConsent()
+    if (billing) await ensureCredits()
+    const res = await client.call<Record<string, unknown>>('/api/v1/ai/job/start', {
+      method: 'POST',
+      body: {
+        provider: input.ask.provider,
+        level: input.ask.level,
+        // La branche de Job_start ; le document de suivi s'écrit sous l'application de connexion.
+        appIdentifier: APP_DATA_IDENTIFIER,
+        data: { dataApp: APP_IDENTIFIER, instructionId: input.instructionId, operation: input.operation, ask: input.ask },
+      },
+      timeoutMs: 60_000,
+    })
+    const id = jobRecordId(res)
+    // Une branche inconnue répond 200 sans identifiant : on échoue bruyamment.
+    if (!id || res.success === false) throw new ApiError(messages().common.errors.serverJobRefused, 502, res, 'job_not_started')
+    return id
+  }
+
+  /**
+   * Débite le coût réel d'un travail fait au serveur (`clip_job`), avec sa clé (`jobDebitKey`) : deux
+   * appareils qui le terminent ensemble ne le débitent qu'une fois. Sans coût connu, rien n'est débité.
+   */
+  async function chargeCost(operation: AiOperation, costCad: number | null, key: string, outcome: { model?: string | null; ok: boolean }): Promise<number | null> {
+    const env = costCad === null ? {} : { billing: { costs: { cad: costCad } }, results: { model: outcome.model ?? undefined } }
+    const cost = billing ? await debit(operation, env, key) : { costCad, charged: null }
+    emitAiCost({ operation, ...cost })
+    if (billing) emitSettled()
+    usageListeners.forEach((fn) => fn({ operation, model: outcome.model ?? null, usage: null, ok: outcome.ok, credits: cost.charged }))
+    return cost.charged
+  }
+
   return {
     ask,
+    startJob,
+    chargeCost,
 
     /** Jeton éphémère Gemini Live (voix temps réel, ~15 min, usage unique). */
     async liveSession(): Promise<{ sessionId: string; model: string; accessToken: string }> {

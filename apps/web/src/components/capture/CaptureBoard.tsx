@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, FileUp, ImagePlus, Library, Mic, PenLine, Rotat
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
+import { useLaunchGeneration } from '@/hooks/useLaunchGeneration'
 import { Button } from '@/components/ui/Button'
 import { ChoiceTile, Input, Switch, Textarea } from '@/components/ui/Field'
 import { PageHeader } from '@/components/ui/Surface'
@@ -80,6 +81,16 @@ export function CaptureBoard({
   const [kind, setKind] = useState<ForceKind>('auto')
   const [dragging, setDragging] = useState(false)
   const [starting, setStarting] = useState(false)
+  // « Générer » touché pendant les envois : la génération partira toute seule à la fin.
+  const [queued, setQueued] = useState(false)
+  const launch = useLaunchGeneration()
+  const mounted = useRef(true)
+  useEffect(
+    () => () => {
+      mounted.current = false
+    },
+    [],
+  )
   const fileInput = useRef<HTMLInputElement>(null)
   const wide = useWide()
   // Au téléphone, la capture prend tout l'écran : une seule chose à faire, rien autour.
@@ -171,28 +182,42 @@ export function CaptureBoard({
   const [libraryOpen, setLibraryOpen] = useState(false)
 
   async function generate() {
-    if (!hasContent) return
+    if (!hasContent && !busy) return
     setStarting(true)
     try {
       await session.saveIntent().catch(() => undefined)
+      if (session.busy) {
+        setQueued(true)
+        await session.whenUploaded()
+      }
       const id = await session.settled()
-      onGenerate(id, kind)
+      // Tous les envois ont raté : rien à générer (chaque carte le dit).
+      if (!session.snapshot.sources.some((s) => s.url || s.text)) return
+      if (mounted.current) onGenerate(id, kind)
+      else {
+        // On a quitté l'écran pendant les envois : la génération part d'ici, sans y ramener la personne.
+        void launch(id, kind)
+        toast.success(tb.queuedStarted)
+      }
     } catch {
       toast.error(tb.notSaved, tb.notSavedText)
     } finally {
-      setStarting(false)
+      if (mounted.current) {
+        setStarting(false)
+        setQueued(false)
+      }
     }
   }
 
   const captured = snap.sources.length + snap.pending.length
   // « Générer » paraît dès qu'il y a quelque chose de prêt ou en route ; un envoi raté le dit sur sa carte.
   const showGenerate = hasContent || busy
-  const status = busy ? tb.uploading : tier.tooBig ? tb.tooBig : tb.ready(snap.sources.length)
+  const status = queued ? tb.queuedHint : busy ? tb.uploading : tier.tooBig ? tb.tooBig : tb.ready(snap.sources.length)
   const [hero, ...others] = actions
 
   const generateButton = (
-    <Button variant="primary" size="lg" icon={<Sparkles className="h-5 w-5" />} disabled={!hasContent || busy || tier.tooBig} loading={starting} onClick={generate} className="w-full">
-      {tb.generate}
+    <Button variant="primary" size="lg" icon={<Sparkles className="h-5 w-5" />} disabled={(!hasContent && !busy) || tier.tooBig || queued} loading={starting} onClick={generate} className="w-full">
+      {queued || busy ? tb.generateQueued : tb.generate}
     </Button>
   )
 

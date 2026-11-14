@@ -358,6 +358,8 @@ export interface GenerationInfo {
   choices?: Record<string, string[]>
   /** Poste deviné par l'IA (texte libre), avant rapprochement. */
   stationGuess?: string | null
+  /** `server` : l'analyse a tourné au serveur (Job_start). */
+  mode?: 'device' | 'server'
 }
 
 export interface ReviewRequest {
@@ -406,6 +408,50 @@ export interface GeneratingInfo {
   byName?: string | null
   /** La coquille (téléphone, tablette) ou le navigateur. */
   device: 'app' | 'web'
+  /**
+   * `server` : l'analyse tourne au serveur (n8n, `clip_job`) ; l'appareil qui l'a lancée peut se
+   * fermer. Le premier appareil ouvert qui voit le résultat termine l'instruction. Absent : sur l'appareil.
+   */
+  mode?: 'device' | 'server'
+  /** Le travail au serveur (`T.serverJob`). */
+  jobId?: string | null
+  /** Ce qu'il faut pour terminer l'instruction sur un autre appareil que celui qui l'a lancée. */
+  job?: ServerJobContext | null
+  /** L'appareil qui termine l'instruction (verrou de 2 minutes) : un seul à la fois. */
+  finishing?: { at: string; by: string } | null
+}
+
+/** Ce que la génération au serveur garde pour la terminer ailleurs (dans l'instruction, `generating.job`). */
+export interface ServerJobContext {
+  /** Les sources envoyées à l'IA, dans l'ordre : S1 = la première. */
+  sourceIds: string[]
+  language: string
+  operation: string
+  forceKind?: 'procedure' | 'lockout' | null
+  autoAnnotate: boolean
+  checkpoints: boolean
+}
+
+/** Le travail au serveur, tel que n8n l'écrit (`clip_job`). */
+export interface ServerJob {
+  kind: 'generation'
+  status: 'running' | 'completed' | 'failed'
+  stage: string
+  steps: string[]
+  startedAt: string
+  heartbeatAt: string
+  finishedAt?: string | null
+  instructionId: string | null
+  operation: string | null
+  result: {
+    json?: unknown
+    model?: string | null
+    billing?: { costs?: { cad?: number }; model?: string | null; usage?: Record<string, unknown> | null } | null
+    skippedFiles?: unknown[]
+  } | null
+  error: { message: string; details?: string | null } | null
+  /** Posé par l'appareil qui a terminé l'instruction : les autres n'y touchent plus. */
+  finalizedAt?: string | null
 }
 
 export interface Instruction {
@@ -430,7 +476,8 @@ export interface Instruction {
   /** Une génération en cours sur un appareil ; `null` une fois finie (réussie ou non). */
   generating?: GeneratingInfo | null
   /** La dernière génération qui n'a pas abouti, pour l'annoncer aux autres appareils. */
-  generationError?: { at: string; message: string } | null
+  /** La dernière génération ratée ; `server` : elle tournait au serveur (la relance se fait sur l'appareil). */
+  generationError?: { at: string; message: string; server?: boolean } | null
   origin?: 'capture' | 'import' | 'duplicate' | 'feedback'
   authorId: string
   authorName: string
@@ -789,6 +836,11 @@ export interface OrgSettings {
   roi: { hoursSavedPerInstruction: number; hourlyRate: number; minutesSavedPerCompletion: number }
   /** À revoir tous les N mois, par défaut, à la publication (null : jamais ; absent : chaque année). */
   renewalMonths?: number | null
+  /**
+   * La génération (toggle `serverGeneration`) : `server` l'envoie au serveur, et l'appareil peut se
+   * fermer pendant que l'IA écrit. Absent : sur l'appareil, comme avant.
+   */
+  generation?: { server: boolean }
   /** Qui a ouvert CLIP le premier dans l'organisation : administrateur tant que personne d'autre ne l'est. */
   createdBy?: string
   createdAt: string

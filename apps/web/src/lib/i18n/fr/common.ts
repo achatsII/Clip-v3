@@ -58,6 +58,8 @@ export const common = {
     aiUnavailable: 'L\'IA n\'a pas répondu. Rien n\'a été débité : réessayez.',
     aiUnreadable: 'L\'IA a rendu une réponse illisible. Réessayez.',
     aiFailed: 'L\'IA n\'a pas pu répondre. Réessayez.',
+    /** La génération au serveur n'a pas pu partir (Job_start n'a rendu aucun travail). */
+    serverJobRefused: 'Le serveur n’a pas pris la génération. Réessayez : elle partira sur cet appareil.',
     imageRefused: (why: string) => `Le service d'images a refusé : ${why}`,
     imageNone: 'Le service d\'images n\'a rendu aucune image',
   },

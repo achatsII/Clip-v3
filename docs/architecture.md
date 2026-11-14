@@ -313,6 +313,47 @@ Sans signe de vie depuis deux minutes (app fermée, téléphone en veille), la c
 « interrompue » : on la relance ici, ou on revoit les médias. Dans l'app mobile, l'écran reste
 allumé pendant la génération.
 
+### La génération au serveur (toggle `serverGeneration`, `src/lib/ai/serverJob.ts`)
+
+L'usine choisit où tourne l'IA (Réglages › Usine, « Génération par l'IA ») ; sans choix, sur
+l'appareil, comme avant. Au serveur, on peut fermer l'app pendant que l'IA écrit l'instruction.
+
+1. **L'appareil prépare** la requête AskAI v4 exactement comme pour lui-même (`prepareGeneration` :
+   vidéos chez Gemini par leur adresse, consignes, sources, schéma ; `importAsk` pour un document) et
+   la confie à `POST /api/v1/ai/job/start` (`aiApi.startJob`) : `appIdentifier: 'clip-v3'` choisit la
+   branche, `data.dataApp` dit l'application de connexion (`html` tant que CLIP partage `html`), et la
+   requête va dans `data.ask`. Avant, comme pour tout appel, l'accord de la personne et le solde des
+   crédits (facturation allumée). L'instruction note `generating.mode: 'server'`, l'identifiant du
+   travail et ce qu'il faut pour la terminer ailleurs (`generating.job` : les sources dans l'ordre,
+   la langue, l'usage).
+2. **n8n roule l'analyse.** La branche clip-v3 de Job_start crée le document `clip_job` (avec le
+   grant de l'appelant, que la Gateway pose depuis le jeton), lance `Job_Generate_CLIP_V3` sans
+   l'attendre et rend `record_id`. Le sous-workflow marque l'étape `analyze`, appelle Ask_AI_V4
+   directement (pas le flux qui coupe les fichiers par lots de dix : une instruction se génère d'un
+   seul appel), puis écrit `status: completed` avec `result.json`, le modèle et `result.billing.costs.cad`,
+   ou `status: failed` avec l'erreur.
+3. **Un appareil termine.** `CreationWatcher` (posé une fois pour qui crée des instructions) relit
+   toutes les 10 s, jamais onglet caché, le travail de chaque création au serveur en cours. Fini, le
+   premier appareil qui le voit pose le verrou `generating.finishing` (5 minutes ; relu pour savoir
+   qui l'a eu), débite le coût réel avec la clé du travail (`jobDebitKey` : deux appareils ne débitent
+   jamais deux fois), met la réponse en forme et finit comme sur l'appareil (vignettes, repères posés
+   sur les images, poste rapproché, brouillon enregistré), puis marque le travail `finalizedAt`. Raté,
+   il écrit l'erreur (`generationError.server`), et la relance se fait sur l'appareil.
+
+Une création au serveur n'est « interrompue » qu'après 30 minutes sans nouvelle ; un travail encore à
+l'étape de départ après 3 minutes n'a jamais été pris par le serveur (`SERVER_PICKUP_MS`). Si
+`job/start` ne rend aucun travail, la génération tourne sur l'appareil avec la requête déjà prête ;
+un refus de facturation se montre tel quel. Le relais des champs de la requête est figé dans le nœud
+« Run AskAI V4 » de n8n : `JOB_RELAYED_FIELDS` le reflète, et un test échoue si la génération emploie
+un champ que la branche ne relaie pas.
+
+**Les envois ne retiennent plus.** « Générer » se touche pendant les envois de la capture : la
+génération part toute seule à leur fin (`CaptureSession.whenUploaded`), même si l'on a quitté
+l'écran entretemps. Dans la coquille iOS, les fichiers partent par une session d'envoi en
+arrière-plan (le défaut d'expo-file-system) : l'envoi continue quand l'app passe en arrière-plan ; la
+page reprend au retour. L'import en lot crée chaque instruction dès son document envoyé et confie
+son analyse au serveur (`startServerImport`) : la page peut se fermer une fois les envois finis.
+
 ### Capturer (« Nouvelle instruction », `CaptureBoard`)
 
 La page la plus importante, d'un seul écran au téléphone (« Créer = un geste », `VISION.md`). Au
