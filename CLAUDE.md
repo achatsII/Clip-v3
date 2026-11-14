@@ -50,7 +50,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `clip_job`. L'appareil peut alors se fermer ; le premier
   appareil ouvert qui voit le travail fini termine l'instruction avec le code de l'app
   (`finishServerGeneration` dans `CreationWatcher` : verrou `generating.finishing`, même fin que sur
-  l'appareil) et débite le coût réel avec la clé du travail (`jobDebitKey`, une seule fois). Si le
+  l'appareil) et débite le coût réel avec la clé du travail (`jobDebitKey`, une seule fois). Une
+  création au serveur ne se juge jamais au signe de vie du téléphone : elle reste en cours jusqu'à ce
+  que son travail soit réglé, même des jours plus tard, et seul le travail la fait échouer (pas pris
+  en 3 min, ou muet 30 min selon sa propre horloge, `jobOutcome`). Le toggle ne décide que du
+  lancement : un travail parti se termine toujours. Si le
   serveur ne prend pas la génération, elle tourne sur l'appareil ; après un échec au serveur, la
   relance aussi. « Générer » se touche pendant les envois : la génération part toute seule à leur fin
   (`whenUploaded`). L'import en lot crée chaque instruction et confie son analyse au serveur

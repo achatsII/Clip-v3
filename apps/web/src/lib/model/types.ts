@@ -417,7 +417,7 @@ export interface GeneratingInfo {
   jobId?: string | null
   /** Ce qu'il faut pour terminer l'instruction sur un autre appareil que celui qui l'a lancée. */
   job?: ServerJobContext | null
-  /** L'appareil qui termine l'instruction (verrou de 2 minutes) : un seul à la fois. */
+  /** L'appareil qui termine l'instruction (verrou de 5 minutes, `FINISH_LOCK_MS`) : un seul à la fois. */
   finishing?: { at: string; by: string } | null
 }
 

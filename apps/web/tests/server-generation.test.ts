@@ -5,10 +5,10 @@ vi.mock('@/lib/realtime/client', () => ({ publishRealtime: vi.fn() }))
 vi.mock('@/lib/ai/autoAnnotate', () => ({ annotateMarks: vi.fn() }))
 vi.mock('@/lib/ai/generate', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/lib/ai/generate')>()), enrichMedia: vi.fn(async (c: unknown) => c) }))
 
-import { creationOf, SERVER_STALE_MS, STALE_MS } from '@/lib/ai/creation'
+import { creationOf, STALE_MS } from '@/lib/ai/creation'
 import { clearJob } from '@/lib/ai/jobs'
 import { finishServerGeneration, startGeneration } from '@/lib/ai/runGeneration'
-import { DEVICE_ID, FINISH_LOCK_MS, JOB_IGNORED_FIELDS, JOB_RELAYED_FIELDS, jobOutcome, SERVER_PICKUP_MS, serverJobIds } from '@/lib/ai/serverJob'
+import { DEVICE_ID, FINISH_LOCK_MS, JOB_IGNORED_FIELDS, JOB_RELAYED_FIELDS, JOB_SILENCE_MS, jobOutcome, SERVER_PICKUP_MS, serverJobIds } from '@/lib/ai/serverJob'
 import { importAsk, prepareGeneration } from '@/lib/ai/generate'
 import { APP_IDENTIFIER } from '@/lib/config'
 import { aiApi, jobDebitKey, jobRecordId, type AskBody } from '@/lib/gateway/ai'
@@ -92,11 +92,24 @@ describe('où en est un travail au serveur', () => {
     expect(jobOutcome(job({ status: 'completed', finalizedAt: iso(now) }), now)).toEqual({ kind: 'done' })
   })
 
-  it('une création au serveur ne s’interrompt qu’après 30 minutes sans nouvelle', () => {
+  it('une création au serveur ne dépend pas du téléphone : elle attend son travail, même des jours', () => {
     const at = (ago: number, mode?: 'server') => ({ generating: { startedAt: iso(now - ago), heartbeatAt: iso(now - ago), stage: 'analyze', device: 'app' as const, ...(mode ? { mode, jobId: 'j' } : {}) } })
     expect(creationOf(at(STALE_MS + 1000, 'server'), now), 'le téléphone fermé : le serveur continue').toMatchObject({ kind: 'running' })
+    // Le cas vécu le 2026-11-14 : app fermée au lancement, rouverte 34 minutes plus tard.
+    expect(creationOf(at(34 * 60_000, 'server'), now).kind).toBe('running')
+    expect(creationOf(at(3 * 24 * 3600_000, 'server'), now).kind).toBe('running')
+    // Sur l'appareil, c'est le signe de vie qui compte : deux minutes sans lui, elle est interrompue.
     expect(creationOf(at(STALE_MS + 1000), now).kind).toBe('stale')
-    expect(creationOf(at(SERVER_STALE_MS + 1000, 'server'), now).kind).toBe('stale')
+    expect(creationOf(at(STALE_MS - 1000), now).kind).toBe('running')
+  })
+
+  it('un travail sans nouvelles du serveur depuis 30 minutes est perdu (son horloge, pas celle du téléphone)', () => {
+    expect(jobOutcome(job({ startedAt: iso(now - JOB_SILENCE_MS - 60_000), heartbeatAt: iso(now - JOB_SILENCE_MS + 60_000) }), now), 'le serveur a donné signe de vie').toEqual({ kind: 'running' })
+    expect(jobOutcome(job({ startedAt: iso(now - JOB_SILENCE_MS - 60_000), heartbeatAt: iso(now - JOB_SILENCE_MS - 1000) }), now)).toMatchObject({ kind: 'failed', reason: 'stuck', costCad: null })
+    // Fini ou raté, un travail ancien reste fini ou raté : c'est le cas d'un retour tardif.
+    const old = { startedAt: iso(now - 3 * 24 * 3600_000), heartbeatAt: iso(now - 3 * 24 * 3600_000) }
+    expect(jobOutcome(job({ ...old, status: 'completed', result: { json: { title: 'T' }, model: 'g', billing: { costs: { cad: 0.02 } } } }), now)).toMatchObject({ kind: 'completed', costCad: 0.02 })
+    expect(jobOutcome(job({ ...old, status: 'failed', error: { message: 'x' } }), now)).toMatchObject({ kind: 'failed', reason: 'error' })
   })
 
   it('les travaux d’une liste de créations, sans doublon', () => {

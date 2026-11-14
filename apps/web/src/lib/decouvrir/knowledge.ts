@@ -90,6 +90,9 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - La génération tourne dans l'appareil qui la lance et se voit sur les autres (« En création ») ; au
   navigateur, on peut quitter l'écran tant que l'onglet reste ouvert. Si l'appareil s'éteint, la création est
   « interrompue » et se relance d'un geste ; les médias sont gardés.
+- Au choix de l'usine (Réglages › Usine › « Génération par l'IA » › « Sur le serveur »), l'IA écrit
+  l'instruction sur le serveur : on peut fermer l'app dès que la génération est partie. Au retour, même des
+  heures plus tard, l'instruction se termine en quelques secondes sur le premier appareil ouvert.
 - Rien n'est publié sans un geste humain : l'IA propose, une personne relit et publie.
 
 ## 3. Retoucher, annoter, illustrer

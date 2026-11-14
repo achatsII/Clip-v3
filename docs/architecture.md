@@ -337,15 +337,25 @@ l'appareil, comme avant. Au serveur, on peut fermer l'app pendant que l'IA écri
    les routes Mongo n'acceptent que les workflows de leur propriétaire, comme Job_start et
    `Job_Analyse_CLIP` (V1). Chacune envoie tout `json_data`, repris du document relu, comme V1.
 3. **Un appareil termine.** `CreationWatcher` (posé une fois pour qui crée des instructions) relit
-   toutes les 10 s, jamais onglet caché, le travail de chaque création au serveur en cours. Fini, le
+   toutes les 10 s, jamais onglet caché, le travail de chaque création au serveur, quel que soit son
+   âge. Fini, le
    premier appareil qui le voit pose le verrou `generating.finishing` (5 minutes ; relu pour savoir
    qui l'a eu), débite le coût réel avec la clé du travail (`jobDebitKey` : deux appareils ne débitent
    jamais deux fois), met la réponse en forme et finit comme sur l'appareil (vignettes, repères posés
    sur les images, poste rapproché, brouillon enregistré), puis marque le travail `finalizedAt`. Raté,
    il écrit l'erreur (`generationError.server`), et la relance se fait sur l'appareil.
 
-Une création au serveur n'est « interrompue » qu'après 30 minutes sans nouvelle ; un travail encore à
-l'étape de départ après 3 minutes n'a jamais été pris par le serveur (`SERVER_PICKUP_MS`). Si
+Une création au serveur ne dépend plus du téléphone qui l'a lancée : elle reste « en cours » tant
+que son travail n'est pas réglé, et le premier appareil ouvert la termine, même des jours plus tard
+(`creationOf`). Seul le travail peut la faire échouer (`jobOutcome`) : encore à l'étape de départ
+après 3 minutes, le serveur ne l'a jamais pris (`SERVER_PICKUP_MS`) ; ni fini ni raté et sans
+nouvelles du serveur depuis 30 minutes (son propre `heartbeatAt`, jamais celui du téléphone), il est
+perdu (`JOB_SILENCE_MS`). Le toggle `serverGeneration` ne décide que du lancement : un travail déjà
+parti se termine toujours, même si la configuration ne se lit pas. Le surveillant refait le tour à
+chaque relecture : une fin ratée, ou le verrou d'un appareil fermé en pleine fin, se reprend. En
+novembre 2026, la règle d'avant (« interrompue » 30 minutes après le dernier signe du téléphone)
+cachait le travail fini : app rouverte 34 minutes plus tard, l'écran disait « La création s'est
+interrompue » (`tests/creation-watcher.test.tsx`). Si
 `job/start` ne rend aucun travail, la génération tourne sur l'appareil avec la requête déjà prête ;
 un refus de facturation se montre tel quel. Le relais des champs de la requête est figé dans le nœud
 « Run AskAI V4 » de n8n : `JOB_RELAYED_FIELDS` le reflète, et un test échoue si la génération emploie

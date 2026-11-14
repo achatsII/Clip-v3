@@ -24,6 +24,11 @@ export const JOB_IGNORED_FIELDS = ['effort'] as const
 
 /** Un travail encore à l'étape de départ après 3 minutes : le serveur ne l'a jamais pris. */
 export const SERVER_PICKUP_MS = 3 * 60_000
+/**
+ * Un travail ni fini ni raté, sans nouvelles du serveur depuis 30 minutes (son propre signe de vie,
+ * jamais celui du téléphone) : le serveur l'a perdu. L'instruction le dit et se relance.
+ */
+export const JOB_SILENCE_MS = 30 * 60_000
 /** Un appareil qui termine l'instruction la garde 5 minutes ; passé ce délai, un autre peut la reprendre. */
 export const FINISH_LOCK_MS = 5 * 60_000
 
@@ -48,6 +53,8 @@ export function jobOutcome(job: ServerJob | null | undefined, now = Date.now()):
   if (job.status === 'failed') return { kind: 'failed', message: t.serverFailed, costCad: costOf(job), reason: 'error' }
   const started = Date.parse(job.startedAt)
   if (job.stage === 'start' && Number.isFinite(started) && now - started > SERVER_PICKUP_MS) return { kind: 'failed', message: t.serverNotTaken, costCad: null, reason: 'stuck' }
+  const last = Date.parse(job.heartbeatAt || job.startedAt)
+  if (Number.isFinite(last) && now - last > JOB_SILENCE_MS) return { kind: 'failed', message: t.serverFailed, costCad: null, reason: 'stuck' }
   return { kind: 'running' }
 }
 

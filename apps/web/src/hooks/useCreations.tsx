@@ -13,7 +13,6 @@ import type { DataApi } from '@/lib/gateway/data'
 import { messages } from '@/lib/i18n'
 import { T } from '@/lib/model/repo'
 import type { Instruction } from '@/lib/model/types'
-import { useToggle } from '@/lib/toggles'
 import { qk, useStations } from './queries'
 
 /** Les travaux au serveur que cet onglet est en train de terminer (une seule fois chacun). */
@@ -85,10 +84,11 @@ export function CreationWatcher() {
   const { data, files, ai, profile, displayName } = useSession()
   const creations = useCreations({ idle: pathname === '/accueil' || pathname === '/instructions' })
   const stations = useStations()
-  // La génération au serveur : les travaux des créations en cours, relus toutes les 10 s (jamais onglet caché).
-  const serverToggle = useToggle('serverGeneration')
+  // La génération au serveur : les travaux des créations en cours, relus toutes les 10 s (jamais onglet
+  // caché). Une création au serveur reste en cours tant que son travail n'est pas réglé, même des jours
+  // plus tard. Le toggle `serverGeneration` ne décide que du lancement : un travail parti se termine toujours.
   const running = (creations.data ?? []).filter((d) => creationOf(d.json_data).kind === 'running')
-  const jobIds = serverToggle ? serverJobIds(running) : []
+  const jobIds = serverJobIds(running)
   const jobs = useQuery({
     queryKey: [...qk.creations, 'jobs', jobIds],
     queryFn: () => Promise.all(jobIds.map(async (id) => ({ id, job: await readServerJob(data, id) }))),
@@ -139,7 +139,8 @@ export function CreationWatcher() {
   }
 
   // Un travail fini au serveur : cet onglet termine l'instruction (vignettes, repères, enregistrement),
-  // une seule fois. L'appareil qui l'a lancée est peut-être fermé.
+  // une seule fois. L'appareil qui l'a lancée est peut-être fermé. Chaque relecture (`dataUpdatedAt`)
+  // refait le tour : une fin ratée ou un verrou d'un autre appareil qui expire se reprend à la suivante.
   useEffect(() => {
     if (!jobs.data || !stations.data) return
     for (const { id: jobId, job } of jobs.data) {
@@ -162,7 +163,7 @@ export function CreationWatcher() {
         })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobs.data, stations.data])
+  }, [jobs.dataUpdatedAt, stations.data])
 
   return null
 }
