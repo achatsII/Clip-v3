@@ -224,6 +224,13 @@ html[data-immersive] .shell-main {
   padding: 0 !important;
 }
 
+/* ───────────────────────── Média à sa juste hauteur ─────────────────────────
+   Au téléphone tenu droit, le lecteur donne au média ses vraies proportions (src/lib/media/fit.ts) ;
+   une vidéo garde dessous la bande de ses commandes : l'image se cale en haut, rien ne la cache. */
+[data-fit='top'] video {
+  object-position: top;
+}
+
 /* ───────────────────────── Verre (5.5) ─────────────────────────
    Écrire seulement « backdrop-filter » : Lightning CSS ajoute le préfixe -webkit- pour Safari.
    Avec les deux écrits, il ne garde que la version préfixée, et Chrome perd tout le flou. */

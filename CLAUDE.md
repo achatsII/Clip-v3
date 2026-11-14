@@ -25,6 +25,13 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   réécriture complète garde les champs qu'on ne connaît pas.
 - **Liens publics** (poste, instruction) : la portée se bâtit côté serveur dans
   `src/lib/server/scope.ts`, jamais à partir du navigateur. Un lien ne lit que `clip_published`.
+- **Espace Découvrir** (`/decouvrir`, [`docs/DECOUVRIR.md`](docs/DECOUVRIR.md)) : les vidéos et le conseiller
+  pour les prospects, à part de l'app (sa propre session, le cookie `clip_decouvrir` ; rien dans les données de
+  Clip). Public par défaut ; `DECOUVRIR_ACCES=sandboxes` le ferme derrière Sandboxes (`src/proxy.ts`,
+  `src/lib/decouvrir/server`), qui reçoit le suivi, les conversations et les besoins. Jamais de prix, de client réel
+  ni d'outil interne. Une fonction qui change dans Clip se reporte dans la base du conseiller
+  (`src/lib/decouvrir/knowledge.ts`, chaque phrase vérifiée) ; une vidéo tournée se publie par
+  `public/decouvrir/videos/<id>.json`, le MP4 au stockage, jamais dans git.
 - **Génération suivie partout** : elle tourne dans l'appareil qui la lance (`startGeneration`). Il
   écrit son état dans l'instruction (`generating` : étape, signe de vie toutes les 30 s ;
   `src/lib/ai/creation.ts`). Les autres appareils le lisent par une petite requête partagée
@@ -45,6 +52,20 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la publication
   sans jamais la retenir (`src/lib/media/reel.ts`). En novembre 2026, la route de montage répond 500
   en QA : le poste lit alors la vidéo d'origine.
+- **Capturer** (« Nouvelle instruction », `CaptureBoard`) : d'un seul écran au téléphone, qui prend tout
+  l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
+  ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher.
+- **Deux façons de modifier** (toggle `editorViews`) : « Comme au poste » (l'étape telle qu'au poste,
+  modifiée sur place) et « Fiche » (la liste des étapes, tous les outils de l'étape choisie à
+  découvert, en cartes ; au téléphone, la liste puis l'étape ; une étape se glisse par sa poignée et
+  rejoint la section où on la lâche, `placeStep`), retenues sur l'appareil
+  (`clip_pref_editor_view` ; sans choix, la fiche au bureau, le poste au téléphone). Une fonction
+  nouvelle de l'éditeur existe dans les deux. L'Aperçu (l'œil) est le lecteur du poste, pas une vue.
+  En-tête commun : `src/components/editor/EditorBar.tsx`.
+- **La lecture au téléphone** (toggle `phoneReader`) : le média à ses vraies proportions, qui cède au
+  texte sans descendre sous 38 % de la place (une vidéo garde toute sa largeur et ses commandes
+  dessous) ; côte à côte quand on tourne le téléphone ; « Tout voir » depuis le sommaire
+  (`src/lib/media/fit.ts`, `ratio.ts`).
 - **Qui est à la tablette** (toggle `operators`) : l'opérateur n'a pas de compte, un nom et un code à
   4 chiffres (page `/equipe`, `clip_operator`, `src/lib/model/operators.ts`). Le code se donne et se
   vérifie au serveur (`/api/operators/pin`, `/api/operators/verify`, `src/lib/server/operators.ts`) ;
@@ -140,6 +161,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Une route du serveur (`src/app/api`) ne tire jamais `@/lib/i18n` : ses hooks React font échouer la
   build. Ce qu'une route peut atteindre (`gateway/client`, `gateway/data`, `model/repo`,
   `model/catalog`) importe `@/lib/i18n/core`.
+- jsdom n'a ni `matchMedia`, ni `ResizeObserver`, ni `scrollIntoView` : un test qui affiche une vue
+  de l'éditeur les remplace (`tests/form-view.test.tsx`).
+- `next dev` écrit `apps/web/AGENTS.md` et retouche `next-env.d.ts` : ne pas les committer.
 - Les enveloppes des routes Data ne sont pas uniformes (`result` sur `/one`, `count` sur `/count`) :
   passer par `dataApi`.
 - Une requête Data rend au plus 10 000 documents : un `limit` plus grand répond 400 (« limit must be
@@ -161,7 +185,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   899 $/mois (15, illimitées, 100, 40 000) · Entreprise sur devis, hors manifeste. Annuel = 10 mois.
 - Les modules en option (`kind: addon`), sur le web seulement, avec Équipe ou Usine, 14 jours offerts :
   Académie (feature `academy`, 149 $ avec Équipe, 449 $ avec Usine) et Relevés (`records_plus`, 99 $ et
-  299 $). Un module par plan de base (`academie_equipe`…) ; l'app ne propose que celui de son plan
+  299 $). Un module par plan de base (`academie-equipe`…) ; l'app ne propose que celui de son plan
   (`MODULES`, `src/lib/billing/catalog.ts`, comparé au manifeste par le test). Le rattachement au plan de
   base n'a pas de champ documenté : la simulation de `billing-publish` le confirme. Un module se montre
   et se vend seulement une fois bâti (toggles `academy` et `recordsPlus`, allumés : les deux le sont).

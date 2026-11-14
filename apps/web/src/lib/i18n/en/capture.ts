@@ -9,7 +9,7 @@ export const capture: typeof Fr = {
     ignore: 'Ignore',
     intent: 'What is it about?',
     optional: '(optional)',
-    intentPlaceholder: 'E.g. cleaning the rails of machine 1234, once a month',
+    intentPlaceholder: 'E.g. cleaning the rails, machine 1234',
     actions: {
       video: { label: 'Video', hint: 'Film the task' },
       photo: { label: 'Photos', hint: 'Parts, settings' },
@@ -24,7 +24,12 @@ export const capture: typeof Fr = {
     autoHint: 'The AI picks the format',
     procedureHint: 'Step by step',
     lockoutHint: 'Energy and isolation',
-    empty: 'Add a video, photos or a note to start.',
+    /** The first way to capture, shown big: film someone who shows and explains. */
+    heroLabel: 'Film the task',
+    heroHint: 'Show and explain out loud: it’s the fastest way.',
+    /** The other ways, on one line; then, once something is captured, “Add”. */
+    others: 'Or add',
+    addMore: 'Add',
     uploading: 'Uploading… you can keep capturing.',
     tooBig: 'That’s a lot for one instruction: split it into several.',
     ready: (n: number) => `${n.toLocaleString('en-CA')} note${n !== 1 ? 's' : ''} ready. The AI will analyze ${n !== 1 ? 'them' : 'it'}.`,

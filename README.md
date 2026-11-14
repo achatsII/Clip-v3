@@ -10,6 +10,7 @@ langue et signale ce qui cloche.
 - L'architecture, les données et le pipeline de génération : [`docs/architecture.md`](docs/architecture.md)
 - Le pont entre l'app web et la coquille mobile : [`docs/pont-natif.md`](docs/pont-natif.md)
 - L'offre (plans, crédits, opérations d'IA) : [`billing.manifest.yaml`](billing.manifest.yaml)
+- L'espace Découvrir des prospects (vidéos, conseiller, accès par Sandboxes) : [`docs/DECOUVRIR.md`](docs/DECOUVRIR.md)
 
 ## Le dépôt
 
@@ -58,8 +59,10 @@ npm run build
 |---|---|---|
 | `NEXT_PUBLIC_GATEWAY_URL` | Adresse de la Gateway Octopus | la QA |
 | `NEXT_PUBLIC_APP_IDENTIFIER` | Identifiant de connexion à la Gateway | `html` |
-| `NEXT_PUBLIC_SELF_SERVICE` | Inscription en libre-service sur `/connexion` | `false` |
-| `NEXT_PUBLIC_BILLING_V2` | Facturation v2 : plans, crédits, paywall | `false` |
+| `NEXT_PUBLIC_SELF_SERVICE` | Inscription en libre-service sur `/connexion` : `1` l'allume, toute autre valeur l'éteint. Allumée, le site invite à « Essayer gratuitement » plutôt qu'à « Réserver une démo » | éteinte |
+| `NEXT_PUBLIC_BILLING_V2` | Facturation v2 (plans, crédits, paywall) : `1` l'allume, toute autre valeur l'éteint | éteinte |
+| `NEXT_PUBLIC_SITE_URL` | Adresse du site public : canoniques, hreflang, plan du site, images Open Graph | `https://clip-v3.vercel.app` |
+| `NEXT_PUBLIC_HUBSPOT_ID` | Compte HubSpot du site, chargé seulement après consentement ; vide : aucun suivi | `3429410` |
 | `CLIP_TOGGLES` | Feature toggles servis par `GET /api/config` (JSON) | valeurs par défaut du code |
 | `CLIP_FORCE_UPDATE_IOS`, `CLIP_FORCE_UPDATE_ANDROID` | Versions de la coquille à bloquer (contrainte semver, ex. `<1.2.0`) | personne |
 | `CLIP_STORE_URL_IOS`, `CLIP_STORE_URL_ANDROID` | Lien « Mettre à jour » de l'écran bloquant | la page du magasin |
@@ -75,6 +78,22 @@ serveur (`/api/config`, `/api/share`) et aucun secret de la Gateway ; sans varia
 Gateway de QA, facturation éteinte. Seule l'adresse `clip-v3.vercel.app` est publique : les autres
 adresses de Vercel (alias d'équipe, déploiements) demandent une connexion à Vercel.
 
+### Le site public
+
+`/` et `/en` : le site de Clip (groupe de routes `apps/web/src/app/(site)`), statique et bilingue
+(français du Québec, anglais sous `/en` avec des adresses traduites). Pages, plan du site
+(`/sitemap.xml`), `robots.txt` et images Open Graph se font à la build. Les textes vivent dans
+`apps/web/src/lib/site/content` ; les prix ne viennent que de `billing.manifest.yaml`.
+
+- `/` garde son rôle pour l'app : une session ouverte mène à `/accueil`, et la coquille mobile ne
+  montre jamais le site (elle va à `/connexion`).
+- Le suivi HubSpot ne se charge qu'après « Accepter » dans la bannière des témoins (Loi 25) ;
+  « Refuser » efface ses témoins. `/rendez-vous` (`/en/book-a-demo`) intègre le calendrier HubSpot.
+- Libre-service éteint, chaque appel à l'action mène à `/rendez-vous`. Allumé, « Essayer
+  gratuitement » ouvre l'inscription (`/connexion?inscription=1`) et un forfait payant la garde en tête
+  (`&plan=…&interval=…`) : avec la facturation allumée, il s'ouvre présélectionné sur
+  `/reglages/abonnement` après `/bienvenue`.
+
 ## Démarrer la coquille mobile
 
 ```bash
@@ -89,6 +108,25 @@ Remplacez l'adresse par celle du poste qui fait tourner l'app web (pas `localhos
 le verrait pas). Sans `EXPO_PUBLIC_CLIP_WEB_URL`, la coquille affiche la production
 (https://clip-v3.vercel.app). Les tests de la coquille : `cd apps/mobile && npm test`.
 
+## L'espace Découvrir
+
+`/decouvrir` montre Clip aux prospects : les vidéos du produit (seul le film de 75 secondes est tourné, les autres
+sont « Bientôt ») et un conseiller IA qui répond d'après une base de connaissance vérifiée. Il est public par défaut.
+Avec `DECOUVRIR_ACCES=sandboxes`, il n'ouvre qu'aux personnes à qui Intelligence Industrielle l'a ouvert dans
+Sandboxes, et tout ce qu'elles y font part à Sandboxes ; rien ne s'écrit dans les données de Clip. Ses variables,
+toutes côté serveur :
+
+| Variable | Rôle | Par défaut |
+|---|---|---|
+| `DECOUVRIR_ACCES` | `sandboxes` : l'accès passe par Sandboxes (lue au build : redéployer après un changement) | `ouvert` |
+| `SANDBOXES_URL`, `SANDBOXES_CLE` | L'API de Sandboxes et la clé de Clip (Sandboxes › Produits) | — (prospects refusés) |
+| `SANDBOXES_APP` | L'application des prospects à la Gateway | `sandboxes` |
+| `DECOUVRIR_GATEWAY_URL` | La Gateway des comptes des prospects (la production) | `NEXT_PUBLIC_GATEWAY_URL` |
+| `SESSION_SECRET` | Scelle le cookie de l'espace (32 caractères ou plus) | — |
+
+Comment ça marche, les gestes pour brancher Clip à Sandboxes et comment ajouter une vidéo :
+[`docs/DECOUVRIR.md`](docs/DECOUVRIR.md).
+
 ## Ce qui reste à faire avant la production
 
 - **Enregistrer l'application `clip-v3` à la Gateway**, puis changer `NEXT_PUBLIC_APP_IDENTIFIER` :
@@ -97,6 +135,8 @@ le verrait pas). Sans `EXPO_PUBLIC_CLIP_WEB_URL`, la coquille affiche la product
   d'avoir de vraies données, ou les recopier.
 - **Publier le catalogue de facturation** (skill `billing-publish`) une fois l'application
   enregistrée, puis allumer `NEXT_PUBLIC_BILLING_V2` là où les routes `/api/v2/billing` répondent.
+- **Allumer le libre-service** (`NEXT_PUBLIC_SELF_SERVICE=1`) quand l'application enregistrée accepte
+  l'inscription : le site passe alors de « Réserver une démo » à « Essayer gratuitement ».
 - **Coquille mobile** : confirmer l'identifiant de bundle (`com.intelligenceindustrielle.clip`),
   décider de l'achat dans les magasins avant la soumission (voir `CLAUDE.md`, « Facturation »), faire
   les builds.

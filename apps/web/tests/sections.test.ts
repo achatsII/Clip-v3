@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanSections, hasSections, inheritSection, moveStep, removeSection, sectionGroups, setSectionRange, settleSection, startSection, startsSection } from '@/lib/model/sections'
+import { cleanSections, hasSections, inheritSection, moveStep, placeStep, removeSection, sectionGroups, setSectionRange, settleSection, startSection, startsSection } from '@/lib/model/sections'
 import { localized } from '@/lib/model/translation'
 import { buildTranslation, contentSegments } from '@/lib/ai/translate'
 import type { InstructionContent, Step } from '@/lib/model/types'
@@ -9,6 +9,30 @@ const names = (steps: Step[]) => steps.map((s) => s.section ?? '-').join(',')
 
 describe('les sections', () => {
   const steps = [step('a'), step('b', 'Démontage'), step('c', 'Démontage'), step('d', 'Remontage'), step('e', 'Remontage')]
+
+  it('une étape glissée dans la liste de la fiche rejoint la section où on la dépose ; les autres gardent la leur', () => {
+    const order = (list: Step[]) => list.map((s) => s.id).join('')
+    // « e » (Remontage) lâchée devant « b » : au début de Démontage.
+    const before = placeStep(steps, 4, 1)
+    expect(order(before)).toBe('aebcd')
+    expect(names(before)).toBe('-,Démontage,Démontage,Démontage,Remontage')
+    // Lâchée au-dessus du titre de Démontage : à la fin de ce qui précède (ici, sans section).
+    const above = placeStep(steps, 4, 1, true)
+    expect(order(above)).toBe('aebcd')
+    expect(names(above)).toBe('-,-,Démontage,Démontage,Remontage')
+    // Tout en bas : elle prend la section de la dernière étape.
+    expect(names(placeStep(steps, 0, 4))).toBe('Démontage,Démontage,Remontage,Remontage,Remontage')
+    // Lâchée à sa place, rien ne change (le même tableau : rien à enregistrer)…
+    expect(placeStep(steps, 1, 1)).toBe(steps)
+    expect(placeStep(steps, 2, 2, true)).toBe(steps)
+    // … mais sous le titre de la section suivante, elle y entre.
+    expect(names(placeStep(steps, 2, 2))).toBe('-,Démontage,Remontage,Remontage,Remontage')
+    // Chaque section reste d'un seul tenant.
+    for (const [from, to, end] of [[0, 3, false], [3, 0, false], [1, 4, true], [4, 3, true]] as const) {
+      const names2 = sectionGroups(placeStep(steps, from, to, end)).map((g) => g.name)
+      expect(new Set(names2).size).toBe(names2.length)
+    }
+  })
 
   it('sont les étapes qui se suivent sous le même nom', () => {
     expect(sectionGroups(steps)).toEqual([

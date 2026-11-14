@@ -58,7 +58,7 @@ describe('ce que l’aperçu montre', () => {
     const team: PreviewSelection = { plan: 'equipe', modules: ['records'], credits: 'empty' }
     expect(applyPurchase(team, 'usine')).toEqual({ plan: 'usine', modules: ['records'], credits: 'full' })
     expect(applyPurchase(team, 'solo')).toEqual({ plan: 'solo', modules: [], credits: 'full' })
-    expect(applyPurchase(team, 'academie_equipe')).toEqual({ plan: 'equipe', modules: ['records', 'academy'], credits: 'empty' })
+    expect(applyPurchase(team, 'academie-equipe')).toEqual({ plan: 'equipe', modules: ['records', 'academy'], credits: 'empty' })
     expect(applyPurchase(team, 'inconnu')).toBe(team)
   })
 
@@ -68,8 +68,8 @@ describe('ce que l’aperçu montre', () => {
     expect((await client.check('academy')).allowed).toBe(false)
     expect((await client.check('translations')).allowed).toBe(true)
     expect((await client.plans()).plans.filter((p) => p.is_current).map((p) => p.code)).toEqual(['equipe'])
-    const back = await client.checkout('academie_equipe', 'yearly', { success: 'https://clip.test/registre?ecarts=1', cancel: 'https://clip.test/registre' })
-    expect(new URL(back).searchParams.get(PREVIEW_PARAM)).toBe('academie_equipe')
+    const back = await client.checkout('academie-equipe', 'yearly', { success: 'https://clip.test/registre?ecarts=1', cancel: 'https://clip.test/registre' })
+    expect(new URL(back).searchParams.get(PREVIEW_PARAM)).toBe('academie-equipe')
     expect(new URL(back).searchParams.get('ecarts')).toBe('1')
     expect(sel.modules).toEqual(['academy'])
     expect((await client.check('academy')).allowed).toBe(true)

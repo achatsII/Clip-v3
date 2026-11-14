@@ -2,8 +2,9 @@
  * Ce que l'app doit savoir du catalogue et que la plateforme ne rend pas : les libellés des features,
  * dans l'ordre d'affichage. Aucun prix ici : les abonnements se lisent à la plateforme, et l'IA n'a
  * pas de prix fixe (chaque réponse est débitée de son coût réel, `aiApi`).
+ * Le site public le lit au serveur (`src/lib/site/pricing.ts`) : d'où le cœur des langues, sans React.
  */
-import { getLang, messages } from '@/lib/i18n'
+import { getLang, messages } from '@/lib/i18n/core'
 import type { ToggleName } from '../toggleDefaults'
 
 export type FeatureKey =
@@ -108,8 +109,8 @@ export interface ModuleDef {
 
 /** Les modules (`kind: addon` au manifeste, un par plan de base : un test les compare). */
 export const MODULES: readonly ModuleDef[] = [
-  { key: 'academy', feature: 'academy', toggle: 'academy', addons: { equipe: 'academie_equipe', usine: 'academie_usine' } },
-  { key: 'records', feature: 'records_plus', toggle: 'recordsPlus', addons: { equipe: 'releves_equipe', usine: 'releves_usine' } },
+  { key: 'academy', feature: 'academy', toggle: 'academy', addons: { equipe: 'academie-equipe', usine: 'academie-usine' } },
+  { key: 'records', feature: 'records_plus', toggle: 'recordsPlus', addons: { equipe: 'releves-equipe', usine: 'releves-usine' } },
 ]
 
 /** Le module qui ouvre cette feature, s'il y en a un. */

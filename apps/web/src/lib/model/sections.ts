@@ -90,6 +90,22 @@ export function moveStep(steps: Step[], index: number, dir: -1 | 1): Step[] {
   return next
 }
 
+/**
+ * Glisse une étape à une autre place (la liste de la fiche) : elle arrive au rang `to` de la liste
+ * sans elle, et rejoint la section où on la dépose — celle de l'étape devant laquelle elle arrive,
+ * ou de celle d'avant quand on la lâche à la fin d'une section (`endOfPrevious`). Les autres
+ * étapes gardent la leur : une section reste d'un seul tenant.
+ */
+export function placeStep(steps: Step[], from: number, to: number, endOfPrevious = false): Step[] {
+  if (from < 0 || from >= steps.length) return steps
+  const rest = steps.filter((_, i) => i !== from)
+  const at = Math.max(0, Math.min(to, rest.length))
+  const neighbor = endOfPrevious ? (rest[at - 1] ?? rest[at]) : (rest[at] ?? rest[at - 1])
+  const name = neighbor ? nameOf(neighbor) : nameOf(steps[from])
+  if (at === from && name === nameOf(steps[from])) return steps
+  return [...rest.slice(0, at), withSection(steps[from], name ?? undefined), ...rest.slice(at)]
+}
+
 /** Une étape ajoutée après une autre reste dans sa section. */
 export function inheritSection(step: Step, after: Step | undefined): Step {
   const name = after ? nameOf(after) : null

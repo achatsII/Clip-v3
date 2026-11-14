@@ -1,63 +1,37 @@
 'use client'
 
-import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Copy, Heading, ImagePlus, Loader2, MessageCircle, MessageCircleQuestion, MoreHorizontal, PencilLine, Plus, Radio, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react'
-import Link from 'next/link'
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, MoreHorizontal, Plus, Radio, Sparkles, TriangleAlert, X } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { mediaThumb } from '@/components/media/MediaView'
-import { strings as playerStrings, rangeText } from '@/components/player/i18n'
 import { StepMediaArea } from '@/components/player/StepMediaArea'
 import { Button } from '@/components/ui/Button'
 import { AutoTextarea } from '@/components/ui/Field'
-import { Menu, type MenuItem } from '@/components/ui/Menu'
+import { Menu } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import type { DraftHistory } from '@/hooks/useDraftHistory'
-import { locale, useMessages, type Messages } from '@/lib/i18n'
+import { locale, useMessages } from '@/lib/i18n'
 import { WARNINGS } from '@/lib/model/catalog'
 import type { StepChange } from '@/lib/model/diff'
-import { removeSection, sectionAt, setSectionRange, settleSection, startSection, startsSection } from '@/lib/model/sections'
+import { fitMediaHeight } from '@/lib/media/fit'
+import { ratioKeys, useMediaRatio } from '@/lib/media/ratio'
+import { layoutOf } from '@/lib/model/media'
+import { startsSection } from '@/lib/model/sections'
+import { useToggle } from '@/lib/toggles'
 import type { Check as StepCheck, InstructionContent, Source, Step, WarningLevel } from '@/lib/model/types'
+import { useWide } from '@/lib/ui/screen'
 import { cn } from '@/lib/util/cn'
-import { CHECK_ICONS, CheckDialog } from './CheckDialog'
-import { ASSIST_ACTIONS, useStepAssist } from './StepAssist'
+import { CheckDialog } from './CheckDialog'
+import { AssistMenu, EditorHeader, iconButton, QuestionsPill, ViewMenu, type StageTop } from './EditorBar'
+import { useStepAssist } from './StepAssist'
 import { StepMediaEditor } from './StepMediaEditor'
-import { UndoButtons } from './UndoControls'
+import { ChecksBlock, keepCheck, SectionField, stepMenu, type StepActions } from './StepParts'
+
+export type { StageTop } from './EditorBar'
 
 /** Un texte modifiable qui garde l'allure du lecteur : on le touche, on écrit. */
 const editable = 'w-full rounded-xl bg-transparent transition hover:bg-slate-900/[0.03] focus:bg-white/80 focus:ring-4 focus:ring-[rgba(var(--primary-rgb),0.18)] focus:outline-none dark:hover:bg-white/5 dark:focus:bg-slate-900/60'
-const iconButton = 'btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-slate-600 hover:bg-slate-900/5 disabled:opacity-30 dark:text-slate-300 dark:hover:bg-white/10'
-
-const WIDE = '(min-width: 1024px)'
-const subscribeWide = (cb: () => void) => {
-  const m = window.matchMedia(WIDE)
-  m.addEventListener('change', cb)
-  return () => m.removeEventListener('change', cb)
-}
-/** Un écran d'ordinateur (ou une tablette à l'horizontale) : la vue du poste en grand. */
-function useWide() {
-  return useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE).matches, () => false)
-}
-
 /** Une instruction sans étape : l'assistant de l'étape n'a rien à retoucher. */
 const NO_STEP: Step = { id: '', title: '', text: '', keyPoints: [], warning: null, media: [] }
-
-/** L'en-tête de l'instruction : ce qui la concerne en entier, et rien d'autre. */
-export interface StageTop {
-  /** Son titre ; le toucher ouvre ses infos (titre, résumé, postes, fiche). */
-  title: string
-  /** Où elle en est : publication et enregistrement. */
-  status: ReactNode
-  statusTone?: 'live' | 'error'
-  /** L'action principale (publier, demander l'approbation, approuver) ; rien quand tout est publié. */
-  primary: (compact: boolean) => ReactNode
-  /** Le reste, rangé dans « … ». */
-  menu: MenuItem[]
-  onInfo: () => void
-  /** Le nom de ce geste, quand ce n'est pas celui d'une instruction (un bloc commun n'a pas de poste). */
-  infoLabel?: string
-  /** Les points que l'IA demande de vérifier : une pastille qui ouvre les questions. */
-  questions: number
-  onQuestions: () => void
-}
 
 export interface StageEditorProps {
   content: InstructionContent
@@ -132,135 +106,9 @@ export function StageEditor(props: StageEditorProps) {
 
 type Inner = StageEditorProps & { assist: ReturnType<typeof useStepAssist>; openMedia: () => void; namingSection: boolean; setNamingSection: (on: boolean) => void }
 
-/** Les actions sur l'étape, dans son « … » : média, ajout, copie, déplacement, suppression. */
-function stepMenu(p: Inner, step: Step, t: Messages): MenuItem[] {
-  const total = p.content.steps.length
-  return [
-    { label: step.media.length ? t.editor.stage.editMedia : t.editor.stage.addMedia, icon: <ImagePlus className="h-4 w-4" />, onClick: p.openMedia },
-    { label: t.editor.step.addAfter, icon: <Plus className="h-4 w-4" />, onClick: p.onInsertAfter },
-    { label: t.editor.step.duplicate, icon: <Copy className="h-4 w-4" />, onClick: p.onDuplicate },
-    { label: t.editor.stage.moveBefore, icon: <ArrowLeft className="h-4 w-4" />, onClick: () => p.onMove(-1), hidden: p.index === 0 },
-    { label: t.editor.stage.moveAfter, icon: <ArrowRight className="h-4 w-4" />, onClick: () => p.onMove(1), hidden: p.index >= total - 1 },
-    {
-      label: t.editor.stage.newSection,
-      icon: <Heading className="h-4 w-4" />,
-      hidden: !p.sections || startsSection(p.content.steps, p.index),
-      divider: true,
-      onClick: () => {
-        p.onSteps(startSection(p.content.steps, p.index, t.editor.stage.newSectionName))
-        p.setNamingSection(true)
-      },
-    },
-    { label: t.editor.stage.removeSection, icon: <X className="h-4 w-4" />, hidden: !p.sections || !step.section, onClick: () => p.onSteps(removeSection(p.content.steps, p.index)) },
-    { label: t.editor.step.delete, icon: <Trash2 className="h-4 w-4" />, onClick: p.onDelete, danger: true, divider: true },
-  ]
-}
-
-/**
- * Le nom de la section de l'étape, modifiable sur place : il change pour toutes les étapes de la
- * section. La plage est retenue au début de la saisie (un nom vidé ne fusionne pas deux sections).
- */
-function SectionField({ p, index }: { p: Inner; index: number }) {
-  const t = useMessages()
-  const range = useRef<{ start: number; end: number } | null>(null)
-  const grab = () => {
-    const g = sectionAt(p.content.steps, index)
-    return g ? { start: g.start, end: g.end } : { start: index, end: index + 1 }
-  }
-  return (
-    <input
-      value={p.content.steps[index]?.section ?? ''}
-      readOnly={p.readOnly}
-      autoFocus={p.namingSection}
-      onFocus={(e) => {
-        range.current = grab()
-        if (p.namingSection) {
-          e.currentTarget.select()
-          p.setNamingSection(false)
-        }
-      }}
-      onChange={(e) => {
-        const r = range.current ?? grab()
-        range.current = r
-        p.onSteps(setSectionRange(p.content.steps, r.start, r.end, e.target.value))
-      }}
-      onBlur={() => {
-        const r = range.current
-        range.current = null
-        if (r) p.onSteps(settleSection(p.content.steps, r.start, r.end))
-      }}
-      aria-label={t.editor.stage.sectionLabel}
-      className="label-caps -mb-2 w-full rounded-xl bg-transparent px-2 py-1.5 text-[var(--primary-strong)] transition hover:bg-slate-900/[0.03] focus:bg-white/80 focus:ring-4 focus:ring-[rgba(var(--primary-rgb),0.18)] focus:outline-none dark:text-sky-300 dark:hover:bg-white/5 dark:focus:bg-slate-900/60"
-    />
-  )
-}
-
-function BackLink() {
-  const t = useMessages()
-  return (
-    <Link href="/instructions" aria-label={t.editor.page.backToList} title={t.editor.page.backToList} className={iconButton}>
-      <ArrowLeft className="h-5 w-5" />
-    </Link>
-  )
-}
-
-/** Le titre de l'instruction et son état ; le toucher ouvre ses infos. */
-function TitleButton({ p }: { p: Inner }) {
-  const t = useMessages()
-  const { top } = p
-  return (
-    <button type="button" onClick={top.onInfo} title={top.infoLabel ?? t.editor.page.info.open} className="btn-press group flex min-h-11 max-w-full min-w-0 items-center gap-1.5 rounded-2xl px-2 text-left hover:bg-slate-900/5 dark:hover:bg-white/10">
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-black text-slate-900 dark:text-white">{top.title.trim() || t.editor.page.info.untitled}</span>
-        <span className={cn('block truncate text-xs font-bold', top.statusTone === 'live' ? 'text-[var(--primary)]' : top.statusTone === 'error' ? 'text-rose-600' : 'text-slate-400')} aria-live="polite">
-          {top.status}
-        </span>
-      </span>
-      {!p.readOnly && <PencilLine className="h-4 w-4 shrink-0 text-slate-400 transition lg:opacity-0 lg:group-hover:opacity-100" />}
-    </button>
-  )
-}
-
-/** « 2 à vérifier » : les questions de l'IA, une à la fois. */
-function QuestionsPill({ p, className }: { p: Inner; className?: string }) {
-  const t = useMessages()
-  return (
-    <button type="button" onClick={p.top.onQuestions} className={cn('btn-press flex min-h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-amber-100 px-3 text-xs font-black text-amber-900 dark:bg-amber-500/20 dark:text-amber-100', className)}>
-      <MessageCircleQuestion className="h-4 w-4 shrink-0" /> {t.editor.page.questions.pill(p.top.questions)}
-    </button>
-  )
-}
-
-/** Le « … » de l'instruction. */
-function InstructionMenu({ p }: { p: Inner }) {
-  const t = useMessages()
-  return <Menu bare label={t.editor.page.menu.label} items={p.top.menu} trigger={<span className={iconButton}><MoreHorizontal className="h-5 w-5" /></span>} />
-}
-
-/**
- * Le seul bouton de l'IA : les retouches de l'étape en un geste, et la conversation avec
- * l'assistant pour tout le reste. Il tourne pendant qu'elle travaille.
- */
-function AssistMenu({ p, compact, side }: { p: Inner; compact?: boolean; side?: 'up' }) {
-  const t = useMessages()
-  const items: MenuItem[] = [
-    ...ASSIST_ACTIONS.map((k) => ({ label: t.editor.assist.actions[k], icon: <Sparkles className="h-4 w-4" />, onClick: () => void p.assist.run(k), disabled: !!p.assist.busy })),
-    { label: t.editor.stage.askAssistant, icon: <MessageCircle className="h-4 w-4" />, onClick: p.onAssistant, divider: true },
-  ]
-  return (
-    <Menu
-      bare
-      side={side}
-      label={t.editor.stage.assistant}
-      items={items}
-      trigger={
-        <span className={cn('btn-press bg-gradient-accent shadow-accent flex h-11 items-center gap-1.5 rounded-2xl text-sm font-black text-white', compact ? 'w-11 justify-center' : 'px-3.5')}>
-          {p.assist.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {!compact && t.editor.stage.assistant}
-        </span>
-      }
-    />
-  )
+/** Les gestes sur l'étape, tels que la vue les reçoit. */
+function actionsOf(p: Inner): StepActions & { openMedia: () => void } {
+  return { steps: p.content.steps, index: p.index, sections: p.sections, onSteps: p.onSteps, onInsertAfter: p.onInsertAfter, onDuplicate: p.onDuplicate, onMove: p.onMove, onDelete: p.onDelete, onNamingSection: p.setNamingSection, openMedia: p.openMedia }
 }
 
 /** Passer d'une étape à l'autre : précédente, le choix, suivante. */
@@ -278,7 +126,7 @@ function StepNav({ p, className }: { p: Inner; className?: string }) {
         <select value={p.step.id} onChange={(e) => p.onSelect(e.target.value)} className="h-11 w-full appearance-none truncate rounded-2xl bg-slate-900/5 px-4 pr-8 text-sm font-black dark:bg-white/10">
           {p.content.steps.map((s, i) => (
             <option key={s.id} value={s.id}>
-              {t.editor.step.of(i + 1, total)} · {s.title}
+              {t.editor.stage.navOption(i + 1, total, s.title)}
             </option>
           ))}
         </select>
@@ -326,7 +174,7 @@ function NoStep({ p }: { p: Inner }) {
 /** Le « … » de l'étape. */
 function StepMenu({ p, step, side }: { p: Inner; step: Step; side?: 'up' }) {
   const t = useMessages()
-  return <Menu bare side={side} label={t.editor.stage.stepActions} items={stepMenu(p, step, t)} trigger={<span className={iconButton}><MoreHorizontal className="h-5 w-5" /></span>} />
+  return <Menu bare side={side} label={t.editor.stage.stepActions} items={stepMenu(actionsOf(p), step, t)} trigger={<span className={iconButton}><MoreHorizontal className="h-5 w-5" /></span>} />
 }
 
 /**
@@ -360,7 +208,7 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
       )}
       {p.feedbackNote && <p className="rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">{t.editor.stepEditor.operatorFeedback(p.feedbackNote)}</p>}
 
-      {p.sections && !!step.section && <SectionField p={p} index={index} />}
+      {p.sections && !!step.section && <SectionField steps={p.content.steps} index={index} readOnly={p.readOnly} naming={p.namingSection} onNamed={() => p.setNamingSection(false)} onSteps={p.onSteps} className="-mb-2" />}
       <div className="flex items-start gap-4">
         <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
         <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label={t.editor.stage.titleLabel} placeholder={t.editor.stage.titlePlaceholder} className={cn(editable, 'min-w-0 flex-1 px-2 pt-1 leading-[1.05] font-black tracking-tighter hyphens-auto text-slate-900 dark:text-white', p.agentOpen ? 'text-3xl' : 'text-3xl sm:text-4xl')} />
@@ -371,28 +219,31 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
         <div className={cn('flex items-start gap-3 rounded-3xl p-4 shadow-lg', WARNINGS[warning.level].className)}>
           <TriangleAlert className="mt-2 h-7 w-7 shrink-0" />
           <div className="min-w-0 flex-1">
-            {readOnly ? (
-              <p className="label-caps opacity-90">{WARNINGS[warning.level].label}</p>
-            ) : (
-              <Menu
-                bare
-                align="left"
-                label={t.editor.stage.warningLevel}
-                items={(Object.keys(WARNINGS) as WarningLevel[]).map((l) => ({ label: WARNINGS[l].label, icon: l === warning.level ? <Check className="h-4 w-4" /> : <span className="block h-4 w-4" />, onClick: () => set({ warning: { level: l, text: warning.text } }) }))}
-                trigger={
-                  <span className="label-caps -ml-1.5 flex h-10 items-center gap-1 rounded-xl px-1.5 opacity-90 hover:bg-black/10">
-                    {WARNINGS[warning.level].label} <ChevronDown className="h-3.5 w-3.5" />
-                  </span>
-                }
-              />
-            )}
+            {/* Le niveau et « retirer » sur une ligne : le texte garde toute la largeur, comme au poste. */}
+            <div className="flex items-center justify-between gap-2">
+              {readOnly ? (
+                <p className="label-caps opacity-90">{WARNINGS[warning.level].label}</p>
+              ) : (
+                <Menu
+                  bare
+                  align="left"
+                  label={t.editor.stage.warningLevel}
+                  items={(Object.keys(WARNINGS) as WarningLevel[]).map((l) => ({ label: WARNINGS[l].label, icon: l === warning.level ? <Check className="h-4 w-4" /> : <span className="block h-4 w-4" />, onClick: () => set({ warning: { level: l, text: warning.text } }) }))}
+                  trigger={
+                    <span className="label-caps -ml-1.5 flex h-10 items-center gap-1 rounded-xl px-1.5 opacity-90 hover:bg-black/10">
+                      {WARNINGS[warning.level].label} <ChevronDown className="h-3.5 w-3.5" />
+                    </span>
+                  }
+                />
+              )}
+              {!readOnly && (
+                <button type="button" onClick={() => set({ warning: null })} aria-label={t.editor.stage.removeWarning} title={t.editor.stage.removeWarning} className="btn-press -my-1 -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/10">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
             <AutoTextarea autoFocus={!readOnly && !warning.text} value={warning.text} readOnly={readOnly} onChange={(e) => set({ warning: { level: warning.level, text: e.target.value } })} aria-label={t.editor.step.warningText} placeholder={t.editor.stage.warningPlaceholder} className={cn(editable, 'px-1 text-lg leading-snug font-black text-inherit placeholder:text-current/60 hover:bg-black/5 focus:bg-black/10 dark:focus:bg-black/20')} />
           </div>
-          {!readOnly && (
-            <button type="button" onClick={() => set({ warning: null })} aria-label={t.editor.stage.removeWarning} className="btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/10">
-              <X className="h-4 w-4" />
-            </button>
-          )}
         </div>
       )}
 
@@ -423,7 +274,7 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
           language={p.content.language}
           readOnly={readOnly}
           onEdit={setEditingCheck}
-          onKeep={(c) => setChecks(checks.map((x) => (x.id === c.id ? (({ proposed: _p, ...rest }) => rest)(x) : x)))}
+          onKeep={(c) => setChecks(checks.map((x) => (x.id === c.id ? keepCheck(x) : x)))}
           onDismiss={(c) => setChecks(checks.filter((x) => x.id !== c.id))}
         />
       )}
@@ -459,67 +310,6 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
         />
       )}
     </>
-  )
-}
-
-/**
- * Les relevés de l'étape, comme l'opérateur les lira (dans la langue de l'instruction) : le genre,
- * le libellé, et ce qui juge la réponse. Un toucher ouvre le relevé.
- */
-function ChecksBlock({ step, language, readOnly, onEdit, onKeep, onDismiss }: { step: Step; language: string; readOnly?: boolean; onEdit: (c: StepCheck) => void; onKeep: (c: StepCheck) => void; onDismiss: (c: StepCheck) => void }) {
-  const t = useMessages().editor.checks
-  const r = playerStrings(language).records
-  const detail = (c: StepCheck): string => {
-    const parts: string[] = []
-    if (c.kind === 'measure') parts.push(rangeText(c, r) ?? c.unit ?? t.kinds.measure)
-    else if (c.kind === 'yesno') parts.push(c.expected ? t.expectedLine(c.expected === 'yes' ? r.yes : r.no) : t.kinds.yesno)
-    else if (c.kind === 'choice') parts.push((c.options ?? []).map((o) => (o.bad ? `${o.label} (${t.bad.toLowerCase()})` : o.label)).join(' · '))
-    else if (c.kind === 'checklist') parts.push((c.items ?? []).map((i) => i.label).join(' · '))
-    else if (c.kind === 'measures') parts.push([`${c.count ?? 3} × ${t.kinds.measure.toLowerCase()}`, rangeText(c, r) ?? c.unit].filter(Boolean).join(' · '))
-    else parts.push(t.kinds[c.kind])
-    if (c.optional) parts.push(t.optional.toLowerCase())
-    return parts.join(' · ')
-  }
-  return (
-    <div className="rounded-3xl border-2 border-[var(--primary)]/25 bg-white/70 p-3 dark:bg-white/5">
-      <p className="label-caps mb-1 flex items-center gap-1.5 px-1 text-[var(--primary-strong)] dark:text-sky-300">
-        <ClipboardCheck className="h-4 w-4" /> {t.title}
-      </p>
-      <ul>
-        {(step.checks ?? []).map((c) => (
-          <li key={c.id} className={cn(c.proposed && 'my-1 rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50/60 dark:border-violet-500/40 dark:bg-violet-500/10')}>
-            <button type="button" disabled={readOnly} onClick={() => onEdit(c)} aria-label={t.edit(c.label)} className={cn('btn-press flex min-h-12 w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left hover:bg-slate-900/5 disabled:cursor-default dark:hover:bg-white/5', c.proposed && 'opacity-80')}>
-              <span className={c.proposed ? 'text-violet-600' : 'text-[var(--primary)]'}>{CHECK_ICONS[c.kind]()}</span>
-              <span className="min-w-0 flex-1">
-                {c.proposed && (
-                  <span className="mb-0.5 inline-flex items-center gap-1 rounded-md bg-violet-600 px-1.5 py-0.5 text-[10px] font-black tracking-wide text-white uppercase">
-                    <Sparkles className="h-3 w-3" /> {t.proposed}
-                  </span>
-                )}
-                <span className="block text-lg leading-snug font-black text-slate-900 dark:text-white">{c.label}</span>
-                <span className="block text-sm font-bold text-slate-500">{detail(c)}</span>
-              </span>
-              {!readOnly && !c.proposed && <PencilLine className="h-4 w-4 shrink-0 text-slate-400" />}
-            </button>
-            {/* L'IA propose, l'auteur dispose : gardé, il ira au poste ; retiré, il disparaît. */}
-            {c.proposed && !readOnly && (
-              <div className="flex flex-wrap items-center gap-2 px-2 pb-2">
-                <p className="min-w-40 flex-1 text-xs font-bold text-violet-800 dark:text-violet-200">{t.proposedHint}</p>
-                {/* Les deux gestes restent ensemble, à droite, même quand la phrase prend toute la ligne. */}
-                <span className="ml-auto flex shrink-0 items-center gap-2">
-                  <button type="button" onClick={() => onDismiss(c)} className="btn-press h-11 rounded-2xl px-3 text-sm font-black text-slate-500 hover:bg-white/70">
-                    {t.dismiss}
-                  </button>
-                  <button type="button" onClick={() => onKeep(c)} className="btn-press flex h-11 items-center gap-1.5 rounded-2xl bg-violet-600 px-4 text-sm font-black text-white">
-                    <Check className="h-4 w-4" strokeWidth={3} /> {t.keep}
-                  </button>
-                </span>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
   )
 }
 
@@ -596,24 +386,7 @@ function StageCanvas(p: Inner) {
 
   return (
     <div className={cn('fixed inset-y-0 left-0 z-40 flex flex-col bg-slate-50 dark:bg-slate-950', p.agentOpen ? 'right-[424px]' : 'right-0')} role="region" aria-label={t.editor.stage.region}>
-      {/* Au-dessus du contenu : les menus de l'en-tête s'ouvrent par-dessus l'étape. */}
-      <header className="glass-nav relative z-20 border-b">
-        <div className="flex h-16 items-center gap-1.5 px-3">
-          <BackLink />
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <TitleButton p={p} />
-            {top.questions > 0 && !readOnly && <QuestionsPill p={p} />}
-          </div>
-          {p.badge}
-          {!readOnly && p.history && <UndoButtons history={p.history} className="shrink-0" />}
-          {!readOnly && step && !step.fromBlock && <AssistMenu p={p} compact={p.agentOpen} />}
-          <InstructionMenu p={p} />
-          {top.primary(false)}
-        </div>
-        <div className="h-1.5 bg-slate-900/5 dark:bg-white/5">
-          <div className="bg-gradient-primary h-full transition-[width] duration-500" style={{ width: `${step ? ((index + 1) / Math.max(1, total)) * 100 : 0}%` }} />
-        </div>
-      </header>
+      <EditorHeader wide top={top} readOnly={readOnly} history={p.history} badge={p.badge} assist={p.assist} showAssist={!!step && !step.fromBlock} onAssistant={p.onAssistant} agentOpen={p.agentOpen} progress={step ? (index + 1) / Math.max(1, total) : 0} />
       {p.notices && <div className="shrink-0 space-y-2 px-4 pt-3">{p.notices}</div>}
 
       {step ? (
@@ -653,28 +426,43 @@ function StageCanvas(p: Inner) {
 function StagePhone(p: Inner) {
   const t = useMessages()
   const { step, readOnly, top } = p
+  // Le média à ses vraies proportions, comme au poste au téléphone (toggle `phoneReader`).
+  const phoneReader = useToggle('phoneReader')
+  const first = step?.media[0]
+  const focus = !!step && layoutOf(step) === 'focus'
+  const ratio = useMediaRatio(phoneReader && focus ? ratioKeys(first, false) : [])
+  const mediaRef = useRef<HTMLDivElement>(null)
+  const [mediaBox, setMediaBox] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    const el = mediaRef.current
+    if (!el || !ratio) {
+      setMediaBox(null)
+      return
+    }
+    // La place d'une étape entre la barre du haut et celle du bas ; le texte, lui, défile avec la page.
+    const measure = () => setMediaBox(fitMediaHeight({ width: el.clientWidth, avail: window.innerHeight - 136, ratio, text: 0, video: first?.kind === 'video' }))
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ratio, first?.kind])
   return (
     <div className="pb-28">
-      <header className="glass-nav pt-safe sticky top-0 z-30 border-b">
-        <div className="flex h-14 items-center gap-1 px-1.5">
-          <BackLink />
-          <div className="min-w-0 flex-1">
-            <TitleButton p={p} />
-          </div>
-          {p.badge}
-          {top.primary(true)}
-          <InstructionMenu p={p} />
-        </div>
-      </header>
+      <EditorHeader wide={false} top={top} readOnly={readOnly} badge={p.badge} assist={p.assist} showAssist={false} onAssistant={p.onAssistant} />
 
       <div className="space-y-3 px-3 pt-3">
-        {top.questions > 0 && !readOnly && <QuestionsPill p={p} className="w-full justify-center" />}
+        {top.questions > 0 && !readOnly && <QuestionsPill top={top} className="w-full justify-center" />}
         {p.notices}
         <div id="step-editor" className={cn('glass-panel scroll-mt-20 overflow-hidden rounded-[28px] p-0 transition-shadow', p.agentWorking && 'ring-4 ring-violet-400/70', p.remoteNote && !p.agentWorking && 'ring-4 ring-sky-400/80')}>
           {step ? (
             <>
               {/* Le média, comme au poste ; ses réglages juste dessous. */}
-              <div className="relative h-[42dvh] bg-slate-900 sm:h-[50dvh]">
+              <div
+                ref={mediaRef}
+                data-fit={mediaBox !== null && first?.kind === 'video' ? 'top' : undefined}
+                style={mediaBox !== null ? { height: mediaBox } : undefined}
+                className={cn('relative bg-slate-900', mediaBox !== null ? 'transition-[height] duration-300 ease-out' : 'h-[42dvh] sm:h-[50dvh]')}
+              >
                 {step.media.length ? (
                   <StepMediaArea key={step.id} step={step} labels={t.editor.mediaArea} />
                 ) : (
@@ -697,13 +485,14 @@ function StagePhone(p: Inner) {
         </div>
       </div>
 
-      {/* Les étapes sous le pouce ; elles se cachent pendant qu'on écrit. */}
-      {step && (
+      {/* Sous le pouce : la vue, les étapes, le « … » de l'étape et l'Assistant ; ils se cachent pendant qu'on écrit. */}
+      {(step || top.views) && (
         <nav className="glass-nav pb-safe kb-hide fixed inset-x-0 bottom-0 z-30 border-t" aria-label={t.editor.stage.stepsNav}>
           <div className="mx-auto flex max-w-2xl items-center gap-1.5 px-2 py-2">
-            <StepNav p={p} className="min-w-0 flex-1" />
-            {!readOnly && !step.fromBlock && <StepMenu p={p} step={step} side="up" />}
-            {!readOnly && !step.fromBlock && <AssistMenu p={p} compact side="up" />}
+            {top.views && <ViewMenu views={top.views} />}
+            {step ? <StepNav p={p} className="min-w-0 flex-1" /> : <span className="flex-1" />}
+            {step && !readOnly && !step.fromBlock && <StepMenu p={p} step={step} side="up" />}
+            {step && !readOnly && !step.fromBlock && <AssistMenu assist={p.assist} onAssistant={p.onAssistant} compact side="up" />}
           </div>
         </nav>
       )}

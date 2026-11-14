@@ -23,7 +23,8 @@ import { training } from './training'
 import { blocks } from './blocks'
 import { academy } from './academy'
 import { reports } from './reports'
+import { decouvrir } from './decouvrir'
 
-export const fr = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports }
+export const fr = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir }
 
 export type Messages = typeof fr

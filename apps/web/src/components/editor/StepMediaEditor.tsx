@@ -47,7 +47,8 @@ function KindIcon({ m }: { m: StepMedia }) {
 /**
  * Le média d'une étape, dans sa fenêtre : l'aperçu, les médias de l'étape (en ajouter un), puis
  * les gestes du média choisi — annoter, vidéo ou image, l'IA (illustration, schéma), retirer. Le
- * verdict, la légende et la disposition attendent sous « Plus d'options ».
+ * verdict, la légende et la disposition attendent sous « Plus d'options » ; `expanded` (la vue
+ * « Fiche ») les montre d'emblée.
  */
 export function StepMediaEditor({
   content,
@@ -56,6 +57,7 @@ export function StepMediaEditor({
   readOnly,
   onChange,
   onSourceAdded,
+  expanded = false,
 }: {
   content: InstructionContent
   step: Step
@@ -63,6 +65,8 @@ export function StepMediaEditor({
   readOnly?: boolean
   onChange: (s: Step) => void
   onSourceAdded: (s: Source) => void
+  /** Tout à découvert : les réglages fins ne se replient pas. */
+  expanded?: boolean
 }) {
   const { ai } = useSession()
   const toast = useToast()
@@ -248,11 +252,13 @@ export function StepMediaEditor({
           {/* Le reste attend : à faire / à éviter, légende, disposition au poste */}
           {media && (
             <div className="mt-3">
-              <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className="btn-press flex h-11 items-center gap-2 rounded-2xl px-2 text-sm font-black text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/5">
-                <SlidersHorizontal className="h-4 w-4" /> {te.moreOptions} <ChevronDown className={cn('h-4 w-4 transition-transform', more && 'rotate-180')} />
-              </button>
-              {more && (
-                <div className="animate-slide-up mt-2 space-y-3 rounded-[24px] bg-slate-900/[0.03] p-3 dark:bg-white/5">
+              {!expanded && (
+                <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className="btn-press flex h-11 items-center gap-2 rounded-2xl px-2 text-sm font-black text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/5">
+                  <SlidersHorizontal className="h-4 w-4" /> {te.moreOptions} <ChevronDown className={cn('h-4 w-4 transition-transform', more && 'rotate-180')} />
+                </button>
+              )}
+              {(more || expanded) && (
+                <div className={cn('space-y-3 rounded-[24px] bg-slate-900/[0.03] p-3 dark:bg-white/5', !expanded && 'animate-slide-up mt-2')}>
                   <div className="flex flex-wrap items-center gap-2">
                     <Segmented
                       size="sm"

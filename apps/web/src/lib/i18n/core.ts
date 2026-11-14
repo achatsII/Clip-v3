@@ -30,7 +30,10 @@ function detect(): Lang {
 }
 
 function applyDocumentLang(l: Lang) {
-  if (typeof document !== 'undefined') document.documentElement.lang = l === 'en' ? 'en-CA' : 'fr-CA'
+  if (typeof document === 'undefined') return
+  // Le site public (`[data-site]`) déclare lui-même sa langue, celle de son adresse : l'outil n'y touche pas.
+  if (document.querySelector('[data-site]')) return
+  document.documentElement.lang = l === 'en' ? 'en-CA' : 'fr-CA'
 }
 
 /** La langue de l'outil en ce moment. */
