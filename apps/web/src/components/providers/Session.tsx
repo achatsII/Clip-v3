@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react'
 import { callNative, hasCapability } from '@/lib/bridge/native'
-import { aiApi, onAiUsage, type AiApi } from '@/lib/gateway/ai'
+import { aiApi, onAiDebitError, onAiUsage, type AiApi } from '@/lib/gateway/ai'
 import { fetchProfile, type Profile } from '@/lib/gateway/auth'
 import { gateway, hasSession } from '@/lib/gateway/client'
 import { dataApi, type DataApi, type Doc } from '@/lib/gateway/data'
@@ -84,10 +84,16 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
     const off = onAiUsage((e) => {
       if (!e.ok) return
       const tokens = typeof e.usage?.total_tokens === 'number' ? (e.usage.total_tokens as number) : null
-      logUsage(data, { type: 'ai', source: 'app', operation: e.operation, model: e.model, tokens, userId: profile.userId })
+      logUsage(data, { type: 'ai', source: 'app', operation: e.operation, model: e.model, tokens, credits: e.credits ?? null, userId: profile.userId })
+    })
+    // Une réponse rendue dont le débit n'a pas pu s'écrire : au journal, pour la rattraper.
+    const offDebit = onAiDebitError((error, d) => {
+      console.error('clip:ai-debit-failed', d, error)
+      logUsage(data, { type: 'ai', source: 'app', operation: d.operation, model: null, tokens: null, credits: null, debitFailed: true, userId: profile.userId })
     })
     return () => {
       off()
+      offDebit()
     }
   }, [profile])
 

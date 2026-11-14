@@ -107,7 +107,6 @@ export const editorTools = {
     ai: {
       hint: 'L’IA place les flèches et les cercles sur ce qu’il faut voir',
       button: 'Annoter par IA',
-      cost: (credits: number) => `IA · ${nb(credits)} crédit${credits > 1 ? 's' : ''}`,
       added: 'Marques ajoutées par l’IA',
       addedHint: 'Touchez une marque pour la déplacer, l’agrandir ou la retirer.',
       failed: 'L’IA n’a pas pu annoter',

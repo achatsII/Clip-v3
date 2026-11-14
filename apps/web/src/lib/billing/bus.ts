@@ -14,6 +14,36 @@ export interface Refusal {
 
 const REFUSAL_CODES = new Set(['insufficient_credits', 'capacity_exceeded', 'not_entitled', 'subscription_inactive', 'subscription_suspended'])
 
+/**
+ * Une réponse de l'IA et ce qu'elle a coûté, une fois terminée : son coût réel (en dollars, jamais
+ * montré) et les crédits débités (`charged`, null sans débit : facturation éteinte ou débit en panne).
+ * L'écran n'en montre que les crédits, après coup : rien ne se prédit avant.
+ */
+export interface AiCost {
+  operation: string
+  costCad: number | null
+  charged: number | null
+}
+
+const costListeners = new Set<(c: AiCost) => void>()
+
+export function onAiCost(fn: (c: AiCost) => void) {
+  costListeners.add(fn)
+  return () => {
+    costListeners.delete(fn)
+  }
+}
+
+export function emitAiCost(c: AiCost) {
+  costListeners.forEach((fn) => {
+    try {
+      fn(c)
+    } catch {
+      /* un écouteur en panne ne bloque rien */
+    }
+  })
+}
+
 const refusalListeners = new Set<(r: Refusal) => void>()
 const settledListeners = new Set<() => void>()
 

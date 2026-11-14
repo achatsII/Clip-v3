@@ -100,7 +100,6 @@ export const editorTools: typeof Fr = {
     ai: {
       hint: 'The AI places arrows and circles on what needs to be seen',
       button: 'Annotate with AI',
-      cost: (credits: number) => `AI · ${nb(credits)} credit${credits !== 1 ? 's' : ''}`,
       added: 'Marks added by the AI',
       addedHint: 'Tap a mark to move, enlarge or remove it.',
       failed: 'The AI couldn’t annotate',

@@ -2,7 +2,6 @@
 
 import { History, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { DictateButton } from '@/components/capture/DictateButton'
 import { useSession } from '@/components/providers/Session'
 import { Button, IconButton } from '@/components/ui/Button'
@@ -213,7 +212,7 @@ export function StandardTab() {
                 }
               }}
             >
-              {t.propose} <AiCost operation="standard_agent" />
+              {t.propose}
             </Button>
           )
         }

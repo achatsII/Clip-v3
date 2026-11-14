@@ -9,8 +9,7 @@ export const importer: typeof Fr = {
   unavailableText: 'You can drop a document into a new instruction.',
   drop: {
     title: 'Drag your files here, or tap to choose them',
-    before: 'PDF or Word (.docx, .doc, .odt) ·',
-    after: 'per short document',
+    formats: 'PDF or Word (.docx, .doc, .odt)',
   },
   onlyDocuments: 'Only PDFs and Word documents are imported here',
   onlyDocumentsText: 'Videos and photos go into a new instruction.',

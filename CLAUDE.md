@@ -169,43 +169,29 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,
   `full_export`, `shared_blocks`, oui ou non selon le plan. Les opérateurs et les lecteurs ne se comptent jamais.
-- Le prix en crédits de chaque opération d'IA, déclaré dans `ai_operations` du manifeste et débité
-  par la plateforme (même liste et mêmes prix dans `AI_COSTS` de `src/lib/billing/catalog.ts`) :
-
-  | Opération (clé envoyée) | Ce qu'elle fait | Crédits |
-  |---|---|---|
-  | `generate_s` | Générer une instruction à partir de peu de médias | 150 |
-  | `generate_m` | Générer à partir de médias moyens | 300 |
-  | `generate_l` | Générer à partir de beaucoup de médias | 750 |
-  | `import_s` | Convertir un document court (PDF, Word) | 60 |
-  | `import_l` | Convertir un document long | 120 |
-  | `step_assist` | Retoucher une étape (raccourcir, clarifier, ajouter un point clé, traduire les textes d'un média…) | 5 |
-  | `translate` | Traduire une instruction : ses textes, les annotations, les légendes et le texte des schémas | 30 |
-  | `translate_image` | Refaire une image avec son texte traduit (option de la traduction, ou l'assistant ; l'image comprise) | 70 |
-  | `annotate` | Placer des flèches et des cercles sur une photo | 5 |
-  | `illustrate` | Illustration générée à partir d'une photo (l'image comprise) | 70 |
-  | `ask_question` | Répondre à une question d'opérateur sur l'instruction | 2 |
-  | `standard_agent` | Rédiger le standard de rédaction à partir d'une description | 5 |
-  | `edit_agent` | Un échange avec l'assistant d'édition (il rend les modifications à faire) | 20 |
-  | `visual` | Schéma généré : une page HTML autonome (SVG, dessin, vue 3D) | 60 |
-  | `look_s` | L'assistant d'édition revoit des sources d'origine (peu de médias), seulement si la demande l'exige | 60 |
-  | `look_m` | Revoir des sources moyennes | 120 |
-  | `look_l` | Revoir beaucoup de médias | 300 |
-  | `quiz` | Préparer les questions de formation d'une instruction (3 à 5) | 10 |
-  | `report_summary` | Commenter un rapport : l'essentiel, à surveiller, des pistes (les chiffres viennent du code) | 10 |
-  | `report_question` | Répondre à une question sur un rapport | 5 |
-
-  La taille d'une génération ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) se décide sur
-  la durée des vidéos et des notes vocales, le nombre de photos et de pages ; au-delà de la plus grande
-  taille, l'app demande de séparer l'instruction.
-- L'app ne déclare jamais une quantité consommée : le serveur compte et débite. Drapeau allumé, un
-  appel à l'assistant d'IA passe par `POST /api/v2/ai/ask` avec `operation` et une
-  `idempotency_key` (`aiApi` de `src/lib/gateway/ai.ts`), jamais par `/api/v4/assistant/ask` ; drapeau
-  éteint, l'appel d'avant ne change pas.
+- **L'IA au coût réel** : aucun prix fixe, rien ne se prédit. Pas de section `ai_operations` au
+  manifeste, aucun prix sur un bouton : chaque réponse de l'IA est débitée, une fois terminée, de ce
+  qu'elle a vraiment coûté (`aiApi.ask`, `src/lib/gateway/ai.ts`, l'askAi du skill `billing`).
+  Drapeau allumé : le solde de `ai_credits` est relu (à zéro ou moins, refus 402 sans appel ; hors du
+  plan, 403), l'appel part sur `/api/v4/assistant/ask`, puis le coût réel que rend la réponse
+  (`billing.costs.cad`, `billing_merged` pour plusieurs lots) est converti en crédits, arrondi au
+  crédit supérieur, et débité par `POST /api/v2/billing/consume` avec la clé de l'appel. Une réponse
+  lancée est payée en entier, même sous zéro (`enforce_denial: false`) ; une réponse en échec qui rend
+  un coût est débitée de ce coût ; sans coût (délai, coupure), rien n'est débité. Un débit en panne se
+  réessaie avec la même clé, puis va au journal (`onAiDebitError`, `clip_event` avec `debitFailed`) :
+  la personne garde sa réponse. Après coup, l'écran dit ce qui a été débité (`CostChip`, « IA · 23
+  crédits utilisés »). Compromis accepté : c'est l'app qui débite, une app modifiée pourrait sauter le
+  débit. Drapeau éteint, l'appel d'avant ne change pas et rien n'est débité.
+- **Le taux** (crédits par dollar de coût réel) se règle dans `NEXT_PUBLIC_AI_CREDIT_RATE` (Vercel),
+  jamais dans le dépôt ; drapeau allumé sans taux valide, l'IA refuse (`billing_misconfigured`)
+  plutôt que de s'ouvrir sans débit. Le nom de chaque usage (`AI_OPERATIONS` : `generate_m`,
+  `report_summary`…) va au registre avec le coût, le modèle et les tokens. La taille d'une génération
+  ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) ne fixe plus de prix : au-delà de la
+  plus grande taille, l'app demande toujours de séparer l'instruction.
 - Les routes de facturation passent par la passerelle Octopus, avec le jeton de l'utilisateur et
   `X-Product: clip-v3` (`src/lib/billing/client.ts`) : `GET /api/v2/billing/context` (plan, état,
-  crédits restants), `POST /api/v2/billing/check` (droit à une feature), `POST /api/v2/ai/ask` (une
-  opération d'IA débitée par la plateforme), `GET /api/v2/billing/plans` (page des plans),
+  crédits restants), `POST /api/v2/billing/check` (droit à une feature), `POST /api/v2/billing/consume`
+  (le débit du coût réel d'une réponse de l'IA), `GET /api/v2/billing/plans` (page des plans),
   `POST /api/v2/billing/checkout` (paiement Stripe, réservé à l'administrateur de l'organisation) et
   `POST /api/v2/billing/portal` (gérer son abonnement).
 - Le droit d'utiliser une feature se vérifie côté serveur, au moment de rendre le service. Une
@@ -218,19 +204,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`src/components/billing/Billing.tsx`, alimentée par `src/lib/billing/bus.ts`) et par la page
   `/reglages/abonnement` : 402 faute de crédits, 403 faute de droit. Il ne se transforme jamais en
   erreur 500 et ne déclenche aucun autre appel ; rien n'est débité.
-- Une nouvelle opération qui appelle un modèle, transcrit, ou traite une vidéo se propose à la
-  facturation dès son écriture (skill `billing`). Restent ouverts sans débit, leur coût compté dans
-  les opérations qui les déclenchent : la génération d'image (`ai:generate_image`, dans
-  `illustrate` et `translate_image`), la transcription des notes (`files:transcribe`) et le traitement des vidéos
-  (`files:process*`, dans les générations) et le montage de la vidéo des étapes
-  (`files/videos/compose`, un par publication où un extrait a changé). Restent aussi ouverts, sans débit à la minute, la
+- Un nouvel appel à l'assistant passe par `aiApi.ask`, sans exception : un appel direct à
+  `/api/v4/assistant/ask` ne serait pas débité. Seul l'assistant rend un coût : restent ouverts sans
+  débit la génération d'image (`ai:generate_image`, dans `illustrate` et `translate_image`), la
+  transcription des notes (`files:transcribe`), le traitement des vidéos (`files:process*`) et le
+  montage de la vidéo des étapes (`files/videos/compose`, un par publication où un extrait a changé). Restent aussi ouverts, sans débit à la minute, la
   lecture à voix haute et l'assistant vocal, tous deux par la voix en direct (`ai:live`). La lecture
   (`LiveSpeaker`, `src/lib/liveSpeech.ts`) est ouverte à tous, liens publics compris. L'assistant
   est réservé au plan Usine par la feature `voice_assistant`, et sur un lien public au poste qui l'a
   demandé (`assistant:ask`).
 - Les libellés des features (clé → texte, en français et en anglais) vivent dans `FEATURE_LABELS` de
-  `src/lib/billing/catalog.ts` ; `tests/billing-manifest.test.ts` échoue si une feature ou une
-  opération du manifeste n'y est pas, ou si un prix diffère.
+  `src/lib/billing/catalog.ts` ; `tests/billing-manifest.test.ts` échoue si une feature du manifeste
+  n'y est pas, ou si l'IA retrouve un prix fixe (`ai_operations`).
 - Le branchement, app web : le drapeau public `NEXT_PUBLIC_BILLING_V2` (éteint par défaut) ; la page
   `/reglages/abonnement` (introuvable sans le drapeau ni l'aperçu ; ouverte par « Abonnement et crédits » du
   menu et par la pastille de crédits), avec le paiement et le portail Stripe ; la fenêtre des

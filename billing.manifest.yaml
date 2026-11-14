@@ -16,9 +16,13 @@ product:
   acquisition: [self_serve]
   is_self_service: true
   application:
-    # Les routes que l'app appelle, au plus juste. Aucun assistant: : chaque appel d'IA passe par
-    # une opération ci-dessous (POST /api/v2/ai/ask), débitée par la plateforme.
-    default_scopes: [data:*, files:write, files:read, files:process, files:transcribe, ai:upload, ai:live, ai:generate_image]
+    # Les routes que l'app appelle, au plus juste. assistant:ask : chaque appel d'IA part sur
+    # /api/v4/assistant/ask avec le jeton du compte, puis l'app débite son coût réel (consume).
+    default_scopes: [data:*, files:write, files:read, files:process, files:transcribe, ai:upload, ai:live, ai:generate_image, assistant:ask]
+  # L'IA FACTURÉE AU COÛT RÉEL : le débit d'une réponse lancée ne refuse jamais, même sous zéro ; c'est la
+  # réponse suivante qui est refusée tant que le solde est à zéro ou en dessous. Vaut pour toute feature à
+  # crédits du produit (CLIP n'en a qu'une, ai_credits).
+  enforce_denial: false
   org_model: { on_signup: personal, team_join: none }
   default_plan_code: free
   default_overage_policy: block
@@ -43,7 +47,8 @@ product:
         approved_on: "2026-11-11"
 
 features:
-  # Une banque commune pour toute l'IA : chaque opération a son prix en crédits (ai_operations).
+  # Une banque commune pour toute l'IA : chaque réponse est débitée de son coût réel, converti en
+  # crédits une fois terminée (le taux se règle hors du dépôt). Aucun prix fixe, rien ne se prédit.
   - key: ai_credits
     kind: credit
     name: Crédits IA
@@ -239,39 +244,5 @@ plans:
     entitlements:
       features: { records_plus: true }
 
-# Une ligne par appel à l'assistant d'Octopus. Les générations ont une opération par taille de lot :
-# l'app choisit d'après la durée de vidéo, le nombre de photos et de pages. Le prix d'une génération
-# couvre aussi la transcription des notes vocales et les vignettes qu'elle déclenche.
-ai_operations:
-  - { key: generate_s, capability: assistant.ask, feature: ai_credits, credits: 150, provider: google, level: mid }
-  - { key: generate_m, capability: assistant.ask, feature: ai_credits, credits: 300, provider: google, level: mid }
-  - { key: generate_l, capability: assistant.ask, feature: ai_credits, credits: 750, provider: google, level: mid }
-  - { key: import_s, capability: assistant.ask, feature: ai_credits, credits: 60, provider: google, level: mid }
-  - { key: import_l, capability: assistant.ask, feature: ai_credits, credits: 120, provider: google, level: mid }
-  - { key: step_assist, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
-  # Traduire une instruction : ses textes, les annotations, les légendes et le texte des schémas.
-  - { key: translate, capability: assistant.ask, feature: ai_credits, credits: 30, provider: google, level: mid }
-  # Refaire une image avec son texte traduit (option, non cochée par défaut) : lire et traduire le
-  # texte de l'image, et couvrir la génération d'image qui suit, comme une illustration.
-  - { key: translate_image, capability: assistant.ask, feature: ai_credits, credits: 70, provider: google, level: mid }
-  - { key: annotate, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
-  # Prépare l'illustration et couvre la génération d'image qui suit.
-  - { key: illustrate, capability: assistant.ask, feature: ai_credits, credits: 70, provider: google, level: mid }
-  - { key: ask_question, capability: assistant.ask, feature: ai_credits, credits: 2, provider: google, level: low }
-  - { key: standard_agent, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
-  # Un échange avec l'assistant d'édition : il lit l'instruction et rend les modifications à faire.
-  - { key: edit_agent, capability: assistant.ask, feature: ai_credits, credits: 20, provider: google, level: mid }
-  # Un schéma généré : une page HTML autonome (SVG, dessin, vue 3D).
-  - { key: visual, capability: assistant.ask, feature: ai_credits, credits: 60, provider: google, level: mid }
-  # L'assistant d'édition revoit des sources d'origine, seulement quand la demande l'exige : un
-  # deuxième tour avec les médias joints (vidéo en basse définition, réponse courte). Une opération
-  # par taille, mêmes seuils que la génération ; environ 40 % du prix d'une génération de même taille.
-  - { key: look_s, capability: assistant.ask, feature: ai_credits, credits: 60, provider: google, level: mid }
-  - { key: look_m, capability: assistant.ask, feature: ai_credits, credits: 120, provider: google, level: mid }
-  - { key: look_l, capability: assistant.ask, feature: ai_credits, credits: 300, provider: google, level: mid }
-  # Les questions de formation d'une instruction (3 à 5) : lire l'instruction et écrire les questions.
-  - { key: quiz, capability: assistant.ask, feature: ai_credits, credits: 10, provider: google, level: mid }
-  # Les rapports : l'IA commente des chiffres déjà calculés (l'essentiel, à surveiller, des pistes),
-  # et répond à une question sur le rapport.
-  - { key: report_summary, capability: assistant.ask, feature: ai_credits, credits: 10, provider: google, level: mid }
-  - { key: report_question, capability: assistant.ask, feature: ai_credits, credits: 5, provider: google, level: mid }
+# PAS DE SECTION ai_operations : l'IA n'a pas de prix fixe. Chaque réponse est débitée de son coût réel
+# (ai_credits, plus haut) ; la publication désactive les opérations retirées.

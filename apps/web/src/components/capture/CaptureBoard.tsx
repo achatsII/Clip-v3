@@ -12,7 +12,6 @@ import { callNative, hasCapability, NativeError, onNativeEvent } from '@/lib/bri
 import { getCaptureSession, isHandledNative } from '@/lib/capture/session'
 import { setAutoAnnotate, useAutoAnnotate } from '@/lib/ai/autoAnnotate'
 import { generationTier } from '@/lib/ai/generate'
-import { AI_COSTS } from '@/lib/billing/catalog'
 import { useMessages } from '@/lib/i18n'
 import { ACCEPTED_FILES } from '@/lib/media/ingest'
 import { uid } from '@/lib/model/repo'
@@ -23,8 +22,6 @@ import { DictateButton } from './DictateButton'
 import { PendingCard, SourceCard } from './SourceCard'
 import { MediaLibraryDialog } from './MediaLibraryDialog'
 import { WebCamera } from './WebCamera'
-import { AiCost } from '@/components/billing/AiCost'
-import { useBilling } from '@/lib/billing/state'
 
 export type ForceKind = 'auto' | 'procedure' | 'lockout'
 
@@ -45,7 +42,6 @@ export function CaptureBoard({
 }) {
   const { data, files, profile, displayName } = useSession()
   const t = useMessages()
-  const billingOn = useBilling().enabled
   const tb = t.capture.board
   const toast = useToast()
   const [key] = useState(() => instructionId ?? uid('new_'))
@@ -315,7 +311,6 @@ export function CaptureBoard({
                   description={
                     <>
                       {t.capture.autoAnnotate.hint}
-                      {billingOn && <span className="font-bold"> {t.capture.autoAnnotate.perImage(t.billing.credits(AI_COSTS.annotate))}</span>}
                     </>
                   }
                 />
@@ -331,7 +326,7 @@ export function CaptureBoard({
             {!hasContent ? tb.empty : busy ? tb.uploading : tier.tooBig ? tb.tooBig : tb.ready(snap.sources.length)}
           </p>
           <Button variant="primary" size="lg" icon={<Sparkles className="h-5 w-5" />} disabled={!hasContent || busy || tier.tooBig} loading={starting} onClick={generate} className="w-full sm:w-auto">
-            {tb.generate} <AiCost operation={tier.op} />
+            {tb.generate}
           </Button>
         </div>
       </div>

@@ -110,7 +110,6 @@ export const capture = {
   autoAnnotate: {
     label: 'Annoter les images automatiquement',
     hint: 'L’IA encercle ce qu’il faut regarder sur chaque image figée ou photo qui en a besoin, sur l’image elle-même. Jamais sur un extrait vidéo.',
-    perImage: (credits: string) => `${credits} par image annotée`,
   },
   progress: {
     /** Les étapes : leur clé s'écrit dans l'instruction, leur libellé se lit sur chaque appareil. */

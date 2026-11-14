@@ -2,14 +2,12 @@
 
 import { ArrowUp, Check, ChevronDown, ChevronUp, Loader2, Mic, RotateCcw, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
 import { Input } from '@/components/ui/Field'
 import { errorText } from '@/components/ui/States'
 import { agentBusy, agentTurn, runAgentOps, type AgentLogEntry, type VoiceTurnResult } from '@/lib/ai/agent'
 import { suggestEdits } from '@/lib/ai/suggest'
-import { AI_COSTS } from '@/lib/billing/catalog'
 import { useBilling, useEntitlement, useGate } from '@/lib/billing/state'
 import { useMessages } from '@/lib/i18n'
 import type { InstructionContent, Source } from '@/lib/model/types'
@@ -109,7 +107,7 @@ export function AgentPanel({
   const translateToggle = useToggle('translations')
   const translateRight = useEntitlement('translations')
   const canTranslate = translateToggle && translateRight !== 'locked'
-  const { openPaywall, enabled: billingOn } = useBilling()
+  const { openPaywall } = useBilling()
   const liveContent = useRef(content)
   liveContent.current = busy ? liveContent.current : content
   const scroller = useRef<HTMLDivElement>(null)
@@ -164,7 +162,7 @@ export function AgentPanel({
         onLook: (info) => {
           looked = info.sourceIds.join(', ')
           patch(agentId, (m) => ({
-            actions: [...(m.actions ?? []), { key: -1, label: `${ta.looking(looked!, info.videoSec > 0 ? formatDuration(info.videoSec) : null)}${billingOn ? ` · ${t.billing.credits(AI_COSTS[info.operation])}` : ''}`, stepId: null, state: 'working' as const }],
+            actions: [...(m.actions ?? []), { key: -1, label: ta.looking(looked!, info.videoSec > 0 ? formatDuration(info.videoSec) : null), stepId: null, state: 'working' as const }],
           }))
         },
         onSources: onSourcesChange,
@@ -354,9 +352,6 @@ export function AgentPanel({
           {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowUp className="h-5 w-5" />}
         </button>
       </form>
-      <p className="-mt-2 px-4 pb-2 text-right text-[11px] font-bold text-slate-400 empty:hidden">
-        <AiCost operation="edit_agent" className="" />
-      </p>
     </section>
   )
 }

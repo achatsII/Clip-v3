@@ -2,7 +2,6 @@
 
 import { Check, GraduationCap, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { Button, IconButton } from '@/components/ui/Button'
 import { useConfirm } from '@/components/ui/Confirm'
 import { AutoTextarea, fieldLook, Label } from '@/components/ui/Field'
@@ -62,7 +61,7 @@ export function QuizDialog({ open, onClose, content, ai, readOnly, published, on
         <>
           {!readOnly && ai && quiz.length > 0 && (
             <Button onClick={() => void make()} loading={busy} icon={<Sparkles className="h-4 w-4" />}>
-              {t.remake} <AiCost operation="quiz" />
+              {t.remake}
             </Button>
           )}
           {/* Sans question, l'action principale est « Préparer les questions » : « Terminé » s'efface. */}
@@ -90,7 +89,7 @@ export function QuizDialog({ open, onClose, content, ai, readOnly, published, on
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               {ai && (
                 <Button variant="primary" onClick={() => void make()} icon={<Sparkles className="h-4 w-4" />}>
-                  {t.make} <AiCost operation="quiz" />
+                  {t.make}
                 </Button>
               )}
               <Button onClick={() => onChange([blank()])} icon={<Plus className="h-4 w-4" />}>

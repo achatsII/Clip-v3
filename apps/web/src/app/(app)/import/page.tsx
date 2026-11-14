@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, CheckCircle2, FileText, FileUp, Loader2, Play, RotateCcw, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -172,7 +171,7 @@ export default function ImportPage() {
         </span>
         <span className="text-xl font-black tracking-tight">{t.importer.drop.title} {locked && <LockBadge />}</span>
         <span className="text-sm font-bold text-slate-500">
-          {t.importer.drop.before} <AiCost operation="import_s" className="font-bold" /> {t.importer.drop.after}
+          {t.importer.drop.formats}
         </span>
       </button>
       <input ref={input} type="file" multiple accept=".pdf,.doc,.docx,.odt,application/pdf" className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files ?? [])); e.target.value = '' }} />

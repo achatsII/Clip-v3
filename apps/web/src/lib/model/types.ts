@@ -628,6 +628,10 @@ export interface UsageEvent extends OperatorRef {
   operation?: string | null
   model?: string | null
   tokens?: number | null
+  /** Les crédits débités pour une réponse de l'IA (`type: 'ai'`), au coût réel ; null sans débit. */
+  credits?: number | null
+  /** Une réponse de l'IA rendue dont le débit n'a pas pu s'écrire (à rattraper). */
+  debitFailed?: boolean | null
   userId?: string | null
   /** Une offre du conseiller d'achat (`type: 'offer'`) : laquelle, et ce que la personne en a fait. */
   offer?: string | null

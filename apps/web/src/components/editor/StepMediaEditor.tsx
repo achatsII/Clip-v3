@@ -2,7 +2,6 @@
 
 import { ChevronDown, Clock, FileText, Film, Image as ImageIcon, ImagePlus, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Sparkles, Trash2, Wand2 } from 'lucide-react'
 import { useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { MediaView, mediaThumb } from '@/components/media/MediaView'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -148,8 +147,8 @@ export function StepMediaEditor({
 
   // L'IA, en un seul menu : l'illustration (à partir d'une photo) et le schéma.
   const aiItems: MenuItem[] = [
-    { label: te.aiIllustration, icon: <Wand2 className="h-4 w-4" />, onClick: () => media?.kind === 'image' && void illustrate(media), hidden: media?.kind !== 'image', disabled: !!busy, hint: <AiCost operation="illustrate" /> },
-    { label: te.aiVisual, icon: <Shapes className="h-4 w-4" />, onClick: () => setVisualOpen(true), disabled: !!busy, hint: <AiCost operation="visual" /> },
+    { label: te.aiIllustration, icon: <Wand2 className="h-4 w-4" />, onClick: () => media?.kind === 'image' && void illustrate(media), hidden: media?.kind !== 'image', disabled: !!busy },
+    { label: te.aiVisual, icon: <Shapes className="h-4 w-4" />, onClick: () => setVisualOpen(true), disabled: !!busy },
   ]
 
   return (
@@ -300,7 +299,7 @@ export function StepMediaEditor({
           <>
             <Button onClick={() => setVisualOpen(false)}>{t.common.cancel}</Button>
             <Button variant="primary" loading={busy === 'visual'} onClick={() => void makeVisual()} icon={<Shapes className="h-4 w-4" />}>
-              {te.visualDialog.draw} <AiCost operation="visual" />
+              {te.visualDialog.draw}
             </Button>
           </>
         }

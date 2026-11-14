@@ -1,7 +1,8 @@
 /**
  * Client de facturation v2 (gabarit du skill billing, adapté à CLIP) : état du compte, droit à
- * une fonction, plans, paiement et portail Stripe. Les opérations d'IA passent par `aiApi.ask`
- * (route mesurée `/api/v2/ai/ask`). Rien ici ne décide d'un accès : la plateforme fait foi.
+ * une fonction, plans, paiement et portail Stripe. L'IA passe par `aiApi.ask`, qui débite chaque
+ * réponse de son coût réel, après (`/api/v2/billing/consume`). Rien ici ne décide d'un accès : la
+ * plateforme fait foi.
  *
  * check() ne lève jamais de refus : il répond 200 avec { allowed, reason }. Un refus porte un code
  * stable (402 insufficient_credits, 403 not_entitled…) : on teste le code, jamais le message.

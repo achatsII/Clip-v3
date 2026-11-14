@@ -46,12 +46,16 @@ export const billing: typeof Fr = {
     perMonth: (amount: string) => `${amount} per month`,
     unlimited: (label: string, _feature: string) => `${label}: unlimited`,
   },
+  spent: {
+    amount: (n: number) => `AI · ${fmt(n)} credit${n === 1 ? '' : 's'} used`,
+    preview: 'Preview: nothing is charged',
+  },
   pill: {
     available: 'credits available',
     thisMonth: 'This month',
     granted: (n: number) => `${fmt(n)} granted`,
     used: 'Used',
-    howItWorks: 'Each AI action shows its cost on its button. An action that fails costs nothing.',
+    howItWorks: 'Each AI answer is charged what it actually cost, once it’s done: the number of credits shows afterwards, never before. If the AI fails midway, only what it already did counts.',
     viewSubscription: 'View my subscription',
   },
   lockBadge: 'Upgrade',

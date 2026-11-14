@@ -678,8 +678,8 @@ répertoire y mène.
   l'instruction complète ni toute la bibliothèque.
 - **L'IA** (`narrative.ts`) : elle reçoit le texte des blocs (`blocksText`, 15 lignes par tableau au
   plus) et rend l'essentiel, ce qu'il faut surveiller et des pistes, trois au plus chacun, par un
-  schéma JSON (`report_summary`, 10 crédits) ; une question sur le rapport coûte `report_question`
-  (5 crédits). Les deux passent par `aiApi.ask` (l'accord pour l'IA ; le débit par la plateforme une fois la facturation branchée). Si l'IA
+  schéma JSON (`report_summary`) ; une question sur le rapport passe par `report_question`. Les deux
+  passent par `aiApi.ask` (l'accord pour l'IA ; facturation allumée, le débit de leur coût réel, après). Si l'IA
   ne répond pas, l'analyse automatique (`autoNarrative`) dit les changements depuis avant. Une
   analyse disparaît quand la période, le lieu ou le quart change.
 - **Les droits** : le droit `stats` ; la revue de la semaine est ouverte à tous les plans
@@ -759,11 +759,17 @@ le geste et les couleurs de sécurité seulement quand l'étape porte un risque.
 
 ## 6. Facturation
 
-Catalogue dans `billing.manifest.yaml` (plans, crédits, limites, opérations d'IA et leur prix).
+Catalogue dans `billing.manifest.yaml` (plans, crédits, limites ; l'IA n'y a pas de prix fixe).
 Branchée derrière `NEXT_PUBLIC_BILLING_V2=1`, éteinte par défaut tant que les routes
-`/api/v2/billing/*` et `/api/v2/ai/ask` répondent `404`. Drapeau éteint : aucun écran de
-facturation, chaque appel d'IA part sur `/api/v4/assistant/ask`. Allumé : chaque appel passe par
-`/api/v2/ai/ask` avec la clé de son opération, et la plateforme débite.
+`/api/v2/billing/*` répondent `404`. Chaque appel d'IA part sur `/api/v4/assistant/ask`, drapeau
+allumé ou non. Allumé, il est facturé au coût réel, après : le solde de `ai_credits` relu avant
+(refus 402 à zéro, sans appel), puis le coût que rend la réponse (`billing.costs.cad`), converti en
+crédits au taux de `NEXT_PUBLIC_AI_CREDIT_RATE` (réglé dans Vercel, jamais dans le dépôt) et débité
+par `/api/v2/billing/consume` avec la clé de l'appel. Rien ne se prédit : aucun bouton ne montre de
+prix, et `CostChip` dit après coup ce qui a été débité. Une réponse lancée est payée en entier, même
+sous zéro (`enforce_denial: false`) ; un débit en panne se réessaie avec la même clé, puis va au
+journal. Au poste par lien public, l'IA passe par le jeton de service de l'usine : c'est l'usine qui
+paie (à vérifier en QA quand le drapeau s'allume).
 
 **Les leviers de vente.** La plateforme ne reçoit pas les limites `reported`. L'app compte donc
 les postes, les rédacteurs (tous les membres sauf les lecteurs, invitations comprises) et les

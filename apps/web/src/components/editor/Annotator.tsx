@@ -35,14 +35,12 @@ import {
   translate,
   type HandleKind,
 } from '@/lib/annotations/model'
-import { AI_COSTS } from '@/lib/billing/catalog'
 import { useMessages } from '@/lib/i18n'
 import { uid } from '@/lib/model/repo'
 import { readPref, writePref } from '@/lib/prefs'
 import type { Annotation, AnnotationColor, AnnotationSize, AnnotationType, Step } from '@/lib/model/types'
 import { IDENTITY, clampView, isZoomed, pinchView, zoomAround, type View } from '@/lib/ui/zoom'
 import { cn } from '@/lib/util/cn'
-import { useBilling } from '@/lib/billing/state'
 
 type Tool = 'select' | AnnotationType
 
@@ -144,7 +142,6 @@ function AnnotatorScreen({ onClose, src, step, value, onSave, onLive }: Annotato
   const toast = useToast()
   const t = useMessages()
   // Le prix d'une action d'IA se montre dès que la facturation se montre (aperçu compris).
-  const billingOn = useBilling().enabled
   const initial = useMemo(() => value.map(sanitizeAnnotation).filter((a): a is Annotation => !!a), [value])
   // Les marques à l'ouverture : ce que « quitter sans enregistrer » remet.
   const original = useRef(initial)
@@ -861,7 +858,7 @@ function AnnotatorScreen({ onClose, src, step, value, onSave, onLive }: Annotato
             className="btn-press bg-gradient-accent shadow-accent flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-3 text-[10px] font-black whitespace-nowrap text-white disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-            <span>{billingOn ? t.editorTools.annotator.ai.cost(AI_COSTS.annotate) : t.editorTools.annotator.ai.button}</span>
+            <span>{t.editorTools.annotator.ai.button}</span>
           </button>
           <span className="mx-0.5 h-8 w-px shrink-0 bg-white/15" />
           <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" role="toolbar" aria-label={t.editorTools.annotator.drawingTools}>

@@ -105,7 +105,6 @@ export const capture: typeof Fr = {
   autoAnnotate: {
     label: 'Annotate images automatically',
     hint: 'The AI circles what to look at on each still image or photo that needs it, right on the image. Never on a video clip.',
-    perImage: (credits: string) => `${credits} per annotated image`,
   },
   progress: {
     stages: {

@@ -1,34 +1,10 @@
 /**
- * Ce que l'app doit savoir du catalogue et que la plateforme ne rend pas : le prix de chaque
- * opération d'IA (copie de `ai_operations` du manifeste, comparée par un test) et les libellés
- * des features, dans l'ordre d'affichage. Aucun prix d'abonnement ici : ils se lisent à la plateforme.
+ * Ce que l'app doit savoir du catalogue et que la plateforme ne rend pas : les libellés des features,
+ * dans l'ordre d'affichage. Aucun prix ici : les abonnements se lisent à la plateforme, et l'IA n'a
+ * pas de prix fixe (chaque réponse est débitée de son coût réel, `aiApi`).
  */
 import { getLang, messages } from '@/lib/i18n'
-import type { AiOperation } from '../gateway/ai'
 import type { ToggleName } from '../toggleDefaults'
-
-export const AI_COSTS: Record<AiOperation, number> = {
-  generate_s: 150,
-  generate_m: 300,
-  generate_l: 750,
-  import_s: 60,
-  import_l: 120,
-  step_assist: 5,
-  translate: 30,
-  translate_image: 70,
-  annotate: 5,
-  illustrate: 70,
-  ask_question: 2,
-  standard_agent: 5,
-  edit_agent: 20,
-  visual: 60,
-  look_s: 60,
-  look_m: 120,
-  look_l: 300,
-  quiz: 10,
-  report_summary: 10,
-  report_question: 5,
-}
 
 export type FeatureKey =
   | 'ai_credits'

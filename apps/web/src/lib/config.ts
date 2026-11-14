@@ -23,6 +23,16 @@ export const SELF_SERVICE = process.env.NEXT_PUBLIC_SELF_SERVICE === '1'
 /** Facturation v2 (plans, crédits, paywall). Éteinte tant que `/api/v2/billing/*` répond 404. */
 export const BILLING_V2 = process.env.NEXT_PUBLIC_BILLING_V2 === '1'
 
+/**
+ * Le taux de l'IA facturée : combien de crédits pour un dollar canadien de coût réel. Il se règle
+ * dans l'environnement (Vercel), jamais dans le dépôt : la valeur d'un crédit ne s'écrit nulle part.
+ * Sans taux valide, l'IA facturée refuse plutôt que de s'ouvrir sans débit.
+ */
+export const AI_CREDIT_RATE: number | null = (() => {
+  const n = Number(process.env.NEXT_PUBLIC_AI_CREDIT_RATE)
+  return Number.isFinite(n) && n > 0 ? n : null
+})()
+
 /** Slug du produit pour la facturation (`X-Product`) : l'identifiant à enregistrer. */
 export const PRODUCT_SLUG = 'clip-v3'
 

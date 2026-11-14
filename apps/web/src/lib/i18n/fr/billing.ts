@@ -13,7 +13,7 @@ const theStore = (store: string) => (store === 'App Store' ? 'l’App Store' : s
 
 /** L’abonnement, les crédits, les plans, la fenêtre des refus, l’achat dans le magasin. */
 export const billing = {
-  /** Un prix ou un solde en crédits : « 150 crédits ». */
+  /** Un solde ou une quantité en crédits : « 150 crédits ». */
   credits,
   aiCredits: 'Crédits IA',
   /** Un plan sans prix, et le plan d’un compte sans abonnement. */
@@ -45,13 +45,18 @@ export const billing = {
     /** « Instructions publiées : illimitées » : l’accord suit la feature. */
     unlimited: (label: string, feature: string) => `${label} : illimité${feature === 'published_instructions' ? 'es' : 's'}`,
   },
+  /** Après une réponse de l’IA : ce qu’elle a coûté, au coût réel (jamais prédit avant). */
+  spent: {
+    amount: (n: number) => `IA · ${fmt(n)} crédit${n > 1 ? 's' : ''} utilisé${n > 1 ? 's' : ''}`,
+    preview: 'Aperçu : rien n’est débité',
+  },
   /** La pastille de solde et sa fenêtre. */
   pill: {
     available: 'crédits disponibles',
     thisMonth: 'Ce mois-ci',
     granted: (n: number) => `${fmt(n)} accordés`,
     used: 'Utilisés',
-    howItWorks: 'Chaque action d’IA affiche son coût sur son bouton. Une action qui échoue ne coûte rien.',
+    howItWorks: 'Chaque réponse de l’IA est débitée de ce qu’elle a vraiment coûté, une fois terminée : le nombre de crédits s’affiche après, jamais avant. Si l’IA échoue en route, seul ce qu’elle a déjà fait compte.',
     viewSubscription: 'Voir mon abonnement',
   },
   /** Le petit cadenas à côté d’une action hors plan. */

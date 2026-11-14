@@ -11,6 +11,7 @@ import { BillingProvider } from '@/lib/billing/state'
 import { BILLING_V2 } from '@/lib/config'
 import { useMessages } from '@/lib/i18n'
 import { Paywall } from './Billing'
+import { CostChip } from './CostChip'
 
 /** Le canal de l'appareil : le magasin dans l'app mobile, Stripe sur le web. */
 const deviceChannel = () => {
@@ -47,6 +48,7 @@ export function BillingRoot({ children }: { children: ReactNode }) {
     <BillingProvider client={billingClient} session={profile.userId || null} enabled={mode === 'live' || mode === 'preview'} preview={mode === 'preview'}>
       {children}
       <Paywall client={billingClient} />
+      {(mode === 'live' || mode === 'preview') && <CostChip mode={mode} />}
       {mode === 'preview' && <PreviewReturn />}
     </BillingProvider>
   )
