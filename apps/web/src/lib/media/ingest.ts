@@ -13,7 +13,7 @@ import { uid } from '../model/repo'
 import type { Source, SourceKind } from '../model/types'
 import { audioDuration, compressImage, dataUrlToBlob, pdfPageCount, videoInfo } from './image'
 
-export type IngestStage = 'import' | 'prepare' | 'upload' | 'optimize' | 'transcribe' | 'convert'
+export type IngestStage = 'import' | 'prepare' | 'upload' | 'offline' | 'optimize' | 'transcribe' | 'convert'
 export type IngestProgress = (stage: IngestStage, ratio?: number) => void
 
 const WORD = /\.(docx?|odt)$/i
@@ -35,6 +35,8 @@ export async function ingestFile(file: File, files: FilesApi, onProgress?: Inges
   if (!kind) throw new Error(messages().capture.upload.unsupported)
   const base: Source = { id: uid('src_'), kind, name: file.name, createdAt: new Date().toISOString(), capturedOn }
   const up = (r: number) => onProgress?.('upload', r)
+  // Un gros fichier part par morceaux : réseau coupé, il attend son retour, et la carte le dit.
+  const wait = { onWait: (waiting: boolean) => onProgress?.(waiting ? 'offline' : 'upload') }
   onProgress?.('prepare')
 
   if (kind === 'photo') {
@@ -46,7 +48,7 @@ export async function ingestFile(file: File, files: FilesApi, onProgress?: Inges
 
   if (kind === 'video') {
     const info = await videoInfo(file)
-    const u = await files.upload(file, file.name, 'captures', (s, t) => up(s / t))
+    const u = await files.upload(file, file.name, 'captures', (s, t) => up(s / t), wait)
     let src: Source = { ...base, url: u.url, path: u.path, mimeType: u.mimeType || 'video/mp4', sizeBytes: u.sizeBytes, durationSec: info.durationSec, width: info.width, height: info.height }
     if (info.thumbnail) {
       const t = await files.upload(info.thumbnail, `${file.name}.jpg`, 'thumbs').catch(() => null)
@@ -67,7 +69,7 @@ export async function ingestFile(file: File, files: FilesApi, onProgress?: Inges
 
   if (kind === 'audio') {
     const durationSec = await audioDuration(file)
-    const u = await files.upload(file, file.name, 'captures', (s, t) => up(s / t))
+    const u = await files.upload(file, file.name, 'captures', (s, t) => up(s / t), wait)
     onProgress?.('transcribe')
     const text = await files.transcribe(file, file.name).catch(() => '')
     return { ...base, url: u.url, path: u.path, mimeType: u.mimeType, sizeBytes: u.sizeBytes, durationSec, text: text || undefined }
@@ -82,7 +84,7 @@ export async function ingestFile(file: File, files: FilesApi, onProgress?: Inges
     name = file.name.replace(WORD, '.pdf')
   }
   const pageCount = await pdfPageCount(pdf)
-  const u = await files.upload(new Blob([pdf], { type: 'application/pdf' }), name, 'documents', (s, t) => up(s / t))
+  const u = await files.upload(new Blob([pdf], { type: 'application/pdf' }), name, 'documents', (s, t) => up(s / t), wait)
   return { ...base, name, originalName: file.name, url: u.url, path: u.path, mimeType: 'application/pdf', sizeBytes: u.sizeBytes, pageCount }
 }
 

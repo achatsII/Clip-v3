@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, Check, Loader2, Trash2 } from 'lucide-react'
+import { AlertCircle, Check, Loader2, RotateCcw, Trash2, WifiOff } from 'lucide-react'
 import { useState } from 'react'
 import { SourceIcon } from '@/components/icons'
 import { Textarea } from '@/components/ui/Field'
@@ -76,10 +76,12 @@ export function SourceCard({ source, onRemove, onEditText }: { source: Source; o
   )
 }
 
-export function PendingCard({ item, onDismiss }: { item: PendingUpload; onDismiss: () => void }) {
+export function PendingCard({ item, onDismiss, onRetry }: { item: PendingUpload; onDismiss: () => void; onRetry?: () => void }) {
   const t = useMessages()
   const ts = t.capture.source
   const failed = item.stage === 'error'
+  // En attente du réseau, l'envoi n'est pas perdu : la barre reste où il en était.
+  const sending = item.stage === 'upload' || item.stage === 'offline'
   return (
     <div className={cn('glass-card flex items-center gap-4 rounded-[24px] p-3 pr-2', failed && 'ring-2 ring-rose-300 dark:ring-rose-500/40')}>
       <span className="relative block shrink-0">
@@ -90,17 +92,23 @@ export function PendingCard({ item, onDismiss }: { item: PendingUpload; onDismis
         <p className="truncate text-[15px] font-black text-slate-900 dark:text-white">{item.name}</p>
         <p className={cn('flex items-start gap-1.5 text-xs font-bold', failed ? 'text-rose-600' : 'text-slate-500')}>
           {failed && <AlertCircle className="h-3.5 w-3.5" />}
+          {item.stage === 'offline' && <WifiOff className="h-3.5 w-3.5 shrink-0" />}
           {failed ? item.error ?? ts.stages.error : ts.stages[item.stage] ?? ts.stages.upload}
-          {!failed && item.stage === 'upload' && typeof item.progress === 'number' && <span className="tabular-nums">{ts.percent(Math.round(item.progress * 100))}</span>}
+          {sending && typeof item.progress === 'number' && <span className="tabular-nums">{ts.percent(Math.round(item.progress * 100))}</span>}
         </p>
-        {!failed && item.stage === 'upload' && (
+        {sending && (
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-900/10 dark:bg-white/10">
             <div className="bg-gradient-primary h-full rounded-full transition-[width]" style={{ width: `${Math.round((item.progress ?? 0) * 100)}%` }} />
           </div>
         )}
       </div>
+      {failed && onRetry && (
+        <button type="button" onClick={onRetry} className="btn-press inline-flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-black text-[var(--primary)] hover:bg-[rgba(var(--primary-rgb),0.08)]">
+          <RotateCcw className="h-4 w-4" /> {t.common.retry}
+        </button>
+      )}
       {failed && (
-        <button type="button" onClick={onDismiss} aria-label={t.common.remove} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-400 hover:bg-slate-900/5">
+        <button type="button" onClick={onDismiss} aria-label={t.common.remove} className="btn-press flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-slate-400 hover:bg-slate-900/5">
           <Trash2 className="h-4 w-4" />
         </button>
       )}

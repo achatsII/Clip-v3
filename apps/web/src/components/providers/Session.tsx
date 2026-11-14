@@ -9,13 +9,14 @@ import { aiApi, onAiDebitError, onAiUsage, type AiApi } from '@/lib/gateway/ai'
 import { fetchProfile, type Profile } from '@/lib/gateway/auth'
 import { gateway, hasSession } from '@/lib/gateway/client'
 import { dataApi, type DataApi, type Doc } from '@/lib/gateway/data'
-import { filesApi, type FilesApi } from '@/lib/gateway/files'
+import { filesApi, setResumableUploads, type FilesApi } from '@/lib/gateway/files'
 import { messages, useMessages } from '@/lib/i18n'
 import { ROLES, type Feature, type Permission } from '@/lib/model/catalog'
 import { ensureOrg, logUsage, normalizeOrg, T } from '@/lib/model/repo'
 import type { MemberRole, MemberSettings, OrgSettings } from '@/lib/model/types'
 import { DictationProvider, type Transcriber } from '@/lib/media/dictation'
 import { applyBrandColor } from '@/lib/theme'
+import { useToggle } from '@/lib/toggles'
 
 export const data = dataApi(gateway)
 export const files = filesApi(gateway)
@@ -77,6 +78,10 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
   useEffect(() => {
     applyBrandColor(org?.json_data.color)
   }, [org?.json_data.color])
+
+  // Les gros fichiers partent par morceaux (toggle `resumableUpload`) : `files.upload` le lit.
+  const resumable = useToggle('resumableUpload')
+  useEffect(() => setResumableUploads(resumable), [resumable])
 
   useEffect(() => {
     if (!profile) return

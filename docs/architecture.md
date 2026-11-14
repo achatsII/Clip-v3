@@ -351,6 +351,21 @@ un refus de facturation se montre tel quel. Le relais des champs de la requête 
 « Run AskAI V4 » de n8n : `JOB_RELAYED_FIELDS` le reflète, et un test échoue si la génération emploie
 un champ que la branche ne relaie pas.
 
+**Les gros fichiers partent par morceaux** (toggle `resumableUpload`, `src/lib/gateway/resumable.ts`).
+Dès 16 Mo, `files.upload` envoie le fichier en morceaux de 4 Mo par le protocole TUS de la Gateway
+(spec 10-files, §2.8.6 à §2.8.8), directement du navigateur : la Gateway montre ses en-têtes TUS au
+navigateur (CORS vérifié en QA le 2026-11-14), alors que Clip V1 devait faire passer chaque morceau
+par son serveur Vercel. Un morceau raté se renvoie seul, à partir de l'offset que la Gateway donne
+(une coupure en plein morceau laisse arriver une partie des octets) ; un réseau coupé s'attend
+(10 minutes au plus, la carte dit « En attente du réseau ») ; une session expirée se rafraîchit une
+fois. La session reste retenue 24 h sur l'appareil (clé : dossier, nom, taille, date du fichier) :
+« Réessayer », sur la carte d'un envoi raté comme dans l'import en lot, reprend où l'envoi s'était
+arrêté. À la fin, l'adresse publique vient du dernier morceau, sinon du statut ; si la Gateway a
+déjà rangé le fichier et fermé la session (404), c'est l'adresse annoncée à la création. Si la
+Gateway refuse ce mode (route absente, morceau refusé), le fichier part d'un bloc, comme avant. Les
+tests jouent contre une fausse Gateway TUS qui se comporte comme la vraie
+(`tests/resumable-upload.test.ts`).
+
 **Les envois ne retiennent plus.** « Générer » se touche pendant les envois de la capture : la
 génération part toute seule à leur fin (`CaptureSession.whenUploaded`), même si l'on a quitté
 l'écran entretemps. Dans la coquille iOS, les fichiers partent par une session d'envoi en

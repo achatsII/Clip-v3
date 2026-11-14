@@ -329,7 +329,7 @@ export function CaptureBoard({
                 <SourceCard key={s.id} source={s} onRemove={() => void session.remove(s.id)} onEditText={(text) => void session.updateText(s.id, text)} />
               ))}
               {snap.pending.map((p) => (
-                <PendingCard key={p.tempId} item={p} onDismiss={() => session.dismissPending(p.tempId)} />
+                <PendingCard key={p.tempId} item={p} onDismiss={() => session.dismissPending(p.tempId)} onRetry={session.canRetry(p.tempId) ? () => void session.retry(p.tempId) : undefined} />
               ))}
             </div>
           </section>

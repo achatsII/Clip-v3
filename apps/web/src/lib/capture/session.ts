@@ -31,12 +31,15 @@ export interface CaptureSnapshot {
 }
 
 type Deps = { data: DataApi; files: FilesApi; actor: Actor }
+type IngestJob = (onProgress: (stage: IngestStage, ratio?: number) => void) => Promise<Source>
 
 export class CaptureSession {
   private listeners = new Set<() => void>()
   private saving: Promise<void> = Promise.resolve()
   private creating: Promise<string> | null = null
   private snap: CaptureSnapshot
+  /** Le travail de chaque envoi en cours ou raté : « Réessayer » le relance (un gros fichier reprend où il était). */
+  private jobs = new Map<string, IngestJob>()
 
   constructor(
     private deps: Deps,
@@ -99,21 +102,42 @@ export class CaptureSession {
     this.set({ pending: this.snap.pending.map((p) => (p.tempId === tempId ? { ...p, ...patch } : p)) })
   }
 
-  private async run(pending: PendingUpload, job: (onProgress: (stage: IngestStage, ratio?: number) => void) => Promise<Source>) {
+  private run(pending: PendingUpload, job: IngestJob) {
+    this.jobs.set(pending.tempId, job)
     this.set({ pending: [...this.snap.pending, pending] })
+    return this.execute(pending.tempId)
+  }
+
+  private async execute(tempId: string) {
+    const job = this.jobs.get(tempId)
+    const pending = this.snap.pending.find((p) => p.tempId === tempId)
+    if (!job || !pending) return
     try {
       await this.ensureDoc()
-      const source = await job((stage, ratio) => this.updatePending(pending.tempId, { stage, progress: ratio }))
+      const source = await job((stage, ratio) => this.updatePending(tempId, { stage, progress: ratio }))
       if (pending.previewUrl && source.kind === 'photo' && !source.thumbnailUrl) source.thumbnailUrl = source.url
+      this.jobs.delete(tempId)
       this.set({
         sources: [...this.snap.sources, source],
-        pending: this.snap.pending.filter((p) => p.tempId !== pending.tempId),
+        pending: this.snap.pending.filter((p) => p.tempId !== tempId),
       })
       await this.persist()
       if (pending.previewUrl) setTimeout(() => URL.revokeObjectURL(pending.previewUrl!), 30_000)
     } catch (e) {
-      this.updatePending(pending.tempId, { stage: 'error', error: e instanceof Error ? e.message : messages().capture.upload.failed })
+      this.updatePending(tempId, { stage: 'error', error: e instanceof Error ? e.message : messages().capture.upload.failed })
     }
+  }
+
+  /** Un envoi raté qu'on peut relancer (le fichier est encore là). */
+  canRetry(tempId: string): boolean {
+    return this.jobs.has(tempId) && this.snap.pending.some((p) => p.tempId === tempId && p.stage === 'error')
+  }
+
+  /** Relance un envoi raté. Un gros fichier reprend où il s'était arrêté, sans renvoyer ce qui est parti. */
+  retry(tempId: string): Promise<void> {
+    if (!this.canRetry(tempId)) return Promise.resolve()
+    this.updatePending(tempId, { stage: 'upload', progress: undefined, error: undefined })
+    return this.execute(tempId)
   }
 
   addFiles(list: File[]) {
@@ -179,6 +203,7 @@ export class CaptureSession {
   }
 
   dismissPending(tempId: string) {
+    this.jobs.delete(tempId)
     this.set({ pending: this.snap.pending.filter((p) => p.tempId !== tempId) })
   }
 

@@ -61,6 +61,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `Job_Generate_CLIP_V3` (nœud « Shape analysis result »), et ce qui s'écrit de plus dans
   `clip_job`, dans la branche de Job_start. Les consignes, le schéma et les fichiers passent tels
   quels : les changer ne demande rien dans n8n.
+- **Gros fichiers** (toggle `resumableUpload`) : dès 16 Mo, un fichier du navigateur part par
+  morceaux de 4 Mo, directement à la Gateway (TUS, `src/lib/gateway/resumable.ts`).
+  - Un morceau raté se renvoie seul, à partir de ce que la Gateway a vraiment reçu.
+  - Réseau coupé, l'envoi attend son retour (10 minutes au plus) et la carte le dit.
+  - La session reste 24 h sur l'appareil : « Réessayer » (capture et import en lot) reprend où
+    l'envoi s'était arrêté.
+  - Si la Gateway refuse ce mode, le fichier part d'un bloc (URL présignée), comme avant.
+  - Clip V1 fait passer chaque morceau par son serveur Vercel (4,5 Mo par requête au plus) ; ici,
+    rien n'y transite.
+  - Dans la coquille, un média part d'un bloc par la session d'envoi en arrière-plan d'iOS, qui
+    continue quand l'app passe en arrière-plan. La caméra filme en 720p à 2,5 Mbit/s ; une vidéo
+    de la galerie part telle quelle, puis la Gateway la ramène en 720p.
 - **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
   (`src/lib/model/translation.ts`), médias compris : légendes, annotations, texte des schémas, et
   en option les images refaites avec leur texte traduit. Un média traduit nomme l'original (`of`).

@@ -83,6 +83,7 @@ export const capture: typeof Fr = {
       import: 'Preparing on the phone (downloading from iCloud if needed)…',
       prepare: 'Preparing…',
       upload: 'Uploading…',
+      offline: 'Waiting for the network… the upload will resume on its own',
       optimize: 'Optimizing the video…',
       transcribe: 'Transcribing…',
       convert: 'Converting to PDF…',

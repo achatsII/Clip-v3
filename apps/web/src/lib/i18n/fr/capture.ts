@@ -87,6 +87,7 @@ export const capture = {
       import: 'Préparation sur le téléphone (téléchargement d’iCloud au besoin)…',
       prepare: 'Préparation…',
       upload: 'Envoi…',
+      offline: 'En attente du réseau… l’envoi reprendra tout seul',
       optimize: 'Optimisation de la vidéo…',
       transcribe: 'Transcription…',
       convert: 'Conversion en PDF…',

@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -64,6 +64,9 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // La génération au serveur (Job_start, branche clip-v3 dans n8n) : le réglage de l'usine paraît,
   // et une fois choisi, on peut fermer l'app pendant que l'IA écrit l'instruction.
   serverGeneration: true,
+  // L'envoi par morceaux des gros fichiers (TUS, directement à la Gateway) : un morceau raté se
+  // renvoie seul, un réseau coupé s'attend, et « Réessayer » reprend où l'envoi s'était arrêté.
+  resumableUpload: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -99,4 +102,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   editorViews: false,
   phoneReader: false,
   serverGeneration: false,
+  resumableUpload: false,
 }

@@ -62,6 +62,8 @@ export default function ImportPage() {
   const [items, setItems] = useState<ImportItem[]>([])
   const [running, setRunning] = useState(false)
   const input = useRef<HTMLInputElement>(null)
+  // Le fichier d'un document pas encore envoyé : « Réessayer » le renvoie (un gros PDF reprend où il était).
+  const fileFor = useRef(new Map<string, File>())
   const itemsRef = useRef(items)
   itemsRef.current = items
   const actor = { id: profile.userId, name: displayName }
@@ -108,18 +110,31 @@ export default function ImportPage() {
     itemsRef.current = next
     setItems(next)
     let id = await persist(next)
+    added.forEach((item, k) => fileFor.current.set(item.id, docs[k]))
     // Envoi et conversion, un fichier à la fois (les conversions de la Gateway passent une par une).
-    for (let k = 0; k < docs.length; k++) {
-      const item = added[k]
-      next = update(item.id, { status: 'uploading' })
-      try {
-        const source = await ingestFile(docs[k], files)
-        next = update(item.id, { status: 'uploaded', source })
-      } catch (e) {
-        next = update(item.id, { status: 'error', error: e instanceof Error ? e.message : t.importer.errors.upload })
-      }
+    for (const item of added) {
+      next = await uploadItem(item.id)
       id = await persist(next, id)
     }
+    void run()
+  }
+
+  /** Envoie (ou renvoie) le document d'un élément ; rend la liste à jour. */
+  async function uploadItem(itemId: string) {
+    const file = fileFor.current.get(itemId)
+    if (!file) return itemsRef.current
+    update(itemId, { status: 'uploading', error: undefined })
+    try {
+      const source = await ingestFile(file, files)
+      fileFor.current.delete(itemId)
+      return update(itemId, { status: 'uploaded', source })
+    } catch (e) {
+      return update(itemId, { status: 'error', error: e instanceof Error ? e.message : t.importer.errors.upload })
+    }
+  }
+
+  async function retryUpload(itemId: string) {
+    await persist(await uploadItem(itemId))
     void run()
   }
 
@@ -236,6 +251,11 @@ export default function ImportPage() {
                 )}
                 {i.status === 'error' && i.source && (
                   <Button size="sm" icon={<RotateCcw className="h-4 w-4" />} onClick={() => { update(i.id, { status: 'uploaded', error: undefined }); void run() }}>
+                    {t.common.retry}
+                  </Button>
+                )}
+                {i.status === 'error' && !i.source && fileFor.current.has(i.id) && (
+                  <Button size="sm" icon={<RotateCcw className="h-4 w-4" />} onClick={() => void retryUpload(i.id)}>
                     {t.common.retry}
                   </Button>
                 )}
