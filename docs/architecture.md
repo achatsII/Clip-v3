@@ -90,11 +90,22 @@ le poste (`linkVersion`). La version 2 ajoute, pour un lien de poste seulement, 
 personnes actives de l'équipe (`clip_operator`) : le lien d'une instruction peut sortir de l'usine,
 il ne montre jamais l'équipe. Tout lien peut aussi insérer le travail fait et les réponses de
 formation (`clip_execution`, `clip_training`), ouverts d'avance pour ne pas refaire les liens à
-l'étape suivante. Un poste au
+l'étape suivante. La version 3 ajoute l'insertion des photos prises au poste (`clip_photo`). Un poste au
 lien plus ancien affiche « Mettre à jour le lien » : un nouveau lien est créé, et l'ancien est rangé
 dans `linkFollow`. Une tablette ou un QR déjà imprimé qui ouvre l'ancien lien est envoyé sur le
 nouveau (`location.replace`) : rien à réimprimer. « Remplacer » (lien compromis) vide `linkFollow` :
 l'ancien lien ne mène plus nulle part.
+
+**Les photos prises sur un lien** (la preuve d'un relevé, la photo d'un « Pas clair ? ») ne passent pas
+par le stockage : la Gateway n'accepte l'envoi de fichiers que des rôles `user` et `admin`, jamais
+`guest`. La photo, réduite pour tenir en environ 250 Ko (`photoForDatabase`), va dans un document
+`clip_photo` à elle, et le relevé ou le retour ne garde qu'une référence courte, `clip-photo:<id>`
+(`guestPhotoSaver`, `src/lib/media/photos.ts`) : le registre et la liste des retours restent légers.
+L'image se relit à l'affichage (`StoredPhoto`, `usePhotoSrc`) ; l'appareil qui l'a prise la montre
+sans rien relire. La fiche imprimée reçoit l'image elle-même (`withPhotoImages`), et l'export CSV dit
+« Photo enregistrée dans CLIP ». Un lien d'avant la version 3 ne peut pas écrire `clip_photo` (403) :
+la photo va alors dans le relevé lui-même, en adresse `data:`, pour que rien ne casse avant la mise à
+jour du lien. Avec un compte, la photo part au stockage comme avant (`filesPhotoSaver`).
 
 ## 3. Le pont natif
 
@@ -187,7 +198,8 @@ une photo ou une page tirés d'une source.
 - Les opérations : `set_instruction`, `add_step` (avec un id choisi par l'IA, réutilisable plus bas),
   `update_step`, `delete_step`, `move_step`, `set_layout`, `set_media` (légende, verdict), `remove_media`,
   `clear_annotations` — pures et testées (`applyOp`) — et trois qui demandent une IA spécialisée :
-  `annotate` (une IA qui **voit** la photo place les marques demandées), `illustrate`, `visual`.
+  `annotate` (une IA qui **voit** la photo place les marques demandées), `illustrate` (à partir de la
+  photo de l'étape, ou de son texte quand elle n'en a pas), `visual`.
 - L'app les applique **une à une** (`runAgentOps`) : elle amène l'éditeur à l'étape, l'entoure, montre
   l'action en cours, puis passe à la suivante ; une action ratée n'arrête pas les autres. Tout le tour
   s'annule d'un geste (l'instruction d'avant est gardée).
@@ -459,7 +471,9 @@ navigation de l'app s'effacent (`useImmersive`, `src/lib/ui/immersive.ts`). Togg
   **outils** en tuiles, chacun ouvre sa fenêtre (`ToolsGrid`) : ce que le « … » range ailleurs. Une
   étape d'un bloc commun s'y lit sans se modifier, comme dans l'autre vue.
 - **Le média** se règle dans une fenêtre dans « Comme au poste » (`StepMediaEditor` : l'aperçu, les
-  médias de l'étape, puis Annoter, Vidéo | Image, « Avec l'IA », Retirer ; verdict, légende et
+  médias de l'étape, puis Annoter, Vidéo | Image, les deux outils de l'IA à découvert, « Illustrer
+  l'étape » (de son texte, même sans image ; « Illustrer cette image » part de l'image affichée) et
+  « Schéma de l'étape », Retirer ; verdict, légende et
   disposition sous « Plus d'options ») ; dans la fiche, la même chose dans sa carte, tout ouvert.
 - **Publier** : la fenêtre dit où l'instruction s'affichera et laisse choisir les postes à ce
   moment-là ; l'avis sur la génération par l'IA s'y demande, quand la personne a tout relu.

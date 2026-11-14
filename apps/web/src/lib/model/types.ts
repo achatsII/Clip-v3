@@ -725,6 +725,23 @@ export interface UpgradeRequest {
 }
 
 /** Une réponse à un relevé, telle qu'au moment du travail (l'instruction peut changer ensuite). */
+/**
+ * Une photo prise sur un lien public (tablette, code QR), rangée dans la base parce que la Gateway
+ * refuse l'envoi de fichiers au rôle `guest` (`src/lib/media/photos.ts`). Le relevé ou le retour la
+ * désigne par `clip-photo:<id>`. `url` : l'adresse au stockage, si elle y est passée depuis.
+ */
+export interface PhotoDoc {
+  dataUrl: string | null
+  url?: string | null
+  width: number | null
+  height: number | null
+  bytes: number
+  folder: 'execution' | 'feedback'
+  instructionId: string | null
+  stationId: string | null
+  createdAt: string
+}
+
 export interface ExecutionAnswer {
   stepId: string
   stepTitle: string
@@ -733,7 +750,9 @@ export interface ExecutionAnswer {
   kind: CheckKind
   /**
    * measure : un nombre ; yesno : true ou false ; choice et text : le texte ; photo : l'adresse (la
-   * première) ; measures : la moyenne des lectures ; checklist : null (les points sont dans `items`).
+   * première), ou `clip-photo:<id>` et `data:` pour une photo prise sur un lien public
+   * (`src/lib/media/photos.ts`) ; measures : la moyenne des lectures ; checklist : null (les points
+   * sont dans `items`).
    */
   value: number | boolean | string | null
   unit?: string

@@ -36,6 +36,7 @@ import { answerLanguage } from '@/lib/ai/voice'
 import type { AiApi } from '@/lib/gateway/ai'
 import type { DataApi } from '@/lib/gateway/data'
 import type { FilesApi } from '@/lib/gateway/files'
+import { filesPhotoSaver, type PhotoSaver } from '@/lib/media/photos'
 import { ENERGY, LANGUAGES, PPE, textDir, WARNINGS } from '@/lib/model/catalog'
 import { firstIncomplete, hasChecks, type Answers, type CheckAnswer, liveChecks } from '@/lib/model/checks'
 import { buildExecution, flushExecutions, saveExecution } from '@/lib/model/executions'
@@ -67,6 +68,12 @@ export interface PlayerDeps {
   data: DataApi
   ai: AiApi | null
   files: FilesApi | null
+  /**
+   * Comment s'enregistrent les photos du poste (relevés, « Pas clair ? »). Sur un lien public, la
+   * base (`guestPhotoSaver`) : la Gateway refuse l'envoi de fichiers au rôle guest. Absent : le
+   * stockage, par `files`.
+   */
+  photos?: PhotoSaver | null
 }
 
 export interface PlayerProps {
@@ -163,6 +170,8 @@ export function Player(props: PlayerProps) {
   const startedAt = useRef<number>(Date.now())
   // Les relevés (toggle `records`) : les réponses de cette fois, ce qui manque, et la trace écrite.
   const recordsOn = useToggle('records')
+  // Les photos du poste : celles que la page fournit (un lien public : la base), sinon le stockage.
+  const savePhoto = useMemo(() => deps.photos ?? (deps.files ? filesPhotoSaver(deps.files) : null), [deps.photos, deps.files])
   const [answers, setAnswers] = useState<Answers>({})
   const [nudge, setNudge] = useState(0)
   const [record, setRecord] = useState<{ state: 'saved' | 'queued'; deviations: number } | null>(null)
@@ -553,7 +562,7 @@ export function Player(props: PlayerProps) {
                   </ul>
                 </div>
               )}
-              {recordsOn && !!step.checks?.length && <StepChecks step={step} answers={answers} onAnswer={answerCheck} t={t.records} files={deps.files} nudge={nudge} preview={preview} />}
+              {recordsOn && !!step.checks?.length && <StepChecks step={step} answers={answers} onAnswer={answerCheck} t={t.records} photos={savePhoto} nudge={nudge} preview={preview} />}
               {/* Au téléphone tenu droit, les gestes de l'étape tiennent sur une ligne (elle glisse au besoin). */}
               <div className={cn('flex gap-2', layout === 'column' ? 'no-scrollbar -mx-4 overflow-x-auto px-4 pt-1 [&>button]:shrink-0' : 'mt-auto flex-wrap pt-2')}>
                 {!preview && (
@@ -600,7 +609,7 @@ export function Player(props: PlayerProps) {
           onClose={() => setFeedbackOpen(false)}
           t={t}
           data={deps.data}
-          files={deps.files}
+          photos={savePhoto}
           base={{
             instructionId,
             publishedId,

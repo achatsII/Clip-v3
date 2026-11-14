@@ -216,6 +216,7 @@ describe('les tendances et l’export du registre', () => {
     verdict: (ok) => (ok === null ? '' : ok ? 'OK' : 'Écart'),
     date: (iso) => iso.slice(0, 10),
     station: (id) => (id === 's1' ? 'Tour 3' : ''),
+    photo: t.photoInApp,
   })
 
   it('l’export : une ligne par relevé, le plus récent d’abord, la mesure en nombre, sans formule possible', () => {

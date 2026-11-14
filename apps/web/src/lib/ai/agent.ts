@@ -169,7 +169,7 @@ export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, la
 - Les sources d’origine (S1, S2…) sont listées sous l’instruction ; les notes écrites et les transcriptions des notes vocales y sont en entier : lis-les d’abord.
 - Revoir des sources (look) coûte du temps et des crédits : seulement quand la demande ne peut pas se faire sans voir ou entendre une source — une valeur dite ou montrée qui n’est pas dans le texte, un geste ou un moment à retrouver, un meilleur moment de vidéo à choisir, ce que montre une photo. Jamais pour reformuler, raccourcir, réordonner, traduire ou ajouter une mise en garde. Pour revoir : UNE opération look, seule, avec sources (le moins possible) et question ; l’app te joint ces sources et tu fais alors la demande.
 - Mettre à une étape un média tiré d’une source : use_media, avec source et, pour une vidéo, start et end (un extrait) ou at (une image figée) ; avec media, il remplace ce média de l’étape, sinon il s’ajoute.
-- Un dessin simple qui montre le geste (vue de face, coupe, plan, 3D), avec très peu de mots : visual. Une illustration à partir de la photo de l’étape : illustrate (seulement si l’étape a une photo).
+- Un dessin simple qui montre le geste (vue de face, coupe, plan, 3D), avec très peu de mots : visual. Une illustration de l’étape : illustrate (à partir de sa photo si elle en a une, sinon de son texte).
 - Montrer ce qu’il faut faire et ne pas faire : set_media avec verdict do ou dont, puis set_layout compare.
 - Traduire pour les opérateurs : translate, avec languages (codes) ; la traduction couvre les textes, les marques sur les photos, les légendes, les outils et les schémas. images: true seulement si la personne demande aussi les images : l’IA redessine celles où du texte se lit, avec ce texte traduit (plus cher). Refaire une traduction existante : translate.
 - Un seul média : translate_media traduit sa légende, ses marques ou son schéma ; translate_image redessine une photo ou une image avec son texte traduit (plus cher). language : la langue visée ; sans language, celle de l’instruction (un média dont le texte est dans une autre langue). Vers une autre langue, l’instruction doit déjà y être traduite (voir TRADUCTIONS) ; sinon, translate d’abord.${opts.translate === false ? '\n- La traduction n’est pas offerte à cette personne : n’utilise jamais translate, translate_media ni translate_image ; dis-le simplement dans reply.' : ''}
@@ -587,12 +587,11 @@ async function applyAiOp(ctx: AgentRunContext, op: AgentOp, ids: IdMap): Promise
     const at = stepOf(latest, ids, op.step)
     return { content: withStep(latest, at.index, { ...at.step, media: [...at.step.media, v].slice(-MAX_MEDIA) }), label: messages().editorTools.agent.done.visualAdded(at.index + 1, v.title ?? ''), stepId: step.id }
   }
-  // illustrate
-  const i = mediaIndexOf(step, op.media, true)
-  const ref = step.media[i]
-  if (ref.kind !== 'image') throw new AgentOpError(messages().editorTools.agent.errors.noReferencePhoto)
-  const prompt = await illustrationPrompt(ctx.ai, ref.url, step)
-  const url = await ctx.ai.generateImage(op.request ? `${prompt} ${op.request}` : prompt, [ref.url])
+  // illustrate : à partir de l'image de l'étape s'il y en a une, sinon de son texte.
+  const imageAt = op.media && op.media >= 1 && op.media <= step.media.length ? op.media - 1 : step.media.findIndex((m) => m.kind === 'image')
+  const ref = imageAt >= 0 && step.media[imageAt]?.kind === 'image' ? step.media[imageAt] : null
+  const prompt = await illustrationPrompt(ctx.ai, ref?.url ?? null, step, { title: content.title, equipment: content.equipment })
+  const url = await ctx.ai.generateImage(op.request ? `${prompt} ${op.request}` : prompt, ref ? [ref.url] : [])
   const latest = ctx.get()
   const at = stepOf(latest, ids, op.step)
   return { content: withStep(latest, at.index, { ...at.step, media: [...at.step.media, { kind: 'image' as const, url, generated: true }].slice(-MAX_MEDIA) }), label: messages().editorTools.agent.done.illustrationAdded(at.index + 1), stepId: step.id }

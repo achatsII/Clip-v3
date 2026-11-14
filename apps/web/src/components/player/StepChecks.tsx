@@ -3,10 +3,10 @@
 import { Camera, Check as CheckIcon, CheckCircle2, ClipboardCheck, Info, Loader2, ScanLine, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { ScanSheet } from '@/components/ScanSheet'
+import { StoredPhoto } from '@/components/StoredPhoto'
 import { Input } from '@/components/ui/Field'
 import { hasCapability } from '@/lib/bridge/native'
-import type { FilesApi } from '@/lib/gateway/files'
-import { compressImage } from '@/lib/media/image'
+import type { PhotoSaver } from '@/lib/media/photos'
 import { canScan, scanNative } from '@/lib/media/scan'
 import { blocks, liveChecks, parseNumber, readingsStats, verdict, type Answers, type CheckAnswer } from '@/lib/model/checks'
 import type { Check, ItemState, Step } from '@/lib/model/types'
@@ -20,7 +20,7 @@ type T = PlayerStrings['records']
  * limites, verdict tout de suite), un oui ou non, un choix, un texte, une photo. Un écart demande une
  * note. `nudge` change quand on veut passer sans avoir tout rempli : ce qui manque se signale.
  */
-export function StepChecks({ step, answers, onAnswer, t, files, nudge, preview }: { step: Step; answers: Answers; onAnswer: (checkId: string, a: CheckAnswer) => void; t: T; files: FilesApi | null; nudge: number; preview?: boolean }) {
+export function StepChecks({ step, answers, onAnswer, t, photos, nudge, preview }: { step: Step; answers: Answers; onAnswer: (checkId: string, a: CheckAnswer) => void; t: T; photos: PhotoSaver | null; nudge: number; preview?: boolean }) {
   const box = useRef<HTMLDivElement>(null)
   // Une proposition de l'IA que l'auteur n'a pas gardée n'existe pas au poste (ni dans l'aperçu).
   const checks = liveChecks(step)
@@ -36,7 +36,7 @@ export function StepChecks({ step, answers, onAnswer, t, files, nudge, preview }
       </p>
       <div className="space-y-5">
         {checks.map((c) => (
-          <CheckField key={c.id} check={c} answer={answers[c.id]} onAnswer={(a) => onAnswer(c.id, a)} t={t} files={files} flag={!!nudge && blocks(c, answers[c.id])} preview={preview} />
+          <CheckField key={c.id} check={c} answer={answers[c.id]} onAnswer={(a) => onAnswer(c.id, a)} t={t} photos={photos} flag={!!nudge && blocks(c, answers[c.id])} preview={preview} />
         ))}
       </div>
       {!!nudge && missing && (
@@ -48,7 +48,7 @@ export function StepChecks({ step, answers, onAnswer, t, files, nudge, preview }
   )
 }
 
-function CheckField({ check, answer, onAnswer, t, files, flag, preview }: { check: Check; answer: CheckAnswer | undefined; onAnswer: (a: CheckAnswer) => void; t: T; files: FilesApi | null; flag: boolean; preview?: boolean }) {
+function CheckField({ check, answer, onAnswer, t, photos, flag, preview }: { check: Check; answer: CheckAnswer | undefined; onAnswer: (a: CheckAnswer) => void; t: T; photos: PhotoSaver | null; flag: boolean; preview?: boolean }) {
   const value = answer?.value ?? null
   const ok = verdict(check, value)
   const set = (v: CheckAnswer['value']) => onAnswer({ value: v, note: answer?.note, authorizedBy: answer?.authorizedBy })
@@ -117,9 +117,9 @@ function CheckField({ check, answer, onAnswer, t, files, flag, preview }: { chec
 
       {check.kind === 'photo' &&
         ((check.photos ?? 1) > 1 ? (
-          <PhotosField max={check.photos ?? 2} value={Array.isArray(value) ? (value as string[]) : typeof value === 'string' && value ? [value] : []} onValue={set} t={t} files={files} preview={preview} label={check.label} />
+          <PhotosField max={check.photos ?? 2} value={Array.isArray(value) ? (value as string[]) : typeof value === 'string' && value ? [value] : []} onValue={set} t={t} photos={photos} preview={preview} label={check.label} />
         ) : (
-          <PhotoField value={typeof value === 'string' ? value : null} onValue={set} t={t} files={files} preview={preview} label={check.label} />
+          <PhotoField value={typeof value === 'string' ? value : null} onValue={set} t={t} photos={photos} preview={preview} label={check.label} />
         ))}
 
       {/* Le verdict, tout de suite : dans la norme, ou l'écart et sa note. */}
@@ -177,20 +177,19 @@ function MeasureField({ check, value, onValue, t }: { check: Check; value: numbe
 }
 
 /** Une photo de preuve : prise à l'appareil, envoyée tout de suite (dans l'aperçu, gardée sur place). */
-function PhotoField({ value, onValue, t, files, preview, label }: { value: string | null; onValue: (v: string | null) => void; t: T; files: FilesApi | null; preview?: boolean; label: string }) {
+function PhotoField({ value, onValue, t, photos, preview, label }: { value: string | null; onValue: (v: string | null) => void; t: T; photos: PhotoSaver | null; preview?: boolean; label: string }) {
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   async function take(file: File) {
     setFailed(false)
-    if (preview || !files) {
+    if (preview || !photos) {
       onValue(URL.createObjectURL(file))
       return
     }
     setBusy(true)
     try {
-      const { blob } = await compressImage(file)
-      onValue((await files.upload(blob, file.name, 'execution')).url)
+      onValue(await photos(file, file.name, 'execution'))
     } catch {
       setFailed(true)
     } finally {
@@ -199,7 +198,7 @@ function PhotoField({ value, onValue, t, files, preview, label }: { value: strin
   }
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {value && <img src={value} alt={label} className="h-20 w-20 rounded-2xl object-cover shadow" />}
+      {value && <StoredPhoto value={value} alt={label} link={false} className="h-20 w-20 rounded-2xl object-cover shadow" />}
       <button type="button" disabled={busy} onClick={() => input.current?.click()} className={cn('btn-press flex h-14 items-center gap-2 rounded-2xl px-5 text-lg font-black', value ? 'glass-card' : 'bg-gradient-primary shadow-primary text-white')}>
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />} {busy ? t.uploading : value ? t.retakePhoto : t.takePhoto}
       </button>
@@ -305,20 +304,19 @@ function ScanText({ value, onValue, t, label }: { value: string; onValue: (v: st
 }
 
 /** Plusieurs photos de preuve (jusqu'à `max`) : chacune envoyée tout de suite, et retirable. */
-function PhotosField({ max, value, onValue, t, files, preview, label }: { max: number; value: string[]; onValue: (v: string[]) => void; t: T; files: FilesApi | null; preview?: boolean; label: string }) {
+function PhotosField({ max, value, onValue, t, photos, preview, label }: { max: number; value: string[]; onValue: (v: string[]) => void; t: T; photos: PhotoSaver | null; preview?: boolean; label: string }) {
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   async function take(file: File) {
     setFailed(false)
-    if (preview || !files) {
+    if (preview || !photos) {
       onValue([...value, URL.createObjectURL(file)].slice(0, max))
       return
     }
     setBusy(true)
     try {
-      const { blob } = await compressImage(file)
-      onValue([...value, (await files.upload(blob, file.name, 'execution')).url].slice(0, max))
+      onValue([...value, await photos(file, file.name, 'execution')].slice(0, max))
     } catch {
       setFailed(true)
     } finally {
@@ -329,7 +327,7 @@ function PhotosField({ max, value, onValue, t, files, preview, label }: { max: n
     <div className="flex flex-wrap items-center gap-3">
       {value.map((url, i) => (
         <span key={url} className="relative">
-          <img src={url} alt={`${label} ${i + 1}`} className="h-20 w-20 rounded-2xl object-cover shadow" />
+          <StoredPhoto value={url} alt={`${label} ${i + 1}`} link={false} className="h-20 w-20 rounded-2xl object-cover shadow" />
           <button type="button" aria-label={t.removePhoto} onClick={() => onValue(value.filter((u) => u !== url))} className="btn-press absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white shadow">
             <X className="h-4 w-4" />
           </button>

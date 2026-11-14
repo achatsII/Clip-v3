@@ -91,7 +91,8 @@ export default function StationPage() {
       setBusy(false)
     }
   }
-  const outdated = operatorsOn && canWrite && !!s.linkId && (s.linkVersion ?? 1) < LINK_SCOPE_VERSION
+  // Un lien d'avant la portée actuelle (qui travaille au poste, photos des relevés) : on propose de le mettre à jour.
+  const outdated = canWrite && !!s.linkId && (s.linkVersion ?? 1) < LINK_SCOPE_VERSION
 
   return (
     <div className="space-y-6">

@@ -114,7 +114,11 @@ export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, req
   return out
 }
 
-export async function illustrationPrompt(ai: AiApi, imageUrl: string, step: Step): Promise<string> {
+/**
+ * La consigne de l'illustration d'une étape. `imageUrl` : la photo de référence ; null : l'étape n'a
+ * pas d'image, et l'illustration part de son texte (et de l'instruction, pour le contexte).
+ */
+export async function illustrationPrompt(ai: AiApi, imageUrl: string | null, step: Step, context?: { title?: string; equipment?: string }): Promise<string> {
   const res = await ai.ask<{ prompt: string }>(
     'illustrate',
     {
@@ -122,8 +126,8 @@ export async function illustrationPrompt(ai: AiApi, imageUrl: string, step: Step
       level: 'mid',
       thinking: 'disabled',
       system_instruction: illustrateSystem(),
-      prompt: illustratePrompt(step),
-      files: [{ url: imageUrl, filename: 'photo.jpg', mimeType: 'image/jpeg' }],
+      prompt: illustratePrompt(step, !!imageUrl, context),
+      ...(imageUrl ? { files: [{ url: imageUrl, filename: 'photo.jpg', mimeType: 'image/jpeg' }] } : {}),
       json_schema: illustrationSchema,
     },
     { scope: step.id, timeoutMs: 60_000 },

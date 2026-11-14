@@ -210,11 +210,14 @@ export function annotatePrompt(step: Step, request?: string, hint?: string): str
 }
 
 export function illustrateSystem(): string {
-  return 'You write prompts for an image model that produces clean industrial work-instruction illustrations: flat technical illustration, isometric or front view, plain light background, high contrast, no text, no logos, safety colors where relevant (red for danger, yellow for caution). The illustration must show exactly the action of the step, based on the reference photo.'
+  return 'You write prompts for an image model that produces clean industrial work-instruction illustrations: flat technical illustration, isometric or front view, plain light background, high contrast, no text, no logos, safety colors where relevant (red for danger, yellow for caution). The illustration must show exactly the action of the step: based on the reference photo when one is given; otherwise on the step text alone, showing the hands, the tool and the part it names, and nothing the text does not say.'
 }
 
-export function illustratePrompt(step: Step): string {
-  return `Step: ${step.title} — ${step.text}. Write one prompt (max 70 words) describing the illustration to generate from the reference photo.`
+/** `withPhoto` : une photo de référence accompagne la demande ; sinon, le texte de l'étape suffit. */
+export function illustratePrompt(step: Step, withPhoto = true, context?: { title?: string; equipment?: string }): string {
+  const about = [context?.title && `Work instruction: ${context.title}.`, context?.equipment && `Equipment: ${context.equipment}.`].filter(Boolean).join(' ')
+  const from = withPhoto ? 'from the reference photo' : 'from this text alone (there is no photo)'
+  return `${about ? `${about} ` : ''}Step: ${step.title} — ${step.text}. Write one prompt (max 70 words) describing the illustration to generate ${from}.`
 }
 
 export function questionSystem(language: string): string {

@@ -28,6 +28,9 @@ export function buildScope(type: LinkType, id: string, opts: { mode?: 'focus' | 
   if (type === 'station') resources.push({ data_type: 'clip_operator', filter: withSlug({ 'json_data.active': true }), actions: ['read'] })
   resources.push({ data_type: 'clip_execution', actions: ['insert'] })
   resources.push({ data_type: 'clip_training', actions: ['insert'] })
+  // Les photos du poste (preuve d'un relevé, retour) : la Gateway refuse l'envoi de fichiers à un
+  // lien (rôle guest), la photo réduite va donc dans la base (`src/lib/media/photos.ts`).
+  resources.push({ data_type: 'clip_photo', actions: ['insert'] })
   return { resources }
 }
 

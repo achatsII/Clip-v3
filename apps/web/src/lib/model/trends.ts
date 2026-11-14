@@ -65,6 +65,8 @@ export interface CsvWords {
   verdict: (ok: boolean | null) => string
   date: (iso: string) => string
   station: (id: string | null | undefined) => string
+  /** Une photo rangée dans la base (prise sur un lien public) : un mot, pas une adresse illisible. */
+  photo: string
 }
 
 const isMeasure = (a: ExecutionAnswer) => (a.kind === 'measure' || a.kind === 'measures') && typeof a.value === 'number'
@@ -73,7 +75,7 @@ const isMeasure = (a: ExecutionAnswer) => (a.kind === 'measure' || a.kind === 'm
 function detail(a: ExecutionAnswer, w: CsvWords): string {
   if (a.values?.length) return a.values.map((n) => csvNumber(n, w.sep)).join(' | ')
   if (a.items?.length) return a.items.map((i) => w.item(i.label, i.state)).join(' | ')
-  if (a.kind === 'photo') return (a.photos?.length ? a.photos : typeof a.value === 'string' ? [a.value] : []).join(' ')
+  if (a.kind === 'photo') return (a.photos?.length ? a.photos : typeof a.value === 'string' ? [a.value] : []).map((u) => (/^https?:\/\//i.test(u) ? u : w.photo)).join(' ')
   return ''
 }
 

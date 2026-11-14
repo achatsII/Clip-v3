@@ -210,7 +210,6 @@ export const editorTools = {
       needTwoMedia: 'Il faut au moins deux médias pour comparer ou faire une grille',
       needsAi: 'Cette opération demande l’IA',
       marksOnImage: 'Les marques se posent sur une photo ou une image',
-      noReferencePhoto: 'Pas de photo de référence : demandez plutôt un schéma',
       sourceNotFound: (ref: string) => `Source introuvable (${ref})`,
       unknownLanguage: (lang: string) => `Langue inconnue (${lang})`,
       noLanguage: 'Aucune langue à traduire',

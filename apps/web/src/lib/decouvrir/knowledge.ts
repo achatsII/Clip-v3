@@ -114,8 +114,9 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - « Annoter l'image » : crayon, surligneur, flèche, ligne, distance (une cote : « 12 mm »), cercle, cadre,
   texte, numéro, icônes (danger, gants, cadenas, sens horaire…) et flou (cacher un visage, un nom, un écran).
   « Annoter par IA » place les flèches et les cercles sur ce qu'il faut voir.
-- « Avec l'IA » : une illustration à partir de la photo, ou un schéma de l'étape (vue de face, de dessus, en
-  coupe ou en 3D, avec très peu de mots).
+- Sous le média, les outils de l'IA à découvert : « Illustrer l'étape », une illustration tirée du texte de
+  l'étape, même quand elle n'a encore aucune image (« Illustrer cette image » part de la photo affichée), et
+  « Schéma de l'étape » (vue de face, de dessus, en coupe ou en 3D, avec très peu de mots).
 - Jusqu'à six médias par étape, disposés « Un à la fois », « À faire / À éviter » côte à côte, ou en « Grille ».
 - Annuler et rétablir (Ctrl+Z) ; l'historique (versions publiées et points de retour du brouillon) pour
   revenir en arrière ; l'édition en direct entre appareils (ce qui change sur le téléphone s'affiche sur

@@ -6,5 +6,6 @@
  * - 1 : poste ou instruction, retours et événements.
  * - 2 : aussi la liste des personnes de l'équipe (lecture), le travail fait (`clip_execution`) et
  *   les réponses de formation (`clip_training`) en écriture.
+ * - 3 : aussi les photos du poste (`clip_photo`, en écriture) : un lien ne peut pas envoyer de fichier.
  */
-export const LINK_SCOPE_VERSION = 2
+export const LINK_SCOPE_VERSION = 3

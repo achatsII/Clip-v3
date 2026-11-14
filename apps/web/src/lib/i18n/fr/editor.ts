@@ -400,9 +400,10 @@ export const editor = {
     otherMoment: 'Autre instant',
     chooseMedia: 'Choisir un média',
     annotate: 'Annoter',
-    aiIllustration: 'Illustration à partir de la photo',
+    /** L'illustration par l'IA : à partir de l'image affichée, ou du texte de l'étape s'il n'y en a pas. */
+    aiIllustrateImage: 'Illustrer cette image',
+    aiIllustrateStep: 'Illustrer l’étape',
     aiVisual: 'Schéma de l’étape',
-    withAi: 'Avec l’IA',
     moreOptions: 'Plus d’options',
     verdicts: { none: 'Neutre', do: '✓ À faire', dont: '✕ À éviter' },
     captionPlaceholder: 'Légende (facultatif)',

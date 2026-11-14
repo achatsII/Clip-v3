@@ -15,6 +15,8 @@ describe('portée des liens publics', () => {
       { data_type: 'clip_operator', filter: { 'json_data.active': true, 'json_data.app_identifier': 'clip-v3' }, actions: ['read'] },
       { data_type: 'clip_execution', actions: ['insert'] },
       { data_type: 'clip_training', actions: ['insert'] },
+      // Les photos du poste : un lien (rôle guest) ne peut pas envoyer de fichier, elles vont dans la base.
+      { data_type: 'clip_photo', actions: ['insert'] },
     ])
   })
   it('poste « seulement ce poste » : les instructions publiées de ce poste seulement', () => {
@@ -24,7 +26,7 @@ describe('portée des liens publics', () => {
   it('instruction : cette instruction publiée seulement, jamais les brouillons', () => {
     const s = buildScope('instruction', id, { sharedApp: false, slug: 'clip-v3' })
     // Les noms de l'équipe restent à la tablette du poste : un lien d'instruction peut sortir de l'usine.
-    expect(s.resources.map((r) => r.data_type)).toEqual(['clip_published', 'clip_feedback', 'clip_event', 'clip_execution', 'clip_training'])
+    expect(s.resources.map((r) => r.data_type)).toEqual(['clip_published', 'clip_feedback', 'clip_event', 'clip_execution', 'clip_training', 'clip_photo'])
     expect(s.resources[0].filter).toEqual({ 'json_data.instructionId': id })
     expect(JSON.stringify(s)).not.toContain('clip_instruction')
   })

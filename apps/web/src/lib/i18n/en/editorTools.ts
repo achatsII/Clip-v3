@@ -196,7 +196,6 @@ export const editorTools: typeof Fr = {
       needTwoMedia: 'At least two media are needed to compare or make a grid',
       needsAi: 'This operation needs the AI',
       marksOnImage: 'Marks go on a photo or an image',
-      noReferencePhoto: 'No reference photo: ask for a diagram instead',
       sourceNotFound: (ref: string) => `Source not found (${ref})`,
       unknownLanguage: (lang: string) => `Unknown language (${lang})`,
       noLanguage: 'No language to translate into',

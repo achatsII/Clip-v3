@@ -21,7 +21,7 @@ export function executionSheet(e: Execution, t: Messages['records'], meta: Sheet
     .map((a) => {
       const verdict = a.ok === true ? `<span class="ok">✓ ${escapeHtml(t.ok)}</span>` : a.ok === false ? `<span class="bad">✗ ${escapeHtml(t.bad)}</span>` : ''
       const limits = answerLimits(a, t)
-      const photos = a.kind === 'photo' ? (a.photos?.length ? a.photos : typeof a.value === 'string' ? [a.value] : []).filter((u) => /^https:\/\//i.test(u)) : []
+      const photos = a.kind === 'photo' ? (a.photos?.length ? a.photos : typeof a.value === 'string' ? [a.value] : []).filter((u) => /^(https:\/\/|data:image\/)/i.test(u)) : []
       const value = photos.length ? `<div class="pics">${photos.map((u) => `<img src="${escapeHtml(u)}" alt="">`).join('')}</div>` : `<b>${escapeHtml(answerValue(a, t))}</b>`
       const items = a.items?.length ? `<div class="items">${a.items.map((i) => `<span class="${i.state}">${escapeHtml(t.itemLine(i.label, t.itemStates[i.state]))}</span>`).join('')}</div>` : ''
       const note = a.note ? `<div class="note">${escapeHtml(t.note)} : ${escapeHtml(a.note)}</div>` : ''

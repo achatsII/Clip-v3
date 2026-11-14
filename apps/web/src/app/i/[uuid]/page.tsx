@@ -9,6 +9,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { aiApi } from '@/lib/gateway/ai'
 import { dataApi } from '@/lib/gateway/data'
 import { filesApi } from '@/lib/gateway/files'
+import { guestPhotoSaver } from '@/lib/media/photos'
 import { canReadAloud, exchangeLink, guestClient, scopedId, type GuestLink } from '@/lib/gateway/guest'
 import { useMessages } from '@/lib/i18n'
 import { findPublished, T } from '@/lib/model/repo'
@@ -53,7 +54,8 @@ function SharedInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; on
       version={p.json_data.version}
       branding={p.json_data.branding}
       source="link"
-      deps={{ data, ai: canReadAloud(link.permissions) ? aiApi(client) : null, files: filesApi(client) }}
+      // Un lien (rôle guest) ne peut pas envoyer de fichier : ses photos vont dans la base.
+      deps={{ data, ai: canReadAloud(link.permissions) ? aiApi(client) : null, files: filesApi(client), photos: guestPhotoSaver(data, { instructionId: p.json_data.instructionId }) }}
       onExit={() => setClosed(true)}
       exitLabel={(words) => words.close}
       canRecord={!!link.scope?.resources.some((r) => r.data_type === T.execution && r.actions.includes('insert'))}

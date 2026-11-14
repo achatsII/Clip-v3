@@ -61,7 +61,7 @@ export const stations: typeof Fr = {
     askOperator: 'Ask who’s working',
     askOperatorDescription: 'Before opening an instruction, the person taps their name and types their code. You know who did what, and when.',
     upgradeTitle: 'This link predates the new features',
-    upgradeHint: 'Update it to know who’s working at the station. The tablet and the QR codes already printed follow the new link.',
+    upgradeHint: 'Update it for photos in readings and to know who works at the station. The tablet and printed QR codes follow the new link.',
     upgrade: 'Update the link',
     upgraded: 'Link updated',
     upgradedHint: 'The tablet and the printed QR codes move to the new link.',

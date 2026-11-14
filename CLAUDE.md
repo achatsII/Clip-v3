@@ -25,6 +25,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   réécriture complète garde les champs qu'on ne connaît pas.
 - **Liens publics** (poste, instruction) : la portée se bâtit côté serveur dans
   `src/lib/server/scope.ts`, jamais à partir du navigateur. Un lien ne lit que `clip_published`.
+  Une photo prise sur un lien (relevé, « Pas clair ? ») va, réduite, dans un document `clip_photo`
+  que le relevé ou le retour désigne par `clip-photo:<id>` (`src/lib/media/photos.ts` ; `StoredPhoto`
+  l'affiche, le PDF et le CSV la résolvent) ; un lien d'avant la portée v3 la range dans le relevé
+  lui-même (`data:`).
 - **Espace Découvrir** (`/decouvrir`, [`docs/DECOUVRIR.md`](docs/DECOUVRIR.md)) : les vidéos et le conseiller
   pour les prospects, à part de l'app (sa propre session, le cookie `clip_decouvrir` ; rien dans les données de
   Clip). Public par défaut ; `DECOUVRIR_ACCES=sandboxes` le ferme derrière Sandboxes (`src/proxy.ts`,
@@ -193,6 +197,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 
 ## Pièges déjà rencontrés
 
+- La Gateway refuse l'envoi de fichiers au rôle `guest` d'un lien public (routes
+  `files/upload/generate/presigned-url` et `files/upload/direct` : `user` et `admin` seulement) : une
+  photo prise au poste passe par la base (`guestPhotoSaver`), jamais par `files.upload`.
 - `cn` ne fusionne pas les classes : sur un composant qui pose déjà `inline-flex`, cacher avec
   `max-sm:hidden`, pas avec `hidden sm:inline-flex`.
 - N'écrire que `backdrop-filter` : avec `-webkit-backdrop-filter` à côté, Lightning CSS ne garde que la

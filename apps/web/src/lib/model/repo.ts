@@ -43,6 +43,8 @@ export const T = {
    * résultat de l'IA. n8n l'écrit avec les droits de la personne qui l'a lancée ; l'app la relit.
    */
   serverJob: 'clip_job',
+  /** Une photo prise sur un lien public (relevé, retour) : la Gateway refuse l'envoi de fichiers au rôle guest. */
+  photo: 'clip_photo',
 } as const
 
 export const nowIso = () => new Date().toISOString()
