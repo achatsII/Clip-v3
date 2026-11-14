@@ -44,8 +44,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   dans Réglages › Usine ; sans choix, sur l'appareil) : la requête AskAI v4 se prépare une seule fois
   pour les deux chemins (`prepareGeneration`, `importAsk`) et part à `POST /api/v1/ai/job/start`
   avec `appIdentifier: 'clip-v3'`, jamais de grant dans le corps. Dans n8n, la branche clip-v3 de
-  Job_start crée `clip_job` avec les droits de l'appelant et lance `Job_Generate_CLIP_V3`, qui roule
-  Ask_AI_V4 tel quel et écrit le résultat et son coût. L'appareil peut alors se fermer ; le premier
+  Job_start crée `clip_job` avec les droits de l'appelant, répond et se relance elle-même sans
+  s'attendre (`data.phase: 'run'`) : ce deuxième passage roule `Job_Generate_CLIP_V3` (Ask_AI_V4 tel
+  quel) et écrit l'état, le résultat et son coût dans `clip_job`. L'appareil peut alors se fermer ; le premier
   appareil ouvert qui voit le travail fini termine l'instruction avec le code de l'app
   (`finishServerGeneration` dans `CreationWatcher` : verrou `generating.finishing`, même fin que sur
   l'appareil) et débite le coût réel avec la clé du travail (`jobDebitKey`, une seule fois). Si le
@@ -55,8 +56,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`startServerImport`). **Une modification de la façon d'analyser se reporte dans la branche
   clip-v3** quand elle change ce que n8n fait : un nouveau champ de la requête s'ajoute au nœud
   « Run AskAI V4 » (`JOB_RELAYED_FIELDS`, un test échoue sinon), une passe d'IA de plus ou un
-  traitement nouveau au serveur se reporte dans `Job_Generate_CLIP_V3`. Les consignes, le schéma et
-  les fichiers passent tels quels : les changer ne demande rien dans n8n.
+  traitement nouveau au serveur se reporte dans `Job_Generate_CLIP_V3`, et ce qui s'écrit de plus dans
+  `clip_job`, dans la branche de Job_start. Les consignes, le schéma et les fichiers passent tels
+  quels : les changer ne demande rien dans n8n.
 - **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
   (`src/lib/model/translation.ts`), médias compris : légendes, annotations, texte des schémas, et
   en option les images refaites avec leur texte traduit. Un média traduit nomme l'original (`of`).
@@ -190,6 +192,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Le prix d'un crédit d'IA en argent ne s'affiche jamais : ni à l'écran, ni dans les textes, ni sur le
   site ; les prix se disent en crédits. Il ne vit qu'à un endroit du code, la constante
   `AI_CREDITS_PER_CAD` (`src/lib/config.ts`), le taux standard de la plateforme.
+- Dans n8n, les routes Mongo (`Route_MongoDB_*`) n'acceptent que les workflows de leur propriétaire,
+  et un workflow créé par le MCP n8n n'en est pas : son appel est refusé (« The sub-workflow … cannot
+  be called by this workflow »). Comme V1 (`Job_Analyse_CLIP`), on écrit depuis un workflow de ce
+  propriétaire : Job_start, qui se relance lui-même pour ne pas faire attendre la Gateway. Chaque
+  écriture envoie tout `json_data`, repris du document relu, comme V1.
 
 ## Facturation
 

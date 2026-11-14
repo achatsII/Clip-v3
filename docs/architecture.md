@@ -327,11 +327,14 @@ l'appareil, comme avant. Au serveur, on peut fermer l'app pendant que l'IA écri
    travail et ce qu'il faut pour la terminer ailleurs (`generating.job` : les sources dans l'ordre,
    la langue, l'usage).
 2. **n8n roule l'analyse.** La branche clip-v3 de Job_start crée le document `clip_job` (avec le
-   grant de l'appelant, que la Gateway pose depuis le jeton), lance `Job_Generate_CLIP_V3` sans
-   l'attendre et rend `record_id`. Le sous-workflow marque l'étape `analyze`, appelle Ask_AI_V4
-   directement (pas le flux qui coupe les fichiers par lots de dix : une instruction se génère d'un
-   seul appel), puis écrit `status: completed` avec `result.json`, le modèle et `result.billing.costs.cad`,
-   ou `status: failed` avec l'erreur.
+   grant de l'appelant, que la Gateway pose depuis le jeton), se relance elle-même sans s'attendre
+   (`data.phase: 'run'`, `data.jobId`) et rend `record_id`. Ce deuxième passage relit `clip_job`,
+   marque l'étape `analyze` et attend `Job_Generate_CLIP_V3`, qui appelle Ask_AI_V4 directement (pas
+   le flux qui coupe les fichiers par lots de dix : une instruction se génère d'un seul appel). Il
+   écrit ensuite `status: completed` avec `result.json`, le modèle et `result.billing.costs.cad`, ou
+   `status: failed` avec l'erreur. Les écritures restent dans Job_start, pas dans le sous-workflow :
+   les routes Mongo n'acceptent que les workflows de leur propriétaire, comme Job_start et
+   `Job_Analyse_CLIP` (V1). Chacune envoie tout `json_data`, repris du document relu, comme V1.
 3. **Un appareil termine.** `CreationWatcher` (posé une fois pour qui crée des instructions) relit
    toutes les 10 s, jamais onglet caché, le travail de chaque création au serveur en cours. Fini, le
    premier appareil qui le voit pose le verrou `generating.finishing` (5 minutes ; relu pour savoir
