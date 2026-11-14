@@ -60,7 +60,10 @@ export const defaultRules = (): string[] => [...messages().instructions.defaults
 export function defaultStandard(): WritingStandard {
   return {
     rules: defaultRules(),
-    startWithSafety: true,
+    // Une usine neuve commence par le travail : les EPI et les mises en garde s'affichent déjà avant
+    // la première étape. `firstStep` reste absent ici : `normalizeOrg` complète une usine existante
+    // avec ce défaut, et son ancien `startWithSafety` doit continuer de décider (`firstStepOf`).
+    startWithSafety: false,
     maxWordsPerStep: 20,
     tone: 'infinitif',
     glossary: [],

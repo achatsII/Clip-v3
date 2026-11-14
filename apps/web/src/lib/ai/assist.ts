@@ -6,6 +6,7 @@ import type { AiApi } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
 import { getLang, messages, messagesIn } from '../i18n'
 import { PPE } from '../model/catalog'
+import { FIRST_STEP_KINDS, firstStepOf, withFirstStep, type FirstStepKind } from '../model/firstStep'
 import { uid } from '../model/repo'
 import { MAX_HTML_BYTES } from '../model/media'
 import type { Annotation, AnnotationColor, InstructionContent, OrgSettings, Step, StepMedia, TranslatedContent, WritingStandard } from '../model/types'
@@ -152,24 +153,27 @@ export async function answerQuestion(ai: AiApi, content: InstructionContent, ste
 
 /** `language` : la langue de l'outil de la personne, celle où le standard proposé s'écrit. */
 export async function suggestStandard(ai: AiApi, description: string, current: WritingStandard, language: string) {
-  const res = await ai.ask<Omit<WritingStandard, 'version' | 'updatedAt'> & { explanation: string }>(
+  const res = await ai.ask<Omit<WritingStandard, 'version' | 'updatedAt' | 'startWithSafety'> & { explanation: string }>(
     'standard_agent',
     {
       provider: 'google',
       level: 'mid',
       thinking: 'disabled',
       system_instruction: standardAgentSystem(language),
-      prompt: `STANDARD ACTUEL : ${JSON.stringify({ rules: current.rules, startWithSafety: current.startWithSafety, maxWordsPerStep: current.maxWordsPerStep, tone: current.tone, glossary: current.glossary })}\n\nCE QUE LA PERSONNE DÉCRIT : ${description}`,
+      prompt: `STANDARD ACTUEL : ${JSON.stringify({ rules: current.rules, firstStep: firstStepOf(current).kind, firstStepText: firstStepOf(current).text, maxWordsPerStep: current.maxWordsPerStep, tone: current.tone, glossary: current.glossary })}\n\nCE QUE LA PERSONNE DÉCRIT : ${description}`,
       json_schema: standardSchema,
     },
     { scope: 'standard', timeoutMs: 60_000 },
   )
   const j = res.json
   if (!j?.rules?.length) throw new ApiError(messages().editor.ai.standardFailed, 502)
+  // Un choix illisible garde celui d'aujourd'hui ; « autre chose » sans texte n'impose rien.
+  const kind = FIRST_STEP_KINDS.includes(j.firstStep as FirstStepKind) ? (j.firstStep as FirstStepKind) : firstStepOf(current).kind
+  const first = firstStepOf({ startWithSafety: false, firstStep: kind, firstStepText: j.firstStepText })
   return {
     proposal: {
       rules: j.rules.map((r) => r.trim()).filter(Boolean).slice(0, 12),
-      startWithSafety: !!j.startWithSafety,
+      ...withFirstStep({ startWithSafety: false }, first.kind, first.text),
       maxWordsPerStep: Math.min(60, Math.max(10, Math.round(j.maxWordsPerStep || current.maxWordsPerStep))),
       tone: (['tu', 'vous', 'infinitif'].includes(j.tone) ? j.tone : current.tone) as WritingStandard['tone'],
       glossary: (j.glossary ?? []).filter((g) => g.term?.trim()).map((g) => ({ term: g.term.trim(), meaning: g.meaning.trim() })),

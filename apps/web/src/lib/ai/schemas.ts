@@ -214,7 +214,8 @@ export const standardSchema = {
   type: 'object',
   properties: {
     rules: strList('5 à 10 règles de rédaction, en mots simples'),
-    startWithSafety: { type: 'boolean' },
+    firstStep: { type: 'string', enum: ['work', 'safety', 'custom'] },
+    firstStepText: str('La première étape voulue, en une phrase, si firstStep = custom ; sinon vide'),
     maxWordsPerStep: num('Nombre maximal de mots par étape, entre 10 et 60'),
     tone: { type: 'string', enum: ['tu', 'vous', 'infinitif'] },
     glossary: {
@@ -223,7 +224,7 @@ export const standardSchema = {
     },
     explanation: str('Ce que tu as retenu, en une ou deux phrases'),
   },
-  required: ['rules', 'startWithSafety', 'maxWordsPerStep', 'tone', 'glossary', 'explanation'],
+  required: ['rules', 'firstStep', 'firstStepText', 'maxWordsPerStep', 'tone', 'glossary', 'explanation'],
 }
 
 export const visualSchema = {

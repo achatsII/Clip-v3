@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -67,6 +67,9 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // L'envoi par morceaux des gros fichiers (TUS, directement à la Gateway) : un morceau raté se
   // renvoie seul, un réseau coupé s'attend, et « Réessayer » reprend où l'envoi s'était arrêté.
   resumableUpload: true,
+  // La première étape au choix de l'usine (Réglages › Standard de rédaction) : le premier geste, la
+  // sécurité, ou une étape qu'elle décrit. Éteint : l'interrupteur « Toujours commencer par la sécurité ».
+  firstStepChoice: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -103,4 +106,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   phoneReader: false,
   serverGeneration: false,
   resumableUpload: false,
+  firstStepChoice: false,
 }

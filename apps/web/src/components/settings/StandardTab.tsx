@@ -1,19 +1,21 @@
 'use client'
 
-import { History, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react'
+import { Hand, HardHat, History, PenLine, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { DictateButton } from '@/components/capture/DictateButton'
 import { useSession } from '@/components/providers/Session'
 import { Button, IconButton } from '@/components/ui/Button'
-import { AutoTextarea, fieldLook, Input, Label, Segmented, Switch, Textarea } from '@/components/ui/Field'
+import { AutoTextarea, ChoiceTile, fieldLook, Input, Label, Segmented, Switch, Textarea } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { suggestStandard } from '@/lib/ai/assist'
 import { getLang, useMessages } from '@/lib/i18n'
+import { cleanFirstStepText, FIRST_STEP_KINDS, FIRST_STEP_MAX, firstStepOf, withFirstStep, type FirstStepKind } from '@/lib/model/firstStep'
 import { nowIso } from '@/lib/model/repo'
 import type { WritingStandard } from '@/lib/model/types'
+import { useToggle } from '@/lib/toggles'
 import { formatDate } from '@/lib/util/cn'
 
 /** Le standard de rédaction : ce que l'IA respecte à chaque génération. Versionné. */
@@ -23,6 +25,7 @@ export function StandardTab() {
   const t = words.settings.standard
   const toast = useToast()
   const readOnly = !can('settings', 'write')
+  const firstStepChoice = useToggle('firstStepChoice')
   const current = org.json_data.standard
   const [draft, setDraft] = useState<WritingStandard>(current)
   const [agentOpen, setAgentOpen] = useState(false)
@@ -70,7 +73,11 @@ export function StandardTab() {
         </div>
 
         <div className="space-y-5">
-          <Switch checked={draft.startWithSafety} disabled={readOnly} onChange={(v) => setDraft({ ...draft, startWithSafety: v })} label={t.startWithSafety} description={t.startWithSafetyHint} />
+          {firstStepChoice ? (
+            <FirstStepField draft={draft} readOnly={readOnly} onChange={setDraft} />
+          ) : (
+            <Switch checked={firstStepOf(draft).kind === 'safety'} disabled={readOnly} onChange={(v) => setDraft(withFirstStep(draft, v ? 'safety' : 'work'))} label={t.startWithSafety} description={t.startWithSafetyHint} />
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="max-words">{t.maxWords}</Label>
@@ -226,7 +233,7 @@ export function StandardTab() {
               ))}
             </ol>
             <p className="text-sm font-bold text-slate-500">
-              {proposal.value.startWithSafety ? t.startsWithSafety : t.notAlwaysSafety} · {t.wordsPerStep(proposal.value.maxWordsPerStep)} · {t.toneIs((t.tones[proposal.value.tone] ?? proposal.value.tone ?? '').toLowerCase())}
+              {t.firstStepSummary(firstStepOf(proposal.value).kind, firstStepOf(proposal.value).text)} · {t.wordsPerStep(proposal.value.maxWordsPerStep)} · {t.toneIs((t.tones[proposal.value.tone] ?? proposal.value.tone ?? '').toLowerCase())}
             </p>
           </div>
         ) : (
@@ -265,6 +272,44 @@ export function StandardTab() {
           ))}
         </ol>
       </Modal>
+    </div>
+  )
+}
+
+const FIRST_STEP_ICONS: Record<FirstStepKind, typeof Hand> = { work: Hand, safety: HardHat, custom: PenLine }
+
+/**
+ * Ce par quoi commence chaque instruction générée : le premier geste, la sécurité, ou une étape que
+ * l'usine décrit. « Autre chose » reste choisi pendant qu'on écrit sa phrase.
+ */
+function FirstStepField({ draft, readOnly, onChange }: { draft: WritingStandard; readOnly: boolean; onChange: (next: WritingStandard) => void }) {
+  const t = useMessages().settings.standard
+  const kind = draft.firstStep ?? firstStepOf(draft).kind
+  return (
+    <div>
+      <Label>{t.firstStep}</Label>
+      <div className="grid gap-2 lg:grid-cols-3">
+        {FIRST_STEP_KINDS.map((k) => {
+          const Icon = FIRST_STEP_ICONS[k]
+          return (
+            <ChoiceTile
+              key={k}
+              selected={kind === k}
+              onClick={() => !readOnly && onChange(withFirstStep(draft, k))}
+              icon={<Icon className="h-5 w-5" />}
+              title={t.firstStepKinds[k].title}
+              description={t.firstStepKinds[k].hint}
+            />
+          )
+        })}
+      </div>
+      {kind === 'custom' && (
+        <div className="mt-3">
+          <Label htmlFor="first-step-text">{t.firstStepText}</Label>
+          <Input id="first-step-text" value={draft.firstStepText ?? ''} readOnly={readOnly} maxLength={FIRST_STEP_MAX} placeholder={t.firstStepPlaceholder} onChange={(e) => onChange(withFirstStep(draft, 'custom', e.target.value))} />
+          {!cleanFirstStepText(draft.firstStepText) && <p className="mt-1.5 text-xs font-bold text-slate-500">{t.firstStepEmpty}</p>}
+        </div>
+      )}
     </div>
   )
 }

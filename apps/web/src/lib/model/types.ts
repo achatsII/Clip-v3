@@ -789,7 +789,15 @@ export interface MemberSettings {
 export interface WritingStandard {
   /** Règles en mots simples, lues par l'IA à chaque génération. */
   rules: string[]
+  /** Vrai seulement si la première étape est la sécurité ; suit `firstStep` (`src/lib/model/firstStep.ts`). */
   startWithSafety: boolean
+  /**
+   * Ce par quoi commence chaque instruction : le premier geste (`work`), la sécurité (`safety`), ou
+   * une étape que l'usine décrit (`custom`, dans `firstStepText`). Absent (standard d'avant ce
+   * choix) : `startWithSafety` décide. Se lit par `firstStepOf`.
+   */
+  firstStep?: 'work' | 'safety' | 'custom'
+  firstStepText?: string | null
   maxWordsPerStep: number
   tone: 'tu' | 'vous' | 'infinitif'
   /** Vocabulaire propre à l'usine : terme → sens. */

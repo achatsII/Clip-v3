@@ -130,7 +130,15 @@ fichier jusqu'à `media.discard`.
    6 mots, une ou deux phrases courtes qui ne répètent ni le titre ni ce que le média montre, 0 à 2
    points clés (le plus souvent aucun), une mise en garde seulement à l'étape où le risque se
    présente, jamais répétée ; les EPI et les consignes générales vont dans la fiche. Le standard d'une
-   nouvelle usine : 20 mots au plus par étape.
+   nouvelle usine : 20 mots au plus par étape, et l'instruction commence par le premier geste.
+   **La première étape** est au choix de l'usine (Réglages › Standard de rédaction, toggle
+   `firstStepChoice`, `src/lib/model/firstStep.ts`) : le premier geste (`work` : la consigne interdit
+   l'étape EPI que l'IA ajoute sinon par habitude ; les EPI et les mises en garde restent sur l'écran
+   « Avant de commencer » et dans le PDF), une étape de sécurité (`safety`), ou une étape que l'usine
+   décrit (`custom`, `firstStepText` ; une fiche de cadenassage garde son ordre). Un standard enregistré
+   avant ce choix n'a que `startWithSafety` : `firstStepOf` le lit tel quel, sans migration. Pour cette
+   raison, `firstStep` n'entre jamais dans `defaultStandard()` : `normalizeOrg` complète une usine
+   existante avec ce défaut et lui ferait perdre son ancien réglage.
 3. **Post-traitement** : validation des références et des temps, identifiants stables, vignettes des
    extraits vidéo (`/files/gifs/generate`, captures), rapprochement du poste deviné avec les postes
    existants.

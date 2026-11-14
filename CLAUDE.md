@@ -77,6 +77,13 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   - Dans la coquille, un média part d'un bloc par la session d'envoi en arrière-plan d'iOS, qui
     continue quand l'app passe en arrière-plan. La caméra filme en 720p à 2,5 Mbit/s ; une vidéo
     de la galerie part telle quelle, puis la Gateway la ramène en 720p.
+- **Première étape** (toggle `firstStepChoice`, Réglages › Standard de rédaction) : chaque usine
+  choisit par quoi commence une instruction générée : le premier geste (défaut d'une usine neuve ; les
+  EPI et les mises en garde s'affichent déjà sur « Avant de commencer »), une étape de sécurité, ou
+  une étape qu'elle décrit (`WritingStandard.firstStep`, `firstStepText`, `src/lib/model/firstStep.ts`).
+  Un standard d'avant n'a que `startWithSafety` : `firstStepOf` le lit tel quel, et `firstStep` n'entre
+  jamais dans `defaultStandard()` (sinon `normalizeOrg` changerait les usines existantes). La consigne
+  part telle quelle au serveur : rien à changer dans n8n.
 - **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
   (`src/lib/model/translation.ts`), médias compris : légendes, annotations, texte des schémas, et
   en option les images refaites avec leur texte traduit. Un média traduit nomme l'original (`of`).

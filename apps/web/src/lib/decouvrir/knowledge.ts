@@ -83,10 +83,12 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   format, démarrage et arrêt) et devine son poste, rapproché des postes existants.
 - Ce que les sources ne tranchent pas devient au plus quatre questions (la pastille « à vérifier »), avec des
   réponses proposées ; les réponses corrigent l'instruction.
-- Le standard de rédaction de l'usine guide chaque génération (Réglages › Standard de rédaction : toujours
-  commencer par la sécurité, mots au plus par étape, ton, règles, vocabulaire de l'usine ; « Décrire à
-  l'IA » le rédige à partir d'une description). Sous une instruction générée, « Le résultat vous
-  convient ? » : ce qui manque guide les générations suivantes (« Ce que l'IA a appris de vos avis »).
+- Le standard de rédaction de l'usine guide chaque génération (Réglages › Standard de rédaction : ce par quoi
+  commence chaque instruction — le premier geste, une étape de sécurité ou une étape que l'usine décrit —,
+  mots au plus par étape, ton, règles, vocabulaire de l'usine ; « Décrire à l'IA » le rédige à partir d'une
+  description). Les EPI et les mises en garde s'affichent avant la première étape, même sans étape de
+  sécurité. Sous une instruction générée, « Le résultat vous convient ? » : ce qui manque guide les
+  générations suivantes (« Ce que l'IA a appris de vos avis »).
 - La génération tourne dans l'appareil qui la lance et se voit sur les autres (« En création ») ; au
   navigateur, on peut quitter l'écran tant que l'onglet reste ouvert. Si l'appareil s'éteint, la création est
   « interrompue » et se relance d'un geste ; les médias sont gardés.

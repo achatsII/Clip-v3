@@ -3,6 +3,7 @@
  * sont injectés : c'est ainsi qu'une usine « règle » son générateur sans toucher au code.
  */
 import { CATEGORIES, ENERGY, PPE } from '../model/catalog'
+import { firstStepOf } from '../model/firstStep'
 import type { InstructionContent, OrgSettings, Step, WritingStandard } from '../model/types'
 
 const TONE: Record<WritingStandard['tone'], string> = {
@@ -20,6 +21,17 @@ function writtenIn(language: string): string {
   return language === 'fr' ? 'en français québécois clair' : language === 'en' ? 'en anglais nord-américain clair (English)' : `dans la langue « ${language} »`
 }
 
+/**
+ * Ce par quoi commence chaque instruction, au choix de l'usine (`firstStepOf`). Sans étape de
+ * sécurité imposée, la consigne le dit : sinon l'IA en ajoute une d'elle-même, par habitude.
+ */
+export function firstStepRule(s: WritingStandard): string {
+  const first = firstStepOf(s)
+  if (first.kind === 'safety') return '- La première étape est toujours une étape de sécurité : EPI à porter et risques à connaître, même brièvement.'
+  if (first.kind === 'custom') return `- La première étape est toujours : « ${first.text} », dite pour ce travail en une étape courte (une fiche de cadenassage garde son ordre).`
+  return '- Pas d’étape d’introduction pour les EPI ni pour la sécurité générale : ils vont dans la fiche (ppe, safety), affichée avant la première étape. La première étape est le premier geste du travail.'
+}
+
 export function standardBlock(org: Pick<OrgSettings, 'standard' | 'learnings'>): string {
   const s = org.standard
   const lines: string[] = []
@@ -28,7 +40,7 @@ export function standardBlock(org: Pick<OrgSettings, 'standard' | 'learnings'>):
   lines.push('STANDARD DE RÉDACTION DE L’USINE (prioritaire) :')
   s.rules.forEach((r) => lines.push(`- ${r}`))
   lines.push(`- Au plus ${s.maxWordsPerStep} mots par texte d’étape, ${TONE[s.tone]}.`)
-  if (s.startWithSafety) lines.push('- La première étape est toujours une étape de sécurité : EPI à porter et risques à connaître, même brièvement.')
+  lines.push(firstStepRule(s))
   if (s.glossary.length) {
     lines.push('VOCABULAIRE DE L’USINE (utilise ces termes) :')
     s.glossary.forEach((g) => lines.push(`- « ${g.term} » : ${g.meaning}`))
@@ -215,7 +227,7 @@ export function questionPrompt(content: InstructionContent, currentStep: number,
 
 /** `language` : la langue de l'outil de la personne, dans laquelle elle lit le standard proposé. */
 export function standardAgentSystem(language = 'fr'): string {
-  return `Tu aides une usine à définir son standard de rédaction d’instructions de travail. À partir de ce que la personne décrit (règles, habitudes, exigences de sécurité, vocabulaire), tu produis un standard clair : 5 à 10 règles courtes en mots simples, si la première étape doit toujours porter sur la sécurité, le nombre maximal de mots par étape (10 à 60), le ton (infinitif, tu ou vous) et le vocabulaire propre à l’usine. Garde les bonnes pratiques reconnues (une action par étape, mises en garde à l’étape du risque, valeurs exactes avec unités) sauf si la personne demande autre chose. Tu écris les règles, les définitions et l’explication ${writtenIn(language)} ; les termes du vocabulaire restent tels que la personne les écrit.`
+  return `Tu aides une usine à définir son standard de rédaction d’instructions de travail. À partir de ce que la personne décrit (règles, habitudes, exigences de sécurité, vocabulaire), tu produis un standard clair : 5 à 10 règles courtes en mots simples, ce par quoi commence chaque instruction (firstStep : "work" = le premier geste du travail, sans étape à part pour les EPI ; "safety" = une étape de sécurité, EPI et risques ; "custom" = une autre étape que l’usine veut toujours en premier, décrite en une phrase dans firstStepText, sinon vide), le nombre maximal de mots par étape (10 à 60), le ton (infinitif, tu ou vous) et le vocabulaire propre à l’usine. Garde les bonnes pratiques reconnues (une action par étape, mises en garde à l’étape du risque, valeurs exactes avec unités) sauf si la personne demande autre chose. Tu écris les règles, les définitions et l’explication ${writtenIn(language)} ; les termes du vocabulaire restent tels que la personne les écrit.`
 }
 
 /**
