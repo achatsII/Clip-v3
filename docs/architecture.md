@@ -330,8 +330,9 @@ l'appareil, comme avant. Au serveur, on peut fermer l'app pendant que l'IA écri
    grant de l'appelant, que la Gateway pose depuis le jeton), se relance elle-même sans s'attendre
    (`data.phase: 'run'`, `data.jobId`) et rend `record_id`. Ce deuxième passage relit `clip_job`,
    marque l'étape `analyze` et attend `Job_Generate_CLIP_V3`, qui appelle Ask_AI_V4 directement (pas
-   le flux qui coupe les fichiers par lots de dix : une instruction se génère d'un seul appel). Il
-   écrit ensuite `status: completed` avec `result.json`, le modèle et `result.billing.costs.cad`, ou
+   le flux qui coupe les fichiers par lots de dix : une instruction se génère d'un seul appel) et lit
+   la réponse comme l'appareil (`aiApi.ask` : `parsed_json`, sinon le texte sans ses balises de code).
+   Il écrit ensuite `status: completed` avec `result.json`, le modèle et `result.billing.costs.cad`, ou
    `status: failed` avec l'erreur. Les écritures restent dans Job_start, pas dans le sous-workflow :
    les routes Mongo n'acceptent que les workflows de leur propriétaire, comme Job_start et
    `Job_Analyse_CLIP` (V1). Chacune envoie tout `json_data`, repris du document relu, comme V1.

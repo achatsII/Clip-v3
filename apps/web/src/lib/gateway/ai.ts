@@ -255,6 +255,8 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean; credi
     if (billing) emitSettled()
     const usage = (r.usage_normalized ?? env.usage_normalized ?? null) as Record<string, unknown> | null
     usageListeners.forEach((fn) => fn({ operation, model: r.model ?? null, usage, ok: true, credits: cost.charged }))
+    // La génération au serveur lit la réponse de la même façon (n8n, Job_Generate_CLIP_V3, nœud
+    // « Shape analysis result ») : changer cette lecture, c'est la changer là aussi.
     let json = (r.parsed_json ?? null) as T | null
     if (!json && body.json_schema && r.assistant_response) {
       try {

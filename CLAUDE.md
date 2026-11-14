@@ -46,7 +46,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   avec `appIdentifier: 'clip-v3'`, jamais de grant dans le corps. Dans n8n, la branche clip-v3 de
   Job_start crée `clip_job` avec les droits de l'appelant, répond et se relance elle-même sans
   s'attendre (`data.phase: 'run'`) : ce deuxième passage roule `Job_Generate_CLIP_V3` (Ask_AI_V4 tel
-  quel) et écrit l'état, le résultat et son coût dans `clip_job`. L'appareil peut alors se fermer ; le premier
+  quel, la réponse lue comme `aiApi.ask` la lit) et écrit l'état, le résultat et son coût dans
+  `clip_job`. L'appareil peut alors se fermer ; le premier
   appareil ouvert qui voit le travail fini termine l'instruction avec le code de l'app
   (`finishServerGeneration` dans `CreationWatcher` : verrou `generating.finishing`, même fin que sur
   l'appareil) et débite le coût réel avec la clé du travail (`jobDebitKey`, une seule fois). Si le
@@ -55,8 +56,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`whenUploaded`). L'import en lot crée chaque instruction et confie son analyse au serveur
   (`startServerImport`). **Une modification de la façon d'analyser se reporte dans la branche
   clip-v3** quand elle change ce que n8n fait : un nouveau champ de la requête s'ajoute au nœud
-  « Run AskAI V4 » (`JOB_RELAYED_FIELDS`, un test échoue sinon), une passe d'IA de plus ou un
-  traitement nouveau au serveur se reporte dans `Job_Generate_CLIP_V3`, et ce qui s'écrit de plus dans
+  « Run AskAI V4 » (`JOB_RELAYED_FIELDS`, un test échoue sinon), une passe d'IA de plus, un
+  traitement nouveau au serveur ou une autre lecture de la réponse (`aiApi.ask`) se reporte dans
+  `Job_Generate_CLIP_V3` (nœud « Shape analysis result »), et ce qui s'écrit de plus dans
   `clip_job`, dans la branche de Job_start. Les consignes, le schéma et les fichiers passent tels
   quels : les changer ne demande rien dans n8n.
 - **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
