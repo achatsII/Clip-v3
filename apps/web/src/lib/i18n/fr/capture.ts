@@ -31,7 +31,7 @@ export const capture = {
     addMore: 'Ajouter',
     uploading: 'Envoi en cours… vous pouvez continuer à capturer.',
     tooBig: 'C’est beaucoup pour une seule instruction : séparez-la en plusieurs.',
-    ready: (n: number) => `${n.toLocaleString('fr-CA')} note${n > 1 ? 's' : ''} prête${n > 1 ? 's' : ''}. L’IA va ${n > 1 ? 'les' : 'l’'}analyser.`,
+    ready: (n: number) => `${n.toLocaleString('fr-CA')} note${n > 1 ? 's' : ''} prête${n > 1 ? 's' : ''}. L’IA va ${n > 1 ? 'les ' : 'l’'}analyser.`,
     generate: 'Générer l’instruction',
     dropFiles: 'Déposez vos fichiers',
     noteTitle: 'Note écrite',
@@ -76,6 +76,17 @@ export const capture = {
     videoHint: (maxMinutes: number) => `720p · environ 19 Mo la minute · ${maxMinutes.toLocaleString('fr-CA')} min au plus`,
     takePhoto: 'Prendre la photo',
     stop: 'Arrêter',
+    count: (n: number) => `${n.toLocaleString('fr-CA')} photo${n > 1 ? 's' : ''}`,
+    done: (n: number) => `Terminer : garder ${n > 1 ? `les ${n.toLocaleString('fr-CA')} photos` : 'la photo'}`,
+    /** Parler pendant les photos : la pastille du micro et la phrase du bas. */
+    voiceHint: 'Parlez en prenant vos photos : ce que vous dites accompagne chaque photo.',
+    listening: (time: string) => `Micro ouvert · ${time}`,
+    micClosed: 'Micro fermé',
+    micDenied: 'Micro refusé',
+    micDeniedHint: 'Autorisez le micro dans le navigateur pour parler pendant les photos.',
+    micFull: (max: string) => `Micro fermé · ${max} au plus`,
+    micOn: 'Ouvrir le micro',
+    micOff: 'Fermer le micro',
   },
   /** Les cartes des médias capturés et des envois en cours. */
   source: {
@@ -94,6 +105,10 @@ export const capture = {
     quote: (text: string) => `« ${text} »`,
     noTranscript: 'Sans transcription : l’IA écoutera l’enregistrement.',
     percent: (n: number) => `${n.toLocaleString('fr-CA')} %`,
+    /** La note dite pendant une série de photos, et l'instant de chaque photo dans cette note. */
+    narration: 'Commentaire des photos',
+    narrated: (n: number) => `${n.toLocaleString('fr-CA')} photo${n > 1 ? 's' : ''} commentée${n > 1 ? 's' : ''}`,
+    voiceAt: (time: string) => `Prise à ${time} du commentaire`,
   },
   /** La génération en cours, ici ou sur un autre appareil. */
   /** Les médias déjà pris : ceux des instructions précédentes, à reprendre. */

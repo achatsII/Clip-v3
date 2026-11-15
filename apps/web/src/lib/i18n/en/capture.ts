@@ -74,6 +74,16 @@ export const capture: typeof Fr = {
     videoHint: (maxMinutes: number) => `720p · about 19 MB per minute · ${maxMinutes.toLocaleString('en-CA')} min max`,
     takePhoto: 'Take the photo',
     stop: 'Stop',
+    count: (n: number) => `${n.toLocaleString('en-CA')} photo${n !== 1 ? 's' : ''}`,
+    done: (n: number) => (n > 1 ? `Finish: keep the ${n.toLocaleString('en-CA')} photos` : 'Finish: keep the photo'),
+    voiceHint: 'Talk as you take photos: what you say goes with each photo.',
+    listening: (time: string) => `Mic on · ${time}`,
+    micClosed: 'Mic off',
+    micDenied: 'Mic not allowed',
+    micDeniedHint: 'Allow the mic in the browser to talk while taking photos.',
+    micFull: (max: string) => `Mic off · ${max} max`,
+    micOn: 'Turn the mic on',
+    micOff: 'Turn the mic off',
   },
   source: {
     stages: {
@@ -91,6 +101,9 @@ export const capture: typeof Fr = {
     quote: (text: string) => `“${text}”`,
     noTranscript: 'No transcript: the AI will listen to the recording.',
     percent: (n: number) => `${n.toLocaleString('en-CA')}%`,
+    narration: 'Photo commentary',
+    narrated: (n: number) => `${n.toLocaleString('en-CA')} photo${n !== 1 ? 's' : ''} described`,
+    voiceAt: (time: string) => `Taken at ${time} in the commentary`,
   },
   library: {
     open: 'Media you already took',

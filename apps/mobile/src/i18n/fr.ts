@@ -61,6 +61,16 @@ export const fr = {
     pick: 'Choisir des photos du téléphone',
     shoot: 'Prendre la photo',
     done: (count: number) => `Terminé (${count})`,
+    /** Parler pendant les photos : la pastille du micro et la phrase du bas. */
+    voiceHint: 'Parlez en prenant vos photos : ce que vous dites accompagne chaque photo.',
+    listening: (time: string) => `Micro ouvert · ${time}`,
+    micClosed: 'Micro fermé',
+    micDenied: 'Micro refusé',
+    micFull: (max: string) => `Micro fermé · ${max} au plus`,
+    micOn: 'Ouvrir le micro',
+    micOff: 'Fermer le micro',
+    micDeniedTitle: 'Le micro est refusé',
+    micDeniedMessage: 'Pour parler pendant les photos, autorisez le micro dans les réglages du téléphone.',
   },
   video: {
     permissionTitle: 'La caméra est nécessaire',

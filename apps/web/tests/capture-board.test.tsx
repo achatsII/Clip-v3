@@ -11,6 +11,7 @@ vi.mock('@/components/providers/Session', () => ({
 import { CaptureBoard } from '@/components/capture/CaptureBoard'
 import { ConfirmProvider } from '@/components/ui/Confirm'
 import { ToastProvider } from '@/components/ui/Toast'
+import { messages } from '@/lib/i18n'
 
 /** Un téléphone : aucune requête « grand écran » ne répond oui. */
 function narrowScreen() {
@@ -68,6 +69,8 @@ describe('capturer une nouvelle instruction, au téléphone', () => {
     expect(screen.getByRole('button', { name: /Générer l’instruction/ })).toBeTruthy()
     // Une seule note : l'accord suit.
     expect(screen.getByText('1 note prête. L’IA va l’analyser.')).toBeTruthy()
+    // Et au pluriel, les mots restent séparés.
+    expect(messages().capture.board.ready(3)).toBe('3 notes prêtes. L’IA va les analyser.')
     // La note est enregistrée : l'instruction se crée, ses sources suivent.
     expect(insert).toHaveBeenCalled()
     expect(patch).toHaveBeenCalled()

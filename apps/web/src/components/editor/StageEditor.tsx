@@ -17,6 +17,7 @@ import { ratioKeys, useMediaRatio } from '@/lib/media/ratio'
 import { layoutOf } from '@/lib/model/media'
 import { startsSection } from '@/lib/model/sections'
 import { useToggle } from '@/lib/toggles'
+import { useStepSwipe } from '@/lib/ui/swipe'
 import type { Check as StepCheck, InstructionContent, Source, Step, WarningLevel } from '@/lib/model/types'
 import { useWide } from '@/lib/ui/screen'
 import { cn } from '@/lib/util/cn'
@@ -446,8 +447,13 @@ function StagePhone(p: Inner) {
     ro.observe(el)
     return () => ro.disconnect()
   }, [ratio, first?.kind])
+  // Glisser d'une étape à l'autre, comme au poste (toggle `editorSwipe`) ; jamais depuis un champ.
+  const swipe = useStepSwipe(useToggle('editorSwipe') && !!step, (dir) => {
+    const target = p.content.steps[p.index + dir]
+    if (target) p.onSelect(target.id)
+  })
   return (
-    <div className="pb-28">
+    <div className="pb-28" {...swipe}>
       <EditorHeader wide={false} top={top} readOnly={readOnly} badge={p.badge} assist={p.assist} showAssist={false} onAssistant={p.onAssistant} />
 
       <div className="space-y-3 px-3 pt-3">

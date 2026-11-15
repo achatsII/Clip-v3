@@ -4,6 +4,7 @@
  * optimisation des vidéos trop lourdes.
  */
 import type { CapturedMedia } from '@clip/bridge'
+import { requireAiConsent } from '../ai/consent'
 import { callNative, onNativeEvent } from '../bridge/native'
 import { GATEWAY_URL } from '../config'
 import { getAccessToken } from '../gateway/client'
@@ -30,10 +31,16 @@ export function kindOfFile(file: { type: string; name: string }): SourceKind | n
 
 export const ACCEPTED_FILES = 'image/*,video/*,audio/*,application/pdf,.pdf,.doc,.docx,.odt,.heic,.mov'
 
-export async function ingestFile(file: File, files: FilesApi, onProgress?: IngestProgress, capturedOn: Source['capturedOn'] = 'web'): Promise<Source> {
+/**
+ * `preset` : ce que la séance sait d'avance d'une source, comme le lien d'une photo à la note de sa
+ * série (`voice`) ou l'identifiant donné d'avance à cette note.
+ */
+export type SourcePreset = Pick<Partial<Source>, 'id' | 'voice'>
+
+export async function ingestFile(file: File, files: FilesApi, onProgress?: IngestProgress, capturedOn: Source['capturedOn'] = 'web', preset: SourcePreset = {}): Promise<Source> {
   const kind = kindOfFile(file)
   if (!kind) throw new Error(messages().capture.upload.unsupported)
-  const base: Source = { id: uid('src_'), kind, name: file.name, createdAt: new Date().toISOString(), capturedOn }
+  const base: Source = { id: uid('src_'), kind, name: file.name, createdAt: new Date().toISOString(), capturedOn, ...preset }
   const up = (r: number) => onProgress?.('upload', r)
   onProgress?.('prepare')
 
@@ -117,7 +124,7 @@ async function uploadNativeFile(item: CapturedMedia, files: FilesApi, folder: st
 }
 
 /** Envoie un média capturé par la coquille native (le fichier ne transite pas par la page). */
-export async function ingestNative(item: CapturedMedia, files: FilesApi, onProgress?: IngestProgress, platform: Source['capturedOn'] = 'ios'): Promise<Source> {
+export async function ingestNative(item: CapturedMedia, files: FilesApi, onProgress?: IngestProgress, platform: Source['capturedOn'] = 'ios', preset: SourcePreset = {}): Promise<Source> {
   const kind: SourceKind = item.kind === 'document' ? 'document' : item.kind
   const base: Source = {
     id: uid('src_'),
@@ -130,6 +137,7 @@ export async function ingestNative(item: CapturedMedia, files: FilesApi, onProgr
     durationSec: item.durationSec,
     createdAt: new Date().toISOString(),
     capturedOn: platform,
+    ...preset,
   }
   const folder = kind === 'document' ? 'documents' : 'captures'
   const off = onNativeEvent((e) => {
@@ -161,6 +169,8 @@ export async function ingestNative(item: CapturedMedia, files: FilesApi, onProgr
   if (kind === 'audio') {
     onProgress?.('transcribe')
     try {
+      // Comme dans le navigateur : rien ne part vers la transcription (une IA) sans l'accord de la personne.
+      await requireAiConsent()
       const token = getAccessToken()
       const res = await callNative('upload.multipart', {
         localId: item.localId,

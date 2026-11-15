@@ -13,7 +13,8 @@ import type { CapturedMedia } from '@clip/bridge'
 import { callNative, hasCapability, NativeError, onNativeEvent } from '@/lib/bridge/native'
 import { getCaptureSession, isHandledNative } from '@/lib/capture/session'
 import { setAutoAnnotate, useAutoAnnotate } from '@/lib/ai/autoAnnotate'
-import { generationTier } from '@/lib/ai/generate'
+import { generationTier, narratedPhotos } from '@/lib/ai/generate'
+import { useToggle } from '@/lib/toggles'
 import { AI_COSTS } from '@/lib/billing/catalog'
 import { useMessages } from '@/lib/i18n'
 import { ACCEPTED_FILES } from '@/lib/media/ingest'
@@ -119,10 +120,13 @@ export function CaptureBoard({
   const busy = snap.pending.some((p) => p.stage !== 'error')
   const hasContent = snap.sources.some((s) => s.url || s.text)
   const tier = generationTier(snap.sources)
+  // Parler pendant les photos (toggle `photoVoice`) : dans l'app, si la coquille sait le faire.
+  const photoVoice = useToggle('photoVoice')
+  const narrated = useMemo(() => narratedPhotos(snap.sources), [snap.sources])
 
   async function native(type: 'camera.photo' | 'camera.video' | 'audio.record') {
     try {
-      const r = await callNative(type, {})
+      const r = type === 'camera.photo' ? await callNative(type, { voice: photoVoice && hasCapability('camera.photo.voice') }) : await callNative(type, {})
       if (r.items.length) session.addNative(r.items)
     } catch (e) {
       if (e instanceof NativeError && e.code === 'cancelled') return
@@ -305,7 +309,14 @@ export function CaptureBoard({
             </h2>
             <div className="grid gap-2.5 md:grid-cols-2">
               {snap.sources.map((s) => (
-                <SourceCard key={s.id} source={s} onRemove={() => void session.remove(s.id)} onEditText={(text) => void session.updateText(s.id, text)} />
+                <SourceCard
+                  key={s.id}
+                  source={s}
+                  onRemove={() => void session.remove(s.id)}
+                  onEditText={(text) => void session.updateText(s.id, text)}
+                  narrated={narrated.get(s.id)?.length}
+                  voiceAt={s.voice && narrated.has(s.voice.sourceId) ? s.voice.at : undefined}
+                />
               ))}
               {snap.pending.map((p) => (
                 <PendingCard key={p.tempId} item={p} onDismiss={() => session.dismissPending(p.tempId)} />
@@ -418,7 +429,7 @@ export function CaptureBoard({
         </div>
       )}
 
-      <WebCamera open={!!camera} mode={camera ?? 'photo'} onClose={() => setCamera(null)} onCaptured={(list) => session.addFiles(list)} />
+      <WebCamera open={!!camera} mode={camera ?? 'photo'} voice={photoVoice} onClose={() => setCamera(null)} onCaptured={(list, voice) => session.addPhotoSeries(list, voice ?? null)} />
       <AudioRecorder open={audioOpen} onClose={() => setAudioOpen(false)} onCaptured={(f) => session.addFiles([f])} />
       <Modal
         open={noteOpen}

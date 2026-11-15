@@ -328,6 +328,39 @@ le titre, la navigation de l'app s'efface.
   dessous sans pouvoir remonter) ; au bureau, en bas de la colonne. Un envoi raté le dit sur sa carte.
 - Au bureau, la même hiérarchie sur une ligne (filmer sur deux colonnes, les quatre autres), et l'on peut
   glisser des fichiers sur la page.
+- **L'ordre de prise** : chaque ajout reçoit un rang à son départ (`CaptureSession`), et un envoi qui
+  finit avant un autre parti plus tôt ne passe pas devant lui ; les photos d'une série restent dans
+  l'ordre du déclic, pour la page comme pour l'IA (S1, S2…).
+
+#### Parler pendant les photos (toggle `photoVoice`, repli éteint)
+
+On prend ses photos en expliquant à voix haute, comme on le ferait à un collègue. **Un seul
+enregistrement par série, jamais coupé**, et l'instant de chaque photo dedans : couper le son à chaque
+déclic perdrait les mots dits à ce moment-là (c'est là qu'on parle le plus de la photo), séparerait les
+phrases en deux, et imposerait une règle (avant ou après la photo ?) que l'IA tranche mieux en
+écoutant le tout.
+
+- **Le micro s'ouvre avec la caméra**, en mode photo, sauf si la personne l'a fermé la dernière fois
+  sur cet appareil : le dernier geste fait foi (navigateur : `clip_pref_photo_voice` ; app :
+  `clip.shell.photoVoice`). Une pastille en haut de l'image le dit (« Micro ouvert · 0:42 », rouge) et
+  le ferme d'un toucher ; fermé, l'enregistrement est en pause (la pause n'est pas dans le fichier) et
+  les photos prises n'ont pas d'instant. Au plus 10 minutes (la durée d'une note vocale). Dans le
+  navigateur, `usePhotoVoice` (`src/lib/media/photoVoice.ts`) ; dans l'app, la capacité
+  `camera.photo.voice` (`docs/pont-natif.md`). Une série commencée ne passe plus à la vidéo : la
+  perdre ne se fait pas d'un geste.
+- **Le lien** : la note de la série reçoit son identifiant d'avance, et chaque photo prise micro
+  ouvert le garde avec son instant (`Source.voice = { sourceId, at }`, `addPhotoSeries`, `addNative`).
+  La note est une note vocale ordinaire (transcrite, comptée dans la taille de la génération) ; une
+  photo reprise d'une autre instruction perd le lien (`reuseSource`).
+- **Les cartes le disent** : la note s'appelle « Commentaire des photos » (« 2 photos commentées »),
+  chaque photo montre son instant (micro et « 0:42 »).
+- **L'IA apparie** (`prepareForAi`) : la note part en fichier même transcrite, pour que l'IA entende à
+  quel instant chaque chose est dite ; sa ligne nomme ses photos, et chaque photo dit « prise à 0:42
+  du commentaire S7 » ; ce qui est dit juste avant et juste après cet instant décrit la photo. Une
+  revue de quelques sources par l'assistant garde les numéros de l'instruction (`ids`) et ne parle
+  pas d'une note qu'elle n'a pas.
+- La transcription d'une note faite dans l'app passe, comme dans le navigateur, par l'accord avant
+  l'IA (`requireAiConsent`).
 
 ### L'éditeur : deux façons de modifier, et l'aperçu (`Editor`, toggle `editorViews`)
 
@@ -388,6 +421,13 @@ navigation de l'app s'effacent (`useImmersive`, `src/lib/ui/immersive.ts`). Togg
 - L'assistant, un autre appareil et un lien (`?etape=`) amènent les deux vues à l'étape qui change ;
   la fiche l'ouvre. La vue laisse sa place au panneau de l'assistant ; l'en-tête serré garde les vues
   en icônes.
+- **Au téléphone, glisser change d'étape**, comme au poste (toggle `editorSwipe`, repli éteint ;
+  `useStepSwipe`, `src/lib/ui/swipe.ts`, le même geste que le lecteur) : dans « Comme au poste » et sur
+  une étape ouverte de la fiche. Le texte de l'étape y est fait de champs : un glissement sur un champ
+  qu'on n'écrit pas change d'étape (un doigt qui glisse ne l'ouvre pas) ; jamais pendant qu'on écrit
+  (clavier ouvert), ni depuis une vidéo, un curseur, une rangée qui défile de côté, une fenêtre
+  ouverte par-dessus, ni par un appui long (sélectionner du texte, déplacer le curseur : plus de
+  0,8 s).
 
 ### Les sections d'une longue instruction (toggle `sections`, `src/lib/model/sections.ts`)
 
@@ -790,6 +830,9 @@ laissait des bandes noires, et le texte se lisait en défilant. Maintenant (`src
 - **Tout voir sur une page** : au téléphone, depuis le sommaire (« Étape 3 sur 12 ») ; l'en-tête
   offre alors « Pas à pas » pour revenir. Au bureau, comme avant, dans l'en-tête.
 - L'éditeur au téléphone (« Comme au poste ») donne au média les mêmes proportions.
+- **Glisser change d'étape** (`useStepSwipe`, partagé avec l'éditeur) : plus de 70 px, nettement plus de
+  côté que vers le bas, en moins de 0,8 s ; jamais depuis un relevé qu'on remplit, une vidéo ou une
+  rangée qui défile de côté (les gestes de l'étape).
 
 ### Les vidéos au poste, sur un réseau faible (toggle `stepReel`, repli éteint)
 

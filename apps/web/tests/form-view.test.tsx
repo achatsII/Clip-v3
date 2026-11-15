@@ -108,6 +108,24 @@ describe('la vue « Fiche » au téléphone', () => {
     expect(screen.getByRole('navigation', { name: 'Les étapes de l’instruction' })).toBeTruthy()
   })
 
+  it('une étape ouverte : glisser du doigt passe à la suivante ou revient, comme au poste ; jamais depuis un champ', () => {
+    render(<Harness onChange={vi.fn()} tool={vi.fn()} />)
+    fireEvent.click(screen.getByText('Retirer le garde'))
+    const swipe = (el: Element, dx: number) => {
+      fireEvent.touchStart(el, { touches: [{ clientX: 200, clientY: 300 }] })
+      fireEvent.touchEnd(el, { changedTouches: [{ clientX: 200 + dx, clientY: 305 }] })
+    }
+    swipe(screen.getByText('Étape 2 sur 3', { selector: 'p' }), -150)
+    expect(screen.getByText('Étape 3 sur 3', { selector: 'p' })).toBeTruthy()
+    swipe(screen.getByText('Étape 3 sur 3', { selector: 'p' }), 150)
+    expect(screen.getByText('Étape 2 sur 3', { selector: 'p' })).toBeTruthy()
+    // Pendant qu'on écrit dans « Comment faire » : le doigt déplace le curseur, l'étape ne change pas.
+    const field = screen.getAllByRole('textbox')[0]
+    field.focus()
+    swipe(field, -150)
+    expect(screen.getByText('Étape 2 sur 3', { selector: 'p' })).toBeTruthy()
+  })
+
   it('l’instruction entière : ses champs, puis ses outils, chacun à un geste', () => {
     const tool = vi.fn()
     render(<Harness onChange={vi.fn()} tool={tool} />)

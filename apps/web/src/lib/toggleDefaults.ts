@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'photoVoice' | 'editorSwipe'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -61,6 +61,11 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // La lecture au téléphone : le média à ses vraies proportions, qui laisse au texte la place qu'il
   // lui faut ; côte à côte quand on tourne le téléphone ; « Tout sur une page » depuis le sommaire.
   phoneReader: true,
+  // Parler pendant les photos : le micro s'ouvre avec la caméra (une pastille le dit et le ferme), un
+  // seul enregistrement pour la série, et chaque photo garde son instant ; l'IA les apparie.
+  photoVoice: true,
+  // Dans l'éditeur au téléphone, glisser à gauche ou à droite change d'étape, comme au poste.
+  editorSwipe: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -95,4 +100,6 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   reports: false,
   editorViews: false,
   phoneReader: false,
+  photoVoice: false,
+  editorSwipe: false,
 }

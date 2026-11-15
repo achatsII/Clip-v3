@@ -35,6 +35,12 @@ export interface Source {
   originalName?: string
   createdAt: string
   capturedOn?: 'web' | 'ios' | 'android'
+  /**
+   * Une photo prise en parlant (toggle `photoVoice`) : la note vocale de la série (`sourceId`, une
+   * source de la même capture) et l'instant de la photo dans cette note, en secondes. Un seul
+   * enregistrement par série, jamais coupé ; l'IA apparie chaque photo avec ce qui est dit autour.
+   */
+  voice?: { sourceId: string; at: number }
 }
 
 export type AnnotationType = 'pen' | 'highlight' | 'arrow' | 'line' | 'measure' | 'circle' | 'rect' | 'text' | 'number' | 'icon' | 'blur'

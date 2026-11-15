@@ -78,7 +78,17 @@ describe('routeBridgeMessage', () => {
       deps({ 'camera.photo': photo }),
     )
     expect(res).toMatchObject({ ok: true })
-    expect(photo).toHaveBeenCalledWith({ maxCount: undefined })
+    // Une page qui ne demande pas le micro (ou plus ancienne) : les photos seules.
+    expect(photo).toHaveBeenCalledWith({ maxCount: undefined, voice: false })
+  })
+
+  it('parler pendant les photos : seulement si la page le demande, et en booléen', async () => {
+    const photo = jest.fn().mockResolvedValue({ items: [] })
+    await routeBridgeMessage(request('camera.photo', { voice: true, maxCount: 10 }), deps({ 'camera.photo': photo }))
+    expect(photo).toHaveBeenCalledWith({ maxCount: 10, voice: true })
+    const refused = await routeBridgeMessage(request('camera.photo', { voice: 'oui' }), deps({ 'camera.photo': photo }))
+    expect(refused).toMatchObject({ ok: false })
+    expect(photo).toHaveBeenCalledTimes(1)
   })
 
   it('transmet le code d’une erreur du pont (ex. capture annulée)', async () => {

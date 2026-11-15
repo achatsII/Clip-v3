@@ -116,6 +116,8 @@ export function toCapturedMedia(record: MediaRecord, thumbnailDataUrl?: string):
     ...(record.durationSec ? { durationSec: record.durationSec } : {}),
     ...(thumbnailDataUrl ? { thumbnailDataUrl } : {}),
     ...(record.origin ? { origin: record.origin } : {}),
+    ...(typeof record.voiceAt === 'number' ? { voiceAt: record.voiceAt } : {}),
+    ...(record.narration ? { narration: true } : {}),
   }
 }
 

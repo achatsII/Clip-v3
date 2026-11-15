@@ -12,6 +12,7 @@ chargement de la page). La page n'appelle que ce qui est annoncé ; sinon, elle 
 | Capacité | Ce qu'elle fait | Module natif |
 |---|---|---|
 | `camera.photo` | Écran plein, plusieurs photos d'affilée, bande de vignettes, « Terminé (n) » | expo-camera, expo-image-manipulator |
+| `camera.photo.voice` | Parler pendant les photos : `camera.photo` avec `voice: true` ouvre aussi le micro (voir plus bas). Annoncée avec le toggle `photoVoice` allumé et la capture native ouverte ; jamais en repli | expo-audio |
 | `camera.video` | Vidéo 720p à débit imposé, minuterie, durée max, lampe | expo-camera, expo-video-thumbnails |
 | `audio.record` | Note vocale, minuterie et niveau du micro | expo-audio |
 | `media.pick` | Photos et vidéos de la galerie, plusieurs à la fois | expo-image-picker |
@@ -62,6 +63,32 @@ Au démarrage, la coquille retire ce qui a plus de 48 h **et** a déjà été en
 orphelins de plus de 48 h. Un média inscrit mais jamais envoyé est gardé : il peut être la seule
 copie d'une capture.
 
+### Parler pendant les photos (`voice`)
+
+Avec `camera.photo` et `voice: true` (faux par défaut ; la page ne l'envoie que si
+`camera.photo.voice` est annoncée), l'écran photo enregistre aussi ce qu'on dit
+(`src/capture/narration.ts` ; la logique, testée seule, dans `narrationController.ts`) :
+
+- **un seul enregistrement par série, jamais coupé** : couper le son à chaque photo perdrait les mots
+  dits au moment du déclic, là où l'on parle le plus de la photo, et séparerait les phrases ;
+- le micro s'ouvre quand l'aperçu de la caméra est prêt (en mode photo, la caméra ne prend pas le
+  micro : les deux tournent ensemble), sauf si la personne l'a fermé la dernière fois sur cet
+  appareil (`clip.shell.photoVoice`, le dernier geste fait foi) ;
+- une pastille sous la barre du haut le dit (« Micro ouvert · 0:42 », rouge, le point bat avec la
+  voix) et le ferme d'un toucher : l'enregistrement se met en pause, et les photos prises micro fermé
+  n'ont pas d'instant. Micro refusé : la pastille mène aux réglages. Au plus la durée d'une note
+  vocale (10 min) : le micro se ferme alors de lui-même ;
+- la réponse rend les photos, chacune avec `voiceAt` (l'instant du déclic dans l'enregistrement, en
+  secondes, pauses non comprises ; aussi pour les photos ajoutées de la galerie pendant qu'on
+  parle), puis la note, la dernière, marquée `narration: true`. Rien d'utile (moins d'une seconde) :
+  pas de note. Le lien est gardé avec les fichiers (`voiceAt`, `narration` dans l'index local), et
+  revient donc par `media.pending` si la page s'est rechargée ;
+- « Supprimer » ou la fermeture sans photo jettent aussi l'enregistrement.
+
+La page relie ensuite la note et ses photos (`Source.voice`) ; voir « Capturer » dans
+`docs/architecture.md`. Une coquille qui n'annonce pas la capacité ignore `voice` (champ inconnu) et
+rend les photos seules.
+
 ## Pilotage par le serveur
 
 Au démarrage (attente de 2,5 s au plus) et au retour au premier plan (au plus toutes les 30 s), la
@@ -72,8 +99,11 @@ coquille lit `GET {web}/api/config` avec l'en-tête `X-App-Version` :
 - **feature toggle `nativeCapture`** : à `false`, les capacités de capture ne sont plus annoncées (la
   page passe à la capture du navigateur ; les envois en cours peuvent finir) ;
 - **feature toggle `storePurchases`** : l'achat dans le magasin n'est annoncé que s'il est à `true` ;
+- **feature toggle `photoVoice`** : parler pendant les photos (`camera.photo.voice`) n'est annoncé que
+  s'il est à `true`, et jamais quand la capture native est coupée ;
 - **serveur injoignable** : rien ne bloque, et la capture native reste annoncée (le comportement de
-  base de la coquille) ; l'achat dans le magasin, lui, ne l'est pas (une fonction nouvelle).
+  base de la coquille) ; l'achat dans le magasin et la voix pendant les photos, eux, ne le sont pas
+  (des fonctions nouvelles).
 
 ## Sécurité
 

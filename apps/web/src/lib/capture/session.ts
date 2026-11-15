@@ -7,7 +7,7 @@ import { nativeEnv } from '../bridge/native'
 import type { DataApi } from '../gateway/data'
 import type { FilesApi } from '../gateway/files'
 import { messages } from '../i18n'
-import { ingestFile, ingestNative, kindOfFile, type IngestStage } from '../media/ingest'
+import { ingestFile, ingestNative, kindOfFile, type IngestStage, type SourcePreset } from '../media/ingest'
 import { uid } from '../model/repo'
 import { createInstruction, saveSources, type Actor } from '../model/service'
 import type { Source, SourceKind } from '../model/types'
@@ -99,14 +99,29 @@ export class CaptureSession {
     this.set({ pending: this.snap.pending.map((p) => (p.tempId === tempId ? { ...p, ...patch } : p)) })
   }
 
+  /**
+   * L'ordre de prise : chaque ajout reçoit un rang à son départ, et un envoi qui finit avant un autre
+   * parti plus tôt ne passe pas devant lui (les photos d'une série restent dans l'ordre du déclic).
+   */
+  private nextRank = 0
+  private rankOf = new Map<string, number>()
+
+  private placed(source: Source, rank: number): Source[] {
+    this.rankOf.set(source.id, rank)
+    const list = this.snap.sources
+    const at = list.findIndex((x) => (this.rankOf.get(x.id) ?? -1) > rank)
+    return at === -1 ? [...list, source] : [...list.slice(0, at), source, ...list.slice(at)]
+  }
+
   private async run(pending: PendingUpload, job: (onProgress: (stage: IngestStage, ratio?: number) => void) => Promise<Source>) {
+    const rank = this.nextRank++
     this.set({ pending: [...this.snap.pending, pending] })
     try {
       await this.ensureDoc()
       const source = await job((stage, ratio) => this.updatePending(pending.tempId, { stage, progress: ratio }))
       if (pending.previewUrl && source.kind === 'photo' && !source.thumbnailUrl) source.thumbnailUrl = source.url
       this.set({
-        sources: [...this.snap.sources, source],
+        sources: this.placed(source, rank),
         pending: this.snap.pending.filter((p) => p.tempId !== pending.tempId),
       })
       await this.persist()
@@ -125,12 +140,33 @@ export class CaptureSession {
     }
   }
 
+  /**
+   * Des photos prises en parlant, dans le navigateur : la note de la série reçoit son identifiant
+   * d'avance, et chaque photo prise micro ouvert y garde son instant (`at[i]` pour `photos[i]`).
+   */
+  addPhotoSeries(photos: File[], voice: { audio: File; at: Array<number | undefined> } | null) {
+    if (!voice) return this.addFiles(photos)
+    const voiceId = uid('src_')
+    photos.forEach((file, i) => {
+      const at = voice.at[i]
+      const preset: SourcePreset = typeof at === 'number' ? { voice: { sourceId: voiceId, at } } : {}
+      void this.run({ tempId: uid('tmp_'), kind: 'photo', name: file.name, previewUrl: URL.createObjectURL(file), stage: 'prepare' }, (p) => ingestFile(file, this.deps.files, p, 'web', preset))
+    })
+    void this.run({ tempId: uid('tmp_'), kind: 'audio', name: voice.audio.name, stage: 'prepare' }, (p) => ingestFile(voice.audio, this.deps.files, p, 'web', { id: voiceId }))
+  }
+
   addNative(items: CapturedMedia[]) {
     const platform = nativeEnv()?.platform ?? 'ios'
+    // Une série de photos commentée : la note reçoit son identifiant d'avance, et chaque photo prise
+    // micro ouvert y garde son instant.
+    const narration = items.find((i) => i.kind === 'audio' && i.narration)
+    const voiceId = narration ? uid('src_') : null
     for (const item of items) {
       handledNative.add(item.localId)
       const kind: SourceKind = item.kind
-      void this.run({ tempId: uid('tmp_'), kind, name: item.fileName, previewUrl: item.thumbnailDataUrl, stage: 'upload', progress: 0 }, (p) => ingestNative(item, this.deps.files, p, platform))
+      const preset: SourcePreset =
+        item === narration && voiceId ? { id: voiceId } : voiceId && item.kind === 'photo' && typeof item.voiceAt === 'number' ? { voice: { sourceId: voiceId, at: item.voiceAt } } : {}
+      void this.run({ tempId: uid('tmp_'), kind, name: item.fileName, previewUrl: item.thumbnailDataUrl, stage: 'upload', progress: 0 }, (p) => ingestNative(item, this.deps.files, p, platform, preset))
     }
   }
 
@@ -143,6 +179,7 @@ export class CaptureSession {
     const known = new Set(this.snap.sources.map(key))
     const fresh = list.filter((x) => !known.has(key(x))).map(reuseSource)
     if (!fresh.length) return 0
+    fresh.forEach((x) => this.rankOf.set(x.id, this.nextRank++))
     this.set({ sources: [...this.snap.sources, ...fresh] })
     await this.persist()
     return fresh.length
@@ -152,6 +189,7 @@ export class CaptureSession {
     const t = text.trim()
     if (!t) return
     const source: Source = { id: uid('src_'), kind: 'note', text: t, createdAt: new Date().toISOString() }
+    this.rankOf.set(source.id, this.nextRank++)
     this.set({ sources: [...this.snap.sources, source] })
     await this.persist()
   }

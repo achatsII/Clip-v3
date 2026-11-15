@@ -38,6 +38,16 @@ describe('les avertissements sur le téléphone', () => {
   })
 })
 
+describe('parler pendant les photos', () => {
+  it('ne s’annonce qu’avec le toggle `photoVoice` allumé, jamais en repli ni capture native coupée', () => {
+    expect(capabilitiesFor(withToggles({ photoVoice: true }))).toContain('camera.photo.voice')
+    expect(capabilitiesFor(withToggles({ photoVoice: false }))).not.toContain('camera.photo.voice')
+    expect(capabilitiesFor(withToggles({}))).not.toContain('camera.photo.voice')
+    expect(capabilitiesFor(null)).not.toContain('camera.photo.voice')
+    expect(capabilitiesFor(withToggles({ photoVoice: true, nativeCapture: false }))).not.toContain('camera.photo.voice')
+  })
+})
+
 describe('reprise des médias après un rechargement de la page', () => {
   it('media.pending reste annoncé, même capture native coupée : un média déjà pris doit pouvoir partir', () => {
     expect(capabilitiesFor(null)).toContain('media.pending')
