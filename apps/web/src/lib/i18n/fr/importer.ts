@@ -5,11 +5,10 @@ export const importer = {
   readOnly: 'Votre rôle ne permet pas d’importer.',
   unavailableTitle: 'Import en lot indisponible pour le moment',
   unavailableText: 'Vous pouvez déposer un document dans une nouvelle instruction.',
-  /** La zone de dépôt. Le coût d'un document court (« · 60 crédits ») s'insère entre `before` et `after`. */
+  /** La zone de dépôt : ce qu'elle accepte. Aucun coût annoncé : l'IA est débitée de son coût réel, après. */
   drop: {
     title: 'Glissez vos fichiers ici, ou touchez pour les choisir',
-    before: 'PDF, Word (.docx, .doc, .odt) ·',
-    after: 'par document court',
+    formats: 'PDF, Word (.docx, .doc, .odt)',
   },
   onlyDocuments: 'Seuls les PDF et les documents Word sont importés ici',
   onlyDocumentsText: 'Les vidéos et photos se déposent dans une nouvelle instruction.',
@@ -26,6 +25,8 @@ export const importer = {
     uploading: 'Envoi et conversion…',
     uploaded: 'Prêt à analyser',
     analyzing: 'L’IA restructure…',
+    /** L'analyse tourne au serveur (toggle `serverGeneration`) : on peut fermer l'app. */
+    server: 'L’IA l’analyse au serveur : vous pouvez fermer l’app',
     done: 'Brouillon créé',
     error: 'Échec',
   },

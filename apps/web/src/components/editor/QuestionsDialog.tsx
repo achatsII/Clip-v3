@@ -2,7 +2,6 @@
 
 import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
@@ -76,7 +75,7 @@ export function QuestionsDialog({
           <Button onClick={() => advance({ ...answers, [question]: '' })}>{t.skip}</Button>
           {last ? (
             <Button variant="primary" disabled={!anyAnswer} onClick={() => advance(answers)}>
-              {t.apply} <AiCost operation="edit_agent" />
+              {t.apply}
             </Button>
           ) : (
             <Button variant="primary" onClick={() => advance(answers)}>

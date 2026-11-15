@@ -141,6 +141,20 @@ instructions publiées sont réellement consultées au plancher semaine après s
 - La génération de vidéos par l'IA.
 - Le hors ligne complet : la capture tolère un réseau instable, la consultation demande le réseau.
 
+## Le site public
+
+Le site (`/`, et `/en` en anglais) présente CLIP à qui ne le connaît pas encore : le champion qui
+cherche une solution, le directeur qui compare. Il garde l'esprit du produit.
+
+- **Ce qu'il montre est vrai** : des démos qui font ce que l'app fait, des prix tirés du seul
+  `billing.manifest.yaml`, aucun témoignage, logo de client, note ou chiffre inventés, aucune
+  fonction absente du code.
+- **Une seule action principale** : essayer gratuitement quand le libre-service est ouvert, sinon
+  réserver une démo.
+- **Il ne gêne jamais l'app** : une session ouverte va à l'accueil de l'app ; la coquille mobile ne
+  montre ni le site ni un prix.
+- **Aucun suivi sans accord** (Loi 25) : HubSpot se charge seulement après « Accepter ».
+
 ## Versions de référence
 
 - v0.1 — première version alignée sur la vision (ce dépôt, branche `claude/eager-euler-wp2u8b`).

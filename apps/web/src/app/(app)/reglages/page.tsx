@@ -88,6 +88,7 @@ export default function SettingsPage() {
 function PlantTab() {
   const { org, updateOrg, files } = useSession()
   const renewalOn = useToggle('renewal')
+  const serverGeneration = useToggle('serverGeneration')
   const words = useMessages()
   const t = words.settings.plant
   const toast = useToast()
@@ -136,6 +137,21 @@ function PlantTab() {
           </div>
         )}
         <NumberingField />
+        {serverGeneration && (
+          <div className="mt-5">
+            <Label>{t.generationTitle}</Label>
+            <Segmented
+              size="sm"
+              value={org.json_data.generation?.server ? 'server' : 'device'}
+              onChange={(v) => void updateOrg({ generation: { server: v === 'server' } }).then(() => toast.success(t.generationSaved))}
+              options={[
+                { value: 'device', label: t.generationDevice },
+                { value: 'server', label: t.generationServer },
+              ]}
+            />
+            <p className="mt-1.5 text-xs font-bold text-slate-400">{t.generationHint}</p>
+          </div>
+        )}
       </Panel>
       <Panel>
         <h2 className="mb-1 flex items-center gap-2 text-xl font-black tracking-tight">{t.brandTitle} {brand === 'locked' && <LockBadge />}</h2>

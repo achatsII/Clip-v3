@@ -67,6 +67,8 @@ export const records = {
   export: 'Exporter (CSV)',
   exportHead: ['Fini le', 'Instruction', 'Poste', 'Fait par', 'Étape', 'Relevé', 'Valeur', 'Unité', 'Minimum', 'Maximum', 'Jugement', 'Détail', 'Ce qui a été fait', 'Autorisé par'],
   exportFile: (date: string) => `registre-releves-${date}.csv`,
+  /** Dans l'export, une photo prise sur un lien public (rangée dans la base, pas au stockage). */
+  photoInApp: 'Photo enregistrée dans CLIP',
   teaser: {
     title: 'Les tendances et l’export avec le module Relevés',
     text: 'Chaque mesure dans le temps avec ses limites, et le registre en CSV pour la qualité et l’audit.',

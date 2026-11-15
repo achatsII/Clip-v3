@@ -34,6 +34,9 @@ export const capture: typeof Fr = {
     tooBig: 'That’s a lot for one instruction: split it into several.',
     ready: (n: number) => `${n.toLocaleString('en-CA')} note${n !== 1 ? 's' : ''} ready. The AI will analyze ${n !== 1 ? 'them' : 'it'}.`,
     generate: 'Generate the instruction',
+    generateQueued: 'Generate when uploads finish',
+    queuedHint: 'The generation will start on its own when the uploads finish. You can leave this screen.',
+    queuedStarted: 'Uploads finished: the generation has started.',
     dropFiles: 'Drop your files',
     noteTitle: 'Written note',
     addNote: 'Add the note',
@@ -90,6 +93,7 @@ export const capture: typeof Fr = {
       import: 'Preparing on the phone (downloading from iCloud if needed)…',
       prepare: 'Preparing…',
       upload: 'Uploading…',
+      offline: 'Waiting for the network… the upload will resume on its own',
       optimize: 'Optimizing the video…',
       transcribe: 'Transcribing…',
       convert: 'Converting to PDF…',
@@ -123,7 +127,6 @@ export const capture: typeof Fr = {
   autoAnnotate: {
     label: 'Annotate images automatically',
     hint: 'The AI circles what to look at on each still image or photo that needs it, right on the image. Never on a video clip.',
-    perImage: (credits: string) => `${credits} per annotated image`,
   },
   progress: {
     stages: {
@@ -152,6 +155,11 @@ export const capture: typeof Fr = {
     keepAppOpen: 'Keep the app open until the end: the screen stays on. You can follow along on the computer; it will show up there as soon as it’s ready.',
     canLeave: 'You can leave this screen: the instruction saves itself as long as the tab stays open, and shows up on your other devices.',
     failed: 'The generation failed.',
+    serverCanClose: 'You can close the app: the AI keeps working on the server. When you come back, the instruction finishes in a few seconds, on any device.',
+    serverRemote: (from: string) => `${from}. The AI keeps working on the server: the instruction will show up here as soon as it’s ready.`,
+    serverFailed: 'The AI couldn’t write the instruction on the server. Start it again: your media are kept.',
+    serverNotTaken: 'The server didn’t take the generation. Start it again: it will run on this device.',
+    serverLost: 'The server generation can’t be found. Start it again: your media are kept.',
   },
   tiers: { short: 'short', medium: 'medium', long: 'long' },
   generate: {

@@ -2,7 +2,6 @@
 
 import { ArrowDown, ArrowUp, Check, ClipboardCheck, Copy, Heading, Image as ImageIcon, Loader2, MessageCircle, Plus, Radio, Sparkles, Trash2, TriangleAlert, Type, X } from 'lucide-react'
 import { useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { AutoTextarea, fieldLook, Input, Label } from '@/components/ui/Field'
 import { locale, useMessages } from '@/lib/i18n'
 import { WARNINGS } from '@/lib/model/catalog'
@@ -119,7 +118,7 @@ export function StepForm(p: StepFormProps) {
         {!readOnly && (
           <div className="mt-4 rounded-2xl bg-violet-50/80 p-3 dark:bg-violet-500/10">
             <p className="label-caps mb-2 flex flex-wrap items-center gap-1.5 text-violet-700 dark:text-violet-200">
-              <Sparkles className="h-3.5 w-3.5" /> {tf.ai} <AiCost operation="step_assist" className="font-bold tracking-normal normal-case opacity-80" />
+              <Sparkles className="h-3.5 w-3.5" /> {tf.ai}
             </p>
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {ASSIST_ACTIONS.map((k) => (

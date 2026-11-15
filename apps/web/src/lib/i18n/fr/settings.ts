@@ -34,6 +34,12 @@ export const settings = {
     apply: 'Appliquer',
     colorApplied: 'Couleur appliquée',
     defaultBlue: 'Bleu par défaut',
+    /** Où tourne la génération par l'IA (toggle `serverGeneration`). */
+    generationTitle: 'Génération par l’IA',
+    generationDevice: 'Sur l’appareil',
+    generationServer: 'Sur le serveur',
+    generationHint: 'Sur le serveur, on peut fermer l’app pendant que l’IA écrit l’instruction : elle se termine sur le premier appareil ouvert.',
+    generationSaved: 'Réglage enregistré',
   },
   /** L'onglet Standard de rédaction, son assistant d'IA et ses versions. */
   standard: {
@@ -43,6 +49,16 @@ export const settings = {
     describeToAi: 'Décrire à l’IA',
     startWithSafety: 'Toujours commencer par la sécurité',
     startWithSafetyHint: 'La première étape rappelle les EPI et les risques.',
+    /** Ce par quoi commence chaque instruction (toggle `firstStepChoice`). */
+    firstStep: 'Première étape',
+    firstStepKinds: {
+      work: { title: 'Le premier geste', hint: 'Pas d’étape à part : les EPI s’affichent avant de commencer.' },
+      safety: { title: 'La sécurité', hint: 'Une étape rappelle les EPI et les risques, même brièvement.' },
+      custom: { title: 'Autre chose', hint: 'Une étape que vous décrivez, toujours en premier.' },
+    },
+    firstStepText: 'Ce que fait la première étape',
+    firstStepPlaceholder: 'Ex. : Vérifier le bon de travail et le numéro de lot',
+    firstStepEmpty: 'Décrivez la première étape ; sans elle, l’IA commence par le premier geste.',
     maxWords: 'Mots au plus par étape',
     tone: 'Ton',
     /** Les tons (clés des données). */
@@ -75,8 +91,9 @@ export const settings = {
     useProposal: 'Utiliser cette proposition',
     proposalApplied: 'Proposition appliquée au formulaire',
     proposalAppliedHint: 'Vérifiez, puis enregistrez la nouvelle version.',
-    startsWithSafety: 'Commence par la sécurité',
-    notAlwaysSafety: 'Ne commence pas forcément par la sécurité',
+    /** La première étape d'un standard proposé par l'IA, déjà en mots. */
+    firstStepSummary: (kind: 'work' | 'safety' | 'custom', text: string) =>
+      kind === 'safety' ? 'Commence par la sécurité' : kind === 'custom' ? `Commence par « ${text} »` : 'Commence par le premier geste',
     wordsPerStep: (n: number) => `${n.toLocaleString('fr-CA')} mots par étape`,
     /** Le ton proposé, déjà en mots et en minuscules. */
     toneIs: (tone: string) => `ton « ${tone} »`,

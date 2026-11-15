@@ -38,6 +38,13 @@ export const T = {
   request: 'clip_request',
   /** L'Académie : les validations sur le terrain (le registre des qualifications). */
   qualification: 'clip_qualification',
+  /**
+   * Une génération qui tourne au serveur (branche clip-v3 de Job_start, n8n) : son état et le
+   * résultat de l'IA. n8n l'écrit avec les droits de la personne qui l'a lancée ; l'app la relit.
+   */
+  serverJob: 'clip_job',
+  /** Une photo prise sur un lien public (relevé, retour) : la Gateway refuse l'envoi de fichiers au rôle guest. */
+  photo: 'clip_photo',
 } as const
 
 export const nowIso = () => new Date().toISOString()
@@ -55,7 +62,10 @@ export const defaultRules = (): string[] => [...messages().instructions.defaults
 export function defaultStandard(): WritingStandard {
   return {
     rules: defaultRules(),
-    startWithSafety: true,
+    // Une usine neuve commence par le travail : les EPI et les mises en garde s'affichent déjà avant
+    // la première étape. `firstStep` reste absent ici : `normalizeOrg` complète une usine existante
+    // avec ce défaut, et son ancien `startWithSafety` doit continuer de décider (`firstStepOf`).
+    startWithSafety: false,
     maxWordsPerStep: 20,
     tone: 'infinitif',
     glossary: [],

@@ -6,7 +6,19 @@
 import { requireAiConsent } from '../ai/consent'
 import { APP_DATA_IDENTIFIER, GATEWAY_URL } from '../config'
 import { ApiError, GatewayClient } from './client'
+import { RESUMABLE_MIN_BYTES, uploadResumable } from './resumable'
 import { messages } from '@/lib/i18n'
+
+let resumableOn = false
+/** L'envoi par morceaux des gros fichiers (toggle `resumableUpload`), posé par la session. */
+export function setResumableUploads(on: boolean) {
+  resumableOn = on
+}
+
+export interface UploadOptions {
+  /** Vrai quand l'envoi attend le retour du réseau, faux quand il repart (envoi par morceaux). */
+  onWait?: (waiting: boolean) => void
+}
 
 export interface UploadedFile {
   url: string
@@ -116,9 +128,35 @@ export function filesApi(client: GatewayClient) {
   return {
     presign,
 
-    /** Envoie un fichier et rend son URL publique. URL présignée d'abord, envoi direct sinon. */
-    async upload(file: Blob, name: string, folder: string, onProgress?: ProgressFn): Promise<UploadedFile> {
+    /**
+     * Envoie un fichier et rend son URL publique. Un gros fichier part par morceaux (il reprend où il
+     * s'était arrêté) ; sinon, ou si la Gateway refuse ce mode : URL présignée, puis envoi direct.
+     */
+    async upload(file: Blob, name: string, folder: string, onProgress?: ProgressFn, opts: UploadOptions = {}): Promise<UploadedFile> {
       const type = file.type || 'application/octet-stream'
+      if (resumableOn && file.size >= RESUMABLE_MIN_BYTES) {
+        const clean = safeName(name)
+        const modified = (file as Partial<File>).lastModified ?? 0
+        try {
+          const r = await uploadResumable(
+            file,
+            { name: clean, type, path: folderPath(folder), fingerprint: [folderPath(folder), clean, file.size, modified, type].join('|') },
+            {
+              getToken: () => client.source.getToken(),
+              refresh: async () => {
+                const ok = await client.source.refresh()
+                if (!ok) client.source.onAuthFailure()
+                return ok
+              },
+            },
+            { onProgress, onWait: opts.onWait },
+          )
+          return { url: r.url, path: r.key, sizeBytes: file.size, mimeType: type, name }
+        } catch (e) {
+          // La Gateway refuse ce mode : le fichier part d'un bloc, comme avant. Le reste remonte.
+          if (!(e instanceof ApiError && e.code === 'tus_unavailable')) throw e
+        }
+      }
       try {
         const target = await presign(name, type, folder)
         const { status } = await xhrSend('PUT', target.uploadUrl, file, presignedPutHeaders(target.uploadUrl, type), onProgress)

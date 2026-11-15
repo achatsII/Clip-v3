@@ -100,7 +100,6 @@ export const editorTools: typeof Fr = {
     ai: {
       hint: 'The AI places arrows and circles on what needs to be seen',
       button: 'Annotate with AI',
-      cost: (credits: number) => `AI · ${nb(credits)} credit${credits !== 1 ? 's' : ''}`,
       added: 'Marks added by the AI',
       addedHint: 'Tap a mark to move, enlarge or remove it.',
       failed: 'The AI couldn’t annotate',
@@ -197,7 +196,6 @@ export const editorTools: typeof Fr = {
       needTwoMedia: 'At least two media are needed to compare or make a grid',
       needsAi: 'This operation needs the AI',
       marksOnImage: 'Marks go on a photo or an image',
-      noReferencePhoto: 'No reference photo: ask for a diagram instead',
       sourceNotFound: (ref: string) => `Source not found (${ref})`,
       unknownLanguage: (lang: string) => `Unknown language (${lang})`,
       noLanguage: 'No language to translate into',

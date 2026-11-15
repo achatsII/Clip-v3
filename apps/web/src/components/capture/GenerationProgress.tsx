@@ -27,7 +27,20 @@ export function launchedFrom(device: 'app' | 'web', byName?: string | null, inli
  * La génération en cours. `remote` : elle tourne sur un autre appareil ; cet écran la suit (étape
  * et durée relues toutes les 10 s) et s'efface tout seul quand l'instruction est prête.
  */
-export function GenerationProgress({ job, onRetry, onCancel, remote }: { job: JobState | undefined; onRetry: () => void; onCancel?: () => void; remote?: { device: 'app' | 'web'; byName?: string | null } }) {
+export function GenerationProgress({
+  job,
+  onRetry,
+  onCancel,
+  remote,
+  server,
+}: {
+  job: JobState | undefined
+  onRetry: () => void
+  onCancel?: () => void
+  remote?: { device: 'app' | 'web'; byName?: string | null }
+  /** L'analyse tourne au serveur : on peut fermer l'app. */
+  server?: boolean
+}) {
   const t = useMessages()
   const tp = t.capture.progress
   const [now, setNow] = useState(() => Date.now())
@@ -78,7 +91,13 @@ export function GenerationProgress({ job, onRetry, onCancel, remote }: { job: Jo
           <p className="text-sm font-bold text-slate-500 tabular-nums">{tp.elapsed(formatClock(elapsed))}</p>
         </div>
       </div>
-      <ol className="relative mt-8 space-y-3">
+      {server && (
+        // Au serveur, c'est ce qui compte, et tout de suite (au téléphone, le bas de l'écran est caché) : on peut s'en aller.
+        <p className="relative mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200" role="status">
+          {remote ? tp.serverRemote(launchedFrom(remote.device, remote.byName)) : tp.serverCanClose}
+        </p>
+      )}
+      <ol className={cn('relative space-y-3', server ? 'mt-5' : 'mt-8')}>
         {stages.map((s, i) => (
           <li key={s.key} className={cn('flex items-center gap-3 rounded-2xl px-4 py-3 transition', i === idx ? 'bg-primary-soft' : 'opacity-70')}>
             <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl', i < idx ? 'bg-emerald-500 text-white' : i === idx ? 'bg-gradient-primary text-white' : 'bg-slate-900/5 text-slate-400 dark:bg-white/10')}>
@@ -90,9 +109,7 @@ export function GenerationProgress({ job, onRetry, onCancel, remote }: { job: Jo
         ))}
       </ol>
       <p className="relative mt-8 min-h-12 text-center text-sm font-medium text-slate-500 transition-opacity">💡 {tp.tips[tip % tp.tips.length]}</p>
-      <p className="relative mt-2 text-center text-xs font-medium text-slate-400">
-        {remote ? tp.remote(launchedFrom(remote.device, remote.byName)) : inNativeShell() ? tp.keepAppOpen : tp.canLeave}
-      </p>
+      {!server && <p className="relative mt-2 text-center text-xs font-medium text-slate-400">{remote ? tp.remote(launchedFrom(remote.device, remote.byName)) : inNativeShell() ? tp.keepAppOpen : tp.canLeave}</p>}
     </div>
   )
 }

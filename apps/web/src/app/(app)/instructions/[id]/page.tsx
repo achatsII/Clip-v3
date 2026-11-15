@@ -11,15 +11,13 @@ import { useSession } from '@/components/providers/Session'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
 import { qk, useInstruction, useStations } from '@/hooks/queries'
 import { useCreations } from '@/hooks/useCreations'
+import { useLaunchGeneration } from '@/hooks/useLaunchGeneration'
 import { creationOf } from '@/lib/ai/creation'
-import { clearJob, jobOf, subscribeJobs } from '@/lib/ai/jobs'
-import { startGeneration } from '@/lib/ai/runGeneration'
+import { clearJob, jobOf, ranHere, subscribeJobs } from '@/lib/ai/jobs'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { useMessages } from '@/lib/i18n'
 import { T } from '@/lib/model/repo'
-import type { GeneratingInfo, Instruction } from '@/lib/model/types'
-import { readAutoAnnotate } from '@/lib/ai/autoAnnotate'
-import { useToggle } from '@/lib/toggles'
+import type { GeneratingInfo } from '@/lib/model/types'
 
 export default function InstructionPage() {
   const { id } = useParams<{ id: string }>()
@@ -36,7 +34,6 @@ export default function InstructionPage() {
     if (instruction.data && !instruction.isFetching) setFreshId(id)
   }, [instruction.data, instruction.isFetching, id])
   const stations = useStations()
-  const draftHistory = useToggle('draftHistory')
   const job = useSyncExternalStore(subscribeJobs, () => jobOf(id), () => undefined)
   const started = useRef(false)
   // Une création lancée sur un autre appareil : on la suit, et la page se met à jour à la fin.
@@ -58,27 +55,14 @@ export default function InstructionPage() {
     void qc.invalidateQueries({ queryKey: qk.instructions })
   }, [qc, id])
 
+  const launch = useLaunchGeneration()
   const generate = useCallback(
-    async (kind: ForceKind) => {
-      const fresh = await session.data.get<Instruction>(T.instruction, id)
-      if (!fresh) return
-      qc.setQueryData(qk.instruction(id), fresh)
-      void startGeneration({
-        doc: fresh,
-        data: session.data,
-        files: session.files,
-        ai: session.ai,
-        org: session.org.json_data,
-        stations: stations.data ?? [],
-        actor: { id: session.profile.userId, name: session.displayName },
-        forceKind: kind === 'auto' ? undefined : kind,
-        autoAnnotate: readAutoAnnotate(),
-        checkpoints: draftHistory,
-        onDone: refresh,
-      })
-    },
-    [qc, id, session, stations.data, refresh, draftHistory],
+    /** `device` : sur cet appareil même si l'usine génère au serveur (relance après un échec au serveur). */
+    (kind: ForceKind, opts: { device?: boolean } = {}) => launch(id, kind, { device: opts.device, onDone: refresh }),
+    [launch, id, refresh],
   )
+  // Après un échec au serveur, la relance se fait sur cet appareil (le chemin d'avant).
+  const relaunch = useCallback(() => void generate('auto', { device: !!instruction.data?.json_data.generationError?.server }), [generate, instruction.data])
 
   // Lancement demandé par l'écran de capture (?generer=auto|procedure|lockout).
   useEffect(() => {
@@ -142,7 +126,9 @@ export default function InstructionPage() {
       <div className="py-6">
         <GenerationProgress
           job={{ status: 'running', stage: creation.info.stage, detail: creation.info.detail ?? undefined, startedAt: Date.parse(creation.info.startedAt) }}
-          remote={{ device: creation.info.device, byName: creation.info.byName }}
+          // Au serveur, l'appareil qui l'a lancée la suit aussi « à distance » : il peut se fermer.
+          remote={creation.info.mode === 'server' && ranHere(id) ? undefined : { device: creation.info.device, byName: creation.info.byName }}
+          server={creation.info.mode === 'server'}
           onRetry={() => undefined}
         />
       </div>
@@ -155,7 +141,7 @@ export default function InstructionPage() {
         <Interrupted
           info={creation.info}
           canWrite={canWrite}
-          onRelaunch={() => void generate('auto')}
+          onRelaunch={() => void generate('auto', { device: creation.info.mode === 'server' })}
           onMedia={() => {
             // La création est abandonnée : elle ne s'affiche plus comme interrompue ailleurs.
             void session.data.patch(T.instruction, id, { generating: null }).then(refresh, () => undefined)
@@ -171,7 +157,7 @@ export default function InstructionPage() {
       <div className="py-6">
         <GenerationProgress
           job={{ status: 'error', message: instr.generationError.message }}
-          onRetry={() => void generate('auto')}
+          onRetry={relaunch}
           onCancel={() => {
             void session.data.patch(T.instruction, id, { generationError: null }).then(refresh, () => undefined)
             setShowMedia(true)

@@ -23,6 +23,12 @@ export const SELF_SERVICE = process.env.NEXT_PUBLIC_SELF_SERVICE === '1'
 /** Facturation v2 (plans, crédits, paywall). Éteinte tant que `/api/v2/billing/*` répond 404. */
 export const BILLING_V2 = process.env.NEXT_PUBLIC_BILLING_V2 === '1'
 
+/**
+ * Le taux de l'IA facturée : combien de crédits pour un dollar canadien de coût réel (le taux
+ * standard de la plateforme, celui d'askAi). Il ne s'affiche jamais : l'écran parle en crédits.
+ */
+export const AI_CREDITS_PER_CAD = 1000
+
 /** Slug du produit pour la facturation (`X-Product`) : l'identifiant à enregistrer. */
 export const PRODUCT_SLUG = 'clip-v3'
 

@@ -107,7 +107,6 @@ export const editorTools = {
     ai: {
       hint: 'L’IA place les flèches et les cercles sur ce qu’il faut voir',
       button: 'Annoter par IA',
-      cost: (credits: number) => `IA · ${nb(credits)} crédit${credits > 1 ? 's' : ''}`,
       added: 'Marques ajoutées par l’IA',
       addedHint: 'Touchez une marque pour la déplacer, l’agrandir ou la retirer.',
       failed: 'L’IA n’a pas pu annoter',
@@ -211,7 +210,6 @@ export const editorTools = {
       needTwoMedia: 'Il faut au moins deux médias pour comparer ou faire une grille',
       needsAi: 'Cette opération demande l’IA',
       marksOnImage: 'Les marques se posent sur une photo ou une image',
-      noReferencePhoto: 'Pas de photo de référence : demandez plutôt un schéma',
       sourceNotFound: (ref: string) => `Source introuvable (${ref})`,
       unknownLanguage: (lang: string) => `Langue inconnue (${lang})`,
       noLanguage: 'Aucune langue à traduire',

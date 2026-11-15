@@ -2,7 +2,6 @@
 
 import { Loader2, Send, Sparkles } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { errorText } from '@/components/ui/States'
@@ -67,7 +66,7 @@ export function ReportAi({ title, period, blocks, signature }: { title: string; 
         </span>
         <h2 className="min-w-0 flex-1 text-lg font-black tracking-tight">{t.title}</h2>
         <Button variant={shown ? undefined : 'primary'} loading={busy} icon={<Sparkles className="h-4 w-4" />} onClick={() => void analyze()}>
-          {shown ? t.again : t.analyze} <AiCost operation="report_summary" />
+          {shown ? t.again : t.analyze}
         </Button>
       </div>
 

@@ -64,7 +64,7 @@ export const stations = {
     askOperator: 'Demander qui travaille',
     askOperatorDescription: 'Avant d’ouvrir une instruction, la personne touche son nom et tape son code. On sait qui a fait quoi, et quand.',
     upgradeTitle: 'Ce lien date d’avant les nouvelles fonctions',
-    upgradeHint: 'Mettez-le à jour pour savoir qui travaille au poste. La tablette et les codes QR déjà imprimés suivent le nouveau lien.',
+    upgradeHint: 'Mettez-le à jour pour les photos des relevés et pour savoir qui travaille au poste. La tablette et les codes QR déjà imprimés suivent le nouveau lien.',
     upgrade: 'Mettre à jour le lien',
     upgraded: 'Lien mis à jour',
     upgradedHint: 'La tablette et les codes QR imprimés passent au nouveau lien.',

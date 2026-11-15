@@ -4,6 +4,10 @@
  * et un signe de vie toutes les 30 secondes. Les autres appareils le lisent par une petite
  * requête, souvent pendant une création, rarement sinon. Sans signe de vie depuis deux minutes
  * (app fermée, téléphone en veille), la génération est « interrompue » : on peut la relancer.
+ *
+ * Une génération au serveur (`mode: 'server'`) ne dépend plus de l'appareil qui l'a lancée : elle
+ * reste « en cours » jusqu'à ce que son travail (`clip_job`) dise qu'il est fini, raté ou perdu, et
+ * le premier appareil ouvert la termine (`CreationWatcher`, `jobOutcome`), même des jours plus tard.
  */
 import type { DataApi } from '../gateway/data'
 import { messages } from '../i18n'
@@ -21,6 +25,9 @@ export type CreationState = { kind: 'none' } | { kind: 'running'; info: Generati
 export function creationOf(i: Pick<Instruction, 'generating'> | null | undefined, now = Date.now()): CreationState {
   const info = i?.generating
   if (!info) return { kind: 'none' }
+  // Au serveur, le signe de vie de l'appareil ne dit rien : il a pu se fermer dès le départ. Le
+  // travail décide, lu par le premier appareil ouvert (même 30 minutes ou trois jours plus tard).
+  if (info.mode === 'server' && info.jobId) return { kind: 'running', info }
   const last = Date.parse(info.heartbeatAt || info.startedAt)
   return Number.isFinite(last) && now - last <= STALE_MS ? { kind: 'running', info } : { kind: 'stale', info }
 }

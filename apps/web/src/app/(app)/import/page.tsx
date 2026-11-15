@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, CheckCircle2, FileText, FileUp, Loader2, Play, RotateCcw, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -12,18 +11,22 @@ import { EmptyState } from '@/components/ui/States'
 import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { qk, useStations } from '@/hooks/queries'
+import { useCreations } from '@/hooks/useCreations'
 import { enrichMedia, importDocument } from '@/lib/ai/generate'
 import { matchStation } from '@/lib/ai/normalize'
+import { startServerImport } from '@/lib/ai/runGeneration'
+import type { Doc } from '@/lib/gateway/data'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { messages, useMessages } from '@/lib/i18n'
 import { ingestFile } from '@/lib/media/ingest'
 import { nowIso, T } from '@/lib/model/repo'
 import { createInstruction, saveDraft } from '@/lib/model/service'
-import type { Source } from '@/lib/model/types'
+import type { Instruction, Source } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
 
-type ItemStatus = 'waiting' | 'uploading' | 'uploaded' | 'analyzing' | 'done' | 'error'
+/** `server` : l'analyse tourne au serveur ; l'instruction existe déjà, le premier appareil ouvert la termine. */
+type ItemStatus = 'waiting' | 'uploading' | 'uploaded' | 'analyzing' | 'server' | 'done' | 'error'
 
 interface ImportItem {
   id: string
@@ -50,12 +53,17 @@ export default function ImportPage() {
   const qc = useQueryClient()
   const stations = useStations()
   const toggle = useToggle('bulkImport')
+  // L'analyse au serveur (toggle `serverGeneration` et réglage de l'usine) : on peut fermer l'app.
+  const serverOn = useToggle('serverGeneration') && org.json_data.generation?.server === true
+  const creations = useCreations()
   const entitlement = useEntitlement('bulk_import')
   const gate = useGate()
   const [jobId, setJobId] = useState<string | null>(null)
   const [items, setItems] = useState<ImportItem[]>([])
   const [running, setRunning] = useState(false)
   const input = useRef<HTMLInputElement>(null)
+  // Le fichier d'un document pas encore envoyé : « Réessayer » le renvoie (un gros PDF reprend où il était).
+  const fileFor = useRef(new Map<string, File>())
   const itemsRef = useRef(items)
   itemsRef.current = items
   const actor = { id: profile.userId, name: displayName }
@@ -102,19 +110,45 @@ export default function ImportPage() {
     itemsRef.current = next
     setItems(next)
     let id = await persist(next)
+    added.forEach((item, k) => fileFor.current.set(item.id, docs[k]))
     // Envoi et conversion, un fichier à la fois (les conversions de la Gateway passent une par une).
-    for (let k = 0; k < docs.length; k++) {
-      const item = added[k]
-      next = update(item.id, { status: 'uploading' })
-      try {
-        const source = await ingestFile(docs[k], files)
-        next = update(item.id, { status: 'uploaded', source })
-      } catch (e) {
-        next = update(item.id, { status: 'error', error: e instanceof Error ? e.message : t.importer.errors.upload })
-      }
+    for (const item of added) {
+      next = await uploadItem(item.id)
       id = await persist(next, id)
     }
     void run()
+  }
+
+  /** Envoie (ou renvoie) le document d'un élément ; rend la liste à jour. */
+  async function uploadItem(itemId: string) {
+    const file = fileFor.current.get(itemId)
+    if (!file) return itemsRef.current
+    update(itemId, { status: 'uploading', error: undefined })
+    try {
+      const source = await ingestFile(file, files)
+      fileFor.current.delete(itemId)
+      return update(itemId, { status: 'uploaded', source })
+    } catch (e) {
+      return update(itemId, { status: 'error', error: e instanceof Error ? e.message : t.importer.errors.upload })
+    }
+  }
+
+  async function retryUpload(itemId: string) {
+    await persist(await uploadItem(itemId))
+    void run()
+  }
+
+  /** L'analyse sur cet appareil ; `existing` : l'instruction déjà créée (le serveur n'a pas pris l'analyse). */
+  async function analyzeHere(item: ImportItem, stationList: Array<{ id: string; name: string; code?: string }>, existing?: Doc<Instruction>) {
+    const r = await importDocument({ ai, org: org.json_data, source: item.source!, stationNames: stationList.map((s) => [s.name, s.code].filter(Boolean).join(' — ')) })
+    const doc = existing ?? (await createInstruction(data, actor, { title: r.content.title, origin: 'import', sources: [item.source!], kind: r.content.kind, category: r.content.category }))
+    const content = await enrichMedia(r.content, files, async (png, name) => (await files.upload(png, name, 'pages')).url)
+    const station = matchStation(r.stationGuess, stationList)
+    await saveDraft(data, doc._id, doc.json_data, content, actor, {
+      stationIds: station ? [station] : [],
+      generation: { at: nowIso(), model: r.model, operation: r.operation, questions: r.questions, choices: r.choices, stationGuess: r.stationGuess, rating: null, comment: null },
+    })
+    return { instructionId: doc._id, title: content.title }
   }
 
   async function run() {
@@ -126,15 +160,18 @@ export default function ImportPage() {
         let next = update(item.id, { status: 'analyzing' })
         await persist(next)
         try {
-          const r = await importDocument({ ai, org: org.json_data, source: item.source!, stationNames: stationList.map((s) => [s.name, s.code].filter(Boolean).join(' — ')) })
-          const doc = await createInstruction(data, actor, { title: r.content.title, origin: 'import', sources: [item.source!], kind: r.content.kind, category: r.content.category })
-          const content = await enrichMedia(r.content, files, async (png, name) => (await files.upload(png, name, 'pages')).url)
-          const station = matchStation(r.stationGuess, stationList)
-          await saveDraft(data, doc._id, doc.json_data, content, actor, {
-            stationIds: station ? [station] : [],
-            generation: { at: nowIso(), model: r.model, operation: r.operation, questions: r.questions, choices: r.choices, stationGuess: r.stationGuess, rating: null, comment: null },
-          })
-          next = update(item.id, { status: 'done', instructionId: doc._id, title: content.title })
+          if (serverOn) {
+            // L'instruction est créée tout de suite ; son analyse part au serveur.
+            const r = await startServerImport({ data, ai, org: org.json_data, source: item.source!, stations: stations.data ?? [], actor, title: item.name.replace(/\.[^.]+$/, '') })
+            if (r.jobId) {
+              next = update(item.id, { status: 'server', instructionId: r.doc._id })
+              await persist(next)
+              continue
+            }
+            next = update(item.id, { status: 'done', ...(await analyzeHere(item, stationList, r.doc)) })
+          } else {
+            next = update(item.id, { status: 'done', ...(await analyzeHere(item, stationList)) })
+          }
         } catch (e) {
           next = update(item.id, { status: 'error', error: e instanceof Error ? e.message : t.importer.errors.analysis })
         }
@@ -149,7 +186,10 @@ export default function ImportPage() {
   if (!can('instructions', 'write')) return <p className="font-bold text-slate-500">{t.importer.readOnly}</p>
   if (!toggle) return <EmptyState icon={<Upload className="h-7 w-7" />} title={t.importer.unavailableTitle} description={t.importer.unavailableText} />
 
-  const done = items.filter((i) => i.status === 'done').length
+  // Une analyse au serveur est finie quand son instruction n'est plus en création (prête ou ratée : elle le dit).
+  const creating = new Set((creations.data ?? []).map((d) => d._id))
+  const shown = (i: ImportItem): ItemStatus => (i.status === 'server' && creations.isFetched && !creating.has(i.instructionId ?? '') ? 'done' : i.status)
+  const done = items.filter((i) => shown(i) === 'done').length
   const pending = items.filter((i) => i.status === 'uploaded').length
   const locked = entitlement === 'locked'
 
@@ -172,7 +212,7 @@ export default function ImportPage() {
         </span>
         <span className="text-xl font-black tracking-tight">{t.importer.drop.title} {locked && <LockBadge />}</span>
         <span className="text-sm font-bold text-slate-500">
-          {t.importer.drop.before} <AiCost operation="import_s" className="font-bold" /> {t.importer.drop.after}
+          {t.importer.drop.formats}
         </span>
       </button>
       <input ref={input} type="file" multiple accept=".pdf,.doc,.docx,.odt,application/pdf" className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files ?? [])); e.target.value = '' }} />
@@ -197,12 +237,12 @@ export default function ImportPage() {
           <ul className="space-y-2">
             {items.map((i) => (
               <li key={i.id} className="glass-card flex items-center gap-3 rounded-2xl p-3">
-                <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', i.status === 'done' ? 'bg-emerald-500 text-white' : i.status === 'error' ? 'bg-rose-500 text-white' : 'bg-slate-900/5 dark:bg-white/10')}>
-                  {i.status === 'done' ? <CheckCircle2 className="h-5 w-5" /> : i.status === 'error' ? <AlertCircle className="h-5 w-5" /> : i.status === 'uploading' || i.status === 'analyzing' ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileText className="h-5 w-5" />}
+                <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', shown(i) === 'done' ? 'bg-emerald-500 text-white' : i.status === 'error' ? 'bg-rose-500 text-white' : 'bg-slate-900/5 dark:bg-white/10')}>
+                  {shown(i) === 'done' ? <CheckCircle2 className="h-5 w-5" /> : i.status === 'error' ? <AlertCircle className="h-5 w-5" /> : i.status === 'uploading' || i.status === 'analyzing' || i.status === 'server' ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileText className="h-5 w-5" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black">{i.title ?? i.name}</span>
-                  <span className={cn('block text-xs font-bold', i.status === 'error' ? 'text-rose-600' : 'text-slate-500')}>{i.status === 'error' ? i.error : t.importer.status[i.status]}</span>
+                  <span className={cn('block text-xs font-bold', i.status === 'error' ? 'text-rose-600' : 'text-slate-500')}>{i.status === 'error' ? i.error : t.importer.status[shown(i)]}</span>
                 </span>
                 {i.instructionId && (
                   <Link href={`/instructions/${i.instructionId}`} className="btn-press glass-card inline-flex h-10 items-center rounded-xl px-3 text-xs font-black">
@@ -211,6 +251,11 @@ export default function ImportPage() {
                 )}
                 {i.status === 'error' && i.source && (
                   <Button size="sm" icon={<RotateCcw className="h-4 w-4" />} onClick={() => { update(i.id, { status: 'uploaded', error: undefined }); void run() }}>
+                    {t.common.retry}
+                  </Button>
+                )}
+                {i.status === 'error' && !i.source && fileFor.current.has(i.id) && (
+                  <Button size="sm" icon={<RotateCcw className="h-4 w-4" />} onClick={() => void retryUpload(i.id)}>
                     {t.common.retry}
                   </Button>
                 )}

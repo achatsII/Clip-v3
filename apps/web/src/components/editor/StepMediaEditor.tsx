@@ -1,14 +1,12 @@
 'use client'
 
-import { ChevronDown, Clock, FileText, Film, Image as ImageIcon, ImagePlus, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Sparkles, Trash2, Wand2 } from 'lucide-react'
+import { ChevronDown, Clock, FileText, Film, Image as ImageIcon, ImagePlus, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
 import { useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { MediaView, mediaThumb } from '@/components/media/MediaView'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Input, Segmented, Textarea } from '@/components/ui/Field'
 import { useConfirm } from '@/components/ui/Confirm'
-import { Menu, type MenuItem } from '@/components/ui/Menu'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
@@ -109,11 +107,12 @@ export function StepMediaEditor({
     set({ media: step.media.map((m, i) => (i === mediaIndex ? { kind: 'video', url: f.videoUrl, sourceId: media.sourceId, start: f.start, end: f.end, posterUrl: media.url } : m)) })
   }
 
-  async function illustrate(m: Extract<StepMedia, { kind: 'image' }>) {
+  /** L'illustration de l'étape : à partir de l'image affichée si c'en est une, sinon du texte de l'étape. */
+  async function illustrate(m: Extract<StepMedia, { kind: 'image' }> | null) {
     setBusy('illustrate')
     try {
-      const prompt = await illustrationPrompt(ai, m.url, step)
-      const url = await ai.generateImage(prompt, [m.url])
+      const prompt = await illustrationPrompt(ai, m?.url ?? null, step, { title: content.title, equipment: content.equipment })
+      const url = await ai.generateImage(prompt, m ? [m.url] : [])
       onChange({ ...step, media: [...step.media, { kind: 'image', url, generated: true }] })
       setMediaIndex(step.media.length)
       toast.success(te.illustrationCreated, te.illustrationCreatedDetail)
@@ -150,11 +149,10 @@ export function StepMediaEditor({
     }
   }
 
-  // L'IA, en un seul menu : l'illustration (à partir d'une photo) et le schéma.
-  const aiItems: MenuItem[] = [
-    { label: te.aiIllustration, icon: <Wand2 className="h-4 w-4" />, onClick: () => media?.kind === 'image' && void illustrate(media), hidden: media?.kind !== 'image', disabled: !!busy, hint: <AiCost operation="illustrate" /> },
-    { label: te.aiVisual, icon: <Shapes className="h-4 w-4" />, onClick: () => setVisualOpen(true), disabled: !!busy, hint: <AiCost operation="visual" /> },
-  ]
+  // L'IA, à découvert (un menu se perdait au bas de la feuille, au téléphone) : l'illustration, à
+  // partir de l'image affichée ou du texte de l'étape, et le schéma.
+  const fromImage = media?.kind === 'image' ? media : null
+  const aiButton = 'btn-press bg-gradient-accent flex h-11 items-center gap-1.5 rounded-2xl px-3.5 text-sm font-black text-white disabled:opacity-60'
 
   return (
     <div>
@@ -223,17 +221,12 @@ export function StepMediaEditor({
                 {te.otherMoment}
               </Button>
             )}
-            <Menu
-              bare
-              align="left"
-              label={te.withAi}
-              items={aiItems}
-              trigger={
-                <span className="btn-press bg-gradient-accent flex h-11 items-center gap-1.5 rounded-2xl px-3.5 text-sm font-black text-white">
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {te.withAi} <ChevronDown className="h-4 w-4" />
-                </span>
-              }
-            />
+            <button type="button" disabled={!!busy} onClick={() => void illustrate(fromImage)} className={aiButton}>
+              {busy === 'illustrate' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} {fromImage ? te.aiIllustrateImage : te.aiIllustrateStep}
+            </button>
+            <button type="button" disabled={!!busy} onClick={() => setVisualOpen(true)} className={aiButton}>
+              {busy === 'visual' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shapes className="h-4 w-4" />} {te.aiVisual}
+            </button>
             {media && (
               <button
                 type="button"
@@ -306,7 +299,7 @@ export function StepMediaEditor({
           <>
             <Button onClick={() => setVisualOpen(false)}>{t.common.cancel}</Button>
             <Button variant="primary" loading={busy === 'visual'} onClick={() => void makeVisual()} icon={<Shapes className="h-4 w-4" />}>
-              {te.visualDialog.draw} <AiCost operation="visual" />
+              {te.visualDialog.draw}
             </Button>
           </>
         }

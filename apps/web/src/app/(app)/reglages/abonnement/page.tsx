@@ -1,9 +1,9 @@
 'use client'
 
-import { ArrowLeft, Check, Coins, ExternalLink, Sparkles } from 'lucide-react'
+import { ArrowLeft, Check, Coins, CreditCard, ExternalLink, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { billingClient } from '@/components/billing/BillingRoot'
 import { entitlementLines, formatPrice, usePlans } from '@/components/billing/Billing'
 import { canBuyInStore, devicePlatform, StoreAccount, StoreBuy } from '@/components/billing/Store'
@@ -18,6 +18,7 @@ import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
 import { FEATURED_PLAN, LIMIT_FEATURES, PLAN_PITCH } from '@/lib/billing/catalog'
+import { BILLING_INTERVAL, parsePlanIntent, type PlanIntent } from '@/lib/billing/intent'
 import { BillingError, creditsOf } from '@/lib/billing/client'
 import { useBilling } from '@/lib/billing/state'
 import { useBillingMode } from '@/lib/billing/mode'
@@ -52,12 +53,23 @@ function Subscription() {
   const limited = LIMIT_FEATURES.filter((k) => usage[k] && usage[k].limit !== null)
   // Les modules en option : sur le web (un module ne se vend pas dans les magasins), une fois bâtis.
   const modules = useModules()
+  // Le forfait choisi sur le site public (`?plan=…&interval=…`), en facturation réelle seulement :
+  // présélectionné, avec « Continuer vers le paiement » pour l'administrateur.
+  const [intent, setIntent] = useState<PlanIntent | null>(null)
+  useEffect(() => {
+    if (preview || inShell) return
+    const found = parsePlanIntent(window.location.search)
+    setIntent(found)
+    if (found) setInterval(BILLING_INTERVAL[found.interval])
+  }, [preview, inShell])
+  const intentPlan = intent ? (plans.data?.plans.find((p) => p.code === intent.plan && p.kind === 'base') ?? null) : null
+  const intentPrice = intent && intentPlan ? (intentPlan.prices.find((x) => x.interval === BILLING_INTERVAL[intent.interval]) ?? null) : null
 
-  async function buy(code: string) {
+  async function buy(code: string, period: 'monthly' | 'yearly' = interval) {
     setBusy(code)
     try {
       const back = `${window.location.origin}/reglages/abonnement`
-      window.location.assign(await billingClient.checkout(code, interval, { success: `${back}?merci=1`, cancel: back }))
+      window.location.assign(await billingClient.checkout(code, period, { success: `${back}?merci=1`, cancel: back }))
     } catch (e) {
       if (e instanceof BillingError && e.code === 'checkout_refused') await manage()
       else if (e instanceof BillingError && e.status === 403) toast.error(e.reason === 'plan_not_on_sale' ? t.billing.checkout.notOnSale : t.billing.checkout.adminOnly)
@@ -84,6 +96,28 @@ function Subscription() {
       </Link>
       <PageHeader title={w.title} subtitle={w.subtitle} />
       {preview && <PreviewPanel />}
+
+      {intent && intentPlan && intentPrice && !(intentPlan.is_current || intentPlan.code === state?.plan_code) && (
+        <Panel className="ring-2 ring-[var(--primary)]">
+          <p className="label-caps text-slate-500">{w.intent.label}</p>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-3xl font-black tracking-tighter">{intentPlan.name}</p>
+              <p className="mt-1 text-lg font-black tabular-nums">
+                {formatPrice(intentPrice.amount_cents, intentPrice.currency)}{' '}
+                <span className="text-base font-bold text-slate-400">{intentPrice.interval === 'yearly' ? t.billing.perYear : t.billing.perMonth}</span>
+              </p>
+            </div>
+            {isAdmin ? (
+              <Button variant="primary" size="lg" loading={busy === intentPlan.code} icon={<CreditCard className="h-5 w-5" />} onClick={() => buy(intentPlan.code, BILLING_INTERVAL[intent.interval])}>
+                {w.intent.continue}
+              </Button>
+            ) : (
+              <p className="rounded-2xl bg-slate-900/5 p-3 text-sm font-bold">{w.askAdmin}</p>
+            )}
+          </div>
+        </Panel>
+      )}
 
       {loading ? (
         <Skeleton className="h-40" />
@@ -186,7 +220,7 @@ function Subscription() {
                     {!inShell && price && !current && (
                       <div className="relative mt-6">
                         {isAdmin ? (
-                          <Button variant={highlight ? 'dark' : 'primary'} block size="lg" loading={busy === p.code} icon={<Sparkles className="h-4 w-4" />} onClick={() => buy(p.code)}>
+                          <Button variant={highlight ? 'dark' : intentPlan ? 'glass' : 'primary'} block size="lg" loading={busy === p.code} icon={<Sparkles className="h-4 w-4" />} onClick={() => buy(p.code)}>
                             {w.choose(p.name)}
                           </Button>
                         ) : (

@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
-import { AI_COSTS, FEATURE_LABELS, FEATURE_ORDER, MODULES } from '@/lib/billing/catalog'
-import { AI_OPERATIONS } from '@/lib/gateway/ai'
+import { FEATURE_LABELS, FEATURE_ORDER, MODULES } from '@/lib/billing/catalog'
+import { AI_FEATURE } from '@/lib/gateway/ai'
 
 interface Manifest {
   product: {
@@ -11,9 +11,10 @@ interface Manifest {
     channels: string[]
     default_plan_code: string
     application: { default_scopes: string[] }
+    enforce_denial?: boolean
     providers: { revenuecat?: { enabled: boolean; project: string; app_user_id_scope: string; posture: string; apps: Record<string, Record<string, string>>; iap_justification: { reason: string } } }
   }
-  features: Array<{ key: string; kind: string }>
+  features: Array<{ key: string; kind: string; unit?: string; unit_scale?: number }>
   plans: Array<{
     code: string
     kind: string
@@ -22,22 +23,29 @@ interface Manifest {
     version: number
     availability: { channels: string[]; audience: string; store_entitlement?: string }
     prices?: Array<{ interval: string; amount_cents: number; store_product_id?: string }>
-    entitlements: { features?: Record<string, boolean>; limits?: Record<string, number | null>; credits?: Array<{ feature: string }> }
+    entitlements: { features?: Record<string, boolean>; limits?: Record<string, number | null>; credits?: Array<{ feature: string; amount: number; period: string }> }
   }>
-  ai_operations: Array<{ key: string; capability: string; feature: string; credits: number }>
+  ai_operations?: unknown
 }
 
 const manifest = parse(readFileSync(resolve(__dirname, '../../../billing.manifest.yaml'), 'utf8')) as Manifest
 
 describe('billing.manifest.yaml ↔ code de l’app', () => {
-  it('chaque appel d’IA du code a son opération au manifeste, au même prix', () => {
-    const ops = Object.fromEntries(manifest.ai_operations.map((o) => [o.key, o.credits]))
-    expect(Object.keys(ops).sort()).toEqual([...AI_OPERATIONS].sort())
-    expect(ops).toEqual(AI_COSTS)
-    for (const o of manifest.ai_operations) {
-      expect(o.capability).toBe('assistant.ask')
-      expect(o.credits).toBeGreaterThan(0)
-      expect(manifest.features.find((f) => f.key === o.feature)?.kind).toBe('credit')
+  it('l’IA au coût réel : aucun prix fixe, une seule banque de crédits, débit jamais refusé, assistant:ask', () => {
+    // Pas de section ai_operations : rien n'a de prix fixe, chaque réponse est débitée de son coût réel.
+    expect(manifest.ai_operations).toBeUndefined()
+    const ai = manifest.features.find((f) => f.key === AI_FEATURE)
+    expect(ai).toMatchObject({ kind: 'credit', unit: 'credit' })
+    expect(ai?.unit_scale ?? 1).toBe(1)
+    expect(manifest.features.filter((f) => f.kind === 'credit')).toHaveLength(1)
+    // Une réponse lancée est payée en entier, même sous zéro : c'est la suivante qui est refusée.
+    expect(manifest.product.enforce_denial).toBe(false)
+    expect(manifest.product.application.default_scopes).toContain('assistant:ask')
+    // Chaque plan de base, gratuit compris, donne ses crédits d'IA chaque mois.
+    for (const p of manifest.plans.filter((x) => x.kind === 'base')) {
+      const grant = p.entitlements.credits?.find((c) => c.feature === AI_FEATURE)
+      expect(grant?.period, p.code).toBe('monthly')
+      expect(grant?.amount, p.code).toBeGreaterThan(0)
     }
   })
 
@@ -56,8 +64,11 @@ describe('billing.manifest.yaml ↔ code de l’app', () => {
     for (const p of manifest.plans) for (const k of Object.keys(p.entitlements.features ?? {})) expect(limits.has(k), `${p.code}.${k}`).toBe(false)
   })
 
-  it('aucun scope d’assistant ni de facturation pour les comptes en libre-service', () => {
-    for (const s of manifest.product.application.default_scopes) expect(s).not.toMatch(/^(assistant:|billing:|platform:|\*$)/)
+  it('aucun scope de facturation ni de plateforme pour les comptes en libre-service ; de l’assistant, seulement assistant:ask', () => {
+    for (const s of manifest.product.application.default_scopes) {
+      expect(s).not.toMatch(/^(billing:|platform:|\*$)/)
+      if (s.startsWith('assistant:')) expect(s).toBe('assistant:ask')
+    }
   })
 
   it('les features des plans existent au catalogue', () => {

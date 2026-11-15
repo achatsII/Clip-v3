@@ -16,6 +16,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { aiApi } from '@/lib/gateway/ai'
 import { dataApi } from '@/lib/gateway/data'
 import { filesApi } from '@/lib/gateway/files'
+import { guestPhotoSaver } from '@/lib/media/photos'
 import { canReadAloud, exchangeLink, guestClient, scopedId, type GuestLink } from '@/lib/gateway/guest'
 import { useMessages } from '@/lib/i18n'
 import { CATEGORIES } from '@/lib/model/catalog'
@@ -150,7 +151,8 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
         branding={open.json_data.branding}
         stationId={stationId}
         source="kiosk"
-        deps={{ data, ai: canReadAloud(link.permissions) || voiceAllowed ? ai : null, files }}
+        // Un lien (rôle guest) ne peut pas envoyer de fichier : ses photos vont dans la base.
+        deps={{ data, ai: canReadAloud(link.permissions) || voiceAllowed ? ai : null, files, photos: guestPhotoSaver(data, { instructionId: open.json_data.instructionId, stationId }) }}
         onExit={() => setOpen(null)}
         exitLabel={(words) => words.backToList}
         allowVoice={voiceAllowed}

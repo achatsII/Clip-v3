@@ -90,11 +90,22 @@ le poste (`linkVersion`). La version 2 ajoute, pour un lien de poste seulement, 
 personnes actives de l'équipe (`clip_operator`) : le lien d'une instruction peut sortir de l'usine,
 il ne montre jamais l'équipe. Tout lien peut aussi insérer le travail fait et les réponses de
 formation (`clip_execution`, `clip_training`), ouverts d'avance pour ne pas refaire les liens à
-l'étape suivante. Un poste au
+l'étape suivante. La version 3 ajoute l'insertion des photos prises au poste (`clip_photo`). Un poste au
 lien plus ancien affiche « Mettre à jour le lien » : un nouveau lien est créé, et l'ancien est rangé
 dans `linkFollow`. Une tablette ou un QR déjà imprimé qui ouvre l'ancien lien est envoyé sur le
 nouveau (`location.replace`) : rien à réimprimer. « Remplacer » (lien compromis) vide `linkFollow` :
 l'ancien lien ne mène plus nulle part.
+
+**Les photos prises sur un lien** (la preuve d'un relevé, la photo d'un « Pas clair ? ») ne passent pas
+par le stockage : la Gateway n'accepte l'envoi de fichiers que des rôles `user` et `admin`, jamais
+`guest`. La photo, réduite pour tenir en environ 250 Ko (`photoForDatabase`), va dans un document
+`clip_photo` à elle, et le relevé ou le retour ne garde qu'une référence courte, `clip-photo:<id>`
+(`guestPhotoSaver`, `src/lib/media/photos.ts`) : le registre et la liste des retours restent légers.
+L'image se relit à l'affichage (`StoredPhoto`, `usePhotoSrc`) ; l'appareil qui l'a prise la montre
+sans rien relire. La fiche imprimée reçoit l'image elle-même (`withPhotoImages`), et l'export CSV dit
+« Photo enregistrée dans CLIP ». Un lien d'avant la version 3 ne peut pas écrire `clip_photo` (403) :
+la photo va alors dans le relevé lui-même, en adresse `data:`, pour que rien ne casse avant la mise à
+jour du lien. Avec un compte, la photo part au stockage comme avant (`filesPhotoSaver`).
 
 ## 3. Le pont natif
 
@@ -130,7 +141,15 @@ fichier jusqu'à `media.discard`.
    6 mots, une ou deux phrases courtes qui ne répètent ni le titre ni ce que le média montre, 0 à 2
    points clés (le plus souvent aucun), une mise en garde seulement à l'étape où le risque se
    présente, jamais répétée ; les EPI et les consignes générales vont dans la fiche. Le standard d'une
-   nouvelle usine : 20 mots au plus par étape.
+   nouvelle usine : 20 mots au plus par étape, et l'instruction commence par le premier geste.
+   **La première étape** est au choix de l'usine (Réglages › Standard de rédaction, toggle
+   `firstStepChoice`, `src/lib/model/firstStep.ts`) : le premier geste (`work` : la consigne interdit
+   l'étape EPI que l'IA ajoute sinon par habitude ; les EPI et les mises en garde restent sur l'écran
+   « Avant de commencer » et dans le PDF), une étape de sécurité (`safety`), ou une étape que l'usine
+   décrit (`custom`, `firstStepText` ; une fiche de cadenassage garde son ordre). Un standard enregistré
+   avant ce choix n'a que `startWithSafety` : `firstStepOf` le lit tel quel, sans migration. Pour cette
+   raison, `firstStep` n'entre jamais dans `defaultStandard()` : `normalizeOrg` complète une usine
+   existante avec ce défaut et lui ferait perdre son ancien réglage.
 3. **Post-traitement** : validation des références et des temps, identifiants stables, vignettes des
    extraits vidéo (`/files/gifs/generate`, captures), rapprochement du poste deviné avec les postes
    existants.
@@ -179,7 +198,8 @@ une photo ou une page tirés d'une source.
 - Les opérations : `set_instruction`, `add_step` (avec un id choisi par l'IA, réutilisable plus bas),
   `update_step`, `delete_step`, `move_step`, `set_layout`, `set_media` (légende, verdict), `remove_media`,
   `clear_annotations` — pures et testées (`applyOp`) — et trois qui demandent une IA spécialisée :
-  `annotate` (une IA qui **voit** la photo place les marques demandées), `illustrate`, `visual`.
+  `annotate` (une IA qui **voit** la photo place les marques demandées), `illustrate` (à partir de la
+  photo de l'étape, ou de son texte quand elle n'en a pas), `visual`.
 - L'app les applique **une à une** (`runAgentOps`) : elle amène l'éditeur à l'étape, l'entoure, montre
   l'action en cours, puis passe à la suivante ; une action ratée n'arrête pas les autres. Tout le tour
   s'annule d'un geste (l'instruction d'avant est gardée).
@@ -313,6 +333,76 @@ Sans signe de vie depuis deux minutes (app fermée, téléphone en veille), la c
 « interrompue » : on la relance ici, ou on revoit les médias. Dans l'app mobile, l'écran reste
 allumé pendant la génération.
 
+### La génération au serveur (toggle `serverGeneration`, `src/lib/ai/serverJob.ts`)
+
+L'usine choisit où tourne l'IA (Réglages › Usine, « Génération par l'IA ») ; sans choix, sur
+l'appareil, comme avant. Au serveur, on peut fermer l'app pendant que l'IA écrit l'instruction.
+
+1. **L'appareil prépare** la requête AskAI v4 exactement comme pour lui-même (`prepareGeneration` :
+   vidéos chez Gemini par leur adresse, consignes, sources, schéma ; `importAsk` pour un document) et
+   la confie à `POST /api/v1/ai/job/start` (`aiApi.startJob`) : `appIdentifier: 'clip-v3'` choisit la
+   branche, `data.dataApp` dit l'application de connexion (`html` tant que CLIP partage `html`), et la
+   requête va dans `data.ask`. Avant, comme pour tout appel, l'accord de la personne et le solde des
+   crédits (facturation allumée). L'instruction note `generating.mode: 'server'`, l'identifiant du
+   travail et ce qu'il faut pour la terminer ailleurs (`generating.job` : les sources dans l'ordre,
+   la langue, l'usage).
+2. **n8n roule l'analyse.** La branche clip-v3 de Job_start crée le document `clip_job` (avec le
+   grant de l'appelant, que la Gateway pose depuis le jeton), se relance elle-même sans s'attendre
+   (`data.phase: 'run'`, `data.jobId`) et rend `record_id`. Ce deuxième passage relit `clip_job`,
+   marque l'étape `analyze` et attend `Job_Generate_CLIP_V3`, qui appelle Ask_AI_V4 directement (pas
+   le flux qui coupe les fichiers par lots de dix : une instruction se génère d'un seul appel) et lit
+   la réponse comme l'appareil (`aiApi.ask` : `parsed_json`, sinon le texte sans ses balises de code).
+   Il écrit ensuite `status: completed` avec `result.json`, le modèle et `result.billing.costs.cad`, ou
+   `status: failed` avec l'erreur. Les écritures restent dans Job_start, pas dans le sous-workflow :
+   les routes Mongo n'acceptent que les workflows de leur propriétaire, comme Job_start et
+   `Job_Analyse_CLIP` (V1). Chacune envoie tout `json_data`, repris du document relu, comme V1.
+3. **Un appareil termine.** `CreationWatcher` (posé une fois pour qui crée des instructions) relit
+   toutes les 10 s, jamais onglet caché, le travail de chaque création au serveur, quel que soit son
+   âge. Fini, le
+   premier appareil qui le voit pose le verrou `generating.finishing` (5 minutes ; relu pour savoir
+   qui l'a eu), débite le coût réel avec la clé du travail (`jobDebitKey` : deux appareils ne débitent
+   jamais deux fois), met la réponse en forme et finit comme sur l'appareil (vignettes, repères posés
+   sur les images, poste rapproché, brouillon enregistré), puis marque le travail `finalizedAt`. Raté,
+   il écrit l'erreur (`generationError.server`), et la relance se fait sur l'appareil.
+
+Une création au serveur ne dépend plus du téléphone qui l'a lancée : elle reste « en cours » tant
+que son travail n'est pas réglé, et le premier appareil ouvert la termine, même des jours plus tard
+(`creationOf`). Seul le travail peut la faire échouer (`jobOutcome`) : encore à l'étape de départ
+après 3 minutes, le serveur ne l'a jamais pris (`SERVER_PICKUP_MS`) ; ni fini ni raté et sans
+nouvelles du serveur depuis 30 minutes (son propre `heartbeatAt`, jamais celui du téléphone), il est
+perdu (`JOB_SILENCE_MS`). Le toggle `serverGeneration` ne décide que du lancement : un travail déjà
+parti se termine toujours, même si la configuration ne se lit pas. Le surveillant refait le tour à
+chaque relecture : une fin ratée, ou le verrou d'un appareil fermé en pleine fin, se reprend. En
+novembre 2026, la règle d'avant (« interrompue » 30 minutes après le dernier signe du téléphone)
+cachait le travail fini : app rouverte 34 minutes plus tard, l'écran disait « La création s'est
+interrompue » (`tests/creation-watcher.test.tsx`). Si
+`job/start` ne rend aucun travail, la génération tourne sur l'appareil avec la requête déjà prête ;
+un refus de facturation se montre tel quel. Le relais des champs de la requête est figé dans le nœud
+« Run AskAI V4 » de n8n : `JOB_RELAYED_FIELDS` le reflète, et un test échoue si la génération emploie
+un champ que la branche ne relaie pas.
+
+**Les gros fichiers partent par morceaux** (toggle `resumableUpload`, `src/lib/gateway/resumable.ts`).
+Dès 16 Mo, `files.upload` envoie le fichier en morceaux de 4 Mo par le protocole TUS de la Gateway
+(spec 10-files, §2.8.6 à §2.8.8), directement du navigateur : la Gateway montre ses en-têtes TUS au
+navigateur (CORS vérifié en QA le 2026-11-14), alors que Clip V1 devait faire passer chaque morceau
+par son serveur Vercel. Un morceau raté se renvoie seul, à partir de l'offset que la Gateway donne
+(une coupure en plein morceau laisse arriver une partie des octets) ; un réseau coupé s'attend
+(10 minutes au plus, la carte dit « En attente du réseau ») ; une session expirée se rafraîchit une
+fois. La session reste retenue 24 h sur l'appareil (clé : dossier, nom, taille, date du fichier) :
+« Réessayer », sur la carte d'un envoi raté comme dans l'import en lot, reprend où l'envoi s'était
+arrêté. À la fin, l'adresse publique vient du dernier morceau, sinon du statut ; si la Gateway a
+déjà rangé le fichier et fermé la session (404), c'est l'adresse annoncée à la création. Si la
+Gateway refuse ce mode (route absente, morceau refusé), le fichier part d'un bloc, comme avant. Les
+tests jouent contre une fausse Gateway TUS qui se comporte comme la vraie
+(`tests/resumable-upload.test.ts`).
+
+**Les envois ne retiennent plus.** « Générer » se touche pendant les envois de la capture : la
+génération part toute seule à leur fin (`CaptureSession.whenUploaded`), même si l'on a quitté
+l'écran entretemps. Dans la coquille iOS, les fichiers partent par une session d'envoi en
+arrière-plan (le défaut d'expo-file-system) : l'envoi continue quand l'app passe en arrière-plan ; la
+page reprend au retour. L'import en lot crée chaque instruction dès son document envoyé et confie
+son analyse au serveur (`startServerImport`) : la page peut se fermer une fois les envois finis.
+
 ### Capturer (« Nouvelle instruction », `CaptureBoard`)
 
 La page la plus importante, d'un seul écran au téléphone (« Créer = un geste », `VISION.md`). Au
@@ -414,7 +504,9 @@ navigation de l'app s'effacent (`useImmersive`, `src/lib/ui/immersive.ts`). Togg
   **outils** en tuiles, chacun ouvre sa fenêtre (`ToolsGrid`) : ce que le « … » range ailleurs. Une
   étape d'un bloc commun s'y lit sans se modifier, comme dans l'autre vue.
 - **Le média** se règle dans une fenêtre dans « Comme au poste » (`StepMediaEditor` : l'aperçu, les
-  médias de l'étape, puis Annoter, Vidéo | Image, « Avec l'IA », Retirer ; verdict, légende et
+  médias de l'étape, puis Annoter, Vidéo | Image, les deux outils de l'IA à découvert, « Illustrer
+  l'étape » (de son texte, même sans image ; « Illustrer cette image » part de l'image affichée) et
+  « Schéma de l'étape », Retirer ; verdict, légende et
   disposition sous « Plus d'options ») ; dans la fiche, la même chose dans sa carte, tout ouvert.
 - **Publier** : la fenêtre dit où l'instruction s'affichera et laisse choisir les postes à ce
   moment-là ; l'avis sur la génération par l'IA s'y demande, quand la personne a tout relu.
@@ -762,8 +854,8 @@ répertoire y mène.
   l'instruction complète ni toute la bibliothèque.
 - **L'IA** (`narrative.ts`) : elle reçoit le texte des blocs (`blocksText`, 15 lignes par tableau au
   plus) et rend l'essentiel, ce qu'il faut surveiller et des pistes, trois au plus chacun, par un
-  schéma JSON (`report_summary`, 10 crédits) ; une question sur le rapport coûte `report_question`
-  (5 crédits). Les deux passent par `aiApi.ask` (l'accord pour l'IA ; le débit par la plateforme une fois la facturation branchée). Si l'IA
+  schéma JSON (`report_summary`) ; une question sur le rapport passe par `report_question`. Les deux
+  passent par `aiApi.ask` (l'accord pour l'IA ; facturation allumée, le débit de leur coût réel, après). Si l'IA
   ne répond pas, l'analyse automatique (`autoNarrative`) dit les changements depuis avant. Une
   analyse disparaît quand la période, le lieu ou le quart change.
 - **Les droits** : le droit `stats` ; la revue de la semaine est ouverte à tous les plans
@@ -870,11 +962,17 @@ laissait des bandes noires, et le texte se lisait en défilant. Maintenant (`src
 
 ## 6. Facturation
 
-Catalogue dans `billing.manifest.yaml` (plans, crédits, limites, opérations d'IA et leur prix).
+Catalogue dans `billing.manifest.yaml` (plans, crédits, limites ; l'IA n'y a pas de prix fixe).
 Branchée derrière `NEXT_PUBLIC_BILLING_V2=1`, éteinte par défaut tant que les routes
-`/api/v2/billing/*` et `/api/v2/ai/ask` répondent `404`. Drapeau éteint : aucun écran de
-facturation, chaque appel d'IA part sur `/api/v4/assistant/ask`. Allumé : chaque appel passe par
-`/api/v2/ai/ask` avec la clé de son opération, et la plateforme débite.
+`/api/v2/billing/*` répondent `404`. Chaque appel d'IA part sur `/api/v4/assistant/ask`, drapeau
+allumé ou non. Allumé, il est facturé au coût réel, après : le solde de `ai_credits` relu avant
+(refus 402 à zéro, sans appel), puis le coût que rend la réponse (`billing.costs.cad`), converti en
+crédits au taux standard de la plateforme (`AI_CREDITS_PER_CAD`, `src/lib/config.ts`) et débité
+par `/api/v2/billing/consume` avec la clé de l'appel. Rien ne se prédit : aucun bouton ne montre de
+prix, et `CostChip` dit après coup ce qui a été débité. Une réponse lancée est payée en entier, même
+sous zéro (`enforce_denial: false`) ; un débit en panne se réessaie avec la même clé, puis va au
+journal. Au poste par lien public, l'IA passe par le jeton de service de l'usine : c'est l'usine qui
+paie (à vérifier en QA quand le drapeau s'allume).
 
 **Les leviers de vente.** La plateforme ne reçoit pas les limites `reported`. L'app compte donc
 les postes, les rédacteurs (tous les membres sauf les lecteurs, invitations comprises) et les

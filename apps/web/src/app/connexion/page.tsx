@@ -9,7 +9,8 @@ import { FieldError, Input, Label } from '@/components/ui/Field'
 import { errorText } from '@/components/ui/States'
 import { login, requestPasswordReset, signup } from '@/lib/gateway/auth'
 import { hasSession } from '@/lib/gateway/client'
-import { SELF_SERVICE } from '@/lib/config'
+import { parsePlanIntent, savePlanIntent, subscriptionPathFor } from '@/lib/billing/intent'
+import { BILLING_V2, SELF_SERVICE } from '@/lib/config'
 import { LANG_NAMES, LANGS, setLang, useLang, useMessages } from '@/lib/i18n'
 import { cn } from '@/lib/util/cn'
 
@@ -29,8 +30,21 @@ export default function ConnexionPage() {
   const [sent, setSent] = useState(false)
 
   useEffect(() => {
-    if (hasSession()) router.replace('/accueil')
+    if (!hasSession()) return
+    // Déjà connecté, venu du site avec un forfait : la page Abonnement, ce forfait présélectionné.
+    const intent = BILLING_V2 ? parsePlanIntent(window.location.search) : null
+    router.replace(intent ? subscriptionPathFor(intent) : '/accueil')
   }, [router])
+
+  // Venu du site : `?inscription=1` ouvre la création de compte (libre-service seulement), et le forfait
+  // choisi (`plan`, `interval`, validés contre le manifeste) se garde jusqu'à la page Abonnement.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    if (!SELF_SERVICE || q.get('inscription') !== '1') return
+    setMode('signup')
+    const intent = parsePlanIntent(q)
+    if (intent) savePlanIntent(intent)
+  }, [])
 
   async function submit(e: FormEvent) {
     e.preventDefault()

@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react'
 import { CHECK_ICONS } from '@/components/editor/CheckDialog'
 import { Trends } from '@/components/records/Trends'
 import { useSession } from '@/components/providers/Session'
+import { StoredPhoto } from '@/components/StoredPhoto'
 import { Button } from '@/components/ui/Button'
 import { Segmented } from '@/components/ui/Field'
 import { SearchField } from '@/components/ui/SearchField'
@@ -23,6 +24,7 @@ import { getLang, useMessages } from '@/lib/i18n'
 import { answerLimits, answerValue, doneBy, listExecutions } from '@/lib/model/executions'
 import { executionsCsv, trendsOf } from '@/lib/model/trends'
 import type { Execution } from '@/lib/model/types'
+import { withPhotoImages } from '@/lib/media/photos'
 import { executionSheet } from '@/lib/pdf/executionSheet'
 import { printHtml } from '@/lib/pdf/print'
 import { FALLBACK_TOGGLES } from '@/lib/toggleDefaults'
@@ -87,6 +89,7 @@ export default function RecordsPage() {
         verdict: (ok) => (ok === null ? '' : ok ? t.ok : t.bad),
         date: (iso) => csvDate(iso),
         station: (id) => (id ? (stationName.get(id) ?? '') : ''),
+        photo: t.photoInApp,
       })
       downloadCsv(t.exportFile(csvDate(new Date().toISOString(), false)), csv)
     } catch (err) {
@@ -179,12 +182,15 @@ export default function RecordsPage() {
 
 /** Un travail : qui, quand, où, puis chaque relevé, son verdict et ce qui a été fait devant un écart. */
 function ExecutionDetail({ doc, stationName, onClose }: { doc: Doc<Execution>; stationName: string | null; onClose: () => void }) {
+  const { data } = useSession()
   const words = useMessages()
   const t = words.records
   const e = doc.json_data
   const seconds = Math.max(0, Math.round((Date.parse(e.finishedAt) - Date.parse(e.startedAt)) / 1000))
   const duration = seconds > 0 ? formatDuration(seconds) : null
-  const print = () => void printHtml(executionSheet(e, t, { stationName, when: formatDateTime(e.finishedAt), printedAt: formatDateTime(new Date().toISOString()), duration, lang: getLang() }))
+  // Les photos prises sur un lien sont dans la base : on les relit avant d'imprimer (le PDF ne relit rien).
+  const print = () =>
+    void withPhotoImages(e, data).then((full) => printHtml(executionSheet(full, t, { stationName, when: formatDateTime(e.finishedAt), printedAt: formatDateTime(new Date().toISOString()), duration, lang: getLang() })))
   return (
     <Modal
       open
@@ -250,18 +256,14 @@ function ExecutionDetail({ doc, stationName, onClose }: { doc: Doc<Execution>; s
                     {a.photos && a.photos.length > 1 && (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {a.photos.map((u) => (
-                          <a key={u} href={u} target="_blank" rel="noreferrer">
-                            <img src={u} alt={a.label} className="h-16 w-16 rounded-xl object-cover" />
-                          </a>
+                          <StoredPhoto key={u} value={u} data={data} alt={a.label} className="h-16 w-16 rounded-xl object-cover" />
                         ))}
                       </div>
                     )}
                   </div>
                   <div className="shrink-0 text-right">
                     {a.kind === 'photo' && typeof a.value === 'string' && !(a.photos && a.photos.length > 1) ? (
-                      <a href={a.value} target="_blank" rel="noreferrer">
-                        <img src={a.value} alt={a.label} className="h-16 w-16 rounded-xl object-cover" />
-                      </a>
+                      <StoredPhoto value={a.value} data={data} alt={a.label} className="h-16 w-16 rounded-xl object-cover" />
                     ) : (
                       <p className="text-lg font-black tabular-nums">{answerValue(a, t)}</p>
                     )}

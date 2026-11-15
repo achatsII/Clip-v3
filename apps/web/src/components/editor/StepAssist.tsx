@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Field'
@@ -62,7 +61,7 @@ export function useStepAssist({ content, step, onApply }: { content: Instruction
                 setCustomText('')
               }}
             >
-              {t.editor.assist.ask} <AiCost operation="step_assist" />
+              {t.editor.assist.ask}
             </Button>
           </>
         }

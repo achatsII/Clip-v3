@@ -62,6 +62,7 @@ export const records: typeof Fr = {
   export: 'Export (CSV)',
   exportHead: ['Finished on', 'Instruction', 'Station', 'Done by', 'Step', 'Check', 'Value', 'Unit', 'Minimum', 'Maximum', 'Verdict', 'Detail', 'What was done', 'Authorized by'],
   exportFile: (date: string) => `records-log-${date}.csv`,
+  photoInApp: 'Photo saved in CLIP',
   teaser: {
     title: 'Trends and export with the Records module',
     text: 'Each measurement over time with its limits, and the log as CSV for quality and audits.',

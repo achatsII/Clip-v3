@@ -25,6 +25,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   réécriture complète garde les champs qu'on ne connaît pas.
 - **Liens publics** (poste, instruction) : la portée se bâtit côté serveur dans
   `src/lib/server/scope.ts`, jamais à partir du navigateur. Un lien ne lit que `clip_published`.
+  Une photo prise sur un lien (relevé, « Pas clair ? ») va, réduite, dans un document `clip_photo`
+  que le relevé ou le retour désigne par `clip-photo:<id>` (`src/lib/media/photos.ts` ; `StoredPhoto`
+  l'affiche, le PDF et le CSV la résolvent) ; un lien d'avant la portée v3 la range dans le relevé
+  lui-même (`data:`).
 - **Espace Découvrir** (`/decouvrir`, [`docs/DECOUVRIR.md`](docs/DECOUVRIR.md)) : les vidéos et le conseiller
   pour les prospects, à part de l'app (sa propre session, le cookie `clip_decouvrir` ; rien dans les données de
   Clip). Public par défaut ; `DECOUVRIR_ACCES=sandboxes` le ferme derrière Sandboxes (`src/proxy.ts`,
@@ -40,6 +44,50 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (Vercel, serveur), le temps réel annonce début, étapes et fin sur le canal de l'organisation
   (`/api/realtime/token`, `src/lib/realtime`) : l'autre appareil se met à jour aussitôt. Les images
   générées passent par OpenAI, niveau mid (`IMAGE_MODEL`, repli Google si la passerelle refuse).
+- **Génération au serveur** (toggle `serverGeneration`, choix de l'usine `OrgSettings.generation.server`
+  dans Réglages › Usine ; sans choix, sur l'appareil) : la requête AskAI v4 se prépare une seule fois
+  pour les deux chemins (`prepareGeneration`, `importAsk`) et part à `POST /api/v1/ai/job/start`
+  avec `appIdentifier: 'clip-v3'`, jamais de grant dans le corps. Dans n8n, la branche clip-v3 de
+  Job_start crée `clip_job` avec les droits de l'appelant, répond et se relance elle-même sans
+  s'attendre (`data.phase: 'run'`) : ce deuxième passage roule `Job_Generate_CLIP_V3` (Ask_AI_V4 tel
+  quel, la réponse lue comme `aiApi.ask` la lit) et écrit l'état, le résultat et son coût dans
+  `clip_job`. L'appareil peut alors se fermer ; le premier
+  appareil ouvert qui voit le travail fini termine l'instruction avec le code de l'app
+  (`finishServerGeneration` dans `CreationWatcher` : verrou `generating.finishing`, même fin que sur
+  l'appareil) et débite le coût réel avec la clé du travail (`jobDebitKey`, une seule fois). Une
+  création au serveur ne se juge jamais au signe de vie du téléphone : elle reste en cours jusqu'à ce
+  que son travail soit réglé, même des jours plus tard, et seul le travail la fait échouer (pas pris
+  en 3 min, ou muet 30 min selon sa propre horloge, `jobOutcome`). Le toggle ne décide que du
+  lancement : un travail parti se termine toujours. Si le
+  serveur ne prend pas la génération, elle tourne sur l'appareil ; après un échec au serveur, la
+  relance aussi. « Générer » se touche pendant les envois : la génération part toute seule à leur fin
+  (`whenUploaded`). L'import en lot crée chaque instruction et confie son analyse au serveur
+  (`startServerImport`). **Une modification de la façon d'analyser se reporte dans la branche
+  clip-v3** quand elle change ce que n8n fait : un nouveau champ de la requête s'ajoute au nœud
+  « Run AskAI V4 » (`JOB_RELAYED_FIELDS`, un test échoue sinon), une passe d'IA de plus, un
+  traitement nouveau au serveur ou une autre lecture de la réponse (`aiApi.ask`) se reporte dans
+  `Job_Generate_CLIP_V3` (nœud « Shape analysis result »), et ce qui s'écrit de plus dans
+  `clip_job`, dans la branche de Job_start. Les consignes, le schéma et les fichiers passent tels
+  quels : les changer ne demande rien dans n8n.
+- **Gros fichiers** (toggle `resumableUpload`) : dès 16 Mo, un fichier du navigateur part par
+  morceaux de 4 Mo, directement à la Gateway (TUS, `src/lib/gateway/resumable.ts`).
+  - Un morceau raté se renvoie seul, à partir de ce que la Gateway a vraiment reçu.
+  - Réseau coupé, l'envoi attend son retour (10 minutes au plus) et la carte le dit.
+  - La session reste 24 h sur l'appareil : « Réessayer » (capture et import en lot) reprend où
+    l'envoi s'était arrêté.
+  - Si la Gateway refuse ce mode, le fichier part d'un bloc (URL présignée), comme avant.
+  - Clip V1 fait passer chaque morceau par son serveur Vercel (4,5 Mo par requête au plus) ; ici,
+    rien n'y transite.
+  - Dans la coquille, un média part d'un bloc par la session d'envoi en arrière-plan d'iOS, qui
+    continue quand l'app passe en arrière-plan. La caméra filme en 720p à 2,5 Mbit/s ; une vidéo
+    de la galerie part telle quelle, puis la Gateway la ramène en 720p.
+- **Première étape** (toggle `firstStepChoice`, Réglages › Standard de rédaction) : chaque usine
+  choisit par quoi commence une instruction générée : le premier geste (défaut d'une usine neuve ; les
+  EPI et les mises en garde s'affichent déjà sur « Avant de commencer »), une étape de sécurité, ou
+  une étape qu'elle décrit (`WritingStandard.firstStep`, `firstStepText`, `src/lib/model/firstStep.ts`).
+  Un standard d'avant n'a que `startWithSafety` : `firstStepOf` le lit tel quel, et `firstStep` n'entre
+  jamais dans `defaultStandard()` (sinon `normalizeOrg` changerait les usines existantes). La consigne
+  part telle quelle au serveur : rien à changer dans n8n.
 - **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
   (`src/lib/model/translation.ts`), médias compris : légendes, annotations, texte des schémas, et
   en option les images refaites avec leur texte traduit. Un média traduit nomme l'original (`of`).
@@ -157,6 +205,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 
 ## Pièges déjà rencontrés
 
+- La Gateway refuse l'envoi de fichiers au rôle `guest` d'un lien public (routes
+  `files/upload/generate/presigned-url` et `files/upload/direct` : `user` et `admin` seulement) : une
+  photo prise au poste passe par la base (`guestPhotoSaver`), jamais par `files.upload`.
 - `cn` ne fusionne pas les classes : sur un composant qui pose déjà `inline-flex`, cacher avec
   `max-sm:hidden`, pas avec `hidden sm:inline-flex`.
 - N'écrire que `backdrop-filter` : avec `-webkit-backdrop-filter` à côté, Lightning CSS ne garde que la
@@ -178,8 +229,14 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   an integer between 0 and 10000 ») et l'écran tombe en erreur. Au-delà, paginer avec `skip`
   (`loadEvents`, `src/lib/reports/load.ts`) ; le test se fait contre une fausse Gateway qui refuse
   comme la vraie (`tests/reports-load.test.ts`).
-- La valeur interne d'un crédit d'IA, en argent, ne s'écrit nulle part dans le dépôt (code, docs,
-  commits) : les prix se disent en crédits.
+- Le prix d'un crédit d'IA en argent ne s'affiche jamais : ni à l'écran, ni dans les textes, ni sur le
+  site ; les prix se disent en crédits. Il ne vit qu'à un endroit du code, la constante
+  `AI_CREDITS_PER_CAD` (`src/lib/config.ts`), le taux standard de la plateforme.
+- Dans n8n, les routes Mongo (`Route_MongoDB_*`) n'acceptent que les workflows de leur propriétaire,
+  et un workflow créé par le MCP n8n n'en est pas : son appel est refusé (« The sub-workflow … cannot
+  be called by this workflow »). Comme V1 (`Job_Analyse_CLIP`), on écrit depuis un workflow de ce
+  propriétaire : Job_start, qui se relance lui-même pour ne pas faire attendre la Gateway. Chaque
+  écriture envoie tout `json_data`, repris du document relu, comme V1.
 
 ## Facturation
 
@@ -201,43 +258,29 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,
   `full_export`, `shared_blocks`, oui ou non selon le plan. Les opérateurs et les lecteurs ne se comptent jamais.
-- Le prix en crédits de chaque opération d'IA, déclaré dans `ai_operations` du manifeste et débité
-  par la plateforme (même liste et mêmes prix dans `AI_COSTS` de `src/lib/billing/catalog.ts`) :
-
-  | Opération (clé envoyée) | Ce qu'elle fait | Crédits |
-  |---|---|---|
-  | `generate_s` | Générer une instruction à partir de peu de médias | 150 |
-  | `generate_m` | Générer à partir de médias moyens | 300 |
-  | `generate_l` | Générer à partir de beaucoup de médias | 750 |
-  | `import_s` | Convertir un document court (PDF, Word) | 60 |
-  | `import_l` | Convertir un document long | 120 |
-  | `step_assist` | Retoucher une étape (raccourcir, clarifier, ajouter un point clé, traduire les textes d'un média…) | 5 |
-  | `translate` | Traduire une instruction : ses textes, les annotations, les légendes et le texte des schémas | 30 |
-  | `translate_image` | Refaire une image avec son texte traduit (option de la traduction, ou l'assistant ; l'image comprise) | 70 |
-  | `annotate` | Placer des flèches et des cercles sur une photo | 5 |
-  | `illustrate` | Illustration générée à partir d'une photo (l'image comprise) | 70 |
-  | `ask_question` | Répondre à une question d'opérateur sur l'instruction | 2 |
-  | `standard_agent` | Rédiger le standard de rédaction à partir d'une description | 5 |
-  | `edit_agent` | Un échange avec l'assistant d'édition (il rend les modifications à faire) | 20 |
-  | `visual` | Schéma généré : une page HTML autonome (SVG, dessin, vue 3D) | 60 |
-  | `look_s` | L'assistant d'édition revoit des sources d'origine (peu de médias), seulement si la demande l'exige | 60 |
-  | `look_m` | Revoir des sources moyennes | 120 |
-  | `look_l` | Revoir beaucoup de médias | 300 |
-  | `quiz` | Préparer les questions de formation d'une instruction (3 à 5) | 10 |
-  | `report_summary` | Commenter un rapport : l'essentiel, à surveiller, des pistes (les chiffres viennent du code) | 10 |
-  | `report_question` | Répondre à une question sur un rapport | 5 |
-
-  La taille d'une génération ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) se décide sur
-  la durée des vidéos et des notes vocales, le nombre de photos et de pages ; au-delà de la plus grande
-  taille, l'app demande de séparer l'instruction.
-- L'app ne déclare jamais une quantité consommée : le serveur compte et débite. Drapeau allumé, un
-  appel à l'assistant d'IA passe par `POST /api/v2/ai/ask` avec `operation` et une
-  `idempotency_key` (`aiApi` de `src/lib/gateway/ai.ts`), jamais par `/api/v4/assistant/ask` ; drapeau
-  éteint, l'appel d'avant ne change pas.
+- **L'IA au coût réel** : aucun prix fixe, rien ne se prédit. Pas de section `ai_operations` au
+  manifeste, aucun prix sur un bouton : chaque réponse de l'IA est débitée, une fois terminée, de ce
+  qu'elle a vraiment coûté (`aiApi.ask`, `src/lib/gateway/ai.ts`, l'askAi du skill `billing`).
+  Drapeau allumé : le solde de `ai_credits` est relu (à zéro ou moins, refus 402 sans appel ; hors du
+  plan, 403), l'appel part sur `/api/v4/assistant/ask`, puis le coût réel que rend la réponse
+  (`billing.costs.cad`, `billing_merged` pour plusieurs lots) est converti en crédits, arrondi au
+  crédit supérieur, et débité par `POST /api/v2/billing/consume` avec la clé de l'appel. Une réponse
+  lancée est payée en entier, même sous zéro (`enforce_denial: false`) ; une réponse en échec qui rend
+  un coût est débitée de ce coût ; sans coût (délai, coupure), rien n'est débité. Un débit en panne se
+  réessaie avec la même clé, puis va au journal (`onAiDebitError`, `clip_event` avec `debitFailed`) :
+  la personne garde sa réponse. Après coup, l'écran dit ce qui a été débité (`CostChip`, « IA · 23
+  crédits utilisés »). Compromis accepté : c'est l'app qui débite, une app modifiée pourrait sauter le
+  débit. Drapeau éteint, l'appel d'avant ne change pas et rien n'est débité.
+- **Le taux** (crédits par dollar de coût réel) est la constante `AI_CREDITS_PER_CAD`
+  (`src/lib/config.ts`), le taux standard de la plateforme ; rien à régler dans Vercel. Dans l'aperçu,
+  `CostChip` montre aussi ce qu'une réponse aurait coûté, sans rien débiter. Le nom de chaque usage (`AI_OPERATIONS` : `generate_m`,
+  `report_summary`…) va au registre avec le coût, le modèle et les tokens. La taille d'une génération
+  ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) ne fixe plus de prix : au-delà de la
+  plus grande taille, l'app demande toujours de séparer l'instruction.
 - Les routes de facturation passent par la passerelle Octopus, avec le jeton de l'utilisateur et
   `X-Product: clip-v3` (`src/lib/billing/client.ts`) : `GET /api/v2/billing/context` (plan, état,
-  crédits restants), `POST /api/v2/billing/check` (droit à une feature), `POST /api/v2/ai/ask` (une
-  opération d'IA débitée par la plateforme), `GET /api/v2/billing/plans` (page des plans),
+  crédits restants), `POST /api/v2/billing/check` (droit à une feature), `POST /api/v2/billing/consume`
+  (le débit du coût réel d'une réponse de l'IA), `GET /api/v2/billing/plans` (page des plans),
   `POST /api/v2/billing/checkout` (paiement Stripe, réservé à l'administrateur de l'organisation) et
   `POST /api/v2/billing/portal` (gérer son abonnement).
 - Le droit d'utiliser une feature se vérifie côté serveur, au moment de rendre le service. Une
@@ -250,19 +293,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`src/components/billing/Billing.tsx`, alimentée par `src/lib/billing/bus.ts`) et par la page
   `/reglages/abonnement` : 402 faute de crédits, 403 faute de droit. Il ne se transforme jamais en
   erreur 500 et ne déclenche aucun autre appel ; rien n'est débité.
-- Une nouvelle opération qui appelle un modèle, transcrit, ou traite une vidéo se propose à la
-  facturation dès son écriture (skill `billing`). Restent ouverts sans débit, leur coût compté dans
-  les opérations qui les déclenchent : la génération d'image (`ai:generate_image`, dans
-  `illustrate` et `translate_image`), la transcription des notes (`files:transcribe`) et le traitement des vidéos
-  (`files:process*`, dans les générations) et le montage de la vidéo des étapes
-  (`files/videos/compose`, un par publication où un extrait a changé). Restent aussi ouverts, sans débit à la minute, la
+- Un nouvel appel à l'assistant passe par `aiApi.ask`, sans exception : un appel direct à
+  `/api/v4/assistant/ask` ne serait pas débité. Seul l'assistant rend un coût : restent ouverts sans
+  débit la génération d'image (`ai:generate_image`, dans `illustrate` et `translate_image`), la
+  transcription des notes (`files:transcribe`), le traitement des vidéos (`files:process*`) et le
+  montage de la vidéo des étapes (`files/videos/compose`, un par publication où un extrait a changé). Restent aussi ouverts, sans débit à la minute, la
   lecture à voix haute et l'assistant vocal, tous deux par la voix en direct (`ai:live`). La lecture
   (`LiveSpeaker`, `src/lib/liveSpeech.ts`) est ouverte à tous, liens publics compris. L'assistant
   est réservé au plan Usine par la feature `voice_assistant`, et sur un lien public au poste qui l'a
   demandé (`assistant:ask`).
 - Les libellés des features (clé → texte, en français et en anglais) vivent dans `FEATURE_LABELS` de
-  `src/lib/billing/catalog.ts` ; `tests/billing-manifest.test.ts` échoue si une feature ou une
-  opération du manifeste n'y est pas, ou si un prix diffère.
+  `src/lib/billing/catalog.ts` ; `tests/billing-manifest.test.ts` échoue si une feature du manifeste
+  n'y est pas, ou si l'IA retrouve un prix fixe (`ai_operations`).
 - Le branchement, app web : le drapeau public `NEXT_PUBLIC_BILLING_V2` (éteint par défaut) ; la page
   `/reglages/abonnement` (introuvable sans le drapeau ni l'aperçu ; ouverte par « Abonnement et crédits » du
   menu et par la pastille de crédits), avec le paiement et le portail Stripe ; la fenêtre des

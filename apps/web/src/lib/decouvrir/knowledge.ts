@@ -87,13 +87,18 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   format, démarrage et arrêt) et devine son poste, rapproché des postes existants.
 - Ce que les sources ne tranchent pas devient au plus quatre questions (la pastille « à vérifier »), avec des
   réponses proposées ; les réponses corrigent l'instruction.
-- Le standard de rédaction de l'usine guide chaque génération (Réglages › Standard de rédaction : toujours
-  commencer par la sécurité, mots au plus par étape, ton, règles, vocabulaire de l'usine ; « Décrire à
-  l'IA » le rédige à partir d'une description). Sous une instruction générée, « Le résultat vous
-  convient ? » : ce qui manque guide les générations suivantes (« Ce que l'IA a appris de vos avis »).
+- Le standard de rédaction de l'usine guide chaque génération (Réglages › Standard de rédaction : ce par quoi
+  commence chaque instruction — le premier geste, une étape de sécurité ou une étape que l'usine décrit —,
+  mots au plus par étape, ton, règles, vocabulaire de l'usine ; « Décrire à l'IA » le rédige à partir d'une
+  description). Les EPI et les mises en garde s'affichent avant la première étape, même sans étape de
+  sécurité. Sous une instruction générée, « Le résultat vous convient ? » : ce qui manque guide les
+  générations suivantes (« Ce que l'IA a appris de vos avis »).
 - La génération tourne dans l'appareil qui la lance et se voit sur les autres (« En création ») ; au
   navigateur, on peut quitter l'écran tant que l'onglet reste ouvert. Si l'appareil s'éteint, la création est
   « interrompue » et se relance d'un geste ; les médias sont gardés.
+- Au choix de l'usine (Réglages › Usine › « Génération par l'IA » › « Sur le serveur »), l'IA écrit
+  l'instruction sur le serveur : on peut fermer l'app dès que la génération est partie. Au retour, même des
+  heures plus tard, l'instruction se termine en quelques secondes sur le premier appareil ouvert.
 - Rien n'est publié sans un geste humain : l'IA propose, une personne relit et publie.
 
 ## 3. Retoucher, annoter, illustrer
@@ -115,8 +120,9 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - « Annoter l'image » : crayon, surligneur, flèche, ligne, distance (une cote : « 12 mm »), cercle, cadre,
   texte, numéro, icônes (danger, gants, cadenas, sens horaire…) et flou (cacher un visage, un nom, un écran).
   « Annoter par IA » place les flèches et les cercles sur ce qu'il faut voir.
-- « Avec l'IA » : une illustration à partir de la photo, ou un schéma de l'étape (vue de face, de dessus, en
-  coupe ou en 3D, avec très peu de mots).
+- Sous le média, les outils de l'IA à découvert : « Illustrer l'étape », une illustration tirée du texte de
+  l'étape, même quand elle n'a encore aucune image (« Illustrer cette image » part de la photo affichée), et
+  « Schéma de l'étape » (vue de face, de dessus, en coupe ou en 3D, avec très peu de mots).
 - Jusqu'à six médias par étape, disposés « Un à la fois », « À faire / À éviter » côte à côte, ou en « Grille ».
 - Annuler et rétablir (Ctrl+Z) ; l'historique (versions publiées et points de retour du brouillon) pour
   revenir en arrière ; l'édition en direct entre appareils (ce qui change sur le téléphone s'affiche sur

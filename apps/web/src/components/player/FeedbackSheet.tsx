@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import type { DataApi } from '@/lib/gateway/data'
-import type { FilesApi } from '@/lib/gateway/files'
-import { compressImage } from '@/lib/media/image'
+import type { PhotoSaver } from '@/lib/media/photos'
 import { FEEDBACK_KINDS } from '@/lib/model/catalog'
 import { createFeedback } from '@/lib/model/repo'
 import { notifyEvent } from '@/lib/notify'
@@ -23,7 +22,7 @@ export function FeedbackSheet({
   onClose,
   t,
   data,
-  files,
+  photos,
   base,
   operatorName,
   notify,
@@ -33,7 +32,8 @@ export function FeedbackSheet({
   /** Les mots du lecteur, dans la langue choisie au poste. */
   t: PlayerStrings
   data: DataApi
-  files: FilesApi | null
+  /** Enregistre la photo : au stockage avec un compte, dans la base sur un lien public. */
+  photos: PhotoSaver | null
   base: Omit<Feedback, 'createdAt' | 'status' | 'kind' | 'comment' | 'photoUrl' | 'authorName'>
   /** La personne identifiée au poste : son nom signe le retour. */
   operatorName?: string
@@ -74,10 +74,7 @@ export function FeedbackSheet({
     setError(null)
     try {
       let photoUrl: string | null = null
-      if (photo && files) {
-        const { blob } = await compressImage(photo)
-        photoUrl = (await files.upload(blob, photo.name, 'feedback')).url
-      }
+      if (photo && photos) photoUrl = await photos(photo, photo.name, 'feedback')
       await createFeedback(data, { ...base, kind, comment: comment.trim() || undefined, photoUrl, authorName: name.trim() || null })
       if (kind === 'danger' && notify) void notifyEvent({ kind: 'danger', instruction: base.instructionTitle, who: name.trim(), text: comment.trim() }, notify)
       try {
@@ -124,7 +121,7 @@ export function FeedbackSheet({
               <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t.feedbackComment} rows={3} />
               <div className="flex gap-2">
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t.feedbackName} className="flex-1" />
-                {files && (
+                {photos && (
                   <Button onClick={() => input.current?.click()} icon={<Camera className="h-4 w-4" />}>
                     {photo ? '✓' : t.feedbackPhoto}
                   </Button>

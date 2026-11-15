@@ -5,6 +5,7 @@ import { Check, ExternalLink, Inbox, MessageSquareWarning, X } from 'lucide-reac
 import Link from 'next/link'
 import { useState } from 'react'
 import { useSession } from '@/components/providers/Session'
+import { StoredPhoto } from '@/components/StoredPhoto'
 import { Button } from '@/components/ui/Button'
 import { Segmented } from '@/components/ui/Field'
 import { SearchField } from '@/components/ui/SearchField'
@@ -111,11 +112,7 @@ export default function FeedbackPage() {
                   </p>
                   {j.resolution && <p className="mt-1 text-xs font-bold text-emerald-600">{j.resolution}</p>}
                 </div>
-                {j.photoUrl && (
-                  <a href={j.photoUrl} target="_blank" rel="noreferrer" className="shrink-0">
-                    <img src={j.photoUrl} alt={t.photo} className="h-20 w-28 rounded-2xl object-cover" />
-                  </a>
-                )}
+                {j.photoUrl && <StoredPhoto value={j.photoUrl} data={data} alt={t.photo} className="h-20 w-28 rounded-2xl object-cover" />}
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Link href={`/instructions/${j.instructionId}?etape=${j.stepId ?? ''}&retour=${f._id}`} className="btn-press bg-gradient-primary shadow-primary inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-black text-white">
                     <ExternalLink className="h-4 w-4" /> {t.fix}

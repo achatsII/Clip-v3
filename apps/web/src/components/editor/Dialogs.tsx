@@ -2,7 +2,6 @@
 
 import { Bot, Copy, History, Languages, Link2, Loader2, RotateCcw, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { AiCost } from '@/components/billing/AiCost'
 import { QrCode } from '@/components/QrCode'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -291,7 +290,7 @@ export function TranslateDialog({ open, onClose, content, onTranslated }: { open
             label={t.images.label}
             description={
               <>
-                {t.images.hint(imageCount)} <AiCost operation="translate_image" />
+                {t.images.hint(imageCount)}
               </>
             }
           />
@@ -320,7 +319,6 @@ export function TranslateDialog({ open, onClose, content, onTranslated }: { open
         }}
       >
         {busy && progress ? (progress.phase === 'text' ? t.progress.text : t.progress.images(progress.done, progress.total)) : existing.includes(lang) ? t.update : t.translate}
-        {!busy && <AiCost operation="translate" />}
       </Button>
       <p className="mt-3 text-xs font-medium text-slate-400">{t.note}</p>
     </Modal>

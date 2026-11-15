@@ -33,6 +33,10 @@ export const capture = {
     tooBig: 'C’est beaucoup pour une seule instruction : séparez-la en plusieurs.',
     ready: (n: number) => `${n.toLocaleString('fr-CA')} note${n > 1 ? 's' : ''} prête${n > 1 ? 's' : ''}. L’IA va ${n > 1 ? 'les ' : 'l’'}analyser.`,
     generate: 'Générer l’instruction',
+    /** « Générer » pendant les envois : la génération part toute seule à la fin. */
+    generateQueued: 'Générer à la fin des envois',
+    queuedHint: 'La génération partira toute seule à la fin des envois. Vous pouvez quitter cet écran.',
+    queuedStarted: 'Les envois sont finis : la génération est partie.',
     dropFiles: 'Déposez vos fichiers',
     noteTitle: 'Note écrite',
     addNote: 'Ajouter la note',
@@ -94,6 +98,7 @@ export const capture = {
       import: 'Préparation sur le téléphone (téléchargement d’iCloud au besoin)…',
       prepare: 'Préparation…',
       upload: 'Envoi…',
+      offline: 'En attente du réseau… l’envoi reprendra tout seul',
       optimize: 'Optimisation de la vidéo…',
       transcribe: 'Transcription…',
       convert: 'Conversion en PDF…',
@@ -130,7 +135,6 @@ export const capture = {
   autoAnnotate: {
     label: 'Annoter les images automatiquement',
     hint: 'L’IA encercle ce qu’il faut regarder sur chaque image figée ou photo qui en a besoin, sur l’image elle-même. Jamais sur un extrait vidéo.',
-    perImage: (credits: string) => `${credits} par image annotée`,
   },
   progress: {
     /** Les étapes : leur clé s'écrit dans l'instruction, leur libellé se lit sur chaque appareil. */
@@ -162,6 +166,12 @@ export const capture = {
     keepAppOpen: 'Laissez l’app ouverte jusqu’à la fin : l’écran reste allumé. Vous pouvez suivre sur l’ordinateur, elle s’y affichera dès qu’elle sera prête.',
     canLeave: 'Vous pouvez quitter cet écran : l’instruction s’enregistre toute seule tant que l’onglet reste ouvert, et se voit sur vos autres appareils.',
     failed: 'La génération a échoué.',
+    /** La génération au serveur (toggle `serverGeneration`). */
+    serverCanClose: 'Vous pouvez fermer l’app : l’IA continue sur le serveur. À votre retour, l’instruction se termine en quelques secondes, sur n’importe quel appareil.',
+    serverRemote: (from: string) => `${from}. L’IA continue sur le serveur : l’instruction s’affichera ici dès qu’elle sera prête.`,
+    serverFailed: 'L’IA n’a pas pu écrire l’instruction sur le serveur. Relancez-la : vos médias sont gardés.',
+    serverNotTaken: 'Le serveur n’a pas pris la génération. Relancez-la : elle partira sur cet appareil.',
+    serverLost: 'La génération au serveur est introuvable. Relancez-la : vos médias sont gardés.',
   },
   /** La taille d'une génération (`generationTier`). */
   tiers: { short: 'courte', medium: 'moyenne', long: 'longue' },

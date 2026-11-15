@@ -31,12 +31,15 @@ export interface CaptureSnapshot {
 }
 
 type Deps = { data: DataApi; files: FilesApi; actor: Actor }
+type IngestJob = (onProgress: (stage: IngestStage, ratio?: number) => void) => Promise<Source>
 
 export class CaptureSession {
   private listeners = new Set<() => void>()
   private saving: Promise<void> = Promise.resolve()
   private creating: Promise<string> | null = null
   private snap: CaptureSnapshot
+  /** Le travail de chaque envoi en cours ou raté : « Réessayer » le relance (un gros fichier reprend où il était). */
+  private jobs = new Map<string, IngestJob>()
 
   constructor(
     private deps: Deps,
@@ -101,10 +104,12 @@ export class CaptureSession {
 
   /**
    * L'ordre de prise : chaque ajout reçoit un rang à son départ, et un envoi qui finit avant un autre
-   * parti plus tôt ne passe pas devant lui (les photos d'une série restent dans l'ordre du déclic).
+   * parti plus tôt ne passe pas devant lui (les photos d'une série restent dans l'ordre du déclic). Un
+   * envoi relancé (« Réessayer ») garde son rang.
    */
   private nextRank = 0
   private rankOf = new Map<string, number>()
+  private pendingRank = new Map<string, number>()
 
   private placed(source: Source, rank: number): Source[] {
     this.rankOf.set(source.id, rank)
@@ -113,22 +118,43 @@ export class CaptureSession {
     return at === -1 ? [...list, source] : [...list.slice(0, at), source, ...list.slice(at)]
   }
 
-  private async run(pending: PendingUpload, job: (onProgress: (stage: IngestStage, ratio?: number) => void) => Promise<Source>) {
-    const rank = this.nextRank++
+  private run(pending: PendingUpload, job: IngestJob) {
+    this.jobs.set(pending.tempId, job)
+    this.pendingRank.set(pending.tempId, this.nextRank++)
     this.set({ pending: [...this.snap.pending, pending] })
+    return this.execute(pending.tempId)
+  }
+
+  private async execute(tempId: string) {
+    const job = this.jobs.get(tempId)
+    const pending = this.snap.pending.find((p) => p.tempId === tempId)
+    if (!job || !pending) return
     try {
       await this.ensureDoc()
-      const source = await job((stage, ratio) => this.updatePending(pending.tempId, { stage, progress: ratio }))
+      const source = await job((stage, ratio) => this.updatePending(tempId, { stage, progress: ratio }))
       if (pending.previewUrl && source.kind === 'photo' && !source.thumbnailUrl) source.thumbnailUrl = source.url
+      this.jobs.delete(tempId)
       this.set({
-        sources: this.placed(source, rank),
-        pending: this.snap.pending.filter((p) => p.tempId !== pending.tempId),
+        sources: this.placed(source, this.pendingRank.get(tempId) ?? this.nextRank++),
+        pending: this.snap.pending.filter((p) => p.tempId !== tempId),
       })
       await this.persist()
       if (pending.previewUrl) setTimeout(() => URL.revokeObjectURL(pending.previewUrl!), 30_000)
     } catch (e) {
-      this.updatePending(pending.tempId, { stage: 'error', error: e instanceof Error ? e.message : messages().capture.upload.failed })
+      this.updatePending(tempId, { stage: 'error', error: e instanceof Error ? e.message : messages().capture.upload.failed })
     }
+  }
+
+  /** Un envoi raté qu'on peut relancer (le fichier est encore là). */
+  canRetry(tempId: string): boolean {
+    return this.jobs.has(tempId) && this.snap.pending.some((p) => p.tempId === tempId && p.stage === 'error')
+  }
+
+  /** Relance un envoi raté. Un gros fichier reprend où il s'était arrêté, sans renvoyer ce qui est parti. */
+  retry(tempId: string): Promise<void> {
+    if (!this.canRetry(tempId)) return Promise.resolve()
+    this.updatePending(tempId, { stage: 'upload', progress: undefined, error: undefined })
+    return this.execute(tempId)
   }
 
   addFiles(list: File[]) {
@@ -217,7 +243,20 @@ export class CaptureSession {
   }
 
   dismissPending(tempId: string) {
+    this.jobs.delete(tempId)
     this.set({ pending: this.snap.pending.filter((p) => p.tempId !== tempId) })
+  }
+
+  /** Attend la fin des envois en cours, réussis ou ratés : « Générer » peut se toucher avant. */
+  whenUploaded(): Promise<void> {
+    if (!this.busy) return Promise.resolve()
+    return new Promise((resolve) => {
+      const off = this.subscribe(() => {
+        if (this.busy) return
+        off()
+        resolve()
+      })
+    })
   }
 
   /** Attend la fin des envois et de l'enregistrement. */

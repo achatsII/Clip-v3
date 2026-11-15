@@ -364,6 +364,8 @@ export interface GenerationInfo {
   choices?: Record<string, string[]>
   /** Poste deviné par l'IA (texte libre), avant rapprochement. */
   stationGuess?: string | null
+  /** `server` : l'analyse a tourné au serveur (Job_start). */
+  mode?: 'device' | 'server'
 }
 
 export interface ReviewRequest {
@@ -412,6 +414,50 @@ export interface GeneratingInfo {
   byName?: string | null
   /** La coquille (téléphone, tablette) ou le navigateur. */
   device: 'app' | 'web'
+  /**
+   * `server` : l'analyse tourne au serveur (n8n, `clip_job`) ; l'appareil qui l'a lancée peut se
+   * fermer. Le premier appareil ouvert qui voit le résultat termine l'instruction. Absent : sur l'appareil.
+   */
+  mode?: 'device' | 'server'
+  /** Le travail au serveur (`T.serverJob`). */
+  jobId?: string | null
+  /** Ce qu'il faut pour terminer l'instruction sur un autre appareil que celui qui l'a lancée. */
+  job?: ServerJobContext | null
+  /** L'appareil qui termine l'instruction (verrou de 5 minutes, `FINISH_LOCK_MS`) : un seul à la fois. */
+  finishing?: { at: string; by: string } | null
+}
+
+/** Ce que la génération au serveur garde pour la terminer ailleurs (dans l'instruction, `generating.job`). */
+export interface ServerJobContext {
+  /** Les sources envoyées à l'IA, dans l'ordre : S1 = la première. */
+  sourceIds: string[]
+  language: string
+  operation: string
+  forceKind?: 'procedure' | 'lockout' | null
+  autoAnnotate: boolean
+  checkpoints: boolean
+}
+
+/** Le travail au serveur, tel que n8n l'écrit (`clip_job`). */
+export interface ServerJob {
+  kind: 'generation'
+  status: 'running' | 'completed' | 'failed'
+  stage: string
+  steps: string[]
+  startedAt: string
+  heartbeatAt: string
+  finishedAt?: string | null
+  instructionId: string | null
+  operation: string | null
+  result: {
+    json?: unknown
+    model?: string | null
+    billing?: { costs?: { cad?: number }; model?: string | null; usage?: Record<string, unknown> | null } | null
+    skippedFiles?: unknown[]
+  } | null
+  error: { message: string; details?: string | null } | null
+  /** Posé par l'appareil qui a terminé l'instruction : les autres n'y touchent plus. */
+  finalizedAt?: string | null
 }
 
 export interface Instruction {
@@ -436,7 +482,8 @@ export interface Instruction {
   /** Une génération en cours sur un appareil ; `null` une fois finie (réussie ou non). */
   generating?: GeneratingInfo | null
   /** La dernière génération qui n'a pas abouti, pour l'annoncer aux autres appareils. */
-  generationError?: { at: string; message: string } | null
+  /** La dernière génération ratée ; `server` : elle tournait au serveur (la relance se fait sur l'appareil). */
+  generationError?: { at: string; message: string; server?: boolean } | null
   origin?: 'capture' | 'import' | 'duplicate' | 'feedback'
   authorId: string
   authorName: string
@@ -634,6 +681,10 @@ export interface UsageEvent extends OperatorRef {
   operation?: string | null
   model?: string | null
   tokens?: number | null
+  /** Les crédits débités pour une réponse de l'IA (`type: 'ai'`), au coût réel ; null sans débit. */
+  credits?: number | null
+  /** Une réponse de l'IA rendue dont le débit n'a pas pu s'écrire (à rattraper). */
+  debitFailed?: boolean | null
   userId?: string | null
   /** Une offre du conseiller d'achat (`type: 'offer'`) : laquelle, et ce que la personne en a fait. */
   offer?: string | null
@@ -680,6 +731,23 @@ export interface UpgradeRequest {
 }
 
 /** Une réponse à un relevé, telle qu'au moment du travail (l'instruction peut changer ensuite). */
+/**
+ * Une photo prise sur un lien public (tablette, code QR), rangée dans la base parce que la Gateway
+ * refuse l'envoi de fichiers au rôle `guest` (`src/lib/media/photos.ts`). Le relevé ou le retour la
+ * désigne par `clip-photo:<id>`. `url` : l'adresse au stockage, si elle y est passée depuis.
+ */
+export interface PhotoDoc {
+  dataUrl: string | null
+  url?: string | null
+  width: number | null
+  height: number | null
+  bytes: number
+  folder: 'execution' | 'feedback'
+  instructionId: string | null
+  stationId: string | null
+  createdAt: string
+}
+
 export interface ExecutionAnswer {
   stepId: string
   stepTitle: string
@@ -688,7 +756,9 @@ export interface ExecutionAnswer {
   kind: CheckKind
   /**
    * measure : un nombre ; yesno : true ou false ; choice et text : le texte ; photo : l'adresse (la
-   * première) ; measures : la moyenne des lectures ; checklist : null (les points sont dans `items`).
+   * première), ou `clip-photo:<id>` et `data:` pour une photo prise sur un lien public
+   * (`src/lib/media/photos.ts`) ; measures : la moyenne des lectures ; checklist : null (les points
+   * sont dans `items`).
    */
   value: number | boolean | string | null
   unit?: string
@@ -744,7 +814,15 @@ export interface MemberSettings {
 export interface WritingStandard {
   /** Règles en mots simples, lues par l'IA à chaque génération. */
   rules: string[]
+  /** Vrai seulement si la première étape est la sécurité ; suit `firstStep` (`src/lib/model/firstStep.ts`). */
   startWithSafety: boolean
+  /**
+   * Ce par quoi commence chaque instruction : le premier geste (`work`), la sécurité (`safety`), ou
+   * une étape que l'usine décrit (`custom`, dans `firstStepText`). Absent (standard d'avant ce
+   * choix) : `startWithSafety` décide. Se lit par `firstStepOf`.
+   */
+  firstStep?: 'work' | 'safety' | 'custom'
+  firstStepText?: string | null
   maxWordsPerStep: number
   tone: 'tu' | 'vous' | 'infinitif'
   /** Vocabulaire propre à l'usine : terme → sens. */
@@ -791,6 +869,11 @@ export interface OrgSettings {
   roi: { hoursSavedPerInstruction: number; hourlyRate: number; minutesSavedPerCompletion: number }
   /** À revoir tous les N mois, par défaut, à la publication (null : jamais ; absent : chaque année). */
   renewalMonths?: number | null
+  /**
+   * La génération (toggle `serverGeneration`) : `server` l'envoie au serveur, et l'appareil peut se
+   * fermer pendant que l'IA écrit. Absent : sur l'appareil, comme avant.
+   */
+  generation?: { server: boolean }
   /** Qui a ouvert CLIP le premier dans l'organisation : administrateur tant que personne d'autre ne l'est. */
   createdBy?: string
   createdAt: string

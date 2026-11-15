@@ -6,6 +6,7 @@
  * ceux de sa langue (`content.language`).
  */
 import { messages } from '../i18n'
+import { firstStepOf } from '../model/firstStep'
 import type { InstructionContent, Step, WritingStandard } from '../model/types'
 
 /** Ce qu'on cherche dans le texte : sécurité, vérification, interdiction ; le français à défaut. */
@@ -41,7 +42,7 @@ function forStep(step: Step, n: number, maxWords: number, terms: Terms): string[
   return out
 }
 
-export function suggestEdits(content: InstructionContent, standard?: Pick<WritingStandard, 'startWithSafety' | 'maxWordsPerStep'> | null, focusStepId?: string | null): string[] {
+export function suggestEdits(content: InstructionContent, standard?: (Pick<WritingStandard, 'startWithSafety' | 'maxWordsPerStep'> & Partial<Pick<WritingStandard, 'firstStep' | 'firstStepText'>>) | null, focusStepId?: string | null): string[] {
   const t = messages().editor.suggestions
   const terms = content.language === 'en' ? TERMS.en : TERMS.fr
   const max = standard?.maxWordsPerStep || 20
@@ -50,7 +51,8 @@ export function suggestEdits(content: InstructionContent, standard?: Pick<Writin
   const focus = focusStepId ? steps.findIndex((s) => s.id === focusStepId) : -1
   if (focus >= 0) out.push(...forStep(steps[focus], focus + 1, max, terms).slice(0, 2))
   if (!steps.length) out.push(t.writeSteps)
-  if (steps.length && standard?.startWithSafety && !terms.safety.test(`${steps[0].title} ${steps[0].text}`)) out.push(t.startWithSafety)
+  // L'usine veut une étape de sécurité en premier (son standard) : on le rappelle si elle manque.
+  if (steps.length && firstStepOf(standard).kind === 'safety' && !terms.safety.test(`${steps[0].title} ${steps[0].text}`)) out.push(t.startWithSafety)
   if (!content.ppe.length) out.push(t.listPpe)
   steps.forEach((s, i) => i !== focus && out.push(...forStep(s, i + 1, max, terms)))
   if (steps.length >= 3 && !terms.verify.test(steps[steps.length - 1].title)) out.push(t.addCheck)
