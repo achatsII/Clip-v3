@@ -63,9 +63,8 @@ export function Faq({ items, className }: { items: Array<{ q: string; a: string 
   )
 }
 
-/** Une boucle du produit dans un cadre de verre (tablette posée sur le fond). */
-export function LoopFrame({ loop, label, lang, priority, className }: { loop: LoopKey; label: string; lang: SiteLang; priority?: boolean; className?: string }) {
-  const t = content(lang)
+/** Le cadre de verre des médias du site (une tablette posée sur le fond) : boucles et illustrations. */
+export function MediaFrame({ className, children }: { className?: string; children: ReactNode }) {
   return (
     <div
       className={cx(
@@ -73,8 +72,18 @@ export function LoopFrame({ loop, label, lang, priority, className }: { loop: Lo
         className,
       )}
     >
-      <LoopVideo loop={LOOPS[loop]} label={label} labels={{ pause: t.a11y.pause, play: t.a11y.play }} priority={priority} className="aspect-video rounded-[22px] sm:rounded-[28px]" />
+      {children}
     </div>
+  )
+}
+
+/** Une boucle du produit dans le cadre de verre. */
+export function LoopFrame({ loop, label, lang, priority, className }: { loop: LoopKey; label: string; lang: SiteLang; priority?: boolean; className?: string }) {
+  const t = content(lang)
+  return (
+    <MediaFrame className={className}>
+      <LoopVideo loop={LOOPS[loop]} label={label} labels={{ pause: t.a11y.pause, play: t.a11y.play }} priority={priority} className="aspect-video rounded-[22px] sm:rounded-[28px]" />
+    </MediaFrame>
   )
 }
 

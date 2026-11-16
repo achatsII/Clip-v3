@@ -11,14 +11,16 @@ import { faqLd, graph, organizationLd, softwareLd, videoLd, websiteLd } from '@/
 import type { SiteLang } from '@/lib/site/lang'
 import type { LoopKey } from '@/lib/site/media'
 import { primaryCta, ROUTES } from '@/lib/site/routes'
-import { Faq, FinalCta, JsonLd, LoopFrame, PhotoCard } from '../blocks'
+import { Faq, FinalCta, JsonLd, LoopFrame, MediaFrame, PhotoCard } from '../blocks'
 import { FilmButton } from '../FilmButton'
 import { GenerateDemo } from '../GenerateDemo'
+import { HowArt, type HowArtKind } from '../HowArt'
 import { PlayerDemo } from '../PlayerDemo'
 import { PlanCards } from '../pricing'
 import { CheckList, Container, cx, Eyebrow, IconTile, PrimaryCta, SectionHeading } from '../ui'
 
-const HOW_LOOPS: LoopKey[] = ['capture', 'generate', 'station']
+/** Les trois temps en illustrations propres au site : le film est déjà en haut de la page. */
+const HOW_ART: HowArtKind[] = ['capture', 'generate', 'deploy']
 const SHOWCASE_LOOPS: Record<string, LoopKey> = { edit: 'edit', modernize: 'modernize', approve: 'deploy', export: 'export' }
 const ROLE_TONES = ['primary', 'success', 'dark', 'danger', 'ai'] as const
 const FACT_TILES = [
@@ -167,7 +169,12 @@ export function HomePage({ lang }: { lang: SiteLang }) {
                 </div>
                 <h3 className="mt-4 text-2xl leading-tight font-black tracking-tighter text-slate-900 dark:text-white">{s.title}</h3>
                 <p className="mt-2 text-base leading-relaxed font-medium text-slate-600 dark:text-slate-300">{s.text}</p>
-                <LoopFrame loop={HOW_LOOPS[i] ?? 'capture'} label={s.alt} lang={lang} className="mt-6" />
+                {/* Les trois cadres sur une même ligne, quelle que soit la longueur des textes au-dessus */}
+                <div className="mt-auto pt-6">
+                  <MediaFrame>
+                    <HowArt kind={HOW_ART[i] ?? 'capture'} t={h.how.art} label={s.alt} />
+                  </MediaFrame>
+                </div>
               </li>
             ))}
           </ol>

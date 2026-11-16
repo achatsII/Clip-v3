@@ -89,6 +89,10 @@ adresses de Vercel (alias d'équipe, déploiements) demandent une connexion à V
   montre jamais le site (elle va à `/connexion`).
 - Le suivi HubSpot ne se charge qu'après « Accepter » dans la bannière des témoins (Loi 25) ;
   « Refuser » efface ses témoins. `/rendez-vous` (`/en/book-a-demo`) intègre le calendrier HubSpot.
+- Les médias (`apps/web/src/lib/site/media.ts`) : le film de 75 s et ses boucles muettes, des extraits
+  du film, vivent au stockage public, jamais dans git. Pour ne pas montrer partout la même chose, une
+  scène du film ne revient qu'une fois par page, et « Comment ça marche » a ses propres illustrations
+  d'interface en HTML (`HowArt`), traduites et en mode sombre.
 - Libre-service éteint, chaque appel à l'action mène à `/rendez-vous`. Allumé, « Essayer
   gratuitement » ouvre l'inscription (`/connexion?inscription=1`) et un forfait payant la garde en tête
   (`&plan=…&interval=…`) : avec la facturation allumée, il s'ouvre présélectionné sur

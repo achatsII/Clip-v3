@@ -6,7 +6,7 @@
 
 const STORE = 'https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/82167b0c-8d5c-4acf-97ea-bf0dc294cb8a/clip-site/video'
 
-export type LoopKey = 'hero' | 'capture' | 'generate' | 'edit' | 'modernize' | 'deploy' | 'station' | 'export'
+export type LoopKey = 'hero' | 'capture' | 'edit' | 'modernize' | 'deploy' | 'station' | 'export'
 
 export interface LoopVideo {
   webm: string
@@ -16,7 +16,10 @@ export interface LoopVideo {
   seconds: number
 }
 
-/** Les boucles muettes (1280 × 720) : le héros, puis une par fonction. */
+/**
+ * Les boucles muettes (1280 × 720), des extraits du film : le héros, puis une par fonction. « Comment ça
+ * marche » a ses propres illustrations (`HowArt`) : le film est déjà dans la page.
+ */
 export const LOOPS: Record<LoopKey, LoopVideo> = {
   hero: {
     webm: `${STORE}/clip-boucle-produit_1794841634108_a7b40935-0918-4e10-ba0e-0ca88b17e046.webm`,
@@ -29,12 +32,6 @@ export const LOOPS: Record<LoopKey, LoopVideo> = {
     mp4: `${STORE}/boucle-capturer_1794841634108_74bfdc12-fb18-4a88-811d-10e783d00c27.mp4`,
     poster: '/site/video/boucle-capturer.jpg',
     seconds: 11.9,
-  },
-  generate: {
-    webm: `${STORE}/boucle-generer_1794841634108_cf28c8b4-04e9-4d4e-bad6-a1c18cff46e8.webm`,
-    mp4: `${STORE}/boucle-generer_1794841634108_31746a9a-ff5a-4168-8df7-9ca287bf5180.mp4`,
-    poster: '/site/video/boucle-generer.jpg',
-    seconds: 9.7,
   },
   edit: {
     webm: `${STORE}/boucle-retoucher_1794841634108_a18856f6-bfb8-4bf3-8f13-dfddf99d355d.webm`,

@@ -161,21 +161,34 @@ export const fr = {
           eyebrow: 'Capturer',
           title: 'Filmez l’expert pendant qu’il explique.',
           text: 'Avec son téléphone, dans l’app : la vidéo, des photos, une note vocale. Ajoutez vos vieux PDF et documents Word. La vidéo reste légère, en 720p.',
-          alt: 'Une technicienne filme un machiniste avec son téléphone, puis ses notes s’ajoutent dans Clip.',
+          alt: 'Le téléphone ouvert sur « Filmer le geste » ; la vidéo, des photos, une note vocale et une procédure s’ajoutent.',
         },
         {
           eyebrow: 'Générer',
           title: 'L’IA rédige l’instruction.',
           text: 'Une action par étape, le bon extrait vidéo à la seconde près, les mises en garde et les équipements de protection au bon moment. D’habitude en moins de 2 minutes.',
-          alt: 'Clip analyse les notes, puis affiche l’instruction rédigée, étape par étape.',
+          alt: 'Les notes passent à l’IA, qui rédige l’instruction étape par étape, mises en garde et extraits vidéo compris, en moins de 2 minutes.',
         },
         {
           eyebrow: 'Déployer au poste',
           title: 'Sur la tablette, sans compte.',
           text: 'Publiez, puis affichez l’instruction sur la tablette du poste ou par code QR. L’opérateur trouve la sienne en un toucher.',
-          alt: 'Un opérateur suit l’instruction sur la tablette fixée à sa machine.',
+          alt: 'Publiée, l’instruction paraît sur la tablette du poste et derrière son code QR ; l’opérateur la touche pour l’ouvrir, sans compte.',
         },
       ],
+      /** Les mots des trois illustrations (l'exemple des démos : le nettoyage des rails). */
+      art: {
+        capture: { film: 'Filmer le geste', generate: 'Générer', sources: ['Vidéo', 'Photos', 'Note vocale', 'Procédure'] },
+        generate: { title: 'Nettoyage des rails', steps: ['Cadenassez', 'Brossez les rails', 'Huilez les rails'], time: '< 2 min' },
+        deploy: {
+          published: 'Publiée',
+          station: 'Poste · Machine 1234',
+          isNew: 'Nouveau',
+          list: ['Nettoyage des rails', 'Changement d’outil', 'Démarrage du quart'],
+          scan: 'Scannez au poste',
+          noLogin: 'Sans compte',
+        },
+      },
     },
     demo: {
       eyebrow: 'Essayez-le',
