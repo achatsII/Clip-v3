@@ -166,7 +166,23 @@ fichier jusqu'à `media.discard`.
 
 **Extrait vidéo plutôt que GIF** : un extrait joué en boucle depuis la vidéo source (début/fin) est
 10 à 20 fois plus léger qu'un GIF, garde la qualité et le son, et se règle à la seconde dans
-l'éditeur. Les captures servent de vignettes et d'images pour le PDF.
+l'éditeur. Les captures servent de vignettes et d'images pour le PDF. Le GIF sert à sortir une
+étape de CLIP (un courriel, Teams, une présentation) : dans l'éditeur, « GIF » sur un extrait le
+fait à la demande (toggle `clipGif`, `files.gif`, route `gifs/generate` avec `type: gif`, 480p,
+10 images par seconde, 15 s au plus : un GIF de 7,5 s pèse 2,6 Mo en QA), puis le télécharge, ou le
+partage par la feuille du téléphone dans l'app (`saveFile`, capacité `share` avec le fichier en
+base64). Le média de l'étape reste l'extrait ; il n'y a donc pas de choix « GIF » à la génération.
+
+**Les options de la génération** (« Options » de la capture). Le format (automatique, instruction,
+cadenassage), « Annoter les images automatiquement », et « Proposer des relevés » (module `records`,
+gardé sur l'appareil, oui par défaut, `proposeChecks.ts`), dont l'aide dit quand l'IA en propose : là
+où une étape demande de lire une valeur, de vérifier un point ou de noter un numéro, sans inventer de
+limite. Non : la consigne dit de n'en proposer aucun (`checksRule`), et la fin retire ceux que l'IA
+aurait mis quand même (`finishGeneration`, `ServerJobContext.checks` au serveur). Les options disent
+aussi ce que l'IA lit en une fois (`GENERATION_LIMITS` : 30 min de vidéo, 45 min de notes vocales,
+80 photos, 60 pages de documents), en autant de fichiers qu'il faut ; la taille d'un fichier ne bloque
+pas (une vidéo trop lourde est réduite). La limite la plus proche se dit dès 80 % sous « Générer »
+(`limitUse`), et celle qui bloque se nomme, à la capture comme à une régénération.
 
 **Les questions de la génération.** Ce que les sources ne tranchent pas devient au plus quatre
 questions (« À vérifier avant de publier »), chacune avec 2 à 4 réponses proposées quand la réponse

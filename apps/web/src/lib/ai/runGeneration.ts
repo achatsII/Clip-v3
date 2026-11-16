@@ -122,6 +122,8 @@ export function startGeneration(input: {
   checkpoints?: boolean
   /** Les figures des documents, recadrées pour les étapes (toggle `documentFigures`). */
   figures?: boolean
+  /** Proposer des relevés (module `records` et choix de la personne) ; non : aucun. Oui par défaut. */
+  checks?: boolean
   /**
    * L'analyse au serveur (toggle `serverGeneration` et réglage de l'usine) : une fois la requête
    * confiée à Job_start, l'appareil peut se fermer. Si le serveur ne la prend pas, elle tourne ici.
@@ -156,6 +158,7 @@ export function startGeneration(input: {
         forceKind: input.forceKind,
         // Une régénération garde la langue de l'instruction déjà écrite.
         language: instr.draft?.language,
+        checks: input.checks,
         onStage: stage,
       }
       let out: Awaited<ReturnType<typeof generateInstruction>>
@@ -179,6 +182,7 @@ export function startGeneration(input: {
             autoAnnotate: input.autoAnnotate !== false,
             checkpoints: !!input.checkpoints,
             figures: !!input.figures,
+            checks: input.checks !== false,
           }
           // Le relais au serveur : plus de signe de vie à donner, l'appareil peut se fermer.
           report.stop()
@@ -199,7 +203,7 @@ export function startGeneration(input: {
         const result = await ai.ask<AiInstruction>(p.operation, p.ask, { scope: 'generation', timeoutMs: 300_000 })
         if (!result.json) throw new ApiError(messages().capture.generate.noInstruction, 502)
         stage('finish')
-        out = { ...finishGeneration(result.json, p.sources, p.language), sources: p.allSources, model: result.model, operation: p.operation }
+        out = { ...finishGeneration(result.json, p.sources, p.language, { checks: input.checks }), sources: p.allSources, model: result.model, operation: p.operation }
       } else {
         out = await generateInstruction({ ai, ...common })
         // Les URI Gemini sont gardées : une régénération dans les 48 h ne retéléverse rien.
@@ -296,7 +300,7 @@ export function finishServerGeneration(input: {
     }
     try {
       const sources = context.sourceIds.map((id) => fresh.json_data.sources.find((s) => s.id === id)).filter((s): s is Source => !!s)
-      const out = finishGeneration(outcome.json as AiInstruction, sources, context.language)
+      const out = finishGeneration(outcome.json as AiInstruction, sources, context.language, { checks: context.checks })
       await completeGeneration({
         doc: fresh,
         data,

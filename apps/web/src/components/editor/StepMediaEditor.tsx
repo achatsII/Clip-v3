@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, Clock, Crop, FileText, Film, Image as ImageIcon, ImagePlus, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
+import { ChevronDown, Clock, Crop, FileText, Film, Image as ImageIcon, ImagePlay, ImagePlus, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
 import { useState } from 'react'
 import { MediaView, mediaThumb } from '@/components/media/MediaView'
 import { useSession } from '@/components/providers/Session'
@@ -16,9 +16,11 @@ import { useMessages, type Messages } from '@/lib/i18n'
 import { toFigure, toWholePage } from '@/lib/media/figures'
 import { LAYOUTS, layoutOf } from '@/lib/model/media'
 import type { Annotation, InstructionContent, Source, Step, StepMedia } from '@/lib/model/types'
+import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
 import { Annotator } from './Annotator'
 import { FramePicker } from './FramePicker'
+import { GifDialog, type GifClip } from './GifDialog'
 import { MediaPicker } from './MediaPicker'
 import { StepMediaArea } from '@/components/player/StepMediaArea'
 
@@ -84,6 +86,8 @@ export function StepMediaEditor({
   const [more, setMore] = useState(() => step.media.some((m) => m.verdict || m.caption) || layoutOf(step) !== 'focus')
   const confirm = useConfirm()
   const [framing, setFraming] = useState(false)
+  const gifOn = useToggle('clipGif')
+  const [gifClip, setGifClip] = useState<GifClip | null>(null)
   // Une vidéo, ou une image figée d'une vidéo : on peut passer de l'une à l'autre.
   const frameSource =
     media?.kind === 'video'
@@ -236,6 +240,11 @@ export function StepMediaEditor({
                 ]}
               />
             )}
+            {gifOn && media?.kind === 'video' && (
+              <Button size="sm" onClick={() => setGifClip({ url: media.url, start: media.start, end: media.end })} icon={<ImagePlay className="h-4 w-4" />} title={t.editor.gif.openHint}>
+                {t.editor.gif.open}
+              </Button>
+            )}
             {media?.kind === 'image' && media.frame && (
               <Button size="sm" onClick={() => setFraming(true)} icon={<Clock className="h-4 w-4" />}>
                 {te.otherMoment}
@@ -310,6 +319,7 @@ export function StepMediaEditor({
           setMediaIndex(0)
         }}
       />
+      <GifDialog clip={gifClip} name={t.editor.gif.fileName(content.steps.findIndex((s) => s.id === step.id) + 1, step.title)} onClose={() => setGifClip(null)} />
       {frameSource && <FramePicker open={framing} onClose={() => setFraming(false)} videoUrl={frameSource.videoUrl} start={frameSource.start} end={frameSource.end} initialAt={frameSource.at} onPicked={applyFrame} />}
       <Modal
         open={visualOpen}

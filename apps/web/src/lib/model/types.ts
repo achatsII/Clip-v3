@@ -469,6 +469,8 @@ export interface ServerJobContext {
   checkpoints: boolean
   /** Les figures des documents, recadrées à la fin (toggle `documentFigures`) ; absent : la page entière, comme avant. */
   figures?: boolean
+  /** Des relevés proposés ; false : aucun (la fin retire ceux que l'IA aurait mis). Absent : oui, comme avant. */
+  checks?: boolean
 }
 
 /** Le travail au serveur, tel que n8n l'écrit (`clip_job`). */

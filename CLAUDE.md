@@ -121,6 +121,15 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
   ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher. Les sources
   restent dans l'ordre de prise, même quand un envoi finit avant un autre.
+- **Options de la génération** (« Options » de la capture) : le format, « Annoter les images », « Proposer
+  des relevés » (module `records`, retenu sur l'appareil, `src/lib/ai/proposeChecks.ts` ; non : la consigne
+  dit aucun et la fin les retire, `ServerJobContext.checks` au serveur ; rien dans n8n) et ce que l'IA lit
+  en une fois (`GENERATION_LIMITS` : 30 min de vidéo, 45 min d'audio, 80 photos, 60 pages, en autant de
+  fichiers qu'il faut ; la limite la plus proche se dit dès 80 %, `limitUse`).
+- **GIF d'un extrait** (toggle `clipGif`) : dans l'éditeur, à la demande (`files.gif`, `gifs/generate`,
+  480p, 15 s au plus), téléchargé ou partagé par la feuille du téléphone (`saveFile`). Il sort une étape de
+  CLIP ; le média de l'étape reste l'extrait (au poste, il joue déjà en boucle) : pas de « GIF » à la
+  génération.
 - **Parler pendant les photos** (toggle `photoVoice`) : le micro s'ouvre avec la caméra photo (une pastille
   le dit et le ferme ; le dernier geste se retient sur l'appareil). Un seul enregistrement par série,
   jamais coupé ; chaque photo garde son instant (`Source.voice`, `src/lib/media/photoVoice.ts` ; dans l'app,

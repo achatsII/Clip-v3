@@ -14,7 +14,8 @@ import type { CapturedMedia } from '@clip/bridge'
 import { callNative, hasCapability, NativeError, onNativeEvent } from '@/lib/bridge/native'
 import { getCaptureSession, isHandledNative } from '@/lib/capture/session'
 import { setAutoAnnotate, useAutoAnnotate } from '@/lib/ai/autoAnnotate'
-import { generationTier, narratedPhotos } from '@/lib/ai/generate'
+import { setProposeChecks, useProposeChecks } from '@/lib/ai/proposeChecks'
+import { GENERATION_LIMITS, generationTier, limitUse, NEAR_LIMIT, narratedPhotos } from '@/lib/ai/generate'
 import { useToggle } from '@/lib/toggles'
 import { useMessages } from '@/lib/i18n'
 import { ACCEPTED_FILES } from '@/lib/media/ingest'
@@ -79,6 +80,8 @@ export function CaptureBoard({
   const [note, setNote] = useState('')
   const [optionsOpen, setOptionsOpen] = useState(false)
   const autoAnnotate = useAutoAnnotate()
+  const proposeChecks = useProposeChecks()
+  const recordsOn = useToggle('records')
   const [kind, setKind] = useState<ForceKind>('auto')
   const [dragging, setDragging] = useState(false)
   const [starting, setStarting] = useState(false)
@@ -216,7 +219,20 @@ export function CaptureBoard({
   const captured = snap.sources.length + snap.pending.length
   // « Générer » paraît dès qu'il y a quelque chose de prêt ou en route ; un envoi raté le dit sur sa carte.
   const showGenerate = hasContent || busy
-  const status = queued ? tb.queuedHint : busy ? tb.uploading : tier.tooBig ? tb.tooBig : tb.ready(snap.sources.length)
+  // La limite la plus proche : dépassée, elle dit laquelle ; à 80 %, elle prévient avant de bloquer.
+  const closest = limitUse(snap.sources)[0]
+  const limitText = closest ? tb.limit[closest.kind](closest.used, closest.max) : ''
+  const status = queued
+    ? tb.queuedHint
+    : busy
+      ? tb.uploading
+      : tier.tooBig
+        ? closest && closest.ratio > 1
+          ? tb.overLimit(limitText)
+          : tb.tooBig
+        : closest && closest.ratio >= NEAR_LIMIT
+          ? tb.nearLimit(limitText)
+          : tb.ready(snap.sources.length)
   const [hero, ...others] = actions
 
   const generateButton = (
@@ -416,6 +432,14 @@ export function CaptureBoard({
                   }
                 />
               </div>
+              {recordsOn && (
+                <div className="sm:col-span-3">
+                  <Switch checked={proposeChecks} onChange={setProposeChecks} label={t.capture.proposeChecks.label} description={t.capture.proposeChecks.hint} />
+                </div>
+              )}
+              <p className="text-xs font-semibold text-slate-500 sm:col-span-3 dark:text-slate-400">
+                {tb.limitsHint({ videoMin: GENERATION_LIMITS.videoSec / 60, audioMin: GENERATION_LIMITS.audioSec / 60, photos: GENERATION_LIMITS.photos, pages: GENERATION_LIMITS.pages })}
+              </p>
             </div>
           )}
         </div>

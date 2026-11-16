@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { readAutoAnnotate } from '@/lib/ai/autoAnnotate'
+import { readProposeChecks } from '@/lib/ai/proposeChecks'
 import { startGeneration } from '@/lib/ai/runGeneration'
 import { T } from '@/lib/model/repo'
 import type { Instruction } from '@/lib/model/types'
@@ -21,6 +22,7 @@ export function useLaunchGeneration() {
   const stations = useStations()
   const draftHistory = useToggle('draftHistory')
   const figures = useToggle('documentFigures')
+  const records = useToggle('records')
   const serverToggle = useToggle('serverGeneration')
   const serverOn = serverToggle && session.org.json_data.generation?.server === true
   return useCallback(
@@ -40,10 +42,12 @@ export function useLaunchGeneration() {
         autoAnnotate: readAutoAnnotate(),
         checkpoints: draftHistory,
         figures,
+        // Sans le module Relevés, l'IA n'en propose pas ; avec, selon le choix de la personne.
+        checks: records && readProposeChecks(),
         server: serverOn && !opts.device,
         onDone: opts.onDone,
       })
     },
-    [session, qc, stations.data, draftHistory, figures, serverOn],
+    [session, qc, stations.data, draftHistory, figures, records, serverOn],
   )
 }

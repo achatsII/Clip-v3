@@ -32,6 +32,16 @@ export const capture: typeof Fr = {
     addMore: 'Add',
     uploading: 'Uploading… you can keep capturing.',
     tooBig: 'That’s a lot for one instruction: split it into several.',
+    limit: {
+      videoSec: (used: number, max: number) => `${Math.ceil(used / 60).toLocaleString('en-CA')} min of video out of ${(max / 60).toLocaleString('en-CA')}`,
+      audioSec: (used: number, max: number) => `${Math.ceil(used / 60).toLocaleString('en-CA')} min of voice notes out of ${(max / 60).toLocaleString('en-CA')}`,
+      photos: (used: number, max: number) => `${used.toLocaleString('en-CA')} photos out of ${max.toLocaleString('en-CA')}`,
+      pages: (used: number, max: number) => `${used.toLocaleString('en-CA')} document pages out of ${max.toLocaleString('en-CA')}`,
+    },
+    overLimit: (what: string) => `${what}: that’s more than the AI reads at once. Remove some, or split it into several instructions.`,
+    nearLimit: (what: string) => `${what}: close to the limit for one instruction.`,
+    limitsHint: (l: { videoMin: number; audioMin: number; photos: number; pages: number }) =>
+      `In one go, the AI reads up to ${l.videoMin} min of video, ${l.audioMin} min of voice notes, ${l.photos} photos and ${l.pages} document pages, in as many files as needed. A video that’s too heavy is reduced automatically.`,
     ready: (n: number) => `${n.toLocaleString('en-CA')} note${n !== 1 ? 's' : ''} ready. The AI will analyze ${n !== 1 ? 'them' : 'it'}.`,
     generate: 'Generate the instruction',
     generateQueued: 'Generate when uploads finish',
@@ -124,6 +134,10 @@ export const capture: typeof Fr = {
     selected: 'Selected',
   },
   /** Le choix des annotations automatiques, dans les options de génération. */
+  proposeChecks: {
+    label: 'Suggest checks',
+    hint: 'Where a step asks to read a value (pressure, torque…), verify something or note a lot number, the AI suggests a check, never inventing a limit. You keep it or remove it: none reaches the station without you.',
+  },
   autoAnnotate: {
     label: 'Annotate images automatically',
     hint: 'The AI circles what to look at on each still image or photo that needs it, right on the image. Never on a video clip.',

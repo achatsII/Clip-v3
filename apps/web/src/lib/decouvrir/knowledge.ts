@@ -70,10 +70,13 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Des médias légers : l'app mobile filme en 720p (environ 19 Mo la minute) et ramène les photos à 1920 px ;
   une vidéo trop lourde est réduite automatiquement. L'envoi continue si le réseau coupe un instant. Au
   navigateur, la caméra et le micro de l'appareil servent aussi.
-- Au plus 30 minutes de vidéo pour une instruction : au-delà, l'app demande de la séparer en plusieurs.
+- En une fois, l'IA lit jusqu'à 30 minutes de vidéo, 45 minutes de notes vocales, 80 photos et 60 pages de
+  documents, en autant de fichiers qu'il faut (dix vidéos de trois minutes passent). Près de la limite, l'app le
+  dit ; au-delà, elle nomme ce qui dépasse et demande de séparer l'instruction en plusieurs.
 - Options : le format (« Automatique », « Étape par étape » pour une instruction de travail, « Énergies et
-  isolement » pour une fiche de cadenassage) et « Annoter les images automatiquement » (l'IA encercle ce qu'il
-  faut regarder sur chaque photo ou image figée qui en a besoin, jamais sur un extrait vidéo).
+  isolement » pour une fiche de cadenassage), « Annoter les images automatiquement » (l'IA encercle ce qu'il
+  faut regarder sur chaque photo ou image figée qui en a besoin, jamais sur un extrait vidéo) et « Proposer des
+  relevés » (là où une étape demande de lire une valeur, de vérifier un point ou de noter un numéro de lot).
 
 ## 2. Générer l'instruction avec l'IA
 - Un seul bouton, « Générer l'instruction » : l'IA regarde et écoute les médias et rédige les étapes,
@@ -127,6 +130,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - « Annoter l'image » : crayon, surligneur, flèche, ligne, distance (une cote : « 12 mm »), cercle, cadre,
   texte, numéro, icônes (danger, gants, cadenas, sens horaire…) et flou (cacher un visage, un nom, un écran).
   « Annoter par IA » place les flèches et les cercles sur ce qu'il faut voir.
+- « GIF » sur un extrait : un GIF de l'étape (15 secondes au plus) à télécharger ou à partager, pour un
+  courriel, Teams ou une présentation. Au poste, l'étape garde son extrait, qui joue déjà en boucle.
 - Sous le média, les outils de l'IA à découvert : « Illustrer l'étape », une illustration tirée du texte de
   l'étape, même quand elle n'a encore aucune image (« Illustrer cette image » part de la photo affichée), et
   « Schéma de l'étape » (vue de face, de dessus, en coupe ou en 3D, avec très peu de mots).

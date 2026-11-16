@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 vi.mock('@/components/providers/Session', () => ({ useSession: () => ({ ai: { ask: vi.fn(), generateImage: vi.fn() }, data: {}, files: {} }) }))
 vi.mock('@/components/ui/Toast', () => ({ useToast: () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }) }))
 vi.mock('@/components/ui/Confirm', () => ({ useConfirm: () => vi.fn(async () => true) }))
+vi.mock('@/lib/toggles', () => ({ useToggle: () => true }))
 
 import { StepMediaEditor } from '@/components/editor/StepMediaEditor'
 import { enrichMedia } from '@/lib/ai/generate'

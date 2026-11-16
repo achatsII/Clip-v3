@@ -382,6 +382,26 @@ export const editor = {
     proposedPublish: (n: number) => (n > 1 ? `${num(n)} relevés proposés par l’IA n’iront pas au poste tant qu’ils ne sont pas gardés.` : '1 relevé proposé par l’IA n’ira pas au poste tant qu’il n’est pas gardé.'),
   },
   /** Une étape dans la fiche : médias, texte, mise en garde, retouches par l’IA. */
+  /** Le GIF d’un extrait, pour sortir une étape de CLIP (courriel, Teams, présentation). */
+  gif: {
+    open: 'GIF',
+    openHint: 'Faire un GIF de cet extrait',
+    fileName: (n: number, title: string) => `Étape ${num(n)} — ${title}`,
+    title: 'Le GIF de cet extrait',
+    making: 'Le GIF se prépare…',
+    makingHint: 'Quelques secondes.',
+    previewAlt: 'Aperçu du GIF',
+    meta: (sec: number) => `GIF de ${num(sec)} s`,
+    trimmed: (max: number) => `Les ${num(max)} premières secondes de l’extrait : un GIF plus long serait trop lourd à partager.`,
+    why: 'Pour un courriel, Teams ou une présentation. Au poste, l’étape garde son extrait : il joue déjà en boucle, plus net et plus léger.',
+    download: 'Télécharger le GIF',
+    share: 'Partager le GIF',
+    copy: 'Copier le lien',
+    copied: 'Lien copié',
+    copyFailed: 'Le lien n’a pas pu se copier',
+    failed: 'Le GIF n’a pas pu se faire',
+    saveFailed: 'Le GIF n’a pas pu s’enregistrer',
+  },
   stepEditor: {
     operatorFeedback: (comment: string) => `Retour d’un opérateur : « ${comment} »`,
     addMediaHint: 'Ajouter une photo, un extrait vidéo ou un plan',

@@ -31,6 +31,18 @@ export const capture = {
     addMore: 'Ajouter',
     uploading: 'Envoi en cours… vous pouvez continuer à capturer.',
     tooBig: 'C’est beaucoup pour une seule instruction : séparez-la en plusieurs.',
+    /** La limite dépassée, ou bientôt atteinte (`limitUse`) : laquelle, et où l’on en est. */
+    limit: {
+      videoSec: (used: number, max: number) => `${Math.ceil(used / 60).toLocaleString('fr-CA')} min de vidéo sur ${(max / 60).toLocaleString('fr-CA')}`,
+      audioSec: (used: number, max: number) => `${Math.ceil(used / 60).toLocaleString('fr-CA')} min de notes vocales sur ${(max / 60).toLocaleString('fr-CA')}`,
+      photos: (used: number, max: number) => `${used.toLocaleString('fr-CA')} photos sur ${max.toLocaleString('fr-CA')}`,
+      pages: (used: number, max: number) => `${used.toLocaleString('fr-CA')} pages de documents sur ${max.toLocaleString('fr-CA')}`,
+    },
+    overLimit: (what: string) => `${what} : c’est plus que ce que l’IA lit en une fois. Retirez-en, ou séparez-la en plusieurs instructions.`,
+    nearLimit: (what: string) => `${what} : c’est bientôt la limite d’une instruction.`,
+    /** Ce que l’IA lit en une fois, dans les options. */
+    limitsHint: (l: { videoMin: number; audioMin: number; photos: number; pages: number }) =>
+      `En une fois, l’IA lit jusqu’à ${l.videoMin} min de vidéo, ${l.audioMin} min de notes vocales, ${l.photos} photos et ${l.pages} pages de documents, en autant de fichiers qu’il faut. Une vidéo trop lourde est réduite toute seule.`,
     ready: (n: number) => `${n.toLocaleString('fr-CA')} note${n > 1 ? 's' : ''} prête${n > 1 ? 's' : ''}. L’IA va ${n > 1 ? 'les ' : 'l’'}analyser.`,
     generate: 'Générer l’instruction',
     /** « Générer » pendant les envois : la génération part toute seule à la fin. */
@@ -132,6 +144,11 @@ export const capture = {
     selected: 'Choisi',
   },
   /** Le choix des annotations automatiques, dans les options de génération. */
+  /** Proposer des relevés : quand l’IA en propose, et qui décide. */
+  proposeChecks: {
+    label: 'Proposer des relevés',
+    hint: 'Là où une étape demande de lire une valeur (pression, couple…), de vérifier un point ou de noter un numéro de lot, l’IA propose un relevé, sans jamais inventer de limite. Vous le gardez ou le retirez : aucun ne va au poste sans vous.',
+  },
   autoAnnotate: {
     label: 'Annoter les images automatiquement',
     hint: 'L’IA encercle ce qu’il faut regarder sur chaque image figée ou photo qui en a besoin, sur l’image elle-même. Jamais sur un extrait vidéo.',

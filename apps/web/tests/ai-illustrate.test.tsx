@@ -11,6 +11,7 @@ const generateImage = vi.fn(async (_prompt: string, _refs: string[]) => 'https:/
 vi.mock('@/components/providers/Session', () => ({ useSession: () => ({ ai: { ask, generateImage }, data: {}, files: {} }) }))
 vi.mock('@/components/ui/Toast', () => ({ useToast: () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }) }))
 vi.mock('@/components/ui/Confirm', () => ({ useConfirm: () => vi.fn(async () => true) }))
+vi.mock('@/lib/toggles', () => ({ useToggle: () => true }))
 
 import { StepMediaEditor } from '@/components/editor/StepMediaEditor'
 import { runAgentOps } from '@/lib/ai/agent'

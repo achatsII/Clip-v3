@@ -39,13 +39,39 @@ export function measureSources(sources: Source[]) {
   return { videoSec, audioSec, photos, pages, notes }
 }
 
+/**
+ * Ce que l'IA lit en une fois pour une instruction, en autant de fichiers qu'il faut (dix vidéos de
+ * trois minutes passent) : au-delà, on la sépare en plusieurs. Une vidéo trop lourde pour l'IA est
+ * réduite toute seule (`prepareForAi`) : la taille d'un fichier ne bloque pas.
+ */
+export const GENERATION_LIMITS = { videoSec: 1800, audioSec: 2700, photos: 80, pages: 60 } as const
+export type LimitKind = keyof typeof GENERATION_LIMITS
+/** La limite la plus proche se montre dès 80 %, avant qu'elle bloque. */
+export const NEAR_LIMIT = 0.8
+
+export interface LimitUse {
+  kind: LimitKind
+  used: number
+  max: number
+  ratio: number
+}
+
+/** Où en est chaque limite utilisée, de la plus proche à la plus loin. */
+export function limitUse(sources: Source[]): LimitUse[] {
+  const m = measureSources(sources)
+  return (Object.keys(GENERATION_LIMITS) as LimitKind[])
+    .map((kind) => ({ kind, used: m[kind], max: GENERATION_LIMITS[kind], ratio: m[kind] / GENERATION_LIMITS[kind] }))
+    .filter((u) => u.used > 0)
+    .sort((a, b) => b.ratio - a.ratio)
+}
+
 /** Choisit l'opération selon la taille réelle des sources (une opération par taille de lot). */
 export function generationTier(sources: Source[]): Tier {
   const m = measureSources(sources)
   const t = messages().capture.tiers
   if (m.videoSec <= 180 && m.audioSec <= 300 && m.photos <= 15 && m.pages <= 10) return { op: 'generate_s', label: t.short, tooBig: false }
   if (m.videoSec <= 600 && m.audioSec <= 900 && m.photos <= 40 && m.pages <= 30) return { op: 'generate_m', label: t.medium, tooBig: false }
-  const tooBig = m.videoSec > 1800 || m.photos > 80 || m.pages > 60 || m.audioSec > 2700
+  const tooBig = (Object.keys(GENERATION_LIMITS) as LimitKind[]).some((k) => m[k] > GENERATION_LIMITS[k])
   return { op: 'generate_l', label: t.long, tooBig }
 }
 
@@ -163,6 +189,8 @@ export interface GenerateInput {
   forceKind?: 'procedure' | 'lockout'
   /** La langue d'écriture : celle de l'instruction qu'on régénère, sinon celle de l'outil de l'auteur. */
   language?: string
+  /** Proposer des relevés (`proposeChecks`) ; non : aucun. Oui par défaut. */
+  checks?: boolean
   onStage?: (stage: Stage, detail?: string) => void
   signal?: AbortSignal
 }
@@ -204,7 +232,12 @@ export async function prepareGeneration(input: Omit<GenerateInput, 'ai' | 'signa
   const usable = input.sources.filter((s) => s.url || s.text)
   if (!usable.length) throw new ApiError(t.noSources, 400)
   const tier = generationTier(usable)
-  if (tier.tooBig) throw new ApiError(t.tooBig, 400)
+  if (tier.tooBig) {
+    // Laquelle des limites : une régénération depuis l'éditeur le dit aussi précisément que la capture.
+    const over = limitUse(usable)[0]
+    const board = messages().capture.board
+    throw new ApiError(over && over.ratio > 1 ? board.overLimit(board.limit[over.kind](over.used, over.max)) : t.tooBig, 400)
+  }
 
   input.onStage?.('prepare')
   // Le détail s'écrit sans mots (« 2/5 ») : chaque appareil le lit dans sa langue.
@@ -222,7 +255,7 @@ export async function prepareGeneration(input: Omit<GenerateInput, 'ai' | 'signa
       effort: 'low',
       mediaResolution: m.videoSec > 300 ? 'low' : 'medium',
       maxOutputTokens: 24000,
-      system_instruction: generationSystem(input.org, { language, forceKind: input.forceKind }),
+      system_instruction: generationSystem(input.org, { language, forceKind: input.forceKind, checks: input.checks !== false }),
       prompt: generationPrompt({ intent: input.intent, title: input.title, stations: input.stationNames, sources: prepared.lines }),
       files: prepared.askFiles,
       json_schema: instructionSchema,
@@ -234,10 +267,12 @@ export async function prepareGeneration(input: Omit<GenerateInput, 'ai' | 'signa
  * Ce que l'IA a rendu, mis en forme ; le même traitement que la réponse vienne de l'appareil ou du
  * serveur. Les sources gardent leur ordre : S1 = la première source envoyée.
  */
-export function finishGeneration(json: AiInstruction | null | undefined, sources: Source[], language: string) {
+export function finishGeneration(json: AiInstruction | null | undefined, sources: Source[], language: string, opts: { checks?: boolean } = {}) {
   if (!json) throw new ApiError(messages().capture.generate.noInstruction, 502)
   const out = normalizeInstruction(json, sources, language)
   if (!out.content.steps.length) throw new ApiError(messages().capture.generate.noSteps, 422)
+  // Pas de relevés demandés : ceux que l'IA aurait proposés quand même ne restent pas.
+  if (opts.checks === false) out.content = { ...out.content, steps: out.content.steps.map(({ checks: _c, ...step }) => step) }
   return out
 }
 
@@ -248,7 +283,7 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
   if (!result.json) throw new ApiError(messages().capture.generate.noInstruction, 502)
 
   input.onStage?.('finish')
-  const { content, stationGuess, questions, choices, marks, aiLabels } = finishGeneration(result.json, p.sources, p.language)
+  const { content, stationGuess, questions, choices, marks, aiLabels } = finishGeneration(result.json, p.sources, p.language, { checks: input.checks })
   return { content, marks, sources: p.allSources, stationGuess, questions, choices, model: result.model, operation: p.operation, aiLabels }
 }
 
