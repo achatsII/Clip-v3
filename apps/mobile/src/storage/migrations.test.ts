@@ -49,6 +49,17 @@ describe('migrateState', () => {
     expect(out).toEqual({ kind: 'newer', version: 7, state })
   })
 
+  it('garde le lien d’une série commentée (l’instant d’une photo, la note de la série)', () => {
+    const photo = { ...media, voiceAt: 12.4 }
+    const note: MediaRecord = { ...media, localId: 'm2', kind: 'audio', mimeType: 'audio/mp4', fileName: 'note.m4a', narration: true }
+    const state = { schemaVersion: CURRENT_SCHEMA_VERSION, installId: 'x', media: { m1: photo, m2: note, m3: { ...media, localId: 'm3', voiceAt: 'tôt' } } }
+    const out = migrateState(JSON.stringify(state), makeId)
+    expect(out.state.media.m1.voiceAt).toBe(12.4)
+    expect(out.state.media.m2.narration).toBe(true)
+    // Un instant illisible se perd, pas la photo.
+    expect(out.state.media.m3).toEqual({ ...media, localId: 'm3' })
+  })
+
   it('ne perd pas un média utilisable à cause d’une entrée illisible voisine', () => {
     const state = {
       schemaVersion: CURRENT_SCHEMA_VERSION,

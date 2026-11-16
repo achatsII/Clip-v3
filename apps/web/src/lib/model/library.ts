@@ -15,6 +15,8 @@ import type { Instruction, Source, SourceKind } from './types'
 export function reuseSource(s: Source): Source {
   const copy: Source = { ...s, id: uid('src_') }
   delete copy.path
+  // Le lien d'une photo à la note de sa série ne suit pas : la note reprise aurait un autre identifiant.
+  delete copy.voice
   return copy
 }
 

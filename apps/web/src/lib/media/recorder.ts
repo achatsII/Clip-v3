@@ -35,6 +35,9 @@ export async function openMic(): Promise<MediaStream> {
 export interface Recording {
   stop: () => Promise<Blob>
   cancel: () => void
+  /** Met en pause et reprend (le micro fermé un moment) : la pause n'est pas dans l'enregistrement. */
+  pause: () => void
+  resume: () => void
   mime: string
 }
 
@@ -62,6 +65,39 @@ export function startRecording(stream: MediaStream, kind: 'video' | 'audio'): Re
     cancel: () => {
       rec.onstop = null
       if (rec.state !== 'inactive') rec.stop()
+    },
+    pause: () => {
+      if (rec.state === 'recording') rec.pause()
+    },
+    resume: () => {
+      if (rec.state === 'paused') rec.resume()
+    },
+  }
+}
+
+/**
+ * Le temps d'un enregistrement qu'on met en pause : l'instant d'une photo s'y lit pauses non
+ * comprises, comme dans le fichier.
+ */
+export function pausableClock() {
+  let before = 0
+  let since: number | null = null
+  return {
+    get running() {
+      return since !== null
+    },
+    start(now: number) {
+      if (since === null) since = now
+    },
+    pause(now: number) {
+      if (since !== null) {
+        before += now - since
+        since = null
+      }
+    },
+    /** Secondes enregistrées. */
+    seconds(now: number) {
+      return (before + (since !== null ? now - since : 0)) / 1000
     },
   }
 }

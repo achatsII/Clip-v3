@@ -63,6 +63,7 @@ import { playable } from '@/lib/media/reel'
 import { MediaPlaybackProvider, slowConnection, VideoPool } from '@/lib/media/videoPool'
 import { useToggle } from '@/lib/toggles'
 import { useMediaQuery, useWide } from '@/lib/ui/screen'
+import { useStepSwipe } from '@/lib/ui/swipe'
 
 export interface PlayerDeps {
   data: DataApi
@@ -195,7 +196,8 @@ export function Player(props: PlayerProps) {
   }, [recordsOn, canRecord, preview, deps.data])
   // La voix en direct : elle s'ouvre au premier « Écouter » et lit chaque étape tout de suite.
   const speaker = useMemo(() => (deps.ai ? new LiveSpeaker(deps.ai) : null), [deps.ai])
-  const touch = useRef<{ x: number; y: number } | null>(null)
+  // Glisser change d'étape ; jamais depuis un relevé à remplir, une vidéo ou une rangée qui défile de côté.
+  const swipe = useStepSwipe(view === 'steps', (dir) => go(index + dir))
 
   useEffect(() => {
     if (speaker) speaker.onState = setReading
@@ -453,14 +455,7 @@ export function Player(props: PlayerProps) {
       <main
         ref={mainRef}
         className="relative min-h-0 flex-1 overflow-y-auto"
-        onTouchStart={(e) => (touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
-        onTouchEnd={(e) => {
-          if (!touch.current || view !== 'steps') return
-          const dx = e.changedTouches[0].clientX - touch.current.x
-          const dy = e.changedTouches[0].clientY - touch.current.y
-          touch.current = null
-          if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5 && !(e.target as HTMLElement).closest('video')) go(index + (dx < 0 ? 1 : -1))
-        }}
+        {...swipe}
       >
         {view === 'document' ? (
           <div dir={textDir(lang)}>

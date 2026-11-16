@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -70,6 +70,11 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // La première étape au choix de l'usine (Réglages › Standard de rédaction) : le premier geste, la
   // sécurité, ou une étape qu'elle décrit. Éteint : l'interrupteur « Toujours commencer par la sécurité ».
   firstStepChoice: true,
+  // Parler pendant les photos : le micro s'ouvre avec la caméra (une pastille le dit et le ferme), un
+  // seul enregistrement pour la série, et chaque photo garde son instant ; l'IA les apparie.
+  photoVoice: true,
+  // Dans l'éditeur au téléphone, glisser à gauche ou à droite change d'étape, comme au poste.
+  editorSwipe: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -107,4 +112,6 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   serverGeneration: false,
   resumableUpload: false,
   firstStepChoice: false,
+  photoVoice: false,
+  editorSwipe: false,
 }

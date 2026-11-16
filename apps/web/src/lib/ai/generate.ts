@@ -63,25 +63,53 @@ function geminiMime(s: Source): string {
   return m
 }
 
+/** Un instant dans une note, comme on le lit : « 0:42 ». */
+function clockOf(sec: number): string {
+  const t = Math.max(0, Math.round(sec))
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`
+}
+
+/**
+ * Les photos prises en parlant, par note de série : seulement celles dont la note fait partie des
+ * sources données (une revue de quelques sources peut ne pas l'avoir).
+ */
+export function narratedPhotos(sources: Source[]): Map<string, Source[]> {
+  const audio = new Set(sources.filter((s) => s.kind === 'audio').map((s) => s.id))
+  const out = new Map<string, Source[]>()
+  for (const s of sources) {
+    if (s.kind !== 'photo' || !s.voice || !audio.has(s.voice.sourceId)) continue
+    out.set(s.voice.sourceId, [...(out.get(s.voice.sourceId) ?? []), s])
+  }
+  return out
+}
+
 /**
  * Prépare les fichiers pour l'IA : vidéos (et notes vocales sans transcription) téléversées chez
  * Gemini, URI réutilisée tant qu'elle vit. Rend les sources mises à jour, à enregistrer.
+ *
+ * Une note dite pendant une série de photos part aussi en fichier, transcrite ou non : l'IA entend
+ * à quel instant chaque chose est dite, et chaque photo dit le sien. `ids` : les numéros à donner
+ * aux sources (S1, S2… par défaut), pour qu'une revue de quelques sources garde ceux de l'instruction.
  */
 export async function prepareForAi(
   sources: Source[],
   files: FilesApi,
   onSource?: (index: number, total: number) => void,
+  ids?: string[],
 ): Promise<{ sources: Source[]; askFiles: AskFile[]; lines: SourceLine[] }> {
   const updated: Source[] = []
   const askFiles: AskFile[] = []
   const lines: SourceLine[] = []
   const soon = Date.now() + 60 * 60 * 1000
+  const idOf = new Map(sources.map((s, i) => [s.id, ids?.[i] ?? `S${i + 1}`]))
+  const narrated = narratedPhotos(sources)
 
   for (let i = 0; i < sources.length; i++) {
     onSource?.(i, sources.length)
     let s = { ...sources[i] }
-    const id = `S${i + 1}`
-    if ((s.kind === 'video' || (s.kind === 'audio' && !s.text)) && s.url) {
+    const id = idOf.get(s.id) ?? `S${i + 1}`
+    const series = s.kind === 'audio' ? narrated.get(s.id) : undefined
+    if ((s.kind === 'video' || (s.kind === 'audio' && (!s.text || series))) && s.url) {
       const fresh = s.geminiFileUri && s.geminiExpiresAt && Date.parse(s.geminiExpiresAt) > soon
       if (!fresh) {
         if (s.kind === 'video' && (s.sizeBytes ?? 0) > GEMINI_MAX_BYTES) {
@@ -100,13 +128,16 @@ export async function prepareForAi(
         line:
           s.kind === 'video'
             ? `${id} — vidéo, ${fmtDuration(s.durationSec)}, « ${s.name ?? 'vidéo'} » (fichier joint n° ${askFiles.length})`
-            : `${id} — note vocale, ${fmtDuration(s.durationSec)} (fichier joint n° ${askFiles.length})`,
+            : series
+              ? `${id} — commentaire dit à voix haute pendant la prise des photos ${series.map((p) => idOf.get(p.id)).join(', ')}, ${fmtDuration(s.durationSec)} (fichier joint n° ${askFiles.length})${s.text ? ` ; transcription : « ${s.text} »` : ''}. Chaque photo porte l’instant de sa prise dans ce commentaire : ce qui est dit juste avant et juste après cet instant décrit cette photo.`
+              : `${id} — note vocale, ${fmtDuration(s.durationSec)} (fichier joint n° ${askFiles.length})`,
       })
     } else if (s.kind === 'audio') {
       lines.push({ id, line: `${id} — note vocale (transcription) : « ${s.text} »` })
     } else if (s.kind === 'photo' && s.url) {
       askFiles.push({ url: s.url, filename: s.name ?? `${id}.jpg`, mimeType: s.mimeType || 'image/jpeg', sizeBytes: s.sizeBytes })
-      lines.push({ id, line: `${id} — photo « ${s.name ?? 'photo'} » (fichier joint n° ${askFiles.length})${s.text ? ` — légende : « ${s.text} »` : ''}` })
+      const said = s.voice && narrated.has(s.voice.sourceId) ? `, prise à ${clockOf(s.voice.at)} du commentaire ${idOf.get(s.voice.sourceId)}` : ''
+      lines.push({ id, line: `${id} — photo « ${s.name ?? 'photo'} » (fichier joint n° ${askFiles.length})${said}${s.text ? ` — légende : « ${s.text} »` : ''}` })
     } else if (s.kind === 'document' && s.url) {
       askFiles.push({ url: s.url, filename: s.name ?? `${id}.pdf`, mimeType: 'application/pdf', sizeBytes: s.sizeBytes })
       lines.push({ id, line: `${id} — document PDF « ${s.originalName ?? s.name ?? 'document'} »${s.pageCount ? `, ${s.pageCount} pages` : ''} (fichier joint n° ${askFiles.length})` })

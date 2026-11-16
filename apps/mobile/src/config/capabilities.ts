@@ -41,6 +41,9 @@ export const CAPTURE_CAPABILITIES: readonly Capability[] = [
 export function capabilitiesFor(config: PublicConfig | null, device: { store?: boolean; push?: boolean } = {}): Capability[] {
   const nativeCaptureOff = config?.toggles?.nativeCapture === false
   const caps = SHELL_CAPABILITIES.filter((c) => !(nativeCaptureOff && CAPTURE_CAPABILITIES.includes(c)))
+  // Parler pendant les photos : une fonction nouvelle, seulement si le serveur l'allume (toggle
+  // `photoVoice`) et que la capture native n'est pas coupée.
+  if (!nativeCaptureOff && config?.toggles?.photoVoice === true) caps.push('camera.photo.voice')
   // L'achat dans le magasin : une fonction nouvelle, seulement si le serveur l'allume (toggle
   // `storePurchases`) et que cette version de l'app peut acheter (clé RevenueCat, hors Expo Go).
   if (device.store && config?.toggles?.storePurchases === true) caps.push(...STORE_CAPABILITIES)

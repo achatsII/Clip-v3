@@ -11,7 +11,9 @@ import { CATEGORIES, WARNINGS } from '@/lib/model/catalog'
 import { liveChecks } from '@/lib/model/checks'
 import { placeStep, sectionGroups } from '@/lib/model/sections'
 import type { Step } from '@/lib/model/types'
+import { useToggle } from '@/lib/toggles'
 import { useWide } from '@/lib/ui/screen'
+import { useStepSwipe } from '@/lib/ui/swipe'
 import { cn } from '@/lib/util/cn'
 import { AssistMenu, EditorHeader, iconButton, QuestionsPill, ViewMenu } from './EditorBar'
 import { FormCard, ToolsGrid } from './FormParts'
@@ -426,8 +428,13 @@ function FormPhone(p: Inner & { detail: boolean; onList: () => void }) {
   const onStep = p.detail && p.pane === 'step' && !!step
   const prev = p.content.steps[p.index - 1]
   const next = p.content.steps[p.index + 1]
+  // Sur une étape ouverte, glisser change d'étape, comme au poste (toggle `editorSwipe`).
+  const swipe = useStepSwipe(useToggle('editorSwipe') && onStep, (dir) => {
+    const target = dir > 0 ? next : prev
+    if (target) p.open(target.id)
+  })
   return (
-    <div className="pb-28">
+    <div className="pb-28" {...swipe}>
       <EditorHeader wide={false} top={p.top} readOnly={readOnly} badge={p.badge} assist={null} showAssist={false} onAssistant={p.onAssistant} />
       <div className="space-y-3 px-3 pt-3">
         {top.questions > 0 && !readOnly && <QuestionsPill top={top} className="w-full justify-center" />}

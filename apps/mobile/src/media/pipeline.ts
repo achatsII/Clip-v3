@@ -40,6 +40,17 @@ export async function finalizeVideo(
   return toCapturedMedia(localStore.getMedia(record.localId) ?? record, preview.thumbnail)
 }
 
+/**
+ * Une photo ou une note d'une série commentée : le lien est gardé avec le fichier, pour que la page
+ * le retrouve même si elle s'est rechargée avant de recevoir la série (`media.pending`).
+ */
+export async function linkToNarration(media: CapturedMedia, link: { voiceAt?: number; narration?: boolean }): Promise<CapturedMedia> {
+  const patch = { ...(typeof link.voiceAt === 'number' ? { voiceAt: link.voiceAt } : {}), ...(link.narration ? { narration: true } : {}) }
+  if (!Object.keys(patch).length) return media
+  await localStore.patchMedia(media.localId, patch)
+  return { ...media, ...patch }
+}
+
 /** Note vocale : AAC mono dans un conteneur MPEG-4 (.m4a). */
 export async function finalizeAudio(rawUri: string, durationSec: number | undefined): Promise<CapturedMedia> {
   const record = await registerMedia(rawUri, { kind: 'audio', mimeType: 'audio/mp4', durationSec, origin: 'camera' })

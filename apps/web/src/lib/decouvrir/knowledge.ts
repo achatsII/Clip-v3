@@ -59,8 +59,12 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   (pièces, réglages), « Note vocale » (expliquez à voix haute), « Note » (une précision écrite) et
   « Fichiers » (PDF, Word, vidéos). « De quoi s'agit-il ? » (facultatif) dit la tâche en quelques mots
   (« nettoyage des rails, machine 1234 »).
-- Une fois un média ajouté, ce qu'on a ajouté (« Vos notes ») passe en tête, « Ajouter » en propose
-  d'autres, et « Générer l'instruction » paraît dans une barre en bas.
+- Une fois un média ajouté, ce qu'on a ajouté (« Vos notes ») passe en tête, dans l'ordre où on l'a pris,
+  « Ajouter » en propose d'autres, et « Générer l'instruction » paraît dans une barre en bas.
+- Parler en prenant les photos : le micro s'ouvre avec la caméra photo, et une pastille rouge (« Micro
+  ouvert ») le dit et le ferme d'un toucher ; le choix est retenu sur l'appareil. Tout ce qui est dit forme
+  un seul « Commentaire des photos », sans couper une phrase au déclic, et chaque photo garde l'instant où
+  elle a été prise : l'IA associe à chaque photo ce qui a été dit autour d'elle.
 - On peut glisser des fichiers : vidéos d'une autre caméra, photos, anciennes instructions en PDF ou Word.
   « Médias déjà pris » reprend les médias des instructions précédentes, sans rien téléverser de nouveau.
 - Des médias légers : l'app mobile filme en 720p (environ 19 Mo la minute) et ramène les photos à 1920 px ;
@@ -104,6 +108,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   des étapes, et tous les outils de l'étape choisie à découvert (le texte et ses retouches par l'IA, le
   média, la mise en garde, les points clés, les relevés, la section) ; à l'ordinateur, la liste à gauche ;
   au téléphone, la liste, puis l'étape touchée. On glisse une étape par sa poignée pour la changer de place.
+  Au téléphone, comme au poste, on passe d'une étape à l'autre en glissant le doigt vers la gauche ou la
+  droite (pas pendant qu'on écrit).
 - « Aperçu » (l'œil) : l'instruction comme l'opérateur la suivra, puis retour à la même étape.
 - « Assistant », le bouton de l'IA dans l'éditeur : « Simplifier l'étape », « Rendre plus clair », « Ajouter
   un point clé », « Vérifier la sécurité », ou une conversation pour demander n'importe quel changement

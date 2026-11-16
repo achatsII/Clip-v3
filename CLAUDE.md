@@ -102,14 +102,22 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   en QA : le poste lit alors la vidéo d'origine.
 - **Capturer** (« Nouvelle instruction », `CaptureBoard`) : d'un seul écran au téléphone, qui prend tout
   l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
-  ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher.
+  ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher. Les sources
+  restent dans l'ordre de prise, même quand un envoi finit avant un autre.
+- **Parler pendant les photos** (toggle `photoVoice`) : le micro s'ouvre avec la caméra photo (une pastille
+  le dit et le ferme ; le dernier geste se retient sur l'appareil). Un seul enregistrement par série,
+  jamais coupé ; chaque photo garde son instant (`Source.voice`, `src/lib/media/photoVoice.ts` ; dans l'app,
+  `camera.photo` avec `voice`, `docs/pont-natif.md`). L'IA reçoit la note en fichier et l'instant de chaque
+  photo, et les apparie (`prepareForAi`).
 - **Deux façons de modifier** (toggle `editorViews`) : « Comme au poste » (l'étape telle qu'au poste,
   modifiée sur place) et « Fiche » (la liste des étapes, tous les outils de l'étape choisie à
   découvert, en cartes ; au téléphone, la liste puis l'étape ; une étape se glisse par sa poignée et
   rejoint la section où on la lâche, `placeStep`), retenues sur l'appareil
   (`clip_pref_editor_view` ; sans choix, la fiche au bureau, le poste au téléphone). Une fonction
   nouvelle de l'éditeur existe dans les deux. L'Aperçu (l'œil) est le lecteur du poste, pas une vue.
-  En-tête commun : `src/components/editor/EditorBar.tsx`.
+  En-tête commun : `src/components/editor/EditorBar.tsx`. Au téléphone, glisser change d'étape comme au
+  poste (toggle `editorSwipe`, `src/lib/ui/swipe.ts`) : sur un champ qu'on n'écrit pas aussi, jamais
+  clavier ouvert, depuis une vidéo, une rangée qui défile ou par un appui long.
 - **La lecture au téléphone** (toggle `phoneReader`) : le média à ses vraies proportions, qui cède au
   texte sans descendre sous 38 % de la place (une vidéo garde toute sa largeur et ses commandes
   dessous) ; côte à côte quand on tourne le téléphone ; « Tout voir » depuis le sommaire

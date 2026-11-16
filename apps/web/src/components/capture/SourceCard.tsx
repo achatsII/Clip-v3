@@ -1,13 +1,13 @@
 'use client'
 
-import { AlertCircle, Check, Loader2, RotateCcw, Trash2, WifiOff } from 'lucide-react'
+import { AlertCircle, Check, Loader2, Mic, RotateCcw, Trash2, WifiOff } from 'lucide-react'
 import { useState } from 'react'
 import { SourceIcon } from '@/components/icons'
 import { Textarea } from '@/components/ui/Field'
 import type { PendingUpload } from '@/lib/capture/session'
 import { useMessages } from '@/lib/i18n'
 import type { Source } from '@/lib/model/types'
-import { cn, formatBytes, formatDuration } from '@/lib/util/cn'
+import { cn, formatBytes, formatClock, formatDuration } from '@/lib/util/cn'
 
 function Thumb({ url, kind }: { url?: string; kind: Source['kind'] }) {
   if (url) {
@@ -32,19 +32,32 @@ function Thumb({ url, kind }: { url?: string; kind: Source['kind'] }) {
   )
 }
 
-export function SourceCard({ source, onRemove, onEditText }: { source: Source; onRemove?: () => void; onEditText?: (text: string) => void }) {
+/**
+ * `narrated` : la note d'une série de photos prises en parlant, et combien de photos elle commente.
+ * `voiceAt` : une photo de cette série, et son instant dans la note.
+ */
+export function SourceCard({ source, onRemove, onEditText, narrated, voiceAt }: { source: Source; onRemove?: () => void; onEditText?: (text: string) => void; narrated?: number; voiceAt?: number }) {
   const t = useMessages()
   const ts = t.capture.source
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(source.text ?? '')
-  const meta = [ts.kinds[source.kind], formatDuration(source.durationSec), source.pageCount ? ts.pages(source.pageCount) : '', formatBytes(source.sizeBytes)].filter(Boolean).join(' · ')
+  const kindLabel = narrated ? ts.narrated(narrated) : ts.kinds[source.kind]
+  const meta = [kindLabel, formatDuration(source.durationSec), source.pageCount ? ts.pages(source.pageCount) : '', formatBytes(source.sizeBytes)].filter(Boolean).join(' · ')
+  const title = source.kind === 'note' ? ts.writtenNote : narrated ? ts.narration : (source.originalName ?? source.name ?? ts.kinds[source.kind])
   return (
     <div className="glass-card animate-pop-in flex items-start gap-4 rounded-[24px] p-3 pr-2">
       <Thumb url={source.thumbnailUrl} kind={source.kind} />
       <div className="min-w-0 flex-1 py-1">
-        <p className="truncate text-[15px] font-black text-slate-900 dark:text-white">{source.kind === 'note' ? ts.writtenNote : source.originalName ?? source.name ?? ts.kinds[source.kind]}</p>
-        <p className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+        <p className="truncate text-[15px] font-black text-slate-900 dark:text-white">{title}</p>
+        <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-bold text-slate-500">
           <Check className="h-3.5 w-3.5 text-emerald-500" /> {meta}
+          {typeof voiceAt === 'number' && (
+            <span className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-300" title={ts.voiceAt(formatClock(voiceAt))}>
+              <Mic className="h-3.5 w-3.5" aria-hidden />
+              <span className="sr-only">{ts.voiceAt(formatClock(voiceAt))}</span>
+              <span aria-hidden className="tabular-nums">{formatClock(voiceAt)}</span>
+            </span>
+          )}
         </p>
         {(source.kind === 'note' || source.kind === 'audio') &&
           (editing ? (

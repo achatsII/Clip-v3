@@ -339,20 +339,19 @@ export async function agentTurn(input: {
   const tier = lookTier(picked.map((x) => x.src))
   if (tier.tooBig) return { reply: messages().editorTools.agent.lookTooBig, operations: [], suggestions: first.suggestions }
   input.onLook?.({ sourceIds: picked.map((x) => x.id), operation: tier.op, videoSec: measureSources(picked.map((x) => x.src)).videoSec })
+  // Les numéros de l'instruction (S3, S7…), pas ceux du sous-ensemble : une photo nomme sa note par le sien.
   const prepared = await prepareForAi(
     picked.map((x) => x.src),
     input.files,
+    undefined,
+    picked.map((x) => x.id),
   )
   // Les URI Gemini neuves se gardent : une autre revue dans les 48 h ne téléverse rien.
   if (prepared.sources.some((src, k) => src.geminiFileUri !== picked[k].src.geminiFileUri)) {
     const byId = new Map(prepared.sources.map((src, k) => [picked[k].src.id, src]))
     input.onSources?.(sources.map((src) => byId.get(src.id) ?? src))
   }
-  // prepareForAi numérote S1, S2… dans le sous-ensemble : on remet les numéros de l'instruction.
-  const lines = prepared.lines.map((l) => {
-    const k = Number(l.id.slice(1)) - 1
-    return l.line.replace(/^S\d+/, picked[k]?.id ?? l.id)
-  })
+  const lines = prepared.lines.map((l) => l.line)
   return askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, {
     sources,
     canTranslate: input.canTranslate,

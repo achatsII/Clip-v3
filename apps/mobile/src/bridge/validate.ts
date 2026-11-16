@@ -66,7 +66,9 @@ export const validators: Validators = {
     const r = isRecord(p) ? p : {}
     const maxCount = optionalInt(r.maxCount, 1, 50)
     if (maxCount === null) return fail('maxCount doit être un nombre')
-    return ok({ maxCount })
+    if (r.voice !== undefined && typeof r.voice !== 'boolean') return fail('voice doit être un booléen')
+    // Parler pendant les photos : faux par défaut (une page plus ancienne ne l'envoie pas).
+    return ok({ maxCount, voice: r.voice === true })
   },
   'camera.video': (p) => {
     const r = isRecord(p) ? p : {}

@@ -1,20 +1,23 @@
+import Feather from '@expo/vector-icons/Feather'
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera'
 import * as Haptics from 'expo-haptics'
 import { useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { GestureDetector } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BridgeError, cancelled } from '../bridge/errors'
-import type { CapturedMedia } from '../bridge/protocol'
+import { CAPTURE_PRESETS, type CapturedMedia } from '../bridge/protocol'
 import { logError } from '../logging/log'
 import { discardMedia } from '../media/mediaStore'
 import { pickFromLibrary } from '../media/pick'
-import { finalizePhoto } from '../media/pipeline'
+import { finalizePhoto, linkToNarration } from '../media/pipeline'
 import { IconButton, Pill, PrimaryButton } from '../ui/components'
+import { formatClock } from '../ui/format'
 import { colors, radii, touch, type } from '../ui/theme'
 import { useBackAction } from './backAction'
 import { captureController, type ActiveCapture } from './controller'
+import { useNarration } from './narration'
 import { PermissionPanel } from './PermissionPanel'
 import { ShutterButton } from './ShutterButton'
 import { previewFrame, useCameraLens } from './framing'
@@ -25,6 +28,10 @@ import { useStrings } from '../i18n'
 /**
  * Plusieurs photos d'affilée. Chaque photo est réduite (1920 px, JPEG) pendant qu'on prend la
  * suivante ; « Terminé » rend la série dans l'ordre de prise.
+ *
+ * Si la page le demande (`voice`), on peut parler en même temps : le micro s'ouvre avec la caméra
+ * (sauf si la personne l'a fermé la dernière fois), une pastille rouge le dit et le ferme d'un
+ * geste ; ce qui est dit revient en une note, chaque photo portant son instant (`narration.ts`).
  */
 export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'> }) {
   const t = useStrings()
@@ -47,6 +54,9 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
   const maxCount = capture.payload.maxCount ?? 30
   const count = taken.length
   const full = count >= maxCount
+  const voice = capture.payload.voice === true
+  // Le micro attend la caméra : la permission, puis l'aperçu prêt.
+  const narration = useNarration(voice && !!permission?.granted && ready)
 
   useBackAction(() => {
     if (finishing) return
@@ -72,11 +82,14 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
     if (!cameraRef.current || !ready || shooting || full || finishing) return
     setShooting(true)
     const key = nextKey.current++
+    // L'instant du déclic, pas celui où la photo est prête : c'est là qu'on parle de la photo.
+    const voiceAt = narration.mark()
     try {
       const picture = await cameraRef.current.takePictureAsync({ quality: 0.92, exif: false })
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       setTaken((prev) => [...prev, { key }])
       const job = finalizePhoto(picture.uri, picture.width, picture.height)
+        .then((photo) => linkToNarration(photo, { voiceAt }))
         .then((media) => {
           setTaken((prev) => prev.map((t) => (t.key === key ? { key, media } : t)))
           return media
@@ -98,9 +111,12 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
   async function pickExisting() {
     if (picking || finishing || full) return
     setPicking(true)
+    // Ajoutées pendant qu'on parle : ce qui est dit à ce moment les décrit peut-être.
+    const voiceAt = narration.mark()
     try {
-      const items = (await pickFromLibrary(['photo'], true)).slice(0, maxCount - count)
-      for (const media of items) {
+      const picked = (await pickFromLibrary(['photo'], true)).slice(0, maxCount - count)
+      for (const photo of picked) {
+        const media = await linkToNarration(photo, { voiceAt })
         const key = nextKey.current++
         pending.current.push(Promise.resolve(media))
         setTaken((prev) => [...prev, { key, media }])
@@ -119,13 +135,30 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
     setFinishing(true)
     const results = await Promise.all(pending.current)
     const items = results.filter((m): m is CapturedMedia => !!m)
-    if (items.length === 0) captureController.fail(capture.id, cancelled())
-    else captureController.complete(capture.id, { items })
+    // Le commentaire, s'il y en a un, vient en dernier : la page le relie aux photos par leur instant.
+    const note = await narration.finish()
+    if (items.length === 0) {
+      if (note) await discardMedia([note.localId])
+      captureController.fail(capture.id, cancelled())
+    } else captureController.complete(capture.id, { items: note ? [...items, note] : items })
+  }
+
+  /** La pastille du micro : fermer, rouvrir, ou dire comment l'autoriser. */
+  function onMic() {
+    if (narration.denied && !narration.denied.canAsk) {
+      Alert.alert(t.photo.micDeniedTitle, t.photo.micDeniedMessage, [
+        { text: t.common.cancel, style: 'cancel' },
+        { text: t.common.openSettings, onPress: () => void Linking.openSettings() },
+      ])
+      return
+    }
+    void Haptics.selectionAsync()
+    void narration.toggle()
   }
 
   function close() {
     if (count === 0) {
-      captureController.fail(capture.id, cancelled())
+      void narration.discard().finally(() => captureController.fail(capture.id, cancelled()))
       return
     }
     Alert.alert(t.photo.keepTitle(count), undefined, [
@@ -136,6 +169,7 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
         onPress: async () => {
           const results = await Promise.all(pending.current)
           await discardMedia(results.filter((m): m is CapturedMedia => !!m).map((m) => m.localId))
+          await narration.discard()
           captureController.fail(capture.id, cancelled())
         },
       },
@@ -159,6 +193,12 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
           onCameraReady={() => setReady(true)}
           onMountError={(e) => logError(new Error(e.message), { screen: 'camera.photo', action: 'mount' })}
         />
+
+        {voice && ready ? (
+          <View style={[styles.micRow, { top: insets.top + 12 + touch.min + 8 + 10 }]} pointerEvents="box-none">
+            <MicPill narration={narration} onPress={onMic} />
+          </View>
+        ) : null}
 
         <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
           <IconButton icon="x" label={t.common.close} onPress={close} size={touch.min + 8} />
@@ -201,7 +241,7 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
               )}
             </ScrollView>
           ) : (
-            <Text style={styles.hint}>{t.photo.hint}</Text>
+            <Text style={styles.hint}>{narration.recording ? t.photo.voiceHint : t.photo.hint}</Text>
           )}
           <View style={styles.zoomRow}>
             <ZoomPresets range={range} magnification={magnification} onPick={setMagnification} />
@@ -225,8 +265,59 @@ export function PhotoCaptureScreen({ capture }: { capture: ActiveCapture<'photo'
   )
 }
 
+/**
+ * Le micro, en une pastille sous la barre du haut : rouge quand il écoute (le point bat avec la
+ * voix), sombre quand il est fermé. Un toucher l'ouvre ou le ferme.
+ */
+function MicPill({ narration, onPress }: { narration: ReturnType<typeof useNarration>; onPress: () => void }) {
+  const t = useStrings()
+  const on = narration.recording
+  const label = on
+    ? t.photo.listening(formatClock(narration.elapsed))
+    : narration.full
+      ? t.photo.micFull(formatClock(CAPTURE_PRESETS.audio.maxDurationSec))
+      : narration.denied
+        ? t.photo.micDenied
+        : t.photo.micClosed
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={on ? `${label}. ${t.photo.micOff}` : `${label}. ${t.photo.micOn}`}
+      accessibilityState={{ selected: on, disabled: narration.full }}
+      disabled={narration.full}
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [styles.micPill, on ? styles.micPillOn : styles.micPillOff, pressed && { opacity: 0.8 }]}
+    >
+      {on ? (
+        <View style={styles.micDotWrap}>
+          <View style={[styles.micDot, { transform: [{ scale: 0.8 + narration.level * 0.7 }] }]} />
+        </View>
+      ) : (
+        <Feather name="mic-off" size={16} color={colors.white} />
+      )}
+      <Text style={styles.micText}>{label}</Text>
+      {on ? <Feather name="pause" size={14} color={colors.white} style={{ opacity: 0.85 }} /> : null}
+    </Pressable>
+  )
+}
+
 const styles = StyleSheet.create({
   black: { flex: 1, backgroundColor: '#000' },
+  micRow: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  micPill: {
+    minHeight: touch.min,
+    paddingHorizontal: 16,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  micPillOn: { backgroundColor: colors.danger },
+  micPillOff: { backgroundColor: 'rgba(10,15,24,0.55)', borderWidth: 1, borderColor: colors.glassBorder },
+  micDotWrap: { width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
+  micDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.white },
+  micText: { color: colors.white, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
   topBar: {
     position: 'absolute',
     left: 0,

@@ -21,6 +21,11 @@ export type NativePlatform = 'ios' | 'android'
 /** Ce que la coquille sait faire. L'app web n'appelle que ce qui est annoncé. */
 export type Capability =
   | 'camera.photo'
+  /**
+   * Parler pendant les photos (`camera.photo` avec `voice`) : un seul enregistrement continu pendant
+   * la série, et l'instant de chaque photo dans cet enregistrement. Annoncée avec le toggle `photoVoice`.
+   */
+  | 'camera.photo.voice'
   | 'camera.video'
   | 'audio.record'
   | 'media.pick'
@@ -84,13 +89,26 @@ export interface CapturedMedia {
   thumbnailDataUrl?: string
   /** D'où vient le fichier : filmé dans CLIP, choisi dans la galerie (original, à réduire), ou un document. */
   origin?: 'camera' | 'library' | 'files'
+  /**
+   * Une photo d'une série commentée : l'instant (en secondes) où elle s'est ajoutée à la série, dans
+   * la note `narration` de la même réponse. Absent si le micro était fermé à ce moment.
+   */
+  voiceAt?: number
+  /** La note vocale enregistrée pendant une série de photos (`camera.photo` avec `voice`), la dernière de `items`. */
+  narration?: boolean
 }
 
 export type ScanFormat = 'qr' | 'code128' | 'code39' | 'ean13' | 'ean8' | 'upc_a' | 'datamatrix'
 
 /** Requête web → natif : `type` et la forme de `payload` / `result`. */
 export interface BridgeRequestMap {
-  'camera.photo': { payload: { maxCount?: number }; result: { items: CapturedMedia[] } }
+  /**
+   * Une série de photos. `voice` (faux par défaut, seulement si `camera.photo.voice` est annoncée) :
+   * le micro s'ouvre avec la caméra, sauf si la personne l'a fermé la dernière fois sur cet appareil,
+   * et se ferme d'un geste ; ce qui est dit revient en une note `narration`, chaque photo portant son
+   * instant (`voiceAt`). Un seul enregistrement, jamais coupé : aucun mot ne se perd au déclic.
+   */
+  'camera.photo': { payload: { maxCount?: number; voice?: boolean }; result: { items: CapturedMedia[] } }
   'camera.video': { payload: { maxDurationSec?: number }; result: { items: CapturedMedia[] } }
   'audio.record': { payload: { maxDurationSec?: number }; result: { items: CapturedMedia[] } }
   'media.pick': { payload: { kinds: Array<'photo' | 'video'>; multiple?: boolean }; result: { items: CapturedMedia[] } }

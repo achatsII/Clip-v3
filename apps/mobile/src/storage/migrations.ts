@@ -24,6 +24,10 @@ export interface MediaRecord {
   durationSec?: number
   /** Filmé dans CLIP, choisi dans la galerie (original), ou document. */
   origin?: 'camera' | 'library' | 'files'
+  /** Photo d'une série commentée : son instant dans la note de la série (repris après un rechargement). */
+  voiceAt?: number
+  /** La note vocale d'une série de photos commentée. */
+  narration?: boolean
 }
 
 export interface ShellStateV1 {
@@ -68,6 +72,8 @@ function asMediaRecord(v: unknown): MediaRecord | null {
   if (typeof v.height === 'number') rec.height = v.height
   if (typeof v.durationSec === 'number') rec.durationSec = v.durationSec
   if (v.origin === 'camera' || v.origin === 'library' || v.origin === 'files') rec.origin = v.origin
+  if (typeof v.voiceAt === 'number' && Number.isFinite(v.voiceAt) && v.voiceAt >= 0) rec.voiceAt = v.voiceAt
+  if (v.narration === true) rec.narration = true
   return rec
 }
 
