@@ -1,5 +1,5 @@
 // Composants de l'app Clip, en HTML statique, pour les maquettes du deck (et les écrans incrustés).
-import { ic, logoMark } from './lib.mjs'
+import { ic, logoMark, wordmark } from './lib.mjs'
 
 export const img = (f) => globalThis.IMG(f)
 
@@ -13,7 +13,7 @@ export const pt = (t, x, y, click = false) => ({ t, x, y, click })
 
 export const BG = (night = false) => `<div class="bg${night ? ' night' : ''}"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="grain"></div></div>`
 
-export const brand = (dark = false) => `<div class="brand${dark ? ' on-dark' : ''}">${logoMark(34)}<b>CLIP</b></div>`
+export const brand = (dark = false) => `<div class="brand${dark ? ' on-dark' : ''}">${logoMark(34)}<b>${wordmark('22px')}</b></div>`
 
 /** Colonne de texte de gauche : sur-titre, titre, sous-titre. */
 export function copy({ n, eyebrow, title, sub, ai = false, extra = '', top = '' }) {
@@ -35,7 +35,7 @@ export function side({ active = 'home', low = '', name = 'Mélanie Tremblay', ro
     ['stats', 'chart-column', 'Statistiques'],
   ]
   return `<aside class="side glass-nav">
-    <div class="logo">${logoMark(40)}<span><b>CLIP</b><small>Usine Démo</small></span></div>
+    <div class="logo">${logoMark(40)}<span><b>${wordmark('24px')}</b><small>Usine Démo</small></span></div>
     <span class="btn btn-p new">${ic('plus', 20)} Nouvelle instruction</span>
     <nav class="nav">${items
       .map(([k, i, l]) => `<a class="${k === active ? 'on' : ''}">${ic(i, 20)}<span>${l}</span>${k === 'retours' && feedback ? `<span class="badge tnum">${feedback}</span>` : ''}</a>`)

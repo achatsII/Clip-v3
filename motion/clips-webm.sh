@@ -5,7 +5,7 @@
 set -e
 cd "$(dirname "$0")"
 SK=${SK:-/root/.claude/plugins/synced/032cda44-35a7-40ff-bc4b-e5f9bead7b20_4c043618-6207-43bd-bea8-8d3dbf921d24/videos-produit/skills/motion-animation-reel}
-if [ "$1" = export ]; then Q="--W 1920 --H 1080 --crf 20"; else Q="--W 1280 --H 720 --crf 37"; fi
+if [ "$1" = export ]; then Q="--W 1920 --H 1080 --crf 20"; else Q="--W 1280 --H 720 --crf 39"; fi
 while read f start dur; do
   python3 "$SK/scripts/media.py" webm "inputs/gen/$f.mp4" "clips/assets/$f.webm" $Q --start "$start" --dur "$dur" < /dev/null
 done <<'LIST'

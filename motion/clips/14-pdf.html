@@ -20,7 +20,7 @@ $('Ltab').innerHTML=SCREEN('tablet','s6',1324,816,{'rails-huile':'assets/rails-h
 const R=document.querySelector('.ui.s6'); R.querySelector('.scr').insertAdjacentHTML('beforeend',FEEDBACK_SHEET('fb'));
 const st=[...R.querySelectorAll('.pl-step')], sub=[...R.querySelectorAll('.pl-sub .pl-st')];
 st[0].style.opacity=0; st[1].style.opacity=1; sub[0].style.opacity=0; sub[1].style.opacity=1; R.querySelector('.pl-prog i').style.width='60%';
-const lis=R.querySelector('.pl-hb.listen'); lis.style.background='#0078ff'; lis.style.color='#fff'; $('fbk0').classList.add('sel');
+const lis=R.querySelector('.pl-hb.listen'); lis.style.background=C.blue; lis.style.color='#fff'; $('fbk0').classList.add('sel');
 $('Lpdf').innerHTML=SCREEN('pdfPage','s14',560,724);
 $('fw').innerHTML=ui('pdfFile');
 const SHP={w:560,h:724,r:8,bg:'#FFFFFF',cam:1.22};

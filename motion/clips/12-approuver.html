@@ -18,7 +18,7 @@ $('Lwin').innerHTML=SCREEN('approve','s11',1120,880);
 const R=document.querySelector('.ui.s11'), bw=R.querySelector('.vb .bw'), bp=R.querySelector('.vb .bp'), toast=R.querySelector('.toast'), btn=R.querySelector('.req .btn-p');
 R.querySelector('.confetti')?.remove(); bw.style.opacity=1; bp.style.opacity=0;
 // confettis : des morceaux lancés du bouton, avec la gravité
-const COLS=['#0078ff','#00c6ff','#18c480','#ffc800','#9b2cfa','#ff2b5e'];
+const COLS=['#5b4cf0','#7c5cff','#18c480','#ffc800','#9b2cfa','#ff2b5e'];
 const CF=Array.from({length:34},(_,i)=>({x:120+((i*53)%120)-60,y:-230,vx:((i*37)%21-10)*55,vy:-520-((i*29)%9)*55,r:(i*47)%360,c:COLS[i%6]}));
 $('Lwin').insertAdjacentHTML('beforeend',CF.map((c,i)=>`<i class="cf" id="cf${i}" style="background:${c.c};opacity:0"></i>`).join(''));
 $('Lph').innerHTML=PHOTO('ph','assets/poste-tablette.jpg');

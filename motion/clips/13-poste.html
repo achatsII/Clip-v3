@@ -39,7 +39,7 @@ M.scene({
       if(!TAPS && t>=tTab+0.2){ TAPS=[[tN,...pos('.pl-next')],[tL,...pos('.pl-hb.listen')],[tS,...pos('.pl-step:last-child .pl-b.amber')]]; }
       const two=t>=tN+0.12; st[0].style.opacity=two?0:1; st[1].style.opacity=two?1:0; sub[0].style.opacity=two?0:1; sub[1].style.opacity=two?1:0;
       prog.style.width=(40+20*M.eio((t-tN-0.1)/0.5))+'%';
-      const on=t>=tL+0.1; lis.style.background=on?'#0078ff':''; lis.style.color=on?'#fff':''; lis.querySelector('svg').style.transform=on?`scale(${(1+0.15*Math.max(0,Math.sin((t-tL)*7))).toFixed(3)})`:'';
+      const on=t>=tL+0.1; lis.style.background=on?C.blue:''; lis.style.color=on?'#fff':''; lis.querySelector('svg').style.transform=on?`scale(${(1+0.15*Math.max(0,Math.sin((t-tL)*7))).toFixed(3)})`:'';
       const sh=M.eio((t-tS-0.12)/0.4); $('fb').style.transform=`translateY(${((1-sh)*360).toFixed(1)}px)`; $('fb').style.opacity=sh>0?1:0;
       $('fbk0').classList.toggle('sel',t>=tK);
       if(TAPS) touchAt($('tp'),t,TAPS);

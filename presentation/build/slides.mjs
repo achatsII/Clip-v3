@@ -4,7 +4,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ic, logoMark, cursor } from './lib.mjs'
+import { ic, logoMark, cursor, wordmark } from './lib.mjs'
 import { img, at, pt, BG, brand, copy, side, win, STEPS, TITLE, WARN, playerFrame, PLAYER_CSS } from './ui.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -22,7 +22,7 @@ function s01() {
 .s1 .hero { position:absolute; left:110px; top:0; bottom:0; width:1000px; display:flex; flex-direction:column; justify-content:center; gap:30px; }
 .s1 .wm { display:flex; align-items:center; gap:22px; }
 .s1 .wm b { display:block; font-size:80px; font-weight:900; letter-spacing:-.06em; color:#fff; line-height:1; }
-.s1 .wm small { display:block; margin-top:8px; font-size:15px; font-weight:900; letter-spacing:.16em; color:#7cc4ff; text-transform:uppercase; }
+.s1 .wm small { display:block; margin-top:8px; font-size:15px; font-weight:900; letter-spacing:.16em; color:#c7d2fe; text-transform:uppercase; }
 .s1 h1 { font-size:86px; line-height:.98; font-weight:900; letter-spacing:-.055em; color:#fff; }
 .s1 h1 em { font-style:normal; background-image:linear-gradient(135deg,#5ad8ff,#3b9bff); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .s1 .lead { font-size:28px; line-height:1.42; font-weight:700; color:rgba(255,255,255,.84); max-width:780px; }
@@ -32,7 +32,7 @@ function s01() {
   <div class="photo a-kb" style="background-image:url(${img('usine-large.jpg')})"></div>
   <div class="shade-l"></div>
   <div class="hero">
-    <div class="wm a-rise" style="--d:.2s">${logoMark(92)}<span><b>CLIP</b><small>Instructions de travail · IA</small></span></div>
+    <div class="wm a-rise" style="--d:.2s">${logoMark(92)}<span><b>${wordmark('60px')}</b><small>Instructions de travail · IA</small></span></div>
     <h1 class="a-rise" style="--d:.45s">Le savoir-faire de vos experts, <em>au poste</em>, en quelques minutes.</h1>
     <p class="lead a-rise" style="--d:.7s">Filmez un expert. L’IA en fait une instruction de travail claire et visuelle, prête pour le plancher.</p>
   </div>
@@ -172,13 +172,13 @@ function s04() {
 .s4 .float .msg span { position:absolute; left:0; top:0; white-space:nowrap; }
 .s4 .gen { height:58px; padding:0 28px; font-size:16px; position:relative; }
 .s4 .gen .spin { position:absolute; left:26px; }
-.s4 .drop { position:absolute; left:264px; right:0; top:0; bottom:0; z-index:20; display:flex; align-items:center; justify-content:center; background:rgba(0,120,255,.12); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+.s4 .drop { position:absolute; left:264px; right:0; top:0; bottom:0; z-index:20; display:flex; align-items:center; justify-content:center; background:rgba(91,76,240,.12); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
 .s4 .drop div { border-radius:30px; padding:28px 40px; text-align:center; font-size:22px; font-weight:900; }
 .s4 .drop .ic { color:var(--primary); margin:0 auto 8px; display:block; }
 .s4 .files { position:absolute; left:-60px; top:700px; z-index:50; width:300px; animation:s4drag ${T}s linear both; }
 .s4 .fcard { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:16px; margin-top:6px; font-size:13.5px; font-weight:800; color:#0f172a; }
 .s4 .fcard .fi { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#fff; }
-.s4 .fcount { position:absolute; right:-10px; top:-14px; width:34px; height:34px; border-radius:99px; background:#0078ff; color:#fff; font-size:15px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:var(--sh-p); }
+.s4 .fcount { position:absolute; right:-10px; top:-14px; width:34px; height:34px; border-radius:99px; background:var(--primary); color:#fff; font-size:15px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:var(--sh-p); }
 `,
     html: `<div class="stage s4">${BG()}${brand()}
   ${copy({ eyebrow: 'Déposer', title: 'Déposez tout dans Clip.', sub: 'La vidéo, des photos, une note vocale… et même vos <b>vieilles procédures</b> en PDF ou Word.', extra: `<div class="a-rise" style="--d:.55s;display:flex;gap:10px;flex-wrap:wrap">${['video|Vidéo', 'image|Photos', 'mic|Notes vocales', 'file-text|PDF et Word'].map((x) => { const [i, l] = x.split('|'); return `<span class="chip glass-card">${ic(i, 18)} ${l}</span>` }).join('')}</div>` }).replace('<i></i>', `<i>${ic('upload', 20)}</i>`)}
@@ -322,7 +322,7 @@ function s06() {
 .s6 .pl-prog i { animation: k6p .6s var(--ease) 2.35s both; width:60%; }
 @keyframes k6p { from { width:40%; } to { width:60%; } }
 .s6 .listen { animation: k6l .3s ease-out 4.85s both; }
-@keyframes k6l { from { background:rgba(255,255,255,.55); color:#0f172a; box-shadow:none; } to { background:#0078ff; color:#fff; box-shadow:var(--sh-p); } }
+@keyframes k6l { from { background:rgba(255,255,255,.55); color:#0f172a; box-shadow:none; } to { background:var(--primary); color:#fff; box-shadow:var(--sh-p); } }
 .s6 .listen .ic { animation: k6v 1s ease-in-out 4.9s infinite; }
 @keyframes k6v { 50% { transform:scale(1.15); } }
 .s6 .pl-step.a-fade .pl-text > * { animation: k-rise .5s var(--ease) both; }
@@ -641,12 +641,12 @@ function s10() {
 .s10 .old .tag { position:absolute; left:18px; top:18px; padding:8px 14px; border-radius:14px; font-size:14px; font-weight:900; display:flex; gap:8px; align-items:center; }
 .s10 .mk { left:740px; top:96px; width:1120px; height:880px; }
 .s10 .main { padding:30px 36px; display:flex; flex-direction:column; gap:16px; }
-.s10 .zone { height:150px; border-radius:30px; border:2.5px dashed rgba(0,120,255,.35); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; }
+.s10 .zone { height:150px; border-radius:30px; border:2.5px dashed rgba(91,76,240,.35); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; }
 .s10 .zone .ic { color:var(--primary); }
 .s10 .zone b { font-size:18px; font-weight:900; }
 .s10 .zone small { font-size:13px; font-weight:700; color:#64748b; }
 .s10 .zone.hot { animation: k10h .9s ease-in-out 1.4s both; }
-@keyframes k10h { 0% { background:transparent; } 30%, 80% { background:rgba(0,120,255,.1); border-color:#0078ff; } 100% { background:transparent; } }
+@keyframes k10h { 0% { background:transparent; } 30%, 80% { background:rgba(91,76,240,.1); border-color:var(--primary); } 100% { background:transparent; } }
 .s10 .batch { border-radius:30px; padding:20px; }
 .s10 .bh { display:flex; align-items:center; gap:12px; }
 .s10 .bh b { font-size:18px; font-weight:900; letter-spacing:-.02em; flex:1; }
@@ -667,7 +667,7 @@ function s10() {
 .s10 .stack { position:absolute; left:-430px; top:560px; width:250px; z-index:50; animation: s10drag ${T}s linear both; }
 .s10 .stack .pg { position:absolute; left:0; top:0; width:170px; height:210px; border-radius:14px; background:#fffdf7; box-shadow:0 10px 30px rgba(15,23,42,.3); border:1px solid #e7e2d3; }
 .s10 .stack .pg i { display:block; height:7px; margin:14px 16px 0; border-radius:4px; background:#e2ddd0; }
-.s10 .stack .n40 { position:absolute; left:140px; top:-14px; width:46px; height:46px; border-radius:99px; background:#0078ff; color:#fff; font-size:17px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:var(--sh-p); }
+.s10 .stack .n40 { position:absolute; left:140px; top:-14px; width:46px; height:46px; border-radius:99px; background:var(--primary); color:#fff; font-size:17px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:var(--sh-p); }
 `,
     html: `<div class="stage s10">${BG()}${brand()}
   ${copy({ eyebrow: 'Moderniser', title: 'Vos vieilles instructions, <em>remises à neuf</em>.', sub: 'Déposez vos PDF et Word, même par dizaines : chacun devient un brouillon structuré, prêt à relire.', top: 'bottom:auto;top:150px;justify-content:flex-start' }).replace('<i></i>', `<i>${ic('file-up', 20)}</i>`)}
@@ -703,7 +703,7 @@ function s11() {
   const S = 's11', T = 9
   const c = cursor('c11', T, [pt(0, 760, 700), at(S, 'row', 1.3), at(S, 'row', 1.5, { click: true }), at(S, 'mod', 2.9), at(S, 'approve', 4.2), at(S, 'approve', 4.4, { click: true }), at(S, 'approve', 9, { dx: -120, dy: 90 })])
   const conf = Array.from({ length: 26 }, (_, i) => {
-    const x = (i * 37) % 100, col = ['#0078ff', '#00c6ff', '#18c480', '#ffc800', '#9b2cfa', '#ff2b5e'][i % 6]
+    const x = (i * 37) % 100, col = ['#5b4cf0', '#7c5cff', '#18c480', '#ffc800', '#9b2cfa', '#ff2b5e'][i % 6]
     return `<i style="left:${x}%;background:${col};--dx:${((i % 5) - 2) * 30}px;animation-delay:${(4.5 + (i % 7) * 0.05).toFixed(2)}s"></i>`
   }).join('')
   return {
@@ -733,7 +733,7 @@ function s11() {
 .s11 .bw { background:#fef3c7; color:#92400e; }
 .s11 .bp { background:#d1fae5; color:#065f46; }
 .s11 .req { margin-top:16px; border-radius:26px; padding:16px; display:flex; gap:14px; align-items:flex-start; }
-.s11 .req .av { width:44px; height:44px; border-radius:16px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; background-image:var(--grad-ai); flex-shrink:0; }
+.s11 .req .av { width:44px; height:44px; border-radius:16px; display:flex; align-items:center; justify-content:center; color:var(--primary-strong); font-weight:900; background:var(--primary-soft); flex-shrink:0; }
 .s11 .req b { display:block; font-size:15px; font-weight:900; }
 .s11 .req q { display:block; margin-top:4px; font-size:14px; font-weight:600; color:#475569; quotes:"« " " »"; }
 .s11 .req .bt { margin-top:12px; display:flex; gap:10px; }
@@ -814,7 +814,7 @@ function s12() {
 .s12 .cam .lbl small { display:block; text-align:center; margin-top:6px; font-size:10px; font-weight:900; letter-spacing:.08em; color:#0f172a; }
 .s12 .cam .fr { position:absolute; left:50%; top:46%; width:200px; height:200px; transform:translate(-50%,-56%); border-radius:26px; border:4px solid rgba(255,255,255,.9); animation: k12f .3s ease-out 2.9s both; }
 @keyframes k12f { to { border-color:#18c480; box-shadow:0 0 0 6px rgba(24,196,128,.3); } }
-.s12 .cam .scan { position:absolute; left:50%; top:46%; width:180px; height:3px; margin-left:-90px; background:#00c6ff; box-shadow:0 0 12px #00c6ff; animation: k12s 1.2s ease-in-out 1.6s 2 alternate both; }
+.s12 .cam .scan { position:absolute; left:50%; top:46%; width:180px; height:3px; margin-left:-90px; background:#8b80ff; box-shadow:0 0 12px #8b80ff; animation: k12s 1.2s ease-in-out 1.6s 2 alternate both; }
 @keyframes k12s { from { transform:translateY(-110px); } to { transform:translateY(70px); } }
 .s12 .cam .aim { position:absolute; left:0; right:0; bottom:110px; text-align:center; color:#fff; font-size:14px; font-weight:800; }
 .s12 .cam .top { position:absolute; left:0; right:0; top:56px; display:flex; justify-content:space-between; padding:0 18px; color:#fff; font-size:15px; font-weight:900; }
@@ -892,11 +892,11 @@ function s13() {
 .s13 .tg { margin-top:12px; display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:18px; background:#fff; font-size:14px; font-weight:800; }
 .s13 .tg .sw { position:relative; width:52px; height:30px; border-radius:99px; background:#cbd5e1; flex-shrink:0; animation: k13b .25s ease-out 1.5s both; }
 .s13 .tg .sw i { position:absolute; left:3px; top:3px; width:24px; height:24px; border-radius:99px; background:#fff; box-shadow:0 2px 6px rgba(15,23,42,.25); animation: k13k .25s ease-out 1.5s both; }
-@keyframes k13b { to { background:#0078ff; } }
+@keyframes k13b { to { background:var(--primary); } }
 @keyframes k13k { to { transform:translateX(22px); } }
 .s13 .tg small { display:block; font-size:12px; font-weight:600; color:#64748b; }
 .s13 .phone { left:680px; top:0; width:420px; height:850px; }
-.s13 .lock { position:absolute; inset:0; background-image:linear-gradient(160deg,#0f172a 0%,#1e3a8a 55%,#0ea5e9 130%); }
+.s13 .lock { position:absolute; inset:0; background-image:linear-gradient(160deg,#0f172a 0%,#312e81 55%,#7c5cff 130%); }
 .s13 .lock .tm { position:absolute; left:0; right:0; top:110px; text-align:center; color:#fff; }
 .s13 .lock .tm b { display:block; font-size:84px; font-weight:800; letter-spacing:-.04em; line-height:1; }
 .s13 .lock .tm small { display:block; margin-top:6px; font-size:17px; font-weight:700; opacity:.85; }
@@ -974,12 +974,12 @@ function s14() {
 .s14 .page .v { margin-top:6px; font-size:10.5px; font-weight:700; color:#475569; }
 .s14 .page .qrb { text-align:center; font-size:8.5px; font-weight:800; color:#475569; }
 .s14 .page .ppe { margin-top:12px; display:flex; gap:6px; }
-.s14 .page .ppe span { padding:5px 9px; border-radius:8px; background:#e5f1ff; color:#0056d6; font-size:10px; font-weight:900; }
+.s14 .page .ppe span { padding:5px 9px; border-radius:8px; background:var(--primary-soft); color:var(--primary-strong); font-size:10px; font-weight:900; }
 .s14 .page .grid { margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .s14 .page .stp .im { height:118px; border-radius:6px; background-size:cover; background-position:center; }
 .s14 .page .stp b { display:block; margin-top:6px; font-size:12.5px; font-weight:900; }
 .s14 .page .stp p { margin-top:2px; font-size:10px; line-height:1.4; font-weight:600; color:#475569; }
-.s14 .page .stp .n { display:inline-flex; width:18px; height:18px; border-radius:6px; align-items:center; justify-content:center; color:#fff; background:#0078ff; font-size:10px; font-weight:900; margin-right:6px; }
+.s14 .page .stp .n { display:inline-flex; width:18px; height:18px; border-radius:6px; align-items:center; justify-content:center; color:#fff; background:var(--primary); font-size:10px; font-weight:900; margin-right:6px; }
 .s14 .page .ft { position:absolute; left:38px; right:38px; bottom:22px; display:flex; justify-content:space-between; font-size:8.5px; font-weight:700; color:#64748b; border-top:1px solid #e2e8f0; padding-top:8px; }
 .s14 .file { position:absolute; right:30px; bottom:30px; display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:20px; z-index:9; }
 .s14 .file .fi { width:44px; height:52px; border-radius:10px; background:#e11d48; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; }
@@ -1038,7 +1038,7 @@ function s15() {
 .s15 .loop { display:flex; align-items:center; gap:14px; }
 .s15 .lp { display:flex; align-items:center; gap:12px; height:64px; padding:0 24px 0 12px; border-radius:24px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#fff; font-size:22px; font-weight:900; animation: k15 .6s ease-out var(--d) both; }
 .s15 .lp i { width:44px; height:44px; border-radius:16px; display:flex; align-items:center; justify-content:center; background-image:var(--grad); box-shadow:var(--sh-p); }
-@keyframes k15 { 0% { opacity:0; transform:translateY(18px); } 60% { opacity:1; background:rgba(0,120,255,.35); } 100% { opacity:1; transform:none; } }
+@keyframes k15 { 0% { opacity:0; transform:translateY(18px); } 60% { opacity:1; background:rgba(91,76,240,.35); } 100% { opacity:1; transform:none; } }
 .s15 .ar { color:rgba(255,255,255,.45); }
 .s15 .cta { margin-top:10px; height:84px; padding:0 44px; border-radius:99px; font-size:26px; gap:14px; }
 `,

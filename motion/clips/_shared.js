@@ -1,15 +1,17 @@
 // Partagé par toutes les scènes du film Clip : palette et fond de l'app (apps/web/src/app/globals.css),
 // états de la forme, écrans de l'app (clips/_ui.js, repris du deck), photos et clips.
 const $=id=>document.getElementById(id);
+// La couleur de CLIP depuis le 2026-11-16 : l'indigo (BRAND, apps/web/src/lib/brand/colors.ts). Les noms d'avant
+// restent (blue = la primaire, cyan = le début du dégradé) pour ne pas toucher chaque scène.
 const C={ink:'#0f172a',slate:'#475569',muted:'#64748b',tert:'#94a3b8',line:'#E2E8F0',white:'#FFFFFF',
-  blue:'#0078ff',blue2:'#0056d6',cyan:'#00c6ff',soft:'#e5f1ff',violet:'#9b2cfa',indigo:'#2c62fa',
+  blue:'#5b4cf0',blue2:'#4338ca',cyan:'#7c5cff',soft:'#eeedfe',violet:'#9b2cfa',indigo:'#2c62fa',
   ok:'#18c480',danger:'#ff2b5e',orange:'#ff6b00',warn:'#ffc800',night:'#0a0f18'};
-const GRAD={blue:'linear-gradient(135deg,#00c6ff 0%,#0078ff 100%)',ai:'linear-gradient(135deg,#9b2cfa 0%,#2c62fa 100%)',
+const GRAD={blue:'linear-gradient(135deg,#7c5cff 0%,#3d6bf5 100%)',ai:'linear-gradient(135deg,#9b2cfa 0%,#2c62fa 100%)',
   danger:'linear-gradient(135deg,#FF2B5E,#FF6B00)',caution:'linear-gradient(135deg,#FFC800,#FF9F00)'};
-// le fond signature de l'app (orbes bleu, cyan et ciel sur blanc cassé), figé : le même dans toutes les scènes
-const BG=`radial-gradient(1300px 1100px at 4% -10%, rgba(59,130,246,.26), transparent 62%),
- radial-gradient(1150px 1000px at 104% 108%, rgba(6,182,212,.28), transparent 62%),
- radial-gradient(900px 760px at 52% 46%, rgba(56,189,248,.12), transparent 62%), #F4F7FB`;
+// le fond de l'app, calme : des voiles légers d'indigo et de bleu froid sur blanc cassé, figé dans toutes les scènes
+const BG=`radial-gradient(1300px 1100px at 4% -10%, rgba(91,76,240,.10), transparent 62%),
+ radial-gradient(1150px 1000px at 104% 108%, rgba(56,189,248,.09), transparent 62%),
+ radial-gradient(900px 760px at 52% 46%, rgba(148,163,184,.10), transparent 62%), #F4F7FB`;
 const CENTER=[960,540];
 const CURSOR_REST=[420,330];
 
@@ -30,7 +32,7 @@ const SH_PHL  ={w:1330,h:648,r:84,bg:'#0B1220',cam:1.0};         // téléphone 
 const SH_PHONE={w:420,h:850,r:54,bg:'#0f172a',cam:1.08};         // téléphone (lecteur traduit)
 const SH_ANNOT={w:1140,h:860,r:26,bg:'#020617',cam:1.12};        // annoter l'image
 const SH_PDF  ={w:600,h:780,r:10,bg:'#FFFFFF',cam:1.22};         // la page PDF
-const SH_ICON ={w:240,h:240,r:68,bg:'#0078ff',cam:1.45};         // le logo seul
+const SH_ICON ={w:240,h:240,r:54,bg:'#5b4cf0',cam:1.45};         // le logo seul (coins à 22,5 %, comme LogoMark)
 const SH_LOGO ={w:820,h:250,r:125,bg:'#FFFFFF',cam:1.3};         // logo + CLIP
 const SH_FIN  ={w:1360,h:560,r:64,bg:'#FFFFFF',cam:1.12};        // la promesse et l'appel à l'action
 const TW=1280, TH=772, PW=1290, PH=608;
@@ -59,7 +61,7 @@ const CHIP_CSS=`
 .chip2{position:absolute;height:66px;padding:0 26px 0 12px;border-radius:999px;display:flex;align-items:center;gap:14px;white-space:nowrap;
   background:rgba(255,255,255,.9);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.95);box-shadow:0 14px 36px rgba(15,23,42,.28);
   color:#0f172a;font-family:'Inter',system-ui,sans-serif;font-size:25px;font-weight:900;letter-spacing:-.01em}
-.chip2 i{width:46px;height:46px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:${GRAD.blue};box-shadow:0 8px 18px rgba(0,120,255,.3)}
+.chip2 i{width:46px;height:46px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:${GRAD.blue};box-shadow:0 8px 18px rgba(91,76,240,.3)}
 .chip2.dark{background:rgba(15,23,42,.62);border-color:rgba(255,255,255,.16);color:#fff}
 .chip2 small{font-size:18px;font-weight:700;color:#64748b;letter-spacing:0}
 .chip2.dark small{color:rgba(255,255,255,.75)}
@@ -70,9 +72,19 @@ const CHIP=(id,icon,text,sub='',dark=false,iconBg='')=>`<div class="chip2${dark?
 
 // ---------- le logo de Clip (LogoMark de src/components/Logo.tsx) ----------
 let LOGO_N=0; const LOGO=(n)=>UI_LOGO(n).replace(/clipg\d+/g,'clipv'+(++LOGO_N));   // un id de dégradé par instance
-const WORDMARK=(fs,color=C.ink)=>`<span style="font-family:'Inter',system-ui,sans-serif;font-weight:900;font-size:${fs}px;letter-spacing:-.06em;color:${color}">CLIP</span>`;
-// l'arc du « C » du logo, à dessiner (stroke-dashoffset) : même tracé que le logo, dans un repère 64 × 64
-const ARC=(n,id)=>`<svg width="${n}" height="${n}" viewBox="0 0 64 64" style="position:absolute;left:${-n/2}px;top:${-n/2}px;overflow:visible"><path id="${id}" d="M41.5 22.5a13 13 0 1 0 0 19" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-dasharray="70" stroke-dashoffset="70"/><circle id="${id}d" cx="44" cy="32" r="4" fill="#fff" opacity="0"/></svg>`;
+// le mot « clip » dessiné (Wordmark de l'app) ; fs : la taille qu'avait le mot écrit, la hauteur suit
+const WORDMARK=(fs,color=C.ink)=>`<span style="display:inline-block;color:${color}">${UI_WORDMARK(Math.round(fs*0.75))}</span>`;
+// le logo 6 (« La pile d'extraits », BRAND_MARK) qui se construit : le cadre de devant se trace, celui de derrière
+// glisse dessous, incliné, puis la lecture s'allume. Même dessin que le logo, dans son repère 100 × 100.
+const MARK_BUILD=(n,id)=>`<svg width="${n}" height="${n}" viewBox="0 0 100 100" style="position:absolute;left:${-n/2}px;top:${-n/2}px;overflow:visible"><defs><mask id="${id}k" maskUnits="userSpaceOnUse" x="0" y="0" width="96" height="96"><rect width="96" height="96" fill="white"/><rect x="31" y="18.7" width="46" height="46" rx="10.25" fill="black"/></mask></defs><g transform="translate(50 50) scale(1.368) translate(-48.25 -47.6)"><g mask="url(#${id}k)"><g id="${id}b" opacity="0"><rect x="28.75" y="37" width="30.5" height="30.5" rx="2.5" fill="none" stroke="#fff" stroke-width="4.5" transform="rotate(-6 44 52.25)"/></g></g><rect id="${id}f" x="38.75" y="26.45" width="30.5" height="30.5" rx="2.5" fill="none" stroke="#fff" stroke-width="4.5" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/><path id="${id}p" d="M48 32.5 L48 50.5 L61.5 41.5 Z" fill="#fff" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" style="transform-box:fill-box;transform-origin:center;transform:scale(0)"/></g></svg>`;
+// t0 : début du tracé. Devant en 0,55 s ; derrière dès 0,22 s, en 0,4 s ; la lecture à 0,45 s, avec un soupçon de dépassement.
+const markBuild=(t,t0,id)=>{
+  const f=M.eio(M.clamp((t-t0)/0.55)); $(id+'f').setAttribute('stroke-dashoffset',(100*(1-f)).toFixed(2));
+  const b=M.eio(M.clamp((t-t0-0.22)/0.4)); $(id+'b').setAttribute('opacity',b.toFixed(3));
+  $(id+'b').setAttribute('transform',`translate(${(-7*(1-b)).toFixed(2)} ${(7*(1-b)).toFixed(2)})`);
+  const u=(t-t0-0.45)/0.2, s=u<=0?0:u<1?1.06*M.eio(u):1.06-0.06*M.eio(M.clamp((u-1)/0.75));
+  $(id+'p').style.transform=`scale(${(s*(1+0.12*M.pulse(t,t0+0.62,0.18))).toFixed(4)})`;
+};
 
 // ---------- pilotage des écrans du deck (leurs animations CSS sont coupées : tout se règle ici, image par image) ----------
 let CAP=null;

@@ -2,6 +2,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+// La marque de l'app (logo, mot, couleurs) : les mêmes fichiers que l'app web, sans copie.
+import { BRAND } from '../../apps/web/src/lib/brand/colors.ts'
+import { brandMark, WORDMARK_VIEWBOX, wordmarkSvg } from '../../apps/web/src/lib/brand/marks.ts'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const VENDOR = path.join(HERE, 'lucide')
@@ -25,11 +28,17 @@ export function ic(name, size = 24, extra = '') {
   return `<svg class="ic ${extra}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`
 }
 
-/** Le logo de l'app (LogoMark de src/components/Logo.tsx). Un id de dégradé unique par instance. */
+/** Le logo de l'app (LogoMark de src/components/Logo.tsx) : le symbole de la banque (`BRAND_MARK`), en blanc sur le
+ * dégradé de CLIP. Un id unique par instance (dégradé et masque, préfixe `clipg` que la vidéo renumérote). */
 let logoN = 0
 export function logoMark(size = 40) {
   const id = `clipg${++logoN}`
-  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00C6FF"/><stop offset="1" stop-color="#0078FF"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#${id})"/><path d="M41.5 22.5a13 13 0 1 0 0 19" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="44" cy="32" r="4" fill="#fff"/></svg>`
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${BRAND.from}"/><stop offset="1" stop-color="${BRAND.to}"/></linearGradient></defs><rect width="100" height="100" rx="22.5" fill="url(#${id})"/><g color="#FFFFFF">${brandMark(id)}</g></svg>`
+}
+
+/** Le mot « clip » dessiné (Wordmark de l'app), de la couleur du texte. */
+export function wordmark(height = '24px') {
+  return `<svg viewBox="${WORDMARK_VIEWBOX}" style="display:block;height:${height};width:auto" role="img" aria-label="CLIP">${wordmarkSvg()}</svg>`
 }
 
 const pct = (t, T) => `${Math.min(100, Math.max(0, (t / T) * 100)).toFixed(3)}%`

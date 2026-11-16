@@ -13,7 +13,7 @@ globalThis.IMG = (f) => `assets/${f}`
 globalThis.TARGETS = JSON.parse(fs.readFileSync(path.join(DECK, 'targets.json'), 'utf8'))
 const { slides } = await import(path.join(DECK, 'slides.mjs'))
 const { PLAYER_CSS, playerFrame, STEPS } = await import(path.join(DECK, 'ui.mjs'))
-const { ic, logoMark } = await import(path.join(DECK, 'lib.mjs'))
+const { ic, logoMark, wordmark } = await import(path.join(DECK, 'lib.mjs'))
 
 /** Le premier <div> dont l'attribut class contient `cls` (mot entier), avec tout son contenu. */
 function pick(html, cls, inner = false) {
@@ -66,7 +66,7 @@ UI.cam = `<div class="camui">
   <span class="cstop" id="camStop"><i></i></span>
   <p class="chint">720p · environ 19 Mo la minute · 10 min au plus</p></div>`
 
-const vars = `:root{--primary:#0078ff;--primary-strong:#0056d6;--primary-soft:#e5f1ff;--grad:linear-gradient(135deg,#00c6ff 0%,#0078ff 100%);--grad-ai:linear-gradient(135deg,#9b2cfa 0%,#2c62fa 100%);--sh-p:0 10px 20px rgba(0,120,255,.3);--sh-a:0 10px 20px rgba(155,44,250,.3);--ease:cubic-bezier(.16,1,.3,1);--pop:cubic-bezier(.34,1.56,.64,1)}`
+const vars = `:root{--primary:#5b4cf0;--primary-strong:#4338ca;--primary-soft:#eeedfe;--grad:linear-gradient(135deg,#7c5cff 0%,#3d6bf5 100%);--grad-ai:linear-gradient(135deg,#9b2cfa 0%,#2c62fa 100%);--sh-p:0 10px 20px rgba(91,76,240,.3);--sh-a:0 10px 20px rgba(155,44,250,.3);--ease:cubic-bezier(.16,1,.3,1);--pop:cubic-bezier(.34,1.56,.64,1)}`
 const extra = `
 #stage *,#stage *::before,#stage *::after{box-sizing:border-box;animation:none!important;transition:none!important}
 #stage p,#stage h1,#stage h2,#stage h3,#stage ul,#stage ol{margin:0;padding:0}
@@ -100,6 +100,7 @@ const head = `// GÉNÉRÉ par motion/build-ui.mjs depuis presentation/build (ne
 const UI_CSS=${JSON.stringify(css)};
 const UI={};
 const UI_LOGO=(n)=>${JSON.stringify(logoMark(64))}.replace('width="64" height="64"','width="'+n+'" height="'+n+'"');
+const UI_WORDMARK=(h)=>${JSON.stringify(wordmark('64px'))}.replace('height:64px','height:'+h+'px');
 `
 fs.writeFileSync(path.join(HERE, 'clips', '_ui.js'), head)
 // un fichier par écran : chaque scène n'inclut que les siens (la page de chaque scène reste légère)
