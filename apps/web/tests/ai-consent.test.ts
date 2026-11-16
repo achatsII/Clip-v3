@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { setAiGate } from '@/lib/ai/consent'
+import { consentDate, consentDecision, consentWithdrawn, saveConsent, setAiGate } from '@/lib/ai/consent'
 import { aiApi } from '@/lib/gateway/ai'
 import { filesApi } from '@/lib/gateway/files'
 import { fakeGateway } from './fakeClient'
@@ -28,5 +28,38 @@ describe('l’accord avant l’IA', () => {
     setAiGate(null)
     await expect(aiApi(gw, { billing: false }).ask('step_assist', { prompt: 'x', system_instruction: 's', provider: 'google', level: 'low' })).resolves.toMatchObject({ text: 'ok' })
     expect(gw.calls).toHaveLength(2)
+  })
+})
+
+describe('l’accord donné à la connexion (toggle aiConsentAtSignIn)', () => {
+  it('aucune fenêtre : l’IA est ouverte, sauf si la personne a retiré son accord', () => {
+    expect(consentDecision({ atSignIn: true, modal: true, date: null, withdrawn: false })).toBe('allow')
+    expect(consentDecision({ atSignIn: true, modal: true, date: null, withdrawn: true })).toBe('block')
+    // Le modèle d'avant reste derrière le toggle aiConsent : la fenêtre tant qu'il n'y a pas de date.
+    expect(consentDecision({ atSignIn: false, modal: true, date: null, withdrawn: false })).toBe('ask')
+    expect(consentDecision({ atSignIn: false, modal: true, date: '2026-11-16', withdrawn: false })).toBe('allow')
+    expect(consentDecision({ atSignIn: false, modal: false, date: null, withdrawn: true })).toBe('allow')
+  })
+
+  it('un retrait se garde (la connexion ne vaut plus accord), et s’annule en acceptant de nouveau', () => {
+    const uid = 'essai-retrait'
+    saveConsent(uid, '2026-11-16T12:00:00.000Z')
+    expect(consentDate(uid)).toBe('2026-11-16T12:00:00.000Z')
+    saveConsent(uid, null)
+    expect(consentWithdrawn(uid)).toBe(true)
+    expect(consentDate(uid)).toBeNull()
+    saveConsent(uid, '2026-11-17T08:00:00.000Z')
+    expect(consentWithdrawn(uid)).toBe(false)
+  })
+
+  it('la ligne de la connexion nomme Google, et OpenAI pour les images, dans les deux langues', async () => {
+    const { messagesIn } = await import('@/lib/i18n')
+    for (const lang of ['fr', 'en'] as const) {
+      const n = messagesIn(lang).auth.login.aiNotice
+      for (const line of [n.login, n.signup]) {
+        expect(line).toMatch(/Google/)
+        expect(line).toMatch(/OpenAI/)
+      }
+    }
   })
 })

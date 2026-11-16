@@ -192,7 +192,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le
   sommaire au poste ; `src/lib/model/sections.ts`) ; `Instruction.renewal` (« à revoir dans 1 an »,
   rappelé un mois avant ; `src/lib/model/renewal.ts`) ; rien ne part vers l'IA sans l'accord de la
-  personne (`requireAiConsent`, `src/lib/ai/consent.ts`) ; « Supprimer mon compte » dans Mon compte.
+  personne (`requireAiConsent`, `src/lib/ai/consent.ts`), donné à la connexion par une ligne sous le
+  bouton (toggle `aiConsentAtSignIn` ; Google pour tout, OpenAI pour les images qu'on lui demande),
+  jamais par une fenêtre au premier usage, retiré ou redonné dans Réglages › Données ; « Supprimer mon
+  compte » dans Mon compte.
 - **Interface** : français du Québec et anglais, par les dictionnaires typés de `src/lib/i18n`
   (`useMessages()` dans un composant, `messages()` ailleurs ; aucun texte écrit dans un écran, aucun
   `'fr-CA'` en dur ; règles dans `docs/architecture.md` §7). Design system « verre » de

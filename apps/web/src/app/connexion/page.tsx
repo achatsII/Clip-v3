@@ -13,6 +13,8 @@ import { parsePlanIntent, savePlanIntent, subscriptionPathFor } from '@/lib/bill
 import { BILLING_V2, SELF_SERVICE } from '@/lib/config'
 import { LANG_NAMES, LANGS, setLang, useLang, useMessages } from '@/lib/i18n'
 import { cn } from '@/lib/util/cn'
+import { PRIVACY_URL } from '@/lib/billing/store'
+import { useToggle } from '@/lib/toggles'
 
 type Mode = 'login' | 'signup' | 'forgot'
 
@@ -20,6 +22,7 @@ export default function ConnexionPage() {
   const router = useRouter()
   const t = useMessages().auth.login
   const lang = useLang()
+  const aiAtSignIn = useToggle('aiConsentAtSignIn')
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -157,6 +160,15 @@ export default function ConnexionPage() {
             <Button type="submit" variant="primary" size="lg" block loading={busy} iconRight={<ArrowRight className="h-5 w-5" />}>
               {t.submit[mode]}
             </Button>
+            {/* L'accord pour l'IA se donne ici, une fois, plutôt que par une fenêtre au premier usage. */}
+            {aiAtSignIn && mode !== 'forgot' && (
+              <p className="text-center text-xs leading-relaxed font-medium text-slate-500 dark:text-slate-400">
+                {t.aiNotice[mode]}{' '}
+                <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-black text-[var(--primary)] underline-offset-4 hover:underline">
+                  {t.privacy}
+                </a>
+              </p>
+            )}
           </form>
         )}
 

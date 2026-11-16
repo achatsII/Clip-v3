@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { consentDate, saveConsent, setAiGate } from '@/lib/ai/consent'
+import { consentDate, consentDecision, consentWithdrawn, saveConsent, setAiGate } from '@/lib/ai/consent'
 import { PRIVACY_URL } from '@/lib/billing/store'
 import { deleteAccount } from '@/lib/gateway/auth'
 import { logout } from '@/lib/gateway/client'
@@ -17,19 +17,27 @@ import { useToggle } from '@/lib/toggles'
 import { formatDate } from '@/lib/util/cn'
 
 /**
- * La fenêtre de l'accord avant le premier envoi à l'IA (toggle `aiConsent`). Elle se branche sur le
- * client de l'IA : le premier appel l'ouvre et attend la réponse ; plusieurs appels à la fois
- * attendent la même réponse. Refusé, l'appel ne part pas.
+ * Le verrou de l'IA, branché sur son client. Accord donné à la connexion (toggle `aiConsentAtSignIn`) :
+ * aucune fenêtre, seul un accord retiré dans Réglages › Données bloque ; le premier envoi note la date.
+ * Sinon (toggle `aiConsent`), la fenêtre d'avant : le premier appel l'ouvre et attend la réponse ;
+ * plusieurs appels à la fois attendent la même réponse. Refusé, l'appel ne part pas.
  */
 export function AiConsentHost() {
   const t = useMessages().shell.aiConsent
   const { profile } = useSession()
   const on = useToggle('aiConsent')
+  const atSignIn = useToggle('aiConsentAtSignIn')
   const [open, setOpen] = useState(false)
   const pending = useRef<{ promise: Promise<boolean>; resolve: (ok: boolean) => void } | null>(null)
 
   const ask = useCallback(async () => {
-    if (!on || consentDate(profile.userId)) return true
+    const uid = profile.userId
+    const decision = consentDecision({ atSignIn, modal: on, date: consentDate(uid), withdrawn: consentWithdrawn(uid) })
+    if (decision === 'block') return false
+    if (decision === 'allow') {
+      if (atSignIn && !consentDate(uid)) saveConsent(uid, new Date().toISOString())
+      return true
+    }
     if (!pending.current) {
       let resolve!: (ok: boolean) => void
       const promise = new Promise<boolean>((r) => (resolve = r))
@@ -37,7 +45,7 @@ export function AiConsentHost() {
       setOpen(true)
     }
     return pending.current.promise
-  }, [on, profile.userId])
+  }, [on, atSignIn, profile.userId])
 
   useEffect(() => {
     setAiGate(ask)
@@ -79,28 +87,51 @@ export function AccountCard() {
   const t = useMessages().settings.account
   const { profile } = useSession()
   const toast = useToast()
-  const consentOn = useToggle('aiConsent')
+  const modalOn = useToggle('aiConsent')
+  const atSignIn = useToggle('aiConsentAtSignIn')
+  const consentOn = modalOn || atSignIn
   const deleteOn = useToggle('deleteAccount')
   const [given, setGiven] = useState<string | null>(null)
+  const [withdrawn, setWithdrawn] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  useEffect(() => setGiven(consentDate(profile.userId)), [profile.userId])
+  useEffect(() => {
+    setGiven(consentDate(profile.userId))
+    setWithdrawn(consentWithdrawn(profile.userId))
+  }, [profile.userId])
   if (!consentOn && !deleteOn) return null
+  const status = withdrawn ? t.aiWithdrawnState : given ? t.aiOn(formatDate(given)) : atSignIn ? t.aiAtSignIn : t.aiOff
+  // Accordé (ou donné à la connexion) : on peut le retirer. Retiré : on peut l'accepter de nouveau.
+  const canWithdraw = !withdrawn && (!!given || atSignIn)
   return (
     <section className="glass-panel rounded-[32px] p-6">
       <h2 className="mb-3 text-xl font-black tracking-tight">{t.title}</h2>
       {consentOn && (
         <div className="flex flex-wrap items-center gap-3">
-          <p className="min-w-0 flex-1 text-sm font-bold text-slate-600 dark:text-slate-300">{given ? t.aiOn(formatDate(given)) : t.aiOff}</p>
-          {given && (
+          <p className="min-w-0 flex-1 text-sm font-bold text-slate-600 dark:text-slate-300">{status}</p>
+          {canWithdraw && (
             <Button
               size="sm"
               onClick={() => {
                 saveConsent(profile.userId, null)
                 setGiven(null)
-                toast.success(t.withdrawn, t.withdrawnHint)
+                setWithdrawn(true)
+                toast.success(t.withdrawn, atSignIn ? t.withdrawnHintSignIn : t.withdrawnHint)
               }}
             >
               {t.withdraw}
+            </Button>
+          )}
+          {withdrawn && atSignIn && (
+            <Button
+              size="sm"
+              onClick={() => {
+                const at = new Date().toISOString()
+                saveConsent(profile.userId, at)
+                setGiven(at)
+                setWithdrawn(false)
+              }}
+            >
+              {t.reaccept}
             </Button>
           )}
         </div>

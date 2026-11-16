@@ -34,6 +34,12 @@ export const auth: typeof Fr = {
     password: 'Password',
     forgotLink: 'Forgot?',
     submit: { login: 'Sign in', signup: 'Create my account', forgot: 'Send the link' },
+    /** Consent to the AI, given by signing in (Apple's rule 5.1.2(i)). */
+    aiNotice: {
+      login: 'By signing in, you agree that Google’s AI analyzes your photos, videos, voice notes and text, and that OpenAI receives a photo when you ask for an image.',
+      signup: 'By creating your account, you agree that Google’s AI analyzes your photos, videos, voice notes and text, and that OpenAI receives a photo when you ask for an image.',
+    },
+    privacy: 'Privacy policy',
     errors: {
       email: 'Enter a valid email.',
       passwordTooShort: 'Your password must be at least 8 characters.',

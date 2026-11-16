@@ -33,6 +33,12 @@ export const auth = {
     password: 'Mot de passe',
     forgotLink: 'Oublié ?',
     submit: { login: 'Se connecter', signup: 'Créer mon compte', forgot: 'Envoyer le lien' },
+    /** L'accord pour l'IA, donné en se connectant (exigence d'Apple, règle 5.1.2(i)). */
+    aiNotice: {
+      login: 'En vous connectant, vous acceptez que l’IA de Google analyse vos photos, vidéos, notes vocales et textes, et qu’OpenAI reçoive une photo quand vous demandez une image.',
+      signup: 'En créant votre compte, vous acceptez que l’IA de Google analyse vos photos, vidéos, notes vocales et textes, et qu’OpenAI reçoive une photo quand vous demandez une image.',
+    },
+    privacy: 'Politique de confidentialité',
     errors: {
       email: 'Entrez un courriel valide.',
       passwordTooShort: 'Le mot de passe doit avoir au moins 8 caractères.',
