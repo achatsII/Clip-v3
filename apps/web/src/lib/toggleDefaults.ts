@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -93,6 +93,9 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // Au poste, une instruction mise à jour le dit : « Mise à jour le … », les étapes nouvelles et
   // modifiées marquées, la version précédente à revoir en lecture, et « Mis à jour » sur sa carte.
   operatorUpdates: true,
+  // L'import d'un document (PDF, Word) reprend ses figures : l'étape reçoit la photo ou le dessin de
+  // la page qui l'illustre, recadré, plutôt que la page entière (qui reste à un geste dans l'éditeur).
+  documentFigures: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -137,4 +140,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   smoothVideos: false,
   nomenclature: false,
   operatorUpdates: false,
+  documentFigures: false,
 }

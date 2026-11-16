@@ -18,6 +18,7 @@ const mediaRef = {
     at: num("Vidéo, image fixe : l'instant à figer, en secondes (à la place d'un extrait)"),
     focusLabel: str("Image fixe ou photo : ce qu'un repère doit montrer, 1 à 4 mots (ex. « Bouton vert »), seulement si c'est bien visible et utile ; vide sinon"),
     page: num('Document : numéro de page, 1 = première page'),
+    figure: str("Document : la figure de la page qui illustre l'étape (photo, dessin, schéma), 2 à 8 mots qui la distinguent des autres figures de la page (« Photo de la vanne V-12 ») ; vide pour montrer la page entière"),
   },
   required: ['source'],
 }
@@ -181,6 +182,26 @@ export const imageTextSchema = {
     texts: { type: 'array', items: { type: 'object', properties: { from: str('Le texte tel qu’écrit sur l’image'), to: str('Sa traduction') }, required: ['from', 'to'] } },
   },
   required: ['texts'],
+}
+
+/** Les figures d'une page de document : leur boîte, dans l'ordre de la demande. */
+export const figuresSchema = {
+  type: 'object',
+  properties: {
+    figures: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          n: num('Le numéro de la figure dans la demande : 1, 2…'),
+          found: { type: 'boolean', description: 'false si cette figure n’est pas sur la page' },
+          box: { type: 'array', items: { type: 'number' }, description: '[ymin, xmin, ymax, xmax] normalisés de 0 à 1000, autour de la figure entière' },
+        },
+        required: ['n', 'found', 'box'],
+      },
+    },
+  },
+  required: ['figures'],
 }
 
 export const annotationSchema = {

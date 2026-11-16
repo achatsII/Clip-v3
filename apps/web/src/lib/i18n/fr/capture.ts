@@ -147,6 +147,7 @@ export const capture = {
     /** Le détail d'une étape : la source préparée sur le total, les vignettes. */
     sourceOf: (index: number, total: number) => `${index.toLocaleString('fr-CA')} sur ${total.toLocaleString('fr-CA')}`,
     thumbnails: 'Vignettes des extraits',
+    figures: 'Les figures du document',
     /** D'où vient une création : « Lancée depuis l’app mobile par Mélanie » ; `inline` : au fil d'une phrase. */
     launchedFrom: (device: 'app' | 'web', byName: string | null | undefined, inline: boolean) =>
       `${inline ? 'lancée' : 'Lancée'} depuis ${device === 'app' ? 'l’app mobile' : 'un navigateur'}${byName ? ` par ${byName}` : ''}`,
@@ -187,6 +188,7 @@ export const capture = {
   upload: {
     failed: 'Envoi impossible',
     unsupported: 'Ce type de fichier n’est pas pris en charge.',
+    slides: 'Un PowerPoint ne se lit pas encore tel quel : enregistrez-le en PDF (Fichier › Exporter), puis déposez le PDF.',
     refused: (first: number | string, then: number) => `L’envoi a été refusé (${first} puis ${then}). Réessayez ; si ça revient, signalez-le.`,
   },
   /** La dictée des champs de texte. */

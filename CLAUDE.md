@@ -90,6 +90,15 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   Un standard d'avant n'a que `startWithSafety` : `firstStepOf` le lit tel quel, et `firstStep` n'entre
   jamais dans `defaultStandard()` (sinon `normalizeOrg` changerait les usines existantes). La consigne
   part telle quelle au serveur : rien à changer dans n8n.
+- **Figures des documents** (toggle `documentFigures`) : à l'import d'un PDF ou d'un Word (converti en
+  PDF), la génération nomme la figure de la page qui illustre l'étape (`figure` du média ; consigne et
+  schéma passent tels quels : rien dans n8n). À la fin (`enrichMedia`, sur l'appareil qui termine, même
+  au serveur), la page se rend à 200 dpi, l'IA y trouve les boîtes en une question par page (usage
+  `figures`, `src/lib/ai/figures.ts`) et l'étape reçoit la figure recadrée, qui sait d'où elle vient
+  (`fromPage`, `src/lib/media/figures.ts`). Introuvable, minuscule ou presque toute la page : la page
+  reste. Dans l'éditeur, « Figure » et « Page entière » passent de l'une à l'autre. Un PowerPoint ne se
+  convertit pas (la route `convert-to-pdf` répond 500 en QA) : l'app dit de l'enregistrer en PDF
+  (`isSlides`).
 - **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
   (`src/lib/model/translation.ts`), médias compris : légendes, annotations, texte des schémas, et
   en option les images refaites avec leur texte traduit. Un média traduit nomme l'original (`of`).

@@ -20,6 +20,7 @@ export function useLaunchGeneration() {
   const qc = useQueryClient()
   const stations = useStations()
   const draftHistory = useToggle('draftHistory')
+  const figures = useToggle('documentFigures')
   const serverToggle = useToggle('serverGeneration')
   const serverOn = serverToggle && session.org.json_data.generation?.server === true
   return useCallback(
@@ -38,10 +39,11 @@ export function useLaunchGeneration() {
         forceKind: kind === 'auto' ? undefined : kind,
         autoAnnotate: readAutoAnnotate(),
         checkpoints: draftHistory,
+        figures,
         server: serverOn && !opts.device,
         onDone: opts.onDone,
       })
     },
-    [session, qc, stations.data, draftHistory, serverOn],
+    [session, qc, stations.data, draftHistory, figures, serverOn],
   )
 }

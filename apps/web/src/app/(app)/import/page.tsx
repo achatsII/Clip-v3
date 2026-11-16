@@ -18,7 +18,7 @@ import { startServerImport } from '@/lib/ai/runGeneration'
 import type { Doc } from '@/lib/gateway/data'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { messages, useMessages } from '@/lib/i18n'
-import { ingestFile } from '@/lib/media/ingest'
+import { ingestFile, isSlides } from '@/lib/media/ingest'
 import { nowIso, T } from '@/lib/model/repo'
 import { hasLabels, labelsFromAi, ruleStationsFor } from '@/lib/model/nomenclature'
 import { createInstruction, saveDraft } from '@/lib/model/service'
@@ -56,6 +56,7 @@ export default function ImportPage() {
   const toggle = useToggle('bulkImport')
   // L'analyse au serveur (toggle `serverGeneration` et réglage de l'usine) : on peut fermer l'app.
   const serverOn = useToggle('serverGeneration') && org.json_data.generation?.server === true
+  const figures = useToggle('documentFigures')
   const creations = useCreations()
   const entitlement = useEntitlement('bulk_import')
   const gate = useGate()
@@ -104,7 +105,9 @@ export default function ImportPage() {
 
   async function addFiles(list: File[]) {
     const docs = list.filter((f) => /\.(pdf|docx?|odt)$/i.test(f.name) || f.type === 'application/pdf')
-    if (docs.length < list.length) toast.info(t.importer.onlyDocuments, t.importer.onlyDocumentsText)
+    // Une présentation ne se convertit pas encore : on dit le geste (l'enregistrer en PDF).
+    if (list.some((f) => isSlides(f))) toast.info(t.importer.slides, t.importer.slidesText)
+    else if (docs.length < list.length) toast.info(t.importer.onlyDocuments, t.importer.onlyDocumentsText)
     if (!docs.length) return
     const added: ImportItem[] = docs.map((f) => ({ id: `${Date.now()}-${f.name}-${Math.random().toString(36).slice(2, 6)}`, name: f.name, status: 'waiting' }))
     let next = [...itemsRef.current, ...added]
@@ -143,7 +146,7 @@ export default function ImportPage() {
   async function analyzeHere(item: ImportItem, stationList: Array<{ id: string; name: string; code?: string }>, existing?: Doc<Instruction>) {
     const r = await importDocument({ ai, org: org.json_data, source: item.source!, stationNames: stationList.map((s) => [s.name, s.code].filter(Boolean).join(' — ')) })
     const doc = existing ?? (await createInstruction(data, actor, { title: r.content.title, origin: 'import', sources: [item.source!], kind: r.content.kind, category: r.content.category }))
-    const content = await enrichMedia(r.content, files, async (png, name) => (await files.upload(png, name, 'pages')).url)
+    const content = await enrichMedia(r.content, files, async (png, name) => (await files.upload(png, name, 'pages')).url, { figures: figures ? { ai } : null })
     const station = matchStation(r.stationGuess, stationList)
     // Le classement proposé par l'IA, ramené aux familles de l'usine ; ses postes par règle suivent.
     const nomenclature = org.json_data.nomenclature
@@ -167,7 +170,7 @@ export default function ImportPage() {
         try {
           if (serverOn) {
             // L'instruction est créée tout de suite ; son analyse part au serveur.
-            const r = await startServerImport({ data, ai, org: org.json_data, source: item.source!, stations: stations.data ?? [], actor, title: item.name.replace(/\.[^.]+$/, '') })
+            const r = await startServerImport({ data, ai, org: org.json_data, source: item.source!, stations: stations.data ?? [], actor, title: item.name.replace(/\.[^.]+$/, ''), figures })
             if (r.jobId) {
               next = update(item.id, { status: 'server', instructionId: r.doc._id })
               await persist(next)

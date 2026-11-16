@@ -403,6 +403,23 @@ arrière-plan (le défaut d'expo-file-system) : l'envoi continue quand l'app pas
 page reprend au retour. L'import en lot crée chaque instruction dès son document envoyé et confie
 son analyse au serveur (`startServerImport`) : la page peut se fermer une fois les envois finis.
 
+**Les figures des documents** (toggle `documentFigures`). Une ancienne instruction en PDF montre ses
+gestes par des photos et des dessins ; l'étape d'avant recevait la page entière, illisible au poste.
+La génération nomme maintenant, sur le média d'une page, la figure qui illustre l'étape (`figure`,
+« Photo de la vanne V-12 » ; vide pour un plan qui remplit la page). À la fin, `enrichMedia` rend
+chaque page citée une seule fois, à 200 dpi quand elle a des figures à prendre, et pose une seule
+question par page à l'IA (`locateFigures`, usage `figures`, Google niveau moyen, image en haute
+définition) : la boîte de chaque figure, [ymin, xmin, ymax, xmax] de 0 à 1000, la convention de
+Gemini et des repères automatiques. La figure se recadre dans le navigateur avec une marge de 2 %
+(`cropImage`, `figureRect`), part en JPEG dans `figures/` et devient l'image de l'étape, avec la page
+d'où elle vient (`fromPage`). Une figure introuvable, plus petite qu'un centième de la page ou qui en
+couvre plus des quatre cinquièmes laisse la page entière. Les pages se traitent trois à la fois, et
+le choix voyage avec le travail au serveur (`ServerJobContext.figures`) : l'appareil qui termine fait
+le recadrage, comme les vignettes. Dans l'éditeur, « Figure / Page entière » échange les deux sans
+rien perdre (légende, verdict, annotations : `toWholePage`, `toFigure`). Un PowerPoint ne passe pas
+encore : la route `convert-to-pdf` de la Gateway ne prend que Word et ODT (un .pptx y répond 500) ;
+la carte de la capture et l'import en lot disent de l'enregistrer en PDF (`isSlides`).
+
 ### Capturer (« Nouvelle instruction », `CaptureBoard`)
 
 La page la plus importante, d'un seul écran au téléphone (« Créer = un geste », `VISION.md`). Au

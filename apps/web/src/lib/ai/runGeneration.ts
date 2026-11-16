@@ -10,7 +10,7 @@ import { createInstruction, saveDraft, type Actor } from '../model/service'
 import type { GeneratingInfo, Instruction, InstructionContent, OrgSettings, ServerJob, ServerJobContext, Source, Station } from '../model/types'
 import { publishRealtime } from '../realtime/client'
 import { annotateMarks } from './autoAnnotate'
-import { creationReporter, DETAIL_THUMBNAILS, sourceDetail } from './creation'
+import { creationReporter, DETAIL_FIGURES, DETAIL_THUMBNAILS, sourceDetail } from './creation'
 import { enrichMedia, finishGeneration, generateInstruction, importAsk, prepareGeneration } from './generate'
 import { runJob } from './jobs'
 import type { AiInstruction, MarkHint } from './normalize'
@@ -55,13 +55,17 @@ async function completeGeneration(c: {
   mode: 'device' | 'server'
   autoAnnotate: boolean
   checkpoints: boolean
+  /** Les figures des documents cités, recadrées pour les étapes (toggle `documentFigures`). */
+  figures?: boolean
   stage: (key: string, detail?: string) => void
   /** Juste avant l'enregistrement (l'appareil arrête ses signes de vie). */
   beforeSave?: () => Promise<void>
 }) {
   const instr = c.doc.json_data
   c.stage('finish', DETAIL_THUMBNAILS)
-  let content = await enrichMedia(c.content, c.files, async (png, name) => (await c.files.upload(png, name, 'pages')).url)
+  let content = await enrichMedia(c.content, c.files, async (png, name) => (await c.files.upload(png, name, 'pages')).url, {
+    figures: c.figures ? { ai: c.ai, onStart: () => c.stage('finish', DETAIL_FIGURES) } : null,
+  })
 
   // Deuxième temps : les repères se posent sur les images elles-mêmes, en haute définition.
   if (c.autoAnnotate && c.marks.length) {
@@ -116,6 +120,8 @@ export function startGeneration(input: {
    * régénération en garde un, et la version de l'IA aussi.
    */
   checkpoints?: boolean
+  /** Les figures des documents, recadrées pour les étapes (toggle `documentFigures`). */
+  figures?: boolean
   /**
    * L'analyse au serveur (toggle `serverGeneration` et réglage de l'usine) : une fois la requête
    * confiée à Job_start, l'appareil peut se fermer. Si le serveur ne la prend pas, elle tourne ici.
@@ -172,6 +178,7 @@ export function startGeneration(input: {
             forceKind: input.forceKind ?? null,
             autoAnnotate: input.autoAnnotate !== false,
             checkpoints: !!input.checkpoints,
+            figures: !!input.figures,
           }
           // Le relais au serveur : plus de signe de vie à donner, l'appareil peut se fermer.
           report.stop()
@@ -218,6 +225,7 @@ export function startGeneration(input: {
         mode: 'device',
         autoAnnotate: input.autoAnnotate !== false,
         checkpoints: !!input.checkpoints,
+        figures: !!input.figures,
         stage,
         beforeSave: async () => {
           report.stop()
@@ -303,6 +311,7 @@ export function finishServerGeneration(input: {
         mode: 'server',
         autoAnnotate: context.autoAnnotate,
         checkpoints: context.checkpoints,
+        figures: context.figures === true,
         stage: (key, detail) => setStage(key, detail),
       })
       await settleJob()
@@ -331,6 +340,8 @@ export async function startServerImport(input: {
   stations: Doc<Station>[]
   actor: Actor
   title: string
+  /** Les figures du document, recadrées pour les étapes à la fin (toggle `documentFigures`). */
+  figures?: boolean
 }): Promise<{ doc: Doc<Instruction>; jobId: string | null }> {
   const { operation, language, ask } = importAsk({ org: input.org, source: input.source, stationNames: stationLabels(input.stations) })
   const doc = await createInstruction(input.data, input.actor, { title: input.title, origin: 'import', sources: [input.source] })
@@ -357,7 +368,7 @@ export async function startServerImport(input: {
     device: inNativeShell() ? 'app' : 'web',
     mode: 'server',
     jobId,
-    job: { sourceIds: [input.source.id], language, operation, forceKind: null, autoAnnotate: false, checkpoints: false },
+    job: { sourceIds: [input.source.id], language, operation, forceKind: null, autoAnnotate: false, checkpoints: false, figures: !!input.figures },
     finishing: null,
   }
   await input.data.patch(T.instruction, doc._id, { generating, generationError: null })

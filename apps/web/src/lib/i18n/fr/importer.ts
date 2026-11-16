@@ -12,6 +12,8 @@ export const importer = {
   },
   onlyDocuments: 'Seuls les PDF et les documents Word sont importés ici',
   onlyDocumentsText: 'Les vidéos et photos se déposent dans une nouvelle instruction.',
+  slides: 'Enregistrez vos PowerPoint en PDF',
+  slidesText: 'Dans PowerPoint : Fichier › Exporter › PDF. Déposez ensuite le PDF ici : ses images deviennent les médias des étapes.',
   /** Le lot en cours. */
   batch: {
     progress: (done: number, total: number) => `${done.toLocaleString('fr-CA')} sur ${total.toLocaleString('fr-CA')} terminé${done > 1 ? 's' : ''}`,

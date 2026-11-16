@@ -394,9 +394,13 @@ export const editor = {
       frame: 'Image',
       illustration: 'Illustration',
       photo: 'Photo',
+      figure: (n: number) => `Figure, page ${num(n)}`,
     },
     video: 'Vidéo',
     image: 'Image',
+    /** Une figure recadrée d’une page de document, ou la page entière. */
+    figure: 'Figure',
+    wholePage: 'Page entière',
     otherMoment: 'Autre instant',
     chooseMedia: 'Choisir un média',
     annotate: 'Annoter',

@@ -82,7 +82,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   points clés, une mise en garde à l'étape où le risque se présente (« Danger », « Attention », « Bon à
   savoir »), les équipements de protection (EPI), les outils et le matériel.
 - Chaque étape reçoit son média : l'extrait de la vidéo d'origine à la seconde près (joué en boucle au
-  poste, pas un GIF), une photo, une image figée tirée de la vidéo, ou une page d'un PDF.
+  poste, pas un GIF), une photo, une image figée tirée de la vidéo, ou une figure d'un PDF : la photo ou
+  le dessin de la page qui illustre l'étape, recadré (la page entière reste à un geste dans l'éditeur).
 - L'IA classe l'instruction (production, maintenance, qualité, santé et sécurité, nettoyage, changement de
   format, démarrage et arrêt) et devine son poste, rapproché des postes existants.
 - Chaque usine se donne ses propres façons de classer (Réglages › Classement) : des familles d'étiquettes,
@@ -156,6 +157,9 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - « Importer vos anciennes instructions » : on dépose des PDF et des documents Word (.docx, .doc, .odt),
   même par dizaines ; chacun devient un brouillon structuré, prêt à relire (« Brouillon créé »). L'onglet reste
   ouvert pendant l'analyse ; « Reprendre l'analyse » relance ce qui reste. Forfait Usine.
+- Les photos et les dessins du document deviennent les médias des étapes, recadrés : chaque étape montre
+  sa figure, pas la page entière.
+- Un PowerPoint s'enregistre d'abord en PDF (Fichier › Exporter), puis se dépose comme un PDF.
 - Un seul document se dépose aussi dans une nouvelle instruction, avec des vidéos et des photos.
 
 ## 6. Approuver et publier

@@ -7,7 +7,7 @@ import { nativeEnv } from '../bridge/native'
 import type { DataApi } from '../gateway/data'
 import type { FilesApi } from '../gateway/files'
 import { messages } from '../i18n'
-import { ingestFile, ingestNative, kindOfFile, type IngestStage, type SourcePreset } from '../media/ingest'
+import { ingestFile, ingestNative, isSlides, kindOfFile, type IngestStage, type SourcePreset } from '../media/ingest'
 import { uid } from '../model/repo'
 import { createInstruction, saveSources, type Actor } from '../model/service'
 import type { Source, SourceKind } from '../model/types'
@@ -160,6 +160,8 @@ export class CaptureSession {
   addFiles(list: File[]) {
     for (const file of list) {
       const kind = kindOfFile(file)
+      // Une présentation ne passe pas encore : sa carte dit de l'enregistrer en PDF (rien à relancer).
+      if (!kind && isSlides(file)) this.set({ pending: [...this.snap.pending, { tempId: uid('tmp_'), kind: 'document', name: file.name, stage: 'error', error: messages().capture.upload.slides }] })
       if (!kind) continue
       const previewUrl = kind === 'photo' || kind === 'video' ? URL.createObjectURL(file) : undefined
       void this.run({ tempId: uid('tmp_'), kind, name: file.name, previewUrl, stage: 'prepare' }, (p) => ingestFile(file, this.deps.files, p))

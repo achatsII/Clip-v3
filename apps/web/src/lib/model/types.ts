@@ -88,6 +88,24 @@ export interface VideoFrame {
   end: number
 }
 
+/**
+ * La page d'un document d'où vient une figure recadrée (toggle `documentFigures`) : l'étape montre la
+ * figure, et revient à la page entière d'un geste si la figure ne suffit pas.
+ */
+export interface DocumentPage {
+  url: string
+  page: number
+  pageImageUrl?: string
+  name?: string
+}
+
+/** Une figure recadrée, gardée pendant que l'étape montre la page entière. */
+export interface PageFigure {
+  url: string
+  alt?: string
+  annotations?: Annotation[]
+}
+
 /** Un média montre ce qu'il faut faire, ou ce qu'il faut éviter (photo « bon » / « pas bon »). */
 export type MediaVerdict = 'do' | 'dont'
 
@@ -99,9 +117,20 @@ interface MediaCommon {
 
 export type StepMedia = MediaCommon &
   (
-    | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame }
+    | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame; fromPage?: DocumentPage }
     | { kind: 'video'; url: string; sourceId?: string; start: number; end: number; posterUrl?: string; clip?: ReelClip }
-    | { kind: 'document'; url: string; sourceId?: string; page?: number; pageImageUrl?: string; name?: string }
+    | {
+        kind: 'document'
+        url: string
+        sourceId?: string
+        page?: number
+        pageImageUrl?: string
+        name?: string
+        /** Ce que la génération veut y prendre (« Photo de la vanne V-12 ») : recadré ensuite (`enrichMedia`). */
+        figure?: string
+        /** La figure qu'on avait tirée de cette page : l'étape y revient d'un geste. */
+        cropped?: PageFigure
+      }
     /**
      * Un schéma généré par l'IA : une page HTML autonome (SVG, dessin, vue 3D), affichée dans un
      * cadre isolé (iframe sans accès à l'app). `url` reste vide : le HTML voyage avec l'instruction.
@@ -438,6 +467,8 @@ export interface ServerJobContext {
   forceKind?: 'procedure' | 'lockout' | null
   autoAnnotate: boolean
   checkpoints: boolean
+  /** Les figures des documents, recadrées à la fin (toggle `documentFigures`) ; absent : la page entière, comme avant. */
+  figures?: boolean
 }
 
 /** Le travail au serveur, tel que n8n l'écrit (`clip_job`). */

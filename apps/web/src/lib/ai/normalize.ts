@@ -20,6 +20,8 @@ export interface AiMediaRef {
    * a vu la vidéo en basse définition) : il se pose ensuite sur l'image elle-même (`autoAnnotate.ts`).
    */
   focusLabel?: string
+  /** Document : la figure de la page qui illustre l'étape ; recadrée après la génération (`enrichMedia`). */
+  figure?: string
 }
 
 /** Ce que la génération veut montrer sur ses images : une demande par image, annotée au deuxième temps. */
@@ -110,7 +112,8 @@ export function resolveMedia(ref: AiMediaRef, sourcesById: Map<string, Source>):
   if (src.kind === 'document') {
     const page = Number.isFinite(ref.page) && Number(ref.page) >= 1 ? Math.round(Number(ref.page)) : 1
     const max = src.pageCount && src.pageCount > 0 ? src.pageCount : page
-    return { kind: 'document', url: src.url, sourceId: src.id, page: Math.min(page, max), name: src.originalName ?? src.name }
+    const figure = clean(ref.figure).slice(0, 120)
+    return { kind: 'document', url: src.url, sourceId: src.id, page: Math.min(page, max), name: src.originalName ?? src.name, ...(figure ? { figure } : {}) }
   }
   return null
 }
@@ -120,7 +123,7 @@ function mediaKey(m: StepMedia): string {
   if (m.kind === 'video') return `v:${m.url}#${m.start}`
   if (m.kind === 'image' && m.frame) return `f:${m.frame.videoUrl}@${m.frame.at}`
   if (m.kind === 'html') return `h:${m.html.length}:${m.html.slice(0, 64)}`
-  return `${m.kind}:${m.url}${m.kind === 'document' ? `#${m.page ?? 1}` : ''}`
+  return `${m.kind}:${m.url}${m.kind === 'document' ? `#${m.page ?? 1}${m.figure ? `:${m.figure.toLowerCase()}` : ''}` : ''}`
 }
 
 /**

@@ -137,6 +137,7 @@ export const capture: typeof Fr = {
     },
     sourceOf: (index: number, total: number) => `${index.toLocaleString('en-CA')} of ${total.toLocaleString('en-CA')}`,
     thumbnails: 'Clip thumbnails',
+    figures: 'Figures from the document',
     launchedFrom: (device: 'app' | 'web', byName: string | null | undefined, inline: boolean) =>
       `${inline ? 'started' : 'Started'} from ${device === 'app' ? 'the mobile app' : 'a browser'}${byName ? ` by ${byName}` : ''}`,
     tips: [
@@ -172,6 +173,7 @@ export const capture: typeof Fr = {
   upload: {
     failed: 'Couldn’t upload',
     unsupported: 'This file type isn’t supported.',
+    slides: 'PowerPoint files can’t be read as is yet: save it as a PDF (File › Export), then drop the PDF.',
     refused: (first: number | string, then: number) => `The upload was refused (${first}, then ${then}). Try again; if it keeps happening, report it.`,
   },
   dictation: {

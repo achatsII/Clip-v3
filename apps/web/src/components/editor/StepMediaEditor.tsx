@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, Clock, FileText, Film, Image as ImageIcon, ImagePlus, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
+import { ChevronDown, Clock, Crop, FileText, Film, Image as ImageIcon, ImagePlus, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
 import { useState } from 'react'
 import { MediaView, mediaThumb } from '@/components/media/MediaView'
 import { useSession } from '@/components/providers/Session'
@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/Toast'
 import { createVisual, illustrationPrompt } from '@/lib/ai/assist'
 import { ApiError } from '@/lib/gateway/client'
 import { useMessages, type Messages } from '@/lib/i18n'
+import { toFigure, toWholePage } from '@/lib/media/figures'
 import { LAYOUTS, layoutOf } from '@/lib/model/media'
 import type { Annotation, InstructionContent, Source, Step, StepMedia } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
@@ -33,6 +34,7 @@ function mediaName(m: StepMedia, kinds: Messages['editor']['stepEditor']['mediaK
   if (m.kind === 'document') return kinds.page(m.page ?? 1)
   if (m.kind === 'html') return kinds.visual
   if (m.frame) return kinds.frame
+  if (m.fromPage) return kinds.figure(m.fromPage.page)
   return m.generated ? kinds.illustration : kinds.photo
 }
 
@@ -98,6 +100,13 @@ export function StepMediaEditor({
     const next: StepMedia = { kind: 'image', url, sourceId: media.sourceId, frame: { videoUrl: frameSource.videoUrl, at, start: frameSource.start, end: frameSource.end }, ...keep }
     set({ media: step.media.map((m, i) => (i === mediaIndex ? next : m)) })
     toast.success(te.frameTaken, te.frameTakenDetail)
+  }
+
+  // Une figure recadrée d'une page de document, ou cette page entière : on passe de l'une à l'autre.
+  const figureSwap = (media?.kind === 'image' && !!media.fromPage) || (media?.kind === 'document' && !!media.cropped)
+  function swapFigure(to: string) {
+    const next = media && (to === 'page' ? toWholePage(media) : toFigure(media))
+    if (next) set({ media: step.media.map((m, i) => (i === mediaIndex ? next : m)) })
   }
 
   async function backToVideo() {
@@ -213,6 +222,17 @@ export function StepMediaEditor({
                 options={[
                   { value: 'video', label: te.video, icon: <Film className="h-4 w-4" /> },
                   { value: 'image', label: te.image, icon: <ImageIcon className="h-4 w-4" /> },
+                ]}
+              />
+            )}
+            {figureSwap && (
+              <Segmented
+                size="sm"
+                value={media?.kind === 'document' ? 'page' : 'figure'}
+                onChange={swapFigure}
+                options={[
+                  { value: 'figure', label: te.figure, icon: <Crop className="h-4 w-4" /> },
+                  { value: 'page', label: te.wholePage, icon: <FileText className="h-4 w-4" /> },
                 ]}
               />
             )}

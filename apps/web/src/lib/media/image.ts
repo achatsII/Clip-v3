@@ -143,3 +143,31 @@ export async function pdfPageCount(file: Blob): Promise<number | undefined> {
     return undefined
   }
 }
+
+/**
+ * Une partie d'une image, en JPEG : la figure d'une page de document. `pick` reçoit la taille de
+ * l'image et rend le rectangle à garder, en pixels (`figureRect`), ou null : rien à prendre.
+ */
+export async function cropImage(file: Blob, pick: (width: number, height: number) => { x: number; y: number; w: number; h: number } | null, maxDimension = 1600, quality = 0.9): Promise<Blob | null> {
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await loadImage(url)
+    const r = pick(img.naturalWidth, img.naturalHeight)
+    if (!r || r.w < 1 || r.h < 1) return null
+    const scale = Math.min(1, maxDimension / Math.max(r.w, r.h))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(r.w * scale))
+    canvas.height = Math.max(1, Math.round(r.h * scale))
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    // Une page PNG peut être transparente : le JPEG la voit sur fond blanc, comme sur papier.
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, canvas.width, canvas.height)
+    return await canvasToBlob(canvas, 'image/jpeg', quality)
+  } catch {
+    return null
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}

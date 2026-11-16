@@ -95,7 +95,7 @@ MÉDIAS :
 - Chaque étape porte le média qui montre le mieux l’action :
   · un extrait vidéo (start et end en secondes, 3 à 20 s, centré sur le geste) quand le mouvement compte : manipuler, tourner, insérer, enchaîner des gestes ;
   · une image fixe tirée de la vidéo (at = l’instant en secondes, sans start ni end) quand un coup d’œil suffit : un bouton à appuyer, un réglage, une étiquette, une position, un état à vérifier. Choisis l’instant où ce qu’il faut voir est net et bien visible ;
-  · une photo, ou la page d’un document (plan, dessin, schéma).
+  · une photo, ou la page d’un document (page = n). Sur un document, figure (2 à 8 mots) nomme la photo, le dessin ou le schéma de la page qui illustre l’étape, de façon à le distinguer des autres figures de la page (« Photo de la vanne V-12 ») : seule cette figure sera montrée. figure vide seulement quand l’étape a besoin de la page entière (un plan ou un tableau qui la remplit).
 - Sur une image fixe ou une photo, focusLabel (1 à 4 mots) dit ce qu’un repère doit montrer (ex. « Bouton vert »), seulement si c’est bien visible et qu’un repère aide vraiment l’opérateur ; sinon, vide. Tu ne places pas le repère : il sera posé ensuite, sur l’image elle-même. Un extrait vidéo n’en a jamais.
 - Référence uniquement les identifiants de sources fournis (S1, S2…). Pour une vidéo, start < end, et start, end et at restent dans la durée indiquée.
 - Le plus souvent, l’extrait vidéo ; l’image fixe seulement quand le mouvement n’apporte rien (un « appuyer sur le bouton » n’a pas besoin de trois secondes de vidéo).
@@ -135,7 +135,7 @@ export function generationPrompt(input: { intent?: string; stations: string[]; s
 export function importSystem(org: Pick<OrgSettings, 'standard' | 'learnings'> & { nomenclature?: Nomenclature | null }, language = 'fr'): string {
   return `${generationSystem(org, { language })}
 
-CONTEXTE PARTICULIER : la source est une ANCIENNE instruction (PDF). Restructure-la fidèlement selon les règles ci-dessus, sans rien perdre d’important et sans rien inventer : chaque consigne, valeur, mise en garde et EPI du document doit se retrouver dans le résultat. Quand une figure, un plan ou une photo d’une page illustre une étape, mets en média {source: "S1", page: n}.`
+CONTEXTE PARTICULIER : la source est une ANCIENNE instruction (PDF). Restructure-la fidèlement selon les règles ci-dessus, sans rien perdre d’important et sans rien inventer : chaque consigne, valeur, mise en garde et EPI du document doit se retrouver dans le résultat. Quand une figure, un plan ou une photo d’une page illustre une étape, mets en média {source: "S1", page: n, figure: "<ce qu’elle montre>"} : l’étape montrera cette figure seule, recadrée. Un logo, un en-tête, un pictogramme d’EPI ou de danger n’illustre pas une étape.`
 }
 
 function contentForPrompt(content: InstructionContent, focusStepId?: string): string {
@@ -215,6 +215,14 @@ export function translateImageSystem(language: string): string {
 export function translatedImagePrompt(texts: Array<{ from: string; to: string }>): string {
   const swaps = texts.map((t) => `"${t.from.replace(/"/g, "'")}" → "${t.to.replace(/"/g, "'")}"`).join('; ')
   return `Recreate the reference image exactly: same framing, composition, objects, colors, lighting and perspective. Only replace the visible text, keeping each text in the same place, size, color and font style: ${swaps}. Do not add, remove or move anything else. No watermark.`
+}
+
+export function figuresSystem(): string {
+  return 'Tu repères des figures sur la page d’un document technique (instruction de travail, procédure, manuel). Pour chaque figure demandée, rends sa boîte [ymin, xmin, ymax, xmax] normalisée de 0 à 1000, autour de la figure entière : la photo, le dessin ou le schéma, avec ses repères, ses flèches, ses cotes et ses légendes collées, mais sans le texte courant de la page, ni l’en-tête, ni le pied de page, ni le cadre du tableau qui la contient. Une figure faite de plusieurs vues côte à côte qui vont ensemble se prend en une seule boîte. found = false si la figure demandée n’est pas sur la page : n’en prends jamais une autre à sa place.'
+}
+
+export function figuresPrompt(figures: string[]): string {
+  return `FIGURES DEMANDÉES SUR CETTE PAGE :\n${figures.map((f, i) => `${i + 1}. ${f}`).join('\n')}`
 }
 
 export function annotateSystem(): string {

@@ -41,6 +41,8 @@ export const AI_OPERATIONS = [
   'quiz',
   // Le classement proposé à la demande, selon les familles de l'usine (toggle `nomenclature`).
   'classify',
+  // La boîte des figures d'une page de document, recadrées pour les étapes (toggle `documentFigures`).
+  'figures',
   'report_summary',
   'report_question',
 ] as const

@@ -6,8 +6,11 @@ import type { AiApi, AiOperation, AskBody, AskFile } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
 import { contentLanguage, messages } from '../i18n'
 import type { FilesApi } from '../gateway/files'
+import { figureKey, figureMedia, figureRect, type FigureBox } from '../media/figures'
+import { cropImage } from '../media/image'
 import type { InstructionContent, OrgSettings, Source, StepMedia } from '../model/types'
 import { sourceDetail } from './creation'
+import { locateFigures } from './figures'
 import { AiInstruction, normalizeInstruction, type MarkHint } from './normalize'
 import { generationPrompt, generationSystem, importSystem, SourceLine } from './prompts'
 import { instructionSchema } from './schemas'
@@ -296,14 +299,31 @@ export async function importDocument(input: {
   return { ...n, model: result.model, operation }
 }
 
+/** Les figures des documents (toggle `documentFigures`) : l'IA qui les trouve, et le recadrage. */
+export interface FigureOptions {
+  ai: AiApi
+  /** Rend la figure recadrée en JPEG, ou null ; par défaut dans le navigateur (`cropImage`). */
+  crop?: (png: Blob, box: FigureBox) => Promise<Blob | null>
+  /** Le recadrage commence (il peut prendre quelques secondes par page). */
+  onStart?: () => void
+}
+
+/** Une page qui a des figures à recadrer se rend plus fine : la figure garde ses détails. */
+const FIGURE_DPI = 200
+/** Les pages se traitent trois à la fois. */
+const PAGES_AT_ONCE = 3
+
+const cropFigure = (png: Blob, box: FigureBox) => cropImage(png, (w, h) => figureRect(box, w, h))
+
 /**
- * Vignettes des extraits vidéo (une capture par extrait) et images des pages de documents.
- * Ne bloque jamais : un média sans vignette reste utilisable.
+ * Vignettes des extraits vidéo (une capture par extrait) et images des pages de documents ; avec
+ * `figures`, la figure d'une page qu'une étape demande se recadre et devient son image.
+ * Ne bloque jamais : un média sans vignette reste utilisable, une figure introuvable laisse la page.
  */
-export async function enrichMedia(content: InstructionContent, files: FilesApi, uploadPng: (png: Blob, name: string) => Promise<string>): Promise<InstructionContent> {
+export async function enrichMedia(content: InstructionContent, files: FilesApi, uploadPng: (png: Blob, name: string) => Promise<string>, opts: { figures?: FigureOptions | null } = {}): Promise<InstructionContent> {
   const next: InstructionContent = { ...content, steps: content.steps.map((s) => ({ ...s, media: s.media.map((m) => ({ ...m })) as StepMedia[] })) }
   const byVideo = new Map<string, Array<{ stepIndex: number; mediaIndex: number; at: number }>>()
-  const docs: Array<{ stepIndex: number; mediaIndex: number; url: string; page: number }> = []
+  const docs: Array<{ stepIndex: number; mediaIndex: number; url: string; page: number; figure?: string }> = []
   next.steps.forEach((s, si) =>
     s.media.forEach((m, mi) => {
       if (m.kind === 'video' && !m.posterUrl) {
@@ -316,7 +336,7 @@ export async function enrichMedia(content: InstructionContent, files: FilesApi, 
         list.push({ stepIndex: si, mediaIndex: mi, at: m.frame.at })
         byVideo.set(m.frame.videoUrl, list)
       } else if (m.kind === 'document' && !m.pageImageUrl && /ii-file\.tor1\.digitaloceanspaces\.com/.test(m.url)) {
-        docs.push({ stepIndex: si, mediaIndex: mi, url: m.url, page: m.page ?? 1 })
+        docs.push({ stepIndex: si, mediaIndex: mi, url: m.url, page: m.page ?? 1, ...(m.figure ? { figure: m.figure } : {}) })
       }
     }),
   )
@@ -340,21 +360,61 @@ export async function enrichMedia(content: InstructionContent, files: FilesApi, 
   next.steps.forEach((s) => {
     s.media = s.media.map((m) => (m.kind === 'image' && m.frame && !m.url ? { kind: 'video', url: m.frame.videoUrl, sourceId: m.sourceId, start: m.frame.start, end: m.frame.end } : m))
   })
-  const pageCache = new Map<string, string>()
-  for (const d of docs) {
-    const key = `${d.url}#${d.page}`
-    try {
-      let url = pageCache.get(key)
-      if (!url) {
-        const { png } = await files.pdfPageImage(d.url, d.page)
-        url = await uploadPng(png, `page-${d.page}.png`)
-        pageCache.set(key, url)
+  // Chaque page citée se rend une fois ; ses figures demandées se trouvent en une seule question.
+  const pages = new Map<string, typeof docs>()
+  for (const d of docs) pages.set(`${d.url}#${d.page}`, [...(pages.get(`${d.url}#${d.page}`) ?? []), d])
+  const figures = opts.figures ?? null
+  if (figures && docs.some((d) => d.figure)) figures.onStart?.()
+  const entries = [...pages.entries()]
+  for (let i = 0; i < entries.length; i += PAGES_AT_ONCE) {
+    await Promise.all(entries.slice(i, i + PAGES_AT_ONCE).map(([key, list]) => enrichPage(next, key, list, files, uploadPng, figures)))
+  }
+  // Ce que l'IA voulait prendre n'a plus à voyager avec l'instruction.
+  for (const s of next.steps) for (const m of s.media) if (m.kind === 'document' && 'figure' in m) delete m.figure
+  return next
+}
+
+async function enrichPage(
+  next: InstructionContent,
+  key: string,
+  list: Array<{ stepIndex: number; mediaIndex: number; url: string; page: number; figure?: string }>,
+  files: FilesApi,
+  uploadPng: (png: Blob, name: string) => Promise<string>,
+  figures: FigureOptions | null,
+): Promise<void> {
+  const { url, page } = list[0]
+  // Les figures demandées sur cette page, une fois chacune (deux étapes peuvent montrer la même) :
+  // la première façon de la nommer est celle qu'on garde.
+  const byKey = new Map<string, string>()
+  if (figures) for (const d of list) if (d.figure && !byKey.has(figureKey(d.figure))) byKey.set(figureKey(d.figure), d.figure)
+  const wanted = [...byKey.entries()]
+  let png: Blob | null = null
+  let pageUrl: string | undefined
+  try {
+    png = (await files.pdfPageImage(url, page, wanted.length ? FIGURE_DPI : undefined)).png
+    pageUrl = await uploadPng(png, `page-${page}.png`)
+  } catch {
+    /* l'aperçu de page est facultatif */
+  }
+  const crops = new Map<string, string>()
+  if (figures && wanted.length && png && pageUrl) {
+    const boxes = await locateFigures(figures.ai, pageUrl, wanted.map(([, f]) => f), key).catch(() => [] as Array<FigureBox | null>)
+    for (let j = 0; j < wanted.length; j++) {
+      const box = boxes[j]
+      if (!box) continue
+      try {
+        const blob = await (figures.crop ?? cropFigure)(png, box)
+        if (blob) crops.set(wanted[j][0], (await files.upload(blob, `figure-${page}-${j + 1}.jpg`, 'figures')).url)
+      } catch {
+        /* cette figure-là garde la page entière */
       }
-      const media = next.steps[d.stepIndex].media[d.mediaIndex]
-      if (media.kind === 'document') media.pageImageUrl = url
-    } catch {
-      /* l'aperçu de page est facultatif */
     }
   }
-  return next
+  for (const d of list) {
+    const media = next.steps[d.stepIndex].media[d.mediaIndex]
+    if (media.kind !== 'document') continue
+    const crop = d.figure ? crops.get(figureKey(d.figure)) : undefined
+    if (crop) next.steps[d.stepIndex].media[d.mediaIndex] = figureMedia(media, crop, pageUrl, d.figure!)
+    else if (pageUrl) media.pageImageUrl = pageUrl
+  }
 }

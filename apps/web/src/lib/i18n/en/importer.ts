@@ -13,6 +13,8 @@ export const importer: typeof Fr = {
   },
   onlyDocuments: 'Only PDFs and Word documents are imported here',
   onlyDocumentsText: 'Videos and photos go into a new instruction.',
+  slides: 'Save your PowerPoint files as PDF',
+  slidesText: 'In PowerPoint: File › Export › PDF. Then drop the PDF here: its pictures become the step media.',
   batch: {
     progress: (done: number, total: number) => `${done.toLocaleString('en-CA')} of ${total.toLocaleString('en-CA')} done`,
     resume: (pending: number) => `Resume the analysis (${pending.toLocaleString('en-CA')})`,

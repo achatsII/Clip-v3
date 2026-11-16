@@ -18,6 +18,16 @@ export type IngestStage = 'import' | 'prepare' | 'upload' | 'offline' | 'optimiz
 export type IngestProgress = (stage: IngestStage, ratio?: number) => void
 
 const WORD = /\.(docx?|odt)$/i
+const SLIDES = /\.(pptx?|ppsx?|odp|key)$/i
+const SLIDES_TYPES = /powerpoint|presentationml|opendocument\.presentation|keynote/i
+
+/**
+ * Une présentation (PowerPoint, Keynote) : la Gateway ne la convertit pas encore en PDF (sa route
+ * n'accepte que Word et ODT). On le dit, avec le geste qui règle tout : l'enregistrer en PDF.
+ */
+export function isSlides(file: { type: string; name: string }): boolean {
+  return SLIDES.test(file.name) || SLIDES_TYPES.test(file.type)
+}
 /** Au-delà, une vidéo du navigateur est réduite en 720p par la Gateway avant d'aller à l'IA. */
 const VIDEO_OPTIMIZE_BYTES = 60 * 1024 * 1024
 
@@ -39,7 +49,7 @@ export type SourcePreset = Pick<Partial<Source>, 'id' | 'voice'>
 
 export async function ingestFile(file: File, files: FilesApi, onProgress?: IngestProgress, capturedOn: Source['capturedOn'] = 'web', preset: SourcePreset = {}): Promise<Source> {
   const kind = kindOfFile(file)
-  if (!kind) throw new Error(messages().capture.upload.unsupported)
+  if (!kind) throw new Error(isSlides(file) ? messages().capture.upload.slides : messages().capture.upload.unsupported)
   const base: Source = { id: uid('src_'), kind, name: file.name, createdAt: new Date().toISOString(), capturedOn, ...preset }
   const up = (r: number) => onProgress?.('upload', r)
   // Un gros fichier part par morceaux : réseau coupé, il attend son retour, et la carte le dit.
