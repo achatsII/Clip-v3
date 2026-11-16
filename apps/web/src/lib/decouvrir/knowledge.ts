@@ -178,6 +178,9 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   l'opérateur ouvre ses instructions, sans compte. Au choix : « Ce poste d'abord » (les autres instructions
   restent à un geste) ou « Seulement ce poste ». Une instruction se partage aussi par un lien direct et son
   code QR, qui montrent toujours la version publiée, jamais le brouillon.
+- Une instruction mise à jour le dit au poste : « Mise à jour le … » et ce qui a changé (les étapes
+  nouvelles ou modifiées sont marquées, et chacune s'ouvre d'un toucher), « Mis à jour » sur sa carte, et la
+  version précédente à revoir en lecture, pour comparer. La tablette retient ce qu'elle a déjà vu.
 - Un poste reçoit ses instructions à la main, ou par règle (la page du poste, « Instructions par règle ») :
   par exemple Département : Découpe et Type : Nettoyage ou Maintenance. Une instruction classée ainsi y
   va d'elle-même, les nouvelles aussi ; la page montre, avant d'enregistrer, combien d'instructions y

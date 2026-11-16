@@ -261,6 +261,8 @@ export const CARD_FIELDS = {
   'json_data.stationIds': 1,
   'json_data.branding': 1,
   'json_data.publishedAt': 1,
+  // « Mis à jour » sur la carte : la version a-t-elle des changements pour l'opérateur ?
+  'json_data.changes.from': 1,
   // Une version publiée avant les fiches : de quoi l'afficher quand même.
   'json_data.content.title': 1,
   'json_data.content.category': 1,

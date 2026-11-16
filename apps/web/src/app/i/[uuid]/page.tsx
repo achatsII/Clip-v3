@@ -60,6 +60,7 @@ function SharedInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; on
       exitLabel={(words) => words.close}
       canRecord={!!link.scope?.resources.some((r) => r.data_type === T.execution && r.actions.includes('insert'))}
       notifyLink={uuid}
+      update={{ publishedAt: p.json_data.publishedAt, changes: p.json_data.changes, previous: p.json_data.previous }}
     />
   )
 }

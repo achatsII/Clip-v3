@@ -17,6 +17,8 @@ import {
   Mic,
   RotateCcw,
   Send,
+  Sparkles,
+  History as HistoryIcon,
   ShieldAlert,
   ThumbsDown,
   ThumbsUp,
@@ -61,6 +63,7 @@ import { fitMediaHeight } from '@/lib/media/fit'
 import { probeImage, ratioKeys, useMediaRatio } from '@/lib/media/ratio'
 import { playable } from '@/lib/media/reel'
 import { MediaPlaybackProvider, slowConnection, VideoPool } from '@/lib/media/videoPool'
+import { isFreshUpdate, markSeen, seenVersion, type PreviousVersion, type PublishedChanges } from '@/lib/model/updates'
 import { useToggle } from '@/lib/toggles'
 import { useMediaQuery, useWide } from '@/lib/ui/screen'
 import { useStepSwipe } from '@/lib/ui/swipe'
@@ -122,6 +125,11 @@ export interface PlayerProps {
    * d'une personne de l'équipe (« Qui êtes-vous ? ») ; l'aperçu fait un essai sans rien écrire.
    */
   canTrain?: boolean
+  /**
+   * La version publiée et ce qui a changé depuis celle d'avant (toggle `operatorUpdates`) : au poste,
+   * « Mise à jour le … », les étapes marquées, et la version précédente à revoir en lecture.
+   */
+  update?: { publishedAt: string | null; changes?: PublishedChanges | null; previous?: PreviousVersion | null } | null
 }
 
 function deviceId(): string {
@@ -138,7 +146,7 @@ function deviceId(): string {
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false, update } = props
   const who = { operatorId: operator?.id ?? null, operatorName: operator?.name ?? null }
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
@@ -225,6 +233,20 @@ export function Player(props: PlayerProps) {
   }, [preview, deps.data, instructionId, stationId, version, source, operator?.id])
 
   const step: Step | undefined = index >= 0 && index < total ? content.steps[index] : undefined
+
+  // Une instruction mise à jour depuis la dernière fois sur cet appareil (toggle `operatorUpdates`) :
+  // décidé à l'ouverture, puis l'appareil retient qu'il a vu cette version.
+  const updatesOn = useToggle('operatorUpdates')
+  const [seenAtOpen] = useState(() => (typeof window === 'undefined' ? null : seenVersion(instructionId)))
+  const fresh = updatesOn && !!update?.changes && !preview && isFreshUpdate({ version, publishedAt: update.publishedAt }, seenAtOpen)
+  const changes = fresh ? update!.changes! : null
+  useEffect(() => {
+    if (updatesOn && !preview && version) markSeen(instructionId, version)
+  }, [updatesOn, preview, version, instructionId])
+  const [oldOpen, setOldOpen] = useState(false)
+  const previous = updatesOn && update?.previous ? update.previous : null
+  const oldContent = useMemo(() => (previous ? localized(previous.content, lang) : null), [previous, lang])
+  const stepMark = (id: string) => (!changes ? null : changes.added.includes(id) ? 'added' : changes.modified.includes(id) ? 'modified' : null)
 
   // Les vidéos : un lecteur gardé d'une étape à l'autre, et la vidéo des étapes (toggle `stepReel`).
   // L'étape suivante se prépare pendant qu'on lit celle-ci, sauf sur une connexion lente.
@@ -465,7 +487,15 @@ export function Player(props: PlayerProps) {
             <DocumentView content={content} t={t} energyById={energyById} sections={sectionsOn} records={recordsOn} />
           </div>
         ) : index === -1 ? (
-          <Intro content={content} t={t} onStart={() => go(0)} />
+          <Intro
+            content={content}
+            t={t}
+            onStart={() => go(0)}
+            update={changes && update ? { changes, publishedAt: update.publishedAt, steps: content.steps } : null}
+            previous={previous ? previous.version : null}
+            onGoTo={(i) => go(i)}
+            onPrevious={() => setOldOpen(true)}
+          />
         ) : index >= total && quizOpen ? (
           <div dir={textDir(lang)} className="h-full">
             <QuizRunner
@@ -535,7 +565,15 @@ export function Player(props: PlayerProps) {
               <div className={cn('flex items-start', layout === 'legacy' ? 'gap-4' : 'gap-3')}>
                 {/* Au téléphone, le numéro est aussi dans l'en-tête : la pastille se fait plus petite et laisse la place au titre. */}
                 <span className={cn('bg-gradient-primary shadow-primary flex shrink-0 items-center justify-center font-black text-white tabular-nums', layout === 'legacy' ? 'h-16 w-16 rounded-3xl text-3xl' : 'h-12 w-12 rounded-2xl text-2xl sm:h-16 sm:w-16 sm:rounded-3xl sm:text-3xl')}>{index + 1}</span>
-                <h2 className={cn('leading-[1.05] font-black tracking-tighter text-slate-900 dark:text-white', layout === 'row' ? 'text-2xl' : 'pt-1 text-3xl sm:text-4xl')}>{step.title}</h2>
+                <div className="min-w-0">
+                  {/* Nouvelle ou modifiée depuis la version d'avant : l'opérateur le voit avant de lire. */}
+                  {stepMark(step.id) && (
+                    <span className={cn('mb-1 inline-flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-black tracking-wide uppercase', stepMark(step.id) === 'added' ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-900')}>
+                      <Sparkles className="h-3.5 w-3.5" /> {stepMark(step.id) === 'added' ? t.update.added : t.update.modified}
+                    </span>
+                  )}
+                  <h2 className={cn('leading-[1.05] font-black tracking-tighter text-slate-900 dark:text-white', layout === 'row' ? 'text-2xl' : 'pt-1 text-3xl sm:text-4xl')}>{step.title}</h2>
+                </div>
               </div>
               {step.energyPointId && energyById.get(step.energyPointId) && <EnergyChip point={energyById.get(step.energyPointId)!} />}
               {step.warning && (
@@ -728,7 +766,10 @@ export function Player(props: PlayerProps) {
   return (
     <DictationLanguage lang={lang}>
       <MediaPlaybackProvider value={playback}>
-        <MediaLabelsProvider value={t.media}>{player}</MediaLabelsProvider>
+        <MediaLabelsProvider value={t.media}>
+          {player}
+          {oldOpen && previous && oldContent && <PreviousView previous={previous} content={oldContent} t={t} sections={sectionsOn} onBack={() => setOldOpen(false)} />}
+        </MediaLabelsProvider>
       </MediaPlaybackProvider>
     </DictationLanguage>
   )
@@ -748,9 +789,31 @@ function EnergyChip({ point }: { point: { tag: string; type: keyof typeof ENERGY
   )
 }
 
-function Intro({ content, t, onStart }: { content: InstructionContent; t: ReturnType<typeof strings>; onStart: () => void }) {
+function Intro({
+  content,
+  t,
+  onStart,
+  update,
+  previous,
+  onGoTo,
+  onPrevious,
+}: {
+  content: InstructionContent
+  t: ReturnType<typeof strings>
+  onStart: () => void
+  update?: { changes: PublishedChanges; publishedAt: string | null; steps: Step[] } | null
+  previous?: number | null
+  onGoTo?: (index: number) => void
+  onPrevious?: () => void
+}) {
   return (
     <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-5 sm:p-10">
+      {update && <UpdateBanner {...update} t={t} previous={previous} onGoTo={onGoTo} onPrevious={onPrevious} />}
+      {!update && previous && onPrevious && (
+        <button type="button" onClick={onPrevious} className="btn-press glass-card inline-flex h-11 w-fit items-center gap-2 rounded-2xl px-4 text-sm font-black">
+          <HistoryIcon className="h-4 w-4" /> {t.update.previous(previous)}
+        </button>
+      )}
       <div>
         <p className="label-caps text-slate-500">{t.before}</p>
         <h1 className="mt-2 text-4xl leading-[0.95] font-black tracking-tighter sm:text-6xl">{content.title}</h1>
@@ -918,6 +981,79 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
             {exitLabel ?? t.backToList}
           </button>
         )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * « Mise à jour le … » : ce qui a changé depuis la version d'avant, en une ligne ; d'un toucher, la
+ * liste des étapes nouvelles et modifiées (chacune ouvre son étape), les retirées, et la version
+ * précédente à revoir.
+ */
+export function UpdateBanner({ changes, publishedAt, steps, t, previous, onGoTo, onPrevious }: { changes: PublishedChanges; publishedAt: string | null; steps: Step[]; t: ReturnType<typeof strings>; previous?: number | null; onGoTo?: (index: number) => void; onPrevious?: () => void }) {
+  const [open, setOpen] = useState(false)
+  const touched = steps.map((s, i) => ({ s, i })).filter(({ s }) => changes.added.includes(s.id) || changes.modified.includes(s.id))
+  return (
+    <section className="rounded-[28px] bg-gradient-to-br from-amber-300 to-amber-400 p-5 text-slate-900 shadow-[0_15px_35px_rgba(245,158,11,0.3)]">
+      <p className="label-caps flex items-center gap-2 opacity-80">
+        <Sparkles className="h-4 w-4" /> {publishedAt ? t.update.title(t.update.date(publishedAt)) : t.update.badge}
+      </p>
+      <p className="mt-1 text-xl leading-snug font-black">{t.update.summary({ added: changes.added.length, modified: changes.modified.length, removed: changes.removed.length, ppe: changes.ppe, safety: changes.safety, lockout: changes.lockout })}</p>
+      {changes.note && (
+        <p className="mt-1 text-base font-bold">
+          {t.update.why} {changes.note}
+        </p>
+      )}
+      {open && (
+        <div className="mt-3 space-y-2">
+          {touched.map(({ s, i }) => (
+            <button key={s.id} type="button" onClick={() => onGoTo?.(i)} className="btn-press flex min-h-12 w-full items-center gap-2 rounded-2xl bg-white/70 px-4 text-left font-black">
+              <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', changes.added.includes(s.id) ? 'bg-emerald-500' : 'bg-amber-600')} />
+              <span className="min-w-0 flex-1 truncate">{t.update.goTo(i + 1, s.title)}</span>
+              <span className="shrink-0 text-xs font-black uppercase opacity-70">{changes.added.includes(s.id) ? t.update.added : t.update.modified}</span>
+            </button>
+          ))}
+          {!!changes.removed.length && (
+            <p className="px-1 text-sm font-bold">
+              {t.update.removedTitle} {changes.removed.join(' · ')}
+            </p>
+          )}
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {(touched.length > 0 || changes.removed.length > 0) && (
+          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="btn-press inline-flex h-11 items-center gap-2 rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">
+            {open ? t.update.hide : t.update.see}
+          </button>
+        )}
+        {previous && onPrevious && (
+          <button type="button" onClick={onPrevious} className="btn-press inline-flex h-11 items-center gap-2 rounded-2xl bg-white/70 px-4 text-sm font-black">
+            <HistoryIcon className="h-4 w-4" /> {t.update.previous(previous)}
+          </button>
+        )}
+      </div>
+    </section>
+  )
+}
+
+/** La version précédente, en lecture : toute l'instruction d'un coup, un bandeau qui dit laquelle, et le retour. */
+function PreviousView({ previous, content, t, sections, onBack }: { previous: PreviousVersion; content: InstructionContent; t: ReturnType<typeof strings>; sections: boolean; onBack: () => void }) {
+  const energyById = new Map((content.lockout?.energyPoints ?? []).map((e) => [e.id, e]))
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col bg-slate-100 dark:bg-slate-950" role="dialog" aria-modal="true" aria-label={t.update.previousTitle(previous.version, previous.publishedAt ? t.update.date(previous.publishedAt) : null)}>
+      <div className="flex shrink-0 flex-wrap items-center gap-3 bg-slate-900 px-4 py-3 text-white sm:px-6">
+        <HistoryIcon className="h-5 w-5 shrink-0" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-black">{t.update.previousTitle(previous.version, previous.publishedAt ? t.update.date(previous.publishedAt) : null)}</span>
+          <span className="block text-sm font-bold text-white/70">{t.update.previousHint}</span>
+        </span>
+        <button type="button" onClick={onBack} className="btn-press bg-gradient-primary inline-flex h-12 items-center gap-2 rounded-2xl px-4 text-sm font-black text-white">
+          <ArrowLeft className="h-5 w-5" /> {t.update.back}
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <DocumentView content={content} t={t} energyById={energyById} sections={sections} records={false} />
       </div>
     </div>
   )

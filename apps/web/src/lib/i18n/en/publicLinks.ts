@@ -5,6 +5,8 @@ export const publicLinks: typeof Fr = {
   loading: 'Loading…',
   deadLink: 'This link no longer works',
   kiosk: {
+    updated: 'Updated',
+
     who: {
       title: 'Who are you?',
       hint: 'Tap your name, then type your code.',

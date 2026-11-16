@@ -723,6 +723,24 @@ Aucun écran ne lit la bibliothèque entière : à des milliers d'instructions, 
   complète, traductions comprises, se lit à l'ouverture. « Tout voir » et la recherche (deux lettres
   et plus) cherchent au serveur, dans la portée du lien, une page à la fois.
 
+### Les mises à jour vues par l'opérateur (toggle `operatorUpdates`, `src/lib/model/updates.ts`)
+
+Une instruction republiée le dit au poste, sans qu'on aille la chercher.
+
+- **À la publication** (`publishInstruction`), la version publique garde ce qui a changé depuis celle
+  d'avant (`Published.changes` : étapes nouvelles et modifiées par leur identifiant, retirées par leur
+  titre, EPI, mises en garde, cadenassage, et la note de la demande d'approbation comme « Pourquoi »)
+  et la version d'avant elle-même (`Published.previous`). Un lien ne lit que `clip_published` : c'est
+  là qu'elles vivent, sans élargir sa portée.
+- **Au poste** : « Mise à jour le 12 novembre » en tête de l'instruction, en une ligne (« 2 étapes
+  modifiées · 1 nouvelle ») ; d'un toucher, la liste des étapes touchées (chacune ouvre la sienne) et
+  les retirées ; une pastille « Nouvelle » ou « Modifiée » sur l'étape ; « Version précédente (v3) »
+  la montre toute, en lecture, avec un bandeau qui dit laquelle et le retour. La carte de la liste
+  du poste porte « Mis à jour » (`changes.from` est lu avec la fiche).
+- **« Déjà vue » se retient sur l'appareil** (`clip_seen_versions`, les 300 dernières) : signalée
+  jusqu'à ce que l'appareil ouvre la nouvelle version ; un appareil qui ne l'a jamais ouverte la voit
+  signalée `FRESH_DAYS` (14) jours après la publication. Rien dans l'aperçu d'un brouillon.
+
 ### La nomenclature de l'usine (toggle `nomenclature`, `src/lib/model/nomenclature.ts`)
 
 D'une usine à l'autre, on ne classe jamais pareil : ici le département et la machine, là le produit,

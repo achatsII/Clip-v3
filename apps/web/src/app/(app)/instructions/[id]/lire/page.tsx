@@ -74,6 +74,7 @@ export default function ReadInstructionPage() {
     // Dans l'app, la personne connectée signe ce qu'elle fait ; l'aperçu d'un brouillon n'écrit rien.
     canRecord: !preview,
     recorder: { id: session.profile.userId, name: session.displayName },
+    update: preview || !published.data ? null : { publishedAt: published.data.json_data.publishedAt, changes: published.data.json_data.changes, previous: published.data.json_data.previous },
   }
   if (editable) return <PreviewEditing key={id} doc={doc} player={player} />
   return <Player content={content} {...player} />

@@ -12,6 +12,7 @@ import type { Branding, Instruction, InstructionContent, OrgSettings, Published,
 import { reuseSource } from './library'
 import { allocateNumbers, instructionSearchText, publishedCard } from './search'
 import { allStationIds } from './nomenclature'
+import { publishedChanges } from './updates'
 
 export interface Actor {
   id: string
@@ -139,6 +140,10 @@ export async function publishInstruction(
     searchText: instructionSearchText({ number: docNumber, labels: instr.labels }, content),
     ...(instr.labels ? { labels: instr.labels } : {}),
     ...(instr.ruleStationIds?.length ? { ruleStationIds: instr.ruleStationIds } : {}),
+    // Pour l'opérateur : ce qui a changé depuis la version d'avant, et cette version, à revoir en lecture.
+    ...(previous && instr.publishedVersion
+      ? { changes: publishedChanges(previous, content, instr.publishedVersion, instr.review?.note ?? opts.note), previous: { version: instr.publishedVersion, publishedAt: instr.publishedAt ?? null, content: previous } }
+      : {}),
   }
   // Un bloc commun ne s'affiche à aucun poste : pas de version publique ; ses instructions le portent.
   let publishedId = instr.block ? null : instr.publishedId

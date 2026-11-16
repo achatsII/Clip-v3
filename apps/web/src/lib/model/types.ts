@@ -1,4 +1,5 @@
 import type { Labels, Nomenclature, StationRule } from './nomenclature'
+import type { PreviousVersion, PublishedChanges } from './updates'
 /**
  * Modèle de données de CLIP V3 (contenu de `json_data` sur la Gateway).
  *
@@ -593,6 +594,10 @@ export interface Published {
   labels?: Labels
   /** Parmi `stationIds`, ceux qui viennent d'une règle de poste (à refaire quand la règle change). */
   ruleStationIds?: string[]
+  /** Ce qui a changé depuis la version d'avant, pour l'opérateur (toggle `operatorUpdates`). */
+  changes?: PublishedChanges | null
+  /** La version publiée d'avant, à revoir au poste en lecture (un lien ne lit que `clip_published`). */
+  previous?: PreviousVersion | null
 }
 
 /** La fiche légère d'une instruction publiée : la liste d'un poste ne lit qu'elle. */

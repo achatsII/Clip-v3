@@ -163,6 +163,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   sous la clé `instructions`). Les postes se regroupent en secteurs (`Station.area`) ; le numéro de
   document (`number`, « IT-0042 ») se donne à la première publication. Au poste, la liste lit la
   fiche des versions publiées (`Published.card`) ; l'instruction complète se lit à l'ouverture.
+- **Mises à jour au poste** (toggle `operatorUpdates`, `src/lib/model/updates.ts`) : la version
+  publique garde ce qui a changé (`Published.changes`) et la version d'avant (`Published.previous`) ;
+  au poste, « Mise à jour le … », les étapes nouvelles ou modifiées marquées, la version précédente en
+  lecture, et « Mis à jour » sur la carte, jusqu'à ce que l'appareil ouvre la nouvelle version.
 - **Nomenclature** (toggle `nomenclature`, Réglages › Classement ; « La nomenclature de l'usine »,
   `docs/architecture.md`) : chaque usine se donne ses familles d'étiquettes, une liste de valeurs ou
   une valeur libre (département, machine, produit, BT…). Le classement (`Instruction.labels`) se range
