@@ -33,7 +33,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       <InlineScript html={SITE_GUARD_SCRIPT} />
-      <div className="site-leaving-mark" aria-hidden>
+      <div className="site-leaving-mark" data-boot-loader aria-hidden>
         <ClipMark className="animate-float h-16 w-16" />
       </div>
       {children}

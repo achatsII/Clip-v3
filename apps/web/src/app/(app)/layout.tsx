@@ -12,7 +12,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SessionProvider
       fallback={
-        <div className="flex min-h-dvh flex-col items-center justify-center gap-4">
+        <div data-boot-loader className="flex min-h-dvh flex-col items-center justify-center gap-4">
           <LogoMark className="animate-float h-16 w-16" />
           <p className="label-caps text-slate-400">{t.shell.opening}</p>
         </div>

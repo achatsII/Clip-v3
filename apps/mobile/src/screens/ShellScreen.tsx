@@ -25,6 +25,12 @@ import { colors } from '../ui/theme'
 import { OfflineScreen } from './SystemScreens'
 import { strings } from '../i18n'
 
+/**
+ * Quand la page dit elle-même qu'elle est prête (`splash.hide`), l'écran de démarrage l'attend au
+ * plus ce délai après la fin du premier chargement : une page qui ne le dit jamais ne le bloque pas.
+ */
+export const SPLASH_WAIT_MS = 8_000
+
 export function ShellScreen({
   target,
   environment,
@@ -123,6 +129,17 @@ export function ShellScreen({
     void SplashScreen.hideAsync().catch(() => undefined)
   }, [])
 
+  // Fin d'un chargement : sans `splash.hide`, l'écran de démarrage s'efface tout de suite ; avec,
+  // la page l'efface à son premier vrai écran (le site, puis l'accueil, montraient chacun leur logo).
+  const splashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const onLoadEnd = useCallback(() => {
+    if (!capabilitiesRef.current.includes('splash.hide')) return hideSplash()
+    splashTimer.current ??= setTimeout(hideSplash, SPLASH_WAIT_MS)
+  }, [hideSplash])
+  useEffect(() => () => {
+    if (splashTimer.current) clearTimeout(splashTimer.current)
+  }, [])
+
   if (failure) {
     return (
       <OfflineScreen
@@ -153,7 +170,7 @@ export function ShellScreen({
         onNavigationStateChange={(nav) => {
           canGoBack.current = nav.canGoBack
         }}
-        onLoadEnd={hideSplash}
+        onLoadEnd={onLoadEnd}
         onError={(e) => {
           logError(new Error(e.nativeEvent.description), { screen: 'shell', action: 'load', code: e.nativeEvent.code })
           hideSplash()

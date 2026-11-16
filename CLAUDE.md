@@ -15,7 +15,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 
 - **Une seule interface** : tout l'écran est dans `apps/web`. La coquille Expo n'ajoute que des
   capacités natives, déclarées dans `packages/bridge` ; le web vérifie une capacité
-  (`hasCapability`) avant de l'appeler et garde toujours un repli web.
+  (`hasCapability`) avant de l'appeler et garde toujours un repli web. Au démarrage, un seul logo :
+  l'écran natif attend le premier vrai écran de la page (`splash.hide`, toggle `splashHandoff`,
+  `ShellSplash`) ; un nouvel écran de chargement avec le logo seul porte `data-boot-loader`.
 - **La Gateway Octopus est le seul backend.** Ses contrats sont dans `apps/web/src/lib/gateway`
   (`client.ts` : jetons, un seul rafraîchissement sur 401 ; `data.ts` ; `files.ts` ; `ai.ts`). On ne
   devine pas une route : on lit sa spec (skill `api-plateforme-ii`).

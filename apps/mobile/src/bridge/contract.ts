@@ -53,6 +53,12 @@ export type Capability =
    * téléphone, que la page range dans la fiche de contact de la personne. Hors Expo Go seulement.
    */
   | 'push.register'
+  /**
+   * Le démarrage : la page dit qu'elle a dessiné son premier vrai écran, et la coquille retire alors
+   * son écran de démarrage. Un seul logo, pas celui de la coquille puis celui de la page. Annoncée
+   * avec le toggle `splashHandoff` ; sans elle, la coquille le retire à la fin du chargement.
+   */
+  | 'splash.hide'
 
 /** Injecté par la coquille dans `window.__CLIP_NATIVE__` avant le chargement de la page. */
 export interface NativeEnvironment {
@@ -179,6 +185,8 @@ export interface BridgeRequestMap {
    * Refusée : `permission_denied`. Un toucher sur l'avertissement ouvre sa page dans la coquille.
    */
   'push.register': { payload: Record<string, never>; result: { token: string; platform: NativePlatform } }
+  /** Le premier vrai écran de la page est dessiné : l'écran de démarrage de la coquille s'efface. */
+  'splash.hide': { payload: Record<string, never>; result: Record<string, never> }
 }
 
 /**

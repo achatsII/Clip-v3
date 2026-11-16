@@ -3,6 +3,7 @@ import { Directory, File, Paths } from 'expo-file-system'
 import * as Haptics from 'expo-haptics'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import * as Print from 'expo-print'
+import * as SplashScreen from 'expo-splash-screen'
 import * as Sharing from 'expo-sharing'
 import * as WebBrowser from 'expo-web-browser'
 import { Linking, Platform, Share } from 'react-native'
@@ -157,6 +158,12 @@ export function createHandlers(emit: (event: BridgeEvent) => void): BridgeHandle
     // L'achat dans le magasin : la capacité n'est annoncée que si le module est utilisable.
     // Les avertissements sur le téléphone : la permission, puis le jeton push.
     'push.register': () => registerForPush(),
+
+    // La page a dessiné son premier vrai écran : l'écran de démarrage s'efface (déjà parti : rien).
+    'splash.hide': async () => {
+      await SplashScreen.hideAsync().catch(() => undefined)
+      return {}
+    },
 
     'store.connect': async ({ orgId }) => {
       if (!storeEnabled()) throw new BridgeError('unsupported', strings().errors.storeUnavailable)

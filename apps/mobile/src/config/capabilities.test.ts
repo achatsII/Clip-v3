@@ -54,3 +54,12 @@ describe('reprise des médias après un rechargement de la page', () => {
     expect(capabilitiesFor({ configVersion: 1, forceUpdate: {}, toggles: { nativeCapture: false }, realtime: false })).toContain('media.pending')
   })
 })
+
+describe('un seul logo au démarrage', () => {
+  it('splash.hide ne s’annonce qu’avec le toggle `splashHandoff` allumé ; en repli, l’écran de démarrage part à la fin du chargement', () => {
+    expect(capabilitiesFor(withToggles({ splashHandoff: true }))).toContain('splash.hide')
+    expect(capabilitiesFor(withToggles({ splashHandoff: false }))).not.toContain('splash.hide')
+    expect(capabilitiesFor(withToggles({}))).not.toContain('splash.hide')
+    expect(capabilitiesFor(null)).not.toContain('splash.hide')
+  })
+})

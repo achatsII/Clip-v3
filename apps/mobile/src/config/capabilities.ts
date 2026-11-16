@@ -50,6 +50,9 @@ export function capabilitiesFor(config: PublicConfig | null, device: { store?: b
   // Les avertissements sur le téléphone : seulement si le serveur les allume (toggle `notify`) et
   // que cette version de l'app a le module (hors Expo Go).
   if (device.push && config?.toggles?.notify === true) caps.push('push.register')
+  // Un seul logo au démarrage : l'écran de démarrage attend le premier vrai écran de la page
+  // (toggle `splashHandoff`). Sans serveur, il s'efface à la fin du chargement, comme avant.
+  if (config?.toggles?.splashHandoff === true) caps.push('splash.hide')
   return caps
 }
 

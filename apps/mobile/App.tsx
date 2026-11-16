@@ -24,6 +24,12 @@ import { colors } from './src/ui/theme'
 import { loadShellLang } from './src/i18n/persist'
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined)
+// L'écran de démarrage s'efface en fondu (iPhone) : la page apparaît dessous, sans saut.
+try {
+  SplashScreen.setOptions({ fade: true, duration: 300 })
+} catch {
+  /* version sans réglages : il s'efface d'un coup */
+}
 
 /** Au démarrage, on attend la configuration au plus ce délai avant d'afficher la page. */
 const BOOT_CONFIG_WAIT_MS = 2_500

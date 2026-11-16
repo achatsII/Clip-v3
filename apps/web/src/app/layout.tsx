@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Providers } from '@/components/providers/Providers'
 import { THEME_SCRIPT } from '@/lib/theme'
 import './globals.css'
+import { ShellSplash } from '@/components/ShellSplash'
 
 /**
  * Les métadonnées se rendent au serveur, qui ne connaît pas la langue de l'outil (choisie dans le
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="orb orb-3" />
           <div className="grain" />
         </div>
+        <ShellSplash />
         <Providers>{children}</Providers>
       </body>
     </html>
