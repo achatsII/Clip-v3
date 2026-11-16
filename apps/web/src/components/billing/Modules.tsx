@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { moduleOffer } from '@/lib/billing/advice'
-import { addonFor, FEATURE_LABELS, featureLabel, MODULES, type FeatureKey, type ModuleDef, type ModuleKey } from '@/lib/billing/catalog'
+import { addonFor, byQuote, FEATURE_LABELS, featureLabel, MODULES, salesHref, type FeatureKey, type ModuleDef, type ModuleKey } from '@/lib/billing/catalog'
 import type { BillingState, PublicPlan } from '@/lib/billing/client'
 import { useMessages } from '@/lib/i18n'
 import { logUsage } from '@/lib/model/repo'
@@ -111,6 +111,14 @@ export function ModuleCard({ m, plans, state, interval, isAdmin, busy, onBuy, in
           <p className="mt-6 rounded-2xl bg-slate-900/5 p-3 text-center text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{eligible ? t.preview.moduleOff : t.modules.withPlans}</p>
         ) : !eligible ? (
           <p className="mt-6 rounded-2xl bg-slate-900/5 p-3 text-center text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{t.modules.withPlans}</p>
+        ) : byQuote(addon) ? (
+          // Sur devis, comme Usine : l'équipe de CLIP l'ajoute à l'abonnement de l'usine.
+          <div className="mt-6">
+            <p className="text-3xl font-black tracking-tighter">{t.quote}</p>
+            <Link href={salesHref()} className="btn-press mt-4 flex h-12 items-center justify-center rounded-full bg-slate-900 text-sm font-black text-white dark:bg-white dark:text-slate-900">
+              {t.contactSales}
+            </Link>
+          </div>
         ) : !addon || !price ? (
           <p className="mt-6 text-sm font-bold text-slate-500">{t.modules.notOnSale}</p>
         ) : (

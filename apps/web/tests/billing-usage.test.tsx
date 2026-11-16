@@ -94,9 +94,11 @@ describe('le plan qui en donne plus, sur la vraie grille', () => {
 
   it('postes et instructions publiées : le plan suivant, et ce qu’il donne', () => {
     const stations = planFor(grid, on('solo'), 'stations')!
-    expect(offerText(stations, 'stations')).toBe('Équipe : 25 postes')
-    expect(offerText(planFor(grid, on('free'), 'published_instructions')!, 'published_instructions')).toBe('Solo : 30 instructions publiées')
-    expect(offerText(planFor(grid, on('solo'), 'published_instructions')!, 'published_instructions')).toBe('Équipe : instructions publiées sans limite')
+    expect(offerText(stations, 'stations')).toBe('Équipe : 10 postes')
+    expect(offerText(planFor(grid, on('free'), 'published_instructions')!, 'published_instructions')).toBe('Solo : 15 instructions publiées')
+    expect(offerText(planFor(grid, on('solo'), 'published_instructions')!, 'published_instructions')).toBe('Équipe : 50 instructions publiées')
+    // Au-delà d'Équipe, toute l'usine est sur devis : la jauge nomme Usine, la fenêtre propose d'en parler.
+    expect(offerText(planFor(grid, on('equipe'), 'published_instructions')!, 'published_instructions')).toBe('Usine : instructions publiées sans limite')
     expect(offerText(planFor(grid, on('equipe'), 'stations')!, 'stations')).toBe('Usine : 100 postes')
   })
 })
@@ -125,7 +127,7 @@ describe('la jauge d’une limite', () => {
     const v = wrap(<UsageMeter feature="stations" limit={{ limit: 5, used: 4, remaining: 1, reached: false }} />)
     expect(v.getByText('4 postes sur 5 dans votre plan')).toBeTruthy()
     expect(v.getByText(/Bientôt plein/)).toBeTruthy()
-    await waitFor(() => expect(v.getByText('Équipe : 25 postes.')).toBeTruthy())
+    await waitFor(() => expect(v.getByText('Équipe : 10 postes.')).toBeTruthy())
     act(() => fireEvent.click(v.getByRole('button', { name: 'Voir Équipe' })))
     expect(v.getByTestId('paywall').textContent).toBe(JSON.stringify({ feature: 'stations', used: 4 }))
   })

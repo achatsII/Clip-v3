@@ -114,11 +114,18 @@ plans:
   #
   # La grille suit la valeur : les postes (la couverture du plancher), les rédacteurs (la capacité de
   # création) et les instructions publiées. Les opérateurs et les lecteurs ne se comptent jamais.
-  # Les banques de crédits suivent l'usage réel d'un profil type (en crédits), avec de la marge ;
-  # au-delà, on monte de plan. Le support humain se paie : il est inclus là où le prix le couvre.
+  #
+  # En libre-service (site et magasins), seulement des forfaits d'entrée, tous plafonnés : rien
+  # d'illimité, rien qu'une usine entière pourrait utiliser. Toute l'usine passe par l'équipe de
+  # CLIP : Usine n'a aucun prix, ne s'achète nulle part et s'attribue à l'organisation après la vente.
+  #
+  # Crédits et limites concordent : une génération coûte en réalité 16 à 55 crédits (mesuré en QA,
+  # novembre 2026, vidéo courte ou moyenne), environ 150 pour 30 minutes de vidéo. Chaque banque
+  # permet d'atteindre la limite d'instructions du plan même avec de longues vidéos, retouches comprises :
+  # c'est la limite d'instructions qui arrête, pas les crédits.
 
   # Gratuit : goûter la boucle (capture, génération, poste, retours), pas vivre dessus.
-  # 300 crédits : environ deux petites générations par mois.
+  # 500 crédits : de quoi faire ses 3 instructions, même à partir de longues vidéos, et les retoucher.
   - code: free
     kind: base
     name: Gratuit
@@ -131,10 +138,12 @@ plans:
       features: { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, academy: false, records_plus: false }
       limits: { published_instructions: 3, stations: 1, editors: 1 }
       credits:
-        - { feature: ai_credits, amount: 300, period: monthly, rollover: none }
+        - { feature: ai_credits, amount: 500, period: monthly, rollover: none }
 
   # Solo : le champion qui documente son propre travail ; ses statistiques l'aident à convaincre
-  # son usine de passer à Équipe.
+  # son usine. 15 instructions et 3 postes : un poste ou une cellule, pas une ligne entière.
+  # 49 $ : sous les outils de documentation par créateur (Guidde, Scribe, Tango : 13 à 59 $ US par
+  # mois), avec le poste et la tablette en plus.
   - code: solo
     kind: base
     name: Solo
@@ -147,11 +156,14 @@ plans:
       - { interval: yearly, currency: CAD, amount_cents: 49000, store_product_id: clip_v3_solo_yearly_v1 }
     entitlements:
       features: { translations: false, adoption_stats: true, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, academy: false, records_plus: false }
-      limits: { published_instructions: 30, stations: 5, editors: 1 }
+      limits: { published_instructions: 15, stations: 3, editors: 1 }
       credits:
         - { feature: ai_credits, amount: 2500, period: monthly, rollover: none }
 
-  # Équipe : un atelier ou une petite usine, le plan mis en avant.
+  # Équipe : l'essai d'une équipe sur une ligne ou un secteur, le plan mis en avant. 3 rédacteurs,
+  # 50 instructions, 10 postes : on y vit un pilote complet (approbation, traduction, blocs communs),
+  # pas une usine. 199 $ : environ 66 $ par rédacteur, comme les offres d'équipe plafonnées des outils
+  # de documentation (Guidde Business : 39 à 59 $ US par créateur, 5 au plus, puis sur devis).
   - code: equipe
     kind: base
     name: Équipe
@@ -160,25 +172,24 @@ plans:
     sort_order: 30
     availability: { channels: [web, ios, android], audience: personal, store_entitlement: clip-v3.equipe }
     prices:
-      - { interval: monthly, currency: CAD, amount_cents: 29900, store_product_id: clip_v3_equipe_monthly_v1 }
-      - { interval: yearly, currency: CAD, amount_cents: 299000, store_product_id: clip_v3_equipe_yearly_v1 }
+      - { interval: monthly, currency: CAD, amount_cents: 19900, store_product_id: clip_v3_equipe_monthly_v1 }
+      - { interval: yearly, currency: CAD, amount_cents: 199000, store_product_id: clip_v3_equipe_yearly_v1 }
     entitlements:
       features: { translations: true, adoption_stats: true, approvals: true, bulk_import: false, voice_assistant: false, brand_kit: true, full_export: false, shared_blocks: true, academy: false, records_plus: false }
-      limits: { published_instructions: null, stations: 25, editors: 5 }
+      limits: { published_instructions: 50, stations: 10, editors: 3 }
       credits:
-        - { feature: ai_credits, amount: 12000, period: monthly, rollover: none }
+        - { feature: ai_credits, amount: 10000, period: monthly, rollover: none }
 
-  # Usine : toute l'usine, tout compris, support prioritaire et démarrage accompagné à l'annuel.
+  # Usine : toute l'usine, sur devis. Aucun prix : il ne s'achète ni sur le site ni dans les
+  # magasins ; l'équipe de CLIP l'attribue à l'organisation une fois la vente faite (prix au contrat).
+  # Ses droits sont ceux d'une usine : l'app les ouvre dès qu'il est attribué.
   - code: usine
     kind: base
     name: Usine
     version: 1
     status: active
     sort_order: 40
-    availability: { channels: [web, ios, android], audience: personal, store_entitlement: clip-v3.usine }
-    prices:
-      - { interval: monthly, currency: CAD, amount_cents: 89900, store_product_id: clip_v3_usine_monthly_v1 }
-      - { interval: yearly, currency: CAD, amount_cents: 899000, store_product_id: clip_v3_usine_yearly_v1 }
+    availability: { channels: [web], audience: personal }
     entitlements:
       features: { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true, academy: false, records_plus: false }
       limits: { published_instructions: null, stations: 100, editors: 15 }
@@ -186,67 +197,28 @@ plans:
         - { feature: ai_credits, amount: 40000, period: monthly, rollover: none }
 
   # ── LES MODULES EN OPTION ──────────────────────────────────────────────────────────────────────
-  # Un module s'ajoute à Équipe ou à Usine quand l'usine en a besoin : l'Académie (former et garder
-  # chaque personne qualifiée) et les Relevés (des données fiables du plancher). Sur le web seulement :
-  # un module ne se vend pas dans les magasins. 14 jours offerts, une fois par organisation. Annuel =
-  # 10 mois. Son prix suit le plan de base (Usine : trois fois Équipe, comme ses postes et ses
-  # rédacteurs) : un module par plan de base, <module>-<plan> (un code ne prend que des traits d'union),
-  # une fois par abonnement (max_quantity: 1). Le manifeste n'a pas de champ documenté
-  # pour ce rattachement : l'app ne propose que le module de son plan (MODULES, dans
-  # src/lib/billing/catalog.ts). La simulation de billing-publish le confirme avant la publication.
-  - code: academie-equipe
-    kind: addon
-    name: Académie
-    version: 1
-    status: active
-    trial_days: 14
-    max_quantity: 1
-    availability: { channels: [web], audience: personal }
-    prices:
-      - { interval: monthly, currency: CAD, amount_cents: 14900 }
-      - { interval: yearly, currency: CAD, amount_cents: 149000 }
-    entitlements:
-      features: { academy: true }
-
+  # L'Académie (former et garder chaque personne qualifiée) et les Relevés (des données fiables du
+  # plancher) s'ajoutent à Usine, sur devis comme elle : aucun prix, l'équipe de CLIP les attribue
+  # (une fois par abonnement, max_quantity: 1). Le manifeste n'a pas de champ documenté pour le
+  # rattachement au plan de base : l'app ne propose que le module de son plan (MODULES, dans
+  # src/lib/billing/catalog.ts).
   - code: academie-usine
     kind: addon
     name: Académie
     version: 1
     status: active
-    trial_days: 14
     max_quantity: 1
     availability: { channels: [web], audience: personal }
-    prices:
-      - { interval: monthly, currency: CAD, amount_cents: 44900 }
-      - { interval: yearly, currency: CAD, amount_cents: 449000 }
     entitlements:
       features: { academy: true }
-
-  - code: releves-equipe
-    kind: addon
-    name: Relevés
-    version: 1
-    status: active
-    trial_days: 14
-    max_quantity: 1
-    availability: { channels: [web], audience: personal }
-    prices:
-      - { interval: monthly, currency: CAD, amount_cents: 9900 }
-      - { interval: yearly, currency: CAD, amount_cents: 99000 }
-    entitlements:
-      features: { records_plus: true }
 
   - code: releves-usine
     kind: addon
     name: Relevés
     version: 1
     status: active
-    trial_days: 14
     max_quantity: 1
     availability: { channels: [web], audience: personal }
-    prices:
-      - { interval: monthly, currency: CAD, amount_cents: 29900 }
-      - { interval: yearly, currency: CAD, amount_cents: 299000 }
     entitlements:
       features: { records_plus: true }
 

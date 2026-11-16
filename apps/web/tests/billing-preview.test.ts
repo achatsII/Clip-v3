@@ -51,25 +51,27 @@ describe('ce que l’aperçu montre', () => {
     const solo = previewState({ plan: 'solo', modules: ['academy'], credits: 'empty' })
     expect(solo.features).toMatchObject({ academy: false, records_plus: false, translations: false, adoption_stats: true })
     expect(solo.credits[0]).toMatchObject({ granted: 2500, available: 0 })
-    expect(previewState({ plan: 'equipe', modules: [], credits: 'low' }).credits[0].available).toBe(1440)
+    expect(previewState({ plan: 'equipe', modules: ['academy'], credits: 'low' })).toMatchObject({ features: { academy: false } })
+    expect(previewState({ plan: 'equipe', modules: [], credits: 'low' }).credits[0].available).toBe(1200)
   })
 
   it('« acheter » un plan le remplace (les modules qu’il ne reçoit pas tombent) ; un module s’ajoute', () => {
-    const team: PreviewSelection = { plan: 'equipe', modules: ['records'], credits: 'empty' }
-    expect(applyPurchase(team, 'usine')).toEqual({ plan: 'usine', modules: ['records'], credits: 'full' })
-    expect(applyPurchase(team, 'solo')).toEqual({ plan: 'solo', modules: [], credits: 'full' })
-    expect(applyPurchase(team, 'academie-equipe')).toEqual({ plan: 'equipe', modules: ['records', 'academy'], credits: 'empty' })
-    expect(applyPurchase(team, 'inconnu')).toBe(team)
+    const plant: PreviewSelection = { plan: 'usine', modules: ['records'], credits: 'empty' }
+    expect(applyPurchase(plant, 'equipe')).toEqual({ plan: 'equipe', modules: [], credits: 'full' })
+    expect(applyPurchase(plant, 'solo')).toEqual({ plan: 'solo', modules: [], credits: 'full' })
+    expect(applyPurchase(plant, 'academie-usine')).toEqual({ plan: 'usine', modules: ['records', 'academy'], credits: 'empty' })
+    expect(applyPurchase({ plan: 'equipe', modules: [], credits: 'low' }, 'usine')).toEqual({ plan: 'usine', modules: [], credits: 'full' })
+    expect(applyPurchase(plant, 'inconnu')).toBe(plant)
   })
 
   it('le client de l’aperçu : rien ne part, tout se joue dans l’appareil', async () => {
-    let sel: PreviewSelection = { plan: 'equipe', modules: [], credits: 'full' }
+    let sel: PreviewSelection = { plan: 'usine', modules: [], credits: 'full' }
     const client = createPreviewClient({ read: () => sel, write: (s) => (sel = s) })
     expect((await client.check('academy')).allowed).toBe(false)
     expect((await client.check('translations')).allowed).toBe(true)
-    expect((await client.plans()).plans.filter((p) => p.is_current).map((p) => p.code)).toEqual(['equipe'])
-    const back = await client.checkout('academie-equipe', 'yearly', { success: 'https://clip.test/registre?ecarts=1', cancel: 'https://clip.test/registre' })
-    expect(new URL(back).searchParams.get(PREVIEW_PARAM)).toBe('academie-equipe')
+    expect((await client.plans()).plans.filter((p) => p.is_current).map((p) => p.code)).toEqual(['usine'])
+    const back = await client.checkout('academie-usine', 'yearly', { success: 'https://clip.test/registre?ecarts=1', cancel: 'https://clip.test/registre' })
+    expect(new URL(back).searchParams.get(PREVIEW_PARAM)).toBe('academie-usine')
     expect(new URL(back).searchParams.get('ecarts')).toBe('1')
     expect(sel.modules).toEqual(['academy'])
     expect((await client.check('academy')).allowed).toBe(true)

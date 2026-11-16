@@ -15,7 +15,7 @@ import { useFeedback, useStatsIndex, useStations } from '@/hooks/queries'
 import { useAdoption } from '@/hooks/useAdoption'
 import { callNative, hasCapability, nativeEnv } from '@/lib/bridge/native'
 import { planFor } from '@/lib/billing/advice'
-import { LIMIT_FEATURES, PLAN_PITCH } from '@/lib/billing/catalog'
+import { byQuote, LIMIT_FEATURES, PLAN_PITCH } from '@/lib/billing/catalog'
 import type { PublicPlan } from '@/lib/billing/client'
 import { useBilling, useEntitlement, useGate } from '@/lib/billing/state'
 import { usageText } from '@/lib/billing/usage'
@@ -78,7 +78,9 @@ function Report() {
     if (inShell || !enabled || !plans.data) return []
     const current = plans.data.plans.find((p) => p.code === state?.plan_code)
     const floor = current ? monthlyCents(current) : 0
-    return plans.data.plans.filter((p) => p.kind === 'base' && monthlyCents(p) > floor).sort((a, b) => monthlyCents(a) - monthlyCents(b))
+    const priced = plans.data.plans.filter((p) => p.kind === 'base' && monthlyCents(p) > floor).sort((a, b) => monthlyCents(a) - monthlyCents(b))
+    // Toute l'usine, sur devis, en dernier : le dossier le propose sans prix (« Sur devis »).
+    return [...priced, ...plans.data.plans.filter((p) => p.kind === 'base' && byQuote(p) && p.code !== current?.code)]
   }, [inShell, enabled, plans.data, state?.plan_code])
   const asked = params.get('plan')
   const fallback = choices.find((p) => p.code === asked)?.code ?? (plans.data ? planFor(choices, state)?.code : undefined) ?? 'none'
@@ -101,7 +103,7 @@ function Report() {
           planName: plan.name,
           pitch: PLAN_PITCH[plan.code] ?? '',
           lines: entitlementLines(plan),
-          price: monthly ? t.stats.pdf.perMonth(formatPrice(monthly.amount_cents, monthly.currency)) : null,
+          price: monthly ? t.stats.pdf.perMonth(formatPrice(monthly.amount_cents, monthly.currency)) : byQuote(plan) ? t.billing.quote : null,
           yearly: yearly ? t.stats.pdf.perYear(formatPrice(yearly.amount_cents, yearly.currency)) : null,
           usage: LIMIT_FEATURES.flatMap((k) => {
             const l = usage[k]

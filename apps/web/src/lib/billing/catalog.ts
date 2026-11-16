@@ -93,6 +93,22 @@ export const PLAN_PITCH: Record<string, string> = Object.defineProperties(
 /** Le plan mis en avant sur la page des plans. */
 export const FEATURED_PLAN = 'equipe'
 
+/** Le plan gratuit, `product.default_plan_code` du manifeste (un test les compare). */
+export const FREE_PLAN = 'free'
+
+/**
+ * Sur devis : un plan ou un module sans prix, autre que le gratuit. Il ne s'achète nulle part (ni sur le
+ * site ni dans les magasins) ; l'équipe de CLIP l'attribue à l'organisation une fois la vente faite. Sur
+ * le web, « Parler à l'équipe CLIP » mène à la prise de rendez-vous ; dans l'app mobile, une phrase sans
+ * lien ni prix d'ailleurs (règles des magasins).
+ */
+export function byQuote(p: { code: string; prices: readonly unknown[] } | null | undefined): boolean {
+  return !!p && p.prices.length === 0 && p.code !== FREE_PLAN
+}
+
+/** Où l'on parle à l'équipe de CLIP : la prise de rendez-vous du site, dans la langue de l'outil. */
+export const salesHref = (): string => (getLang() === 'fr' ? '/rendez-vous' : '/en/book-a-demo')
+
 /* ───────────────────────── Les modules en option ───────────────────────── */
 
 export type ModuleKey = 'academy' | 'records'
@@ -109,8 +125,8 @@ export interface ModuleDef {
 
 /** Les modules (`kind: addon` au manifeste, un par plan de base : un test les compare). */
 export const MODULES: readonly ModuleDef[] = [
-  { key: 'academy', feature: 'academy', toggle: 'academy', addons: { equipe: 'academie-equipe', usine: 'academie-usine' } },
-  { key: 'records', feature: 'records_plus', toggle: 'recordsPlus', addons: { equipe: 'releves-equipe', usine: 'releves-usine' } },
+  { key: 'academy', feature: 'academy', toggle: 'academy', addons: { usine: 'academie-usine' } },
+  { key: 'records', feature: 'records_plus', toggle: 'recordsPlus', addons: { usine: 'releves-usine' } },
 ]
 
 /** Le module qui ouvre cette feature, s'il y en a un. */
@@ -119,6 +135,6 @@ export const moduleOf = (feature: string | null | undefined): ModuleDef | null =
 /** Le code du module à acheter avec ce plan de base ; null si le plan ne le reçoit pas. */
 export const addonFor = (m: ModuleDef, planCode: string | null | undefined): string | null => (planCode && m.addons[planCode]) || null
 
-/** Les plans de base qui reçoivent ce module (« avec Équipe ou Usine »). */
+/** Les plans de base qui reçoivent ce module (« avec Usine »). */
 export const plansFor = (m: ModuleDef): string[] => Object.keys(m.addons)
 

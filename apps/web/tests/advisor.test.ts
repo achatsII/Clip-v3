@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { moduleOffer } from '@/lib/billing/advice'
 import { addTry, candidates, emptyMemory, pickOffer, snooze, SNOOZE, STALE, WEEK, type AdvisorInput, type Offer } from '@/lib/billing/advisor'
 import { refusalFrom } from '@/lib/billing/bus'
-import { MODULES } from '@/lib/billing/catalog'
+import { byQuote, MODULES } from '@/lib/billing/catalog'
 import type { BillingState, PublicPlan } from '@/lib/billing/client'
 
-// La grille du manifeste : Gratuit, Solo, Équipe, Usine, et les modules d'Équipe et d'Usine.
+// La grille du manifeste : Gratuit, Solo, Équipe en libre-service ; Usine et ses modules sur devis (sans prix).
 const credits = (amount: number) => [{ feature_key: 'ai_credits', amount, period: 'monthly', unit: 'credit' }]
 const price = (cents: number) => [{ interval: 'monthly' as const, currency: 'CAD', amount_cents: cents }, { interval: 'yearly' as const, currency: 'CAD', amount_cents: cents * 10 }]
 const base = (code: string, name: string, cents: number, features: Record<string, boolean>, stations: number, ai: number, published: number | null, editors: number): PublicPlan => ({
@@ -15,16 +15,14 @@ const base = (code: string, name: string, cents: number, features: Record<string
   prices: cents ? price(cents) : [],
   entitlements: { features: { academy: false, records_plus: false, ...features }, limits: { published_instructions: published, stations, editors }, credits: credits(ai) },
 })
-const addon = (code: string, name: string, cents: number, feature: string): PublicPlan => ({ code, name, kind: 'addon', trial_days: 14, prices: price(cents), entitlements: { features: { [feature]: true } } })
+const addon = (code: string, name: string, feature: string): PublicPlan => ({ code, name, kind: 'addon', prices: [], entitlements: { features: { [feature]: true } } })
 const plans: PublicPlan[] = [
-  base('free', 'Gratuit', 0, { translations: false }, 1, 300, 3, 1),
-  base('solo', 'Solo', 4900, { translations: false }, 5, 2500, 30, 1),
-  base('equipe', 'Équipe', 29900, { translations: true }, 25, 12000, null, 5),
-  base('usine', 'Usine', 89900, { translations: true }, 100, 40000, null, 15),
-  addon('academie-equipe', 'Académie', 14900, 'academy'),
-  addon('academie-usine', 'Académie', 44900, 'academy'),
-  addon('releves-equipe', 'Relevés', 9900, 'records_plus'),
-  addon('releves-usine', 'Relevés', 29900, 'records_plus'),
+  base('free', 'Gratuit', 0, { translations: false }, 1, 500, 3, 1),
+  base('solo', 'Solo', 4900, { translations: false }, 3, 2500, 15, 1),
+  base('equipe', 'Équipe', 19900, { translations: true }, 10, 10000, 50, 3),
+  base('usine', 'Usine', 0, { translations: true }, 100, 40000, null, 15),
+  addon('academie-usine', 'Académie', 'academy'),
+  addon('releves-usine', 'Relevés', 'records_plus'),
 ]
 const on = (plan: string, features: Record<string, boolean> = {}): BillingState =>
   ({ product: 'clip-v3', state: 'active', plan_code: plan, plan_version: 1, features, limits: [], credits: [], currency: 'CAD', current_period_end: null, grace_until: null, cancel_at_period_end: false, channel: 'web' }) as BillingState
@@ -33,17 +31,21 @@ const input = (over: Partial<AdvisorInput> = {}): AdvisorInput => ({ state: on('
 const academy = MODULES.find((m) => m.key === 'academy')!
 
 describe('le module à proposer selon le plan de l’usine', () => {
-  it('Équipe et Usine reçoivent chacun leur module ; Solo est mené à Équipe', () => {
-    expect(moduleOffer(plans, on('equipe'), academy).addon?.code).toBe('academie-equipe')
-    expect(moduleOffer(plans, on('usine'), academy).addon?.code).toBe('academie-usine')
-    expect(moduleOffer(plans, on('solo'), academy)).toMatchObject({ addon: null, plan: { code: 'equipe' } })
-    expect(moduleOffer(plans, on('free'), academy).plan?.code).toBe('equipe')
+  it('Usine reçoit ses modules, sur devis ; les autres plans sont menés à Usine, sur devis aussi', () => {
+    const own = moduleOffer(plans, on('usine'), academy)
+    expect(own.addon?.code).toBe('academie-usine')
+    expect(byQuote(own.addon)).toBe(true)
+    for (const code of ['free', 'solo', 'equipe']) {
+      const o = moduleOffer(plans, on(code), academy)
+      expect(o, code).toMatchObject({ addon: null, plan: { code: 'usine' } })
+      expect(byQuote(o.plan), code).toBe(true)
+    }
   })
 
-  it('suit le module que la plateforme désigne, s’il est bien de ce module ; un module pas en vente : rien', () => {
-    expect(moduleOffer(plans, on('equipe'), academy, 'academie-usine').addon?.code).toBe('academie-usine')
-    expect(moduleOffer(plans, on('equipe'), academy, 'releves-equipe').addon?.code).toBe('academie-equipe')
-    expect(moduleOffer(plans.filter((p) => p.code !== 'academie-equipe'), on('equipe'), academy).addon).toBeNull()
+  it('suit le module que la plateforme désigne, s’il est bien de ce module ; un module absent du catalogue : rien', () => {
+    expect(moduleOffer(plans, on('usine'), academy, 'academie-usine').addon?.code).toBe('academie-usine')
+    expect(moduleOffer(plans, on('usine'), academy, 'releves-usine').addon?.code).toBe('academie-usine')
+    expect(moduleOffer(plans.filter((p) => p.code !== 'academie-usine'), on('usine'), academy).addon).toBeNull()
   })
 
   it('le refus de la plateforme garde le module qu’il nomme', () => {
@@ -77,20 +79,22 @@ describe('les offres qui serviraient, de la plus pressante à la moins pressante
     expect(candidates(input({ tries: { translations: [NOW, NOW] } }))).toEqual([])
   })
 
-  it('un module que l’usage appelle : seulement si le plan le reçoit, si l’usine ne l’a pas, et s’il est bâti', () => {
-    expect(candidates(input({ evidence: { academy: 12 } }))).toMatchObject([{ id: 'module:academy', addon: 'academie-equipe', trialDays: 14, evidence: 12 }])
-    expect(candidates(input({ evidence: { academy: 9 } }))).toEqual([])
+  it('un module que l’usage appelle est sur devis : l’offre d’achat ne le propose pas, même au plan qui le reçoit', () => {
+    expect(candidates(input({ evidence: { academy: 40 } }))).toEqual([])
+    expect(candidates(input({ state: on('usine'), evidence: { academy: 40 } }))).toEqual([])
+    expect(candidates(input({ state: on('usine'), evidence: { records: 30 } }))).toEqual([])
     expect(candidates(input({ state: on('solo'), evidence: { academy: 40 } }))).toEqual([])
-    expect(candidates(input({ state: on('equipe', { academy: true }), evidence: { academy: 40 } }))).toEqual([])
-    expect(candidates(input({ evidence: { academy: 40 }, modules: [] }))).toEqual([])
-    expect(candidates(input({ evidence: { records: 30 } }))[0]).toMatchObject({ id: 'module:records', addon: 'releves-equipe' })
   })
 
-  it('une fonction d’un module essayée sur Solo mène au plan qui le reçoit ; une seule offre par fonction', () => {
-    expect(candidates(input({ state: on('solo'), tries: { academy: [NOW, NOW] } }))).toMatchObject([{ id: 'feature:academy', plan: 'equipe', addon: null }])
-    const both = candidates(input({ tries: { academy: [NOW, NOW] }, evidence: { academy: 30 } }))
-    expect(both.map((o) => o.id)).toEqual(['feature:academy'])
-    expect(both[0]).toMatchObject({ addon: 'academie-equipe', plan: null })
+  it('une fonction d’un module essayée mène à un plan sur devis : pas d’offre d’achat ; une fonction en vente, une seule offre', () => {
+    expect(candidates(input({ state: on('solo'), tries: { academy: [NOW, NOW] } }))).toEqual([])
+    const both = candidates(input({ state: on('solo'), tries: { academy: [NOW, NOW], translations: [NOW, NOW, NOW] }, evidence: { academy: 30 } }))
+    expect(both.map((o) => o.id)).toEqual(['feature:translations'])
+    expect(both[0]).toMatchObject({ plan: 'equipe', addon: null })
+  })
+
+  it('une limite pleine d’Équipe mène à Usine, sur devis : l’offre d’achat se tait (la jauge et la page Abonnement en parlent)', () => {
+    expect(candidates(input({ usage: { stations: { used: 10, limit: 10 } } }))).toEqual([])
   })
 
   it('au plan le plus haut, une limite pleine n’a rien à proposer ; les crédits épuisés mènent au plan qui en donne plus', () => {

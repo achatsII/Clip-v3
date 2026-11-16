@@ -452,7 +452,7 @@ export const fr = {
     modules: {
       eyebrow: 'Modules',
       title: 'Allez plus loin quand l’usine en a besoin.',
-      text: 'Des modules en option, avec {modulePlans}. {trialDays} jours offerts.',
+      text: 'Des modules en option, avec {modulePlans}, sur devis.',
     },
     platforms: {
       title: 'Partout où l’on travaille.',
@@ -475,11 +475,7 @@ export const fr = {
     freeForever: 'Sans date de fin',
     featured: 'Recommandé',
     quote: 'Sur devis',
-    enterprise: {
-      name: 'Entreprise',
-      pitch: 'Pour plusieurs usines ou des besoins sur mesure.',
-      points: ['Plusieurs usines', 'Contrat et facturation sur mesure'],
-    },
+    quoteNote: 'Selon l’usine et le déploiement',
     credits: '{credits} crédits d’IA par mois',
     choose: 'Choisir {plan}',
     everythingIn: 'Tout {plan}, plus :',
@@ -496,9 +492,8 @@ export const fr = {
     modules: {
       eyebrow: 'Modules en option',
       title: 'Ajoutez un module quand l’usine en a besoin.',
-      text: 'Avec {modulePlans}, sur le web. {trialDays} jours offerts, une fois par organisation.',
-      priceWith: '{price} {per} avec {plan}',
-      trial: '{trialDays} jours offerts',
+      text: 'Avec {modulePlans}, sur devis : l’équipe de Clip les ajoute à l’abonnement de l’usine.',
+      withPlan: 'S’ajoute à {plan}, sur devis.',
     },
     creditsInfo: {
       eyebrow: 'Crédits d’IA',
@@ -602,7 +597,7 @@ export const fr = {
         { q: 'Que se passe-t-il quand l’instruction change ?', a: 'À la publication, vous pouvez demander de se re-former : les formations d’avant ne comptent plus.' },
         {
           q: 'Qu’ajoute l’Académie ?',
-          a: 'Un parcours par poste fait de ses instructions publiées, la validation sur le terrain par un superviseur, la revalidation à intervalle fixe et un registre pour l’audit. {trialDays} jours offerts.',
+          a: 'Un parcours par poste fait de ses instructions publiées, la validation sur le terrain par un superviseur, la revalidation à intervalle fixe et un registre pour l’audit.',
         },
       ],
     },
@@ -836,8 +831,8 @@ export const fr = {
   planPitch: {
     free: 'Pour essayer avec vos premières instructions.',
     solo: 'Pour la personne qui documente son travail et le partage par code QR.',
-    equipe: 'Pour un atelier ou une petite usine : l’équipe rédige, approuve et traduit.',
-    usine: 'Pour toute l’usine : postes et tablettes partout, support prioritaire.',
+    equipe: 'Pour essayer à quelques-uns sur une ligne : l’équipe rédige, approuve et traduit.',
+    usine: 'Pour toute l’usine, ou plusieurs : déploiement accompagné et support prioritaire.',
   } as Record<string, string>,
   /** Les modules, par feature : nom, phrase et points (le prix vient du manifeste). */
   modules: {

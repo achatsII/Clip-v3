@@ -16,8 +16,14 @@ export const billing = {
   /** Un solde ou une quantité en crédits : « 150 crédits ». */
   credits,
   aiCredits: 'Crédits IA',
-  /** Un plan sans prix, et le plan d’un compte sans abonnement. */
+  /** Le plan gratuit, et le plan d’un compte sans abonnement. */
   free: 'Gratuit',
+  /** Un plan ou un module sur devis : sans prix, il ne s’achète nulle part, l’équipe de CLIP l’attribue. */
+  quote: 'Sur devis',
+  /** Le bouton qui mène à la prise de rendez-vous (sur le web seulement). */
+  contactSales: 'Parler à l’équipe CLIP',
+  /** Dans l’app mobile : ni lien ni prix d’ailleurs (règles des magasins). */
+  quoteInApp: 'Pour toute l’usine, l’équipe de CLIP l’installe avec votre organisation.',
   perMonth: '/ mois',
   perYear: '/ an',
   renewsOn: (date: string) => `Renouvellement le ${date}.`,
@@ -37,8 +43,8 @@ export const billing = {
     pitch: {
       free: 'Pour essayer avec vos premières instructions.',
       solo: 'Pour la personne qui documente son travail et le partage par code QR.',
-      equipe: 'Pour un atelier ou une petite usine : l’équipe rédige, approuve et traduit.',
-      usine: 'Pour toute l’usine : postes et tablettes partout, support prioritaire.',
+      equipe: 'Pour essayer à quelques-uns sur une ligne : l’équipe rédige, approuve et traduit.',
+      usine: 'Pour toute l’usine, ou plusieurs : sur devis, avec un démarrage accompagné.',
     },
     /** « 2 500 crédits par mois ». */
     perMonth: (amount: string) => `${amount} par mois`,
@@ -193,7 +199,7 @@ export const billing = {
     active: 'Actif',
     /** Un module actif : aller là où il vit dans l’app. */
     open: 'Ouvrir',
-    withPlans: 'S’ajoute à Équipe ou à Usine',
+    withPlans: 'S’ajoute à Usine, sur devis',
     /** Pourquoi la fenêtre s’ouvre pour un module que le plan ne reçoit pas. */
     needsPlan: (name: string, plan: string) => `Le module ${name} s’ajoute au plan ${plan}.`,
     notOnSale: 'Ce module ne s’achète pas encore.',
@@ -285,7 +291,7 @@ export const billing = {
     beforeTax: 'avant taxes',
     choose: (plan: string) => `Choisir ${plan}`,
     askAdmin: 'Demandez à l’administrateur',
-    enterprise: 'Besoin de plusieurs usines, de l’authentification unique ou d’un contrat ? Écrivez-nous : un plan Entreprise se prépare sur mesure.',
+    enterprise: 'Plusieurs usines, l’authentification unique ou un contrat sur mesure ? L’équipe de CLIP prépare Usine avec vous.',
     /** Le forfait choisi sur le site public, présélectionné après l’inscription. */
     intent: {
       label: 'Le forfait choisi sur notre site',

@@ -425,7 +425,7 @@ export const en: SiteContent = {
     modules: {
       eyebrow: 'Modules',
       title: 'Go further when your plant needs it.',
-      text: 'Optional modules, with {modulePlans}. {trialDays} days free.',
+      text: 'Optional modules, with {modulePlans}, by custom quote.',
     },
     platforms: {
       title: 'Wherever the work happens.',
@@ -448,11 +448,7 @@ export const en: SiteContent = {
     freeForever: 'No end date',
     featured: 'Recommended',
     quote: 'Custom quote',
-    enterprise: {
-      name: 'Enterprise',
-      pitch: 'For several plants or tailored needs.',
-      points: ['Several plants', 'Tailored contract and invoicing'],
-    },
+    quoteNote: 'Based on your plant and rollout',
     credits: '{credits} AI credits per month',
     choose: 'Choose {plan}',
     everythingIn: 'Everything in {plan}, plus:',
@@ -469,9 +465,8 @@ export const en: SiteContent = {
     modules: {
       eyebrow: 'Optional modules',
       title: 'Add a module when your plant needs it.',
-      text: 'With {modulePlans}, on the web. {trialDays} days free, once per organization.',
-      priceWith: '{price} {per} with {plan}',
-      trial: '{trialDays} days free',
+      text: 'With {modulePlans}, by custom quote: the Clip team adds them to the plant’s subscription.',
+      withPlan: 'Adds on to {plan}, by custom quote.',
     },
     creditsInfo: {
       eyebrow: 'AI credits',
@@ -568,7 +563,7 @@ export const en: SiteContent = {
         { q: 'What happens when the instruction changes?', a: 'When publishing, you can require retraining: earlier sign-offs no longer count.' },
         {
           q: 'What does the Academy add?',
-          a: 'A training path per workstation built from its published instructions, hands-on sign-off by a supervisor, revalidation at a set interval and an audit register. {trialDays} days free.',
+          a: 'A training path per workstation built from its published instructions, hands-on sign-off by a supervisor, revalidation at a set interval and an audit register.',
         },
       ],
     },
@@ -797,8 +792,8 @@ export const en: SiteContent = {
   planPitch: {
     free: 'To try it out with your first instructions.',
     solo: 'For the person who documents their work and shares it by QR code.',
-    equipe: 'For a workshop or a small plant: the team writes, approves and translates.',
-    usine: 'For the whole plant: workstations and tablets everywhere, priority support.',
+    equipe: 'For a few people trying it on a line: the team writes, approves and translates.',
+    usine: 'For the whole plant, or several: guided rollout and priority support.',
   },
   modules: {
     academy: {

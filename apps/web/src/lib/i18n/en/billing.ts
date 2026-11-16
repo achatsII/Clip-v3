@@ -25,6 +25,9 @@ export const billing: typeof Fr = {
   credits,
   aiCredits: 'AI credits',
   free: 'Free',
+  quote: 'Custom quote',
+  contactSales: 'Talk to the CLIP team',
+  quoteInApp: 'For the whole plant, the CLIP team sets it up with your organization.',
   perMonth: '/ month',
   perYear: '/ year',
   renewsOn: (date: string) => `Renews on ${date}.`,
@@ -40,8 +43,8 @@ export const billing: typeof Fr = {
     pitch: {
       free: 'To try it out with your first instructions.',
       solo: 'For the person who documents their work and shares it by QR code.',
-      equipe: 'For a workshop or a small plant: the team writes, approves and translates.',
-      usine: 'For the whole plant: stations and tablets everywhere, priority support.',
+      equipe: 'For a few people trying it on a line: the team writes, approves and translates.',
+      usine: 'For the whole plant, or several: custom quote, with a guided rollout.',
     },
     perMonth: (amount: string) => `${amount} per month`,
     unlimited: (label: string, _feature: string) => `${label}: unlimited`,
@@ -174,7 +177,7 @@ export const billing: typeof Fr = {
     active: 'Active',
     /** An active module: go where it lives in the app. */
     open: 'Open',
-    withPlans: 'Adds on to Team or Plant',
+    withPlans: 'Adds on to Plant, by custom quote',
     needsPlan: (name: string, plan: string) => `The ${name} module adds on to the ${plan} plan.`,
     notOnSale: 'This module is not for sale yet.',
     academy: {
@@ -257,7 +260,7 @@ export const billing: typeof Fr = {
     beforeTax: 'before tax',
     choose: (plan: string) => `Choose ${plan}`,
     askAdmin: 'Ask your administrator',
-    enterprise: 'Need several plants, single sign-on or a contract? Write to us: we’ll tailor an Enterprise plan for you.',
+    enterprise: 'Several plants, single sign-on or a custom contract? The CLIP team prepares Plant with you.',
     intent: {
       label: 'The plan you chose on our site',
       continue: 'Continue to payment',

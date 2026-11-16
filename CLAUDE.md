@@ -272,15 +272,24 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   de `billing-publish` avant d'être publié ; le verrou `billing.manifest.lock.json` dira ce qui est
   publié (rien ne l'est encore). Le slug `clip-v3` doit d'abord être enregistré à la Gateway comme
   application.
-- La grille (manifeste) : Gratuit (1 rédacteur, 3 publiées, 1 poste, 300 crédits) · Solo 49 $/mois (1, 30,
-  5, 2 500) · Équipe 299 $/mois, mis en avant (5 rédacteurs, illimitées, 25 postes, 12 000) · Usine
-  899 $/mois (15, illimitées, 100, 40 000) · Entreprise sur devis, hors manifeste. Annuel = 10 mois.
-- Les modules en option (`kind: addon`), sur le web seulement, avec Équipe ou Usine, 14 jours offerts :
-  Académie (feature `academy`, 149 $ avec Équipe, 449 $ avec Usine) et Relevés (`records_plus`, 99 $ et
-  299 $). Un module par plan de base (`academie-equipe`…) ; l'app ne propose que celui de son plan
-  (`MODULES`, `src/lib/billing/catalog.ts`, comparé au manifeste par le test). Le rattachement au plan de
-  base n'a pas de champ documenté : la simulation de `billing-publish` le confirme. Un module se montre
-  et se vend seulement une fois bâti (toggles `academy` et `recordsPlus`, allumés : les deux le sont).
+- La grille (manifeste, décision du 2026-11-16) : en libre-service (site par Stripe, magasins par
+  RevenueCat), seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : Gratuit (1 rédacteur,
+  3 publiées, 1 poste, 500 crédits) · Solo 49 $/mois (1, 15, 3, 2 500) · Équipe 199 $/mois, mis en avant
+  (3 rédacteurs, 50 publiées, 10 postes, 10 000). Annuel = 10 mois. Toute l'usine passe par l'équipe de
+  CLIP : **Usine** (15 rédacteurs, illimitées, 100 postes, 40 000) n'a aucun prix, ne s'achète nulle part
+  et s'attribue à l'organisation après la vente ; il remplace l'ancienne carte Entreprise du site.
+- **Sur devis** (`byQuote`, `src/lib/billing/catalog.ts`) : un plan ou un module sans prix, autre que le
+  gratuit (`FREE_PLAN`, le `default_plan_code`). La page Abonnement, la fenêtre des refus, la jauge et le
+  dossier pour la direction le nomment « Sur devis » ; sur le web, « Parler à l'équipe CLIP » mène à
+  `/rendez-vous` (`salesHref`) ; dans l'app mobile, une phrase sans lien ni prix (règles des magasins). Le
+  conseiller d'achat ne le propose jamais (rien ne s'achète). Les limites d'instructions et les crédits
+  concordent : chaque banque permet d'atteindre la limite même à partir de longues vidéos (150 crédits
+  la génération ; mesuré en QA : 16 à 55), un test le tient.
+- Les modules en option (`kind: addon`), avec Usine seulement, sur devis comme elle (sans prix ni essai) :
+  Académie (feature `academy`, `academie-usine`) et Relevés (`records_plus`, `releves-usine`). L'app ne
+  propose que le module de son plan (`MODULES`, comparé au manifeste par le test). Le rattachement au
+  plan de base n'a pas de champ documenté : la simulation de `billing-publish` le confirme. Un module se
+  montre seulement une fois bâti (toggles `academy` et `recordsPlus`, allumés : les deux le sont).
 - Ce qui se facture : `ai_credits`, une banque de crédits d'IA par mois · `published_instructions`,
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,

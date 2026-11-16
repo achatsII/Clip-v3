@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
-import { FEATURE_LABELS, FEATURE_ORDER, MODULES } from '@/lib/billing/catalog'
+import { byQuote, FEATURE_LABELS, FEATURE_ORDER, FREE_PLAN, MODULES } from '@/lib/billing/catalog'
 import { AI_FEATURE } from '@/lib/gateway/ai'
 
 interface Manifest {
@@ -102,7 +102,7 @@ describe('billing.manifest.yaml ↔ code de l’app', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('chaque module du code est un add-on du manifeste : web seulement, 14 jours offerts, annuel à 10 mois', () => {
+  it('chaque module du code est un add-on du manifeste : web seulement, sur devis (sans prix ni essai), avec Usine', () => {
     const addons = manifest.plans.filter((p) => p.kind === 'addon')
     const bases = new Set(manifest.plans.filter((p) => p.kind === 'base').map((p) => p.code))
     const named = MODULES.flatMap((m) => Object.entries(m.addons).map(([base, code]) => ({ m, base, code: code! })))
@@ -112,19 +112,40 @@ describe('billing.manifest.yaml ↔ code de l’app', () => {
       expect(bases.has(base), `${code} : plan de base ${base}`).toBe(true)
       expect(p.status, code).toBe('active')
       expect(p.entitlements.features?.[m.feature], code).toBe(true)
-      expect(p.trial_days, code).toBe(14)
       expect(p.availability.channels, code).toEqual(['web'])
-      const monthly = p.prices?.find((x) => x.interval === 'monthly')?.amount_cents ?? 0
-      expect(monthly, code).toBeGreaterThan(0)
-      expect(p.prices?.find((x) => x.interval === 'yearly')?.amount_cents, code).toBe(monthly * 10)
+      // Sur devis, comme le plan qui les reçoit : rien ne s'achète seul, rien ne s'essaie seul.
+      expect(p.prices ?? [], code).toEqual([])
+      expect(p.trial_days, code).toBeUndefined()
+      expect(byQuote({ code, prices: p.prices ?? [] }), code).toBe(true)
+      expect(byQuote({ code: base, prices: manifest.plans.find((b) => b.code === base)?.prices ?? [] }), `${code} : ${base} sur devis`).toBe(true)
     }
   })
 
-  it('aucun plan de base ne donne un module ; Usine paie un module trois fois le prix d’Équipe', () => {
+  it('aucun plan de base ne donne un module ; seuls les plans sur devis les reçoivent', () => {
     const moduleFeatures = new Set(MODULES.map((m) => m.feature))
     for (const p of manifest.plans.filter((x) => x.kind === 'base')) for (const [k, v] of Object.entries(p.entitlements.features ?? {})) if (moduleFeatures.has(k as never)) expect(v, `${p.code}.${k}`).toBe(false)
-    const monthly = (code?: string) => manifest.plans.find((p) => p.code === code)?.prices?.find((x) => x.interval === 'monthly')?.amount_cents ?? 0
-    // 149 $ → 449 $, 99 $ → 299 $ : trois fois, au prix rond moins un dollar.
-    for (const m of MODULES) expect(monthly(m.addons.usine) + 100, m.key).toBe(3 * (monthly(m.addons.equipe) + 100))
+    for (const m of MODULES) expect(Object.keys(m.addons), m.key).toEqual(['usine'])
+  })
+
+  it('en libre-service, rien d’illimité ; le plan gratuit est celui du manifeste ; Usine est sur devis, sur le web seulement', () => {
+    expect(FREE_PLAN).toBe(manifest.product.default_plan_code)
+    const bases = manifest.plans.filter((p) => p.kind === 'base' && p.status === 'active')
+    for (const p of bases.filter((x) => (x.prices ?? []).length > 0 || x.code === FREE_PLAN))
+      for (const [k, v] of Object.entries(p.entitlements.limits ?? {})) expect(v, `${p.code}.${k} : un plan en libre-service a une limite`).not.toBeNull()
+    const usine = bases.find((p) => p.code === 'usine')!
+    expect(byQuote({ code: usine.code, prices: usine.prices ?? [] })).toBe(true)
+    expect(usine.availability.channels).toEqual(['web'])
+    expect(usine.availability.store_entitlement).toBeUndefined()
+  })
+
+  it('crédits et limites concordent : la banque de chaque plan suffit à atteindre sa limite d’instructions, même à partir de longues vidéos', () => {
+    // Coût réel mesuré en QA (novembre 2026) : 16 à 55 crédits par génération, environ 150 pour 30 minutes de vidéo.
+    const LONG_GENERATION = 150
+    for (const p of manifest.plans.filter((x) => x.kind === 'base' && x.status === 'active')) {
+      const limit = p.entitlements.limits?.published_instructions
+      const bank = p.entitlements.credits?.find((c) => c.feature === 'ai_credits')?.amount ?? 0
+      if (limit == null) continue
+      expect(bank, `${p.code} : ${bank} crédits pour ${limit} instructions`).toBeGreaterThanOrEqual(limit * LONG_GENERATION)
+    }
   })
 })

@@ -17,7 +17,7 @@ import { ErrorState, Skeleton } from '@/components/ui/States'
 import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
-import { FEATURED_PLAN, LIMIT_FEATURES, PLAN_PITCH } from '@/lib/billing/catalog'
+import { byQuote, FEATURED_PLAN, LIMIT_FEATURES, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
 import { BILLING_INTERVAL, parsePlanIntent, type PlanIntent } from '@/lib/billing/intent'
 import { BillingError, creditsOf } from '@/lib/billing/client'
 import { useBilling } from '@/lib/billing/state'
@@ -199,7 +199,7 @@ function Subscription() {
                       <p className={cn('mt-1 text-sm font-bold', highlight ? 'text-white/85' : 'text-slate-500')}>{PLAN_PITCH[p.code] ?? ''}</p>
                       {!inShell && (
                         <p className="mt-4 text-4xl font-black tracking-tighter tabular-nums">
-                          {price ? formatPrice(price.amount_cents, price.currency) : t.billing.free}
+                          {price ? formatPrice(price.amount_cents, price.currency) : byQuote(p) ? t.billing.quote : t.billing.free}
                           {price && <span className={cn('text-base font-bold', highlight ? 'text-white/80' : 'text-slate-400')}> {price.interval === 'yearly' ? t.billing.perYear : t.billing.perMonth}</span>}
                         </p>
                       )}
@@ -215,6 +215,18 @@ function Subscription() {
                     {platform && !preview && price && !current && (
                       <div className="relative mt-6">
                         <StoreBuy client={billingClient} plan={p} interval={interval} storePurchase={plans.data?.store_purchase} platform={platform} tone={highlight ? 'onColor' : 'light'} />
+                      </div>
+                    )}
+                    {/* Sur devis : on en parle (le web) ; dans l'app mobile, une phrase sans lien ni prix. */}
+                    {byQuote(p) && !current && (
+                      <div className="relative mt-6">
+                        {inShell ? (
+                          <p className={cn('rounded-2xl p-3 text-center text-sm font-bold', highlight ? 'bg-white/15' : 'bg-slate-900/5')}>{t.billing.quoteInApp}</p>
+                        ) : (
+                          <Link href={salesHref()} className={cn('btn-press flex h-12 items-center justify-center rounded-full text-sm font-black', highlight ? 'bg-white text-slate-900' : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900')}>
+                            {t.billing.contactSales}
+                          </Link>
+                        )}
                       </div>
                     )}
                     {!inShell && price && !current && (

@@ -6,7 +6,7 @@
  * pures, testées : une offre qui n'apporte rien, ou qui revient sans cesse, ferait fuir.
  */
 import { moduleOffer, planFor } from './advice'
-import { isLimitFeature, moduleOf, MODULES, type FeatureKey, type LimitFeature, type ModuleKey } from './catalog'
+import { byQuote, isLimitFeature, moduleOf, MODULES, type FeatureKey, type LimitFeature, type ModuleKey } from './catalog'
 import type { BillingState, PublicPlan } from './client'
 import { usageLevel } from './usage'
 
@@ -57,7 +57,7 @@ export function candidates(x: AdvisorInput): Offer[] {
       // Un seul rédacteur sur Solo, un seul poste sur Gratuit : c'est le plan, pas la croissance.
       if (l.limit === null || l.used < 2 || usageLevel(l) !== (full ? 'full' : 'near')) continue
       const plan = planFor(x.plans, x.state, feature)
-      if (plan) out.push({ id: `limit:${feature}`, kind: 'limit', feature, used: l.used, limit: l.limit, full, plan: plan.code })
+      if (plan && !byQuote(plan)) out.push({ id: `limit:${feature}`, kind: 'limit', feature, used: l.used, limit: l.limit, full, plan: plan.code })
     }
   }
 
@@ -71,11 +71,12 @@ export function candidates(x: AdvisorInput): Offer[] {
     if (m) {
       if (!sellable(m.key)) continue
       const o = moduleOffer(x.plans, x.state, m)
+      if (byQuote(o.addon) || byQuote(o.plan)) continue
       if (o.addon || o.plan) out.push({ id: `feature:${feature}`, kind: 'feature', feature, tries: n, plan: o.plan?.code ?? null, addon: o.addon?.code ?? null })
       continue
     }
     const plan = planFor(x.plans, x.state, feature)
-    if (plan) out.push({ id: `feature:${feature}`, kind: 'feature', feature, tries: n, plan: plan.code, addon: null })
+    if (plan && !byQuote(plan)) out.push({ id: `feature:${feature}`, kind: 'feature', feature, tries: n, plan: plan.code, addon: null })
   }
 
   // 3. Un module que l'usage appelle, si le plan le reçoit et que l'usine ne l'a pas.
@@ -83,7 +84,7 @@ export function candidates(x: AdvisorInput): Offer[] {
     const n = x.evidence[m.key]
     if (!sellable(m.key) || owned(m.feature) || n == null || n < MODULE_EVIDENCE[m.key]) continue
     const { addon } = moduleOffer(x.plans, x.state, m)
-    if (addon) out.push({ id: `module:${m.key}`, kind: 'module', module: m.key, feature: m.feature, evidence: n, addon: addon.code, trialDays: addon.trial_days ?? 0 })
+    if (addon && !byQuote(addon)) out.push({ id: `module:${m.key}`, kind: 'module', module: m.key, feature: m.feature, evidence: n, addon: addon.code, trialDays: addon.trial_days ?? 0 })
   }
 
   // Une même fonction n'a qu'une offre : la plus pressante.

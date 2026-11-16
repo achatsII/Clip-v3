@@ -41,8 +41,8 @@ describe('les forfaits du site, tirés du manifeste', () => {
     for (const m of catalog.modules) expect(m.trialDays).toBe(catalog.trialDays)
   })
 
-  it('l’annuel vaut le même nombre de mois pour chaque forfait payant et chaque module (« 2 mois offerts »)', () => {
-    for (const p of [...catalog.plans.filter((x) => x.paid), ...catalog.modules]) {
+  it('l’annuel vaut le même nombre de mois pour chaque forfait payant et chaque module en vente (« 2 mois offerts »)', () => {
+    for (const p of [...catalog.plans.filter((x) => x.paid), ...catalog.modules.filter((m) => m.prices.length > 0)]) {
       const month = priceOf(p, 'month')!.amountCents
       const year = priceOf(p, 'year')!.amountCents
       expect(year, p.code).toBe(month * catalog.paidMonths)

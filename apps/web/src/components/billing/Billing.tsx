@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
 import { creditsReason, moduleOffer, planFor, renewalText } from '@/lib/billing/advice'
-import { FEATURE_LABELS, FEATURE_ORDER, PLAN_PITCH, featureLabel, featureUnit, isLimitFeature, moduleOf, type FeatureKey } from '@/lib/billing/catalog'
+import { byQuote, FEATURE_LABELS, FEATURE_ORDER, type FeatureKey, featureLabel, featureUnit, isLimitFeature, moduleOf, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
 import { formatPrice } from '@/lib/billing/format'
 import { BillingError, creditsOf, limitOf, type BillingClient, type PublicPlan } from '@/lib/billing/client'
 import { limitReason } from '@/lib/billing/usage'
@@ -180,8 +180,9 @@ export function Paywall({ client }: { client: BillingClient }) {
   const mo = shownModule && plans.data ? moduleOffer(plans.data.plans, state, shownModule, paywall.refusal?.upgradeAddon) : null
   const addon = storeSale ? null : (mo?.addon ?? null)
   const plan = plans.data ? (shownModule ? (mo?.plan ?? null) : planFor(plans.data.plans, state, credits ? 'ai_credits' : feature, paywall.refusal?.upgradePlan)) : null
-  /** Ce qui s'achète : le module, sinon le plan. */
+  /** Ce qui s'achète : le module, sinon le plan. Sur devis (Usine, ses modules) : rien ne s'achète, on en parle. */
   const offer = addon ?? plan
+  const quote = byQuote(offer)
   const mt = shownModule ? t.billing.modules[shownModule.key] : null
   const platform = devicePlatform()
   const isAdmin = role === 'admin'
@@ -264,6 +265,7 @@ export function Paywall({ client }: { client: BillingClient }) {
                 </li>
               ))}
             </ul>
+            {quote && <p className="mt-4 text-2xl font-black">{t.billing.quote}</p>}
             {price && !inShell && (
               <p className={cn('mt-4 font-black tabular-nums', trialDays > 0 ? 'text-lg' : 'text-2xl')}>
                 {trialDays > 0 ? t.billing.modules.after(`${formatPrice(price.amount_cents, price.currency)} ${price.interval === 'yearly' ? t.billing.perYear : t.billing.perMonth}`) : formatPrice(price.amount_cents, price.currency)}
@@ -286,6 +288,7 @@ export function Paywall({ client }: { client: BillingClient }) {
                 </li>
               ))}
             </ul>
+            {quote && <p className="mt-4 text-2xl font-black">{t.billing.quote}</p>}
             {!inShell && price && (
               <p className="mt-4 text-2xl font-black tabular-nums">
                 {formatPrice(price.amount_cents, price.currency)}
@@ -312,7 +315,16 @@ export function Paywall({ client }: { client: BillingClient }) {
         </div>
       )}
       <div className="mt-6 flex flex-col gap-2">
-        {addon && mt && shownModule ? (
+        {quote ? (
+          // Sur devis : on en parle (le web) ; dans l'app mobile, une phrase sans lien (règles des magasins).
+          inShell ? (
+            <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{t.billing.quoteInApp}</p>
+          ) : (
+            <Link href={salesHref()} onClick={closePaywall} className="btn-press bg-gradient-primary shadow-primary flex h-12 items-center justify-center gap-2 rounded-full text-sm font-black text-white">
+              {t.billing.contactSales}
+            </Link>
+          )
+        ) : addon && mt && shownModule ? (
           isAdmin ? (
             <Button variant="primary" size="lg" block loading={busy} onClick={buy}>
               {previewInApp ? t.billing.preview.seeWith(mt.name) : trialDays > 0 ? t.billing.modules.tryFree(trialDays) : t.billing.modules.add(mt.name)}

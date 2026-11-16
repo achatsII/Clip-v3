@@ -7,7 +7,7 @@ import { Check, Minus, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { FEATURE_LABELS, FEATURE_ORDER, type FeatureKey } from '@/lib/billing/catalog'
 import type { PlanInterval } from '@/lib/billing/intent'
-import { content, planName } from '@/lib/site/content'
+import { content, listOf, planName } from '@/lib/site/content'
 import { fmt, siteNum, type SiteLang } from '@/lib/site/lang'
 import { formatPrice, LIMIT_KEYS, priceOf, siteCatalog, type SitePlan } from '@/lib/site/pricing'
 import { pathOf, planCta, ROUTES } from '@/lib/site/routes'
@@ -31,6 +31,13 @@ function PriceBlock({ plan, lang, featured }: { plan: SitePlan; lang: SiteLang; 
   // Le forfait gratuit n'a pas de prix au manifeste : zéro, dans la devise des autres forfaits.
   const currency = siteCatalog().plans.find((p) => p.paid)?.prices[0]?.currency ?? 'CAD'
   const muted = featured ? 'text-white/75' : 'text-slate-500 dark:text-slate-400'
+  if (plan.quote)
+    return (
+      <div className="mt-5">
+        <p className="text-4xl font-black tracking-tighter">{t.quote}</p>
+        <p className={cx('mt-1 text-sm font-bold', muted)}>{t.quoteNote}</p>
+      </div>
+    )
   if (!plan.paid)
     return (
       <div className="mt-5">
@@ -64,6 +71,13 @@ function PlanButton({ plan, lang, featured }: { plan: SitePlan; lang: SiteLang; 
   const t = content(lang)
   const name = planName(plan.code, lang)
   const tone: ButtonTone = featured ? 'light' : 'glass'
+  // Sur devis : on en parle, rien ne s'achète.
+  if (plan.quote)
+    return (
+      <ButtonLink href={pathOf('book', lang)} tone={featured ? 'light' : 'dark'} size="lg" className="w-full" arrow>
+        {t.pricing.contact}
+      </ButtonLink>
+    )
   return (
     <>
       {(['month', 'year'] as PlanInterval[]).map((interval) => {
@@ -79,7 +93,7 @@ function PlanButton({ plan, lang, featured }: { plan: SitePlan; lang: SiteLang; 
   )
 }
 
-/** Les cartes des forfaits, puis Entreprise (sur devis, hors manifeste). */
+/** Les cartes des forfaits ; le forfait sur devis en dernier (on en parle avec l'équipe). */
 export function PlanCards({ lang, compact }: { lang: SiteLang; compact?: boolean }) {
   const t = content(lang)
   const c = siteCatalog()
@@ -154,26 +168,6 @@ export function PlanCards({ lang, compact }: { lang: SiteLang; compact?: boolean
           )
         })}
       </div>
-      {!compact && (
-        <div className="site-reveal glass-card mt-4 flex flex-col gap-5 rounded-[32px] p-6 text-slate-900 lg:flex-row lg:items-center lg:gap-10 dark:text-white">
-          <div className="lg:w-72">
-            <h3 className="text-2xl font-black tracking-tight">{t.pricing.enterprise.name}</h3>
-            <p className="mt-1.5 text-sm leading-snug font-bold text-slate-500 dark:text-slate-400">{t.pricing.enterprise.pitch}</p>
-          </div>
-          <p className="text-3xl font-black tracking-tighter">{t.pricing.quote}</p>
-          <ul className="flex flex-1 flex-wrap gap-x-6 gap-y-2 text-sm font-bold">
-            {t.pricing.enterprise.points.map((p) => (
-              <li key={p} className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" strokeWidth={3} aria-hidden />
-                {p}
-              </li>
-            ))}
-          </ul>
-          <ButtonLink href={pathOf('book', lang)} tone="dark" size="lg" arrow>
-            {t.pricing.contact}
-          </ButtonLink>
-        </div>
-      )}
     </>
   )
 }
@@ -272,7 +266,7 @@ export function ModuleCards({ lang }: { lang: SiteLang }) {
             <div className="relative">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-3xl font-black tracking-tighter">{text.name}</h3>
-                <span className="label-caps rounded-xl bg-white/20 px-2.5 py-1 text-[10px]">{fmt(t.pricing.modules.trial, { trialDays: siteNum(c.trialDays, lang) })}</span>
+                <span className="label-caps rounded-xl bg-white/20 px-2.5 py-1 text-[10px]">{t.pricing.quote}</span>
               </div>
               <p className="mt-2 text-lg font-bold text-white/90">{text.pitch}</p>
               <ul className="mt-5 space-y-2 text-[15px] font-bold">
@@ -283,28 +277,18 @@ export function ModuleCards({ lang }: { lang: SiteLang }) {
                   </li>
                 ))}
               </ul>
-              <ul className="mt-6 space-y-1.5 rounded-[22px] bg-white/15 p-4 text-[15px] font-black">
-                {variants.map((m) =>
-                  (['month', 'year'] as PlanInterval[]).map((interval) => {
-                    const p = priceOf(m, interval)
-                    if (!p) return null
-                    return (
-                      <li key={`${m.code}-${interval}`} className={cx('tabular-nums', interval === 'month' ? 'site-when-month' : 'site-when-year')}>
-                        {fmt(t.pricing.modules.priceWith, {
-                          price: formatPrice(p.amountCents, p.currency, lang),
-                          per: interval === 'month' ? t.pricing.perMonth : t.pricing.perYear,
-                          plan: planName(m.basePlan, lang),
-                        })}
-                      </li>
-                    )
-                  }),
+              {/* Sur devis, avec le forfait qui les reçoit : l'équipe de Clip les ajoute à l'abonnement de l'usine. */}
+              <p className="mt-6 rounded-[22px] bg-white/15 p-4 text-[15px] font-black">{fmt(t.pricing.modules.withPlan, { plan: listOf([...new Set(variants.map((m) => planName(m.basePlan, lang)))], lang) })}</p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <ButtonLink href={pathOf('book', lang)} tone="light" size="lg" arrow>
+                  {t.pricing.contact}
+                </ButtonLink>
+                {more[feature] && (
+                  <Link href={more[feature] as string} className="inline-flex min-h-11 items-center gap-1 text-sm font-black underline underline-offset-4">
+                    {feature === 'academy' ? t.solutions.training.menu : t.cta.features}
+                  </Link>
                 )}
-              </ul>
-              {more[feature] && (
-                <Link href={more[feature] as string} className="mt-5 inline-flex min-h-11 items-center gap-1 text-sm font-black underline underline-offset-4">
-                  {feature === 'academy' ? t.solutions.training.menu : t.cta.features}
-                </Link>
-              )}
+              </div>
             </div>
           </div>
         )

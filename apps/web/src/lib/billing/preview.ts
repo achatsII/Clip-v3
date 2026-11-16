@@ -41,18 +41,18 @@ const base = (code: PreviewPlan, name: string, prices: PublicPlan['prices'], fea
   prices,
   entitlements: { features: { ...NONE, ...features }, limits, credits: [{ feature_key: 'ai_credits', amount: credits, period: 'monthly', unit: 'credit' }] },
 })
-const addon = (code: string, name: string, prices: PublicPlan['prices'], feature: 'academy' | 'records_plus'): PublicPlan => ({ code, name, kind: 'addon', version: 1, trial_days: 14, prices, entitlements: { features: { [feature]: true } } })
+/** Un module sur devis, comme Usine : sans prix ni essai, l'équipe de CLIP l'attribue. */
+const addon = (code: string, name: string, feature: 'academy' | 'records_plus'): PublicPlan => ({ code, name, kind: 'addon', version: 1, prices: [], entitlements: { features: { [feature]: true } } })
 
-/** Les plans en vente (versions actives du manifeste), dans l'ordre de la page. */
+/** Les plans du catalogue (versions actives du manifeste), dans l'ordre de la page. Usine et ses
+ * modules sont sur devis : sans prix, ils ne s'achètent nulle part. */
 export const PREVIEW_PLANS: readonly PublicPlan[] = [
-  base('free', 'Gratuit', [], {}, { published_instructions: 3, stations: 1, editors: 1 }, 300),
-  base('solo', 'Solo', cad(4900, 49000), { adoption_stats: true }, { published_instructions: 30, stations: 5, editors: 1 }, 2500),
-  base('equipe', 'Équipe', cad(29900, 299000), { translations: true, adoption_stats: true, approvals: true, brand_kit: true, shared_blocks: true }, { published_instructions: null, stations: 25, editors: 5 }, 12000),
-  base('usine', 'Usine', cad(89900, 899000), { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true }, { published_instructions: null, stations: 100, editors: 15 }, 40000),
-  addon('academie-equipe', 'Académie', cad(14900, 149000), 'academy'),
-  addon('academie-usine', 'Académie', cad(44900, 449000), 'academy'),
-  addon('releves-equipe', 'Relevés', cad(9900, 99000), 'records_plus'),
-  addon('releves-usine', 'Relevés', cad(29900, 299000), 'records_plus'),
+  base('free', 'Gratuit', [], {}, { published_instructions: 3, stations: 1, editors: 1 }, 500),
+  base('solo', 'Solo', cad(4900, 49000), { adoption_stats: true }, { published_instructions: 15, stations: 3, editors: 1 }, 2500),
+  base('equipe', 'Équipe', cad(19900, 199000), { translations: true, adoption_stats: true, approvals: true, brand_kit: true, shared_blocks: true }, { published_instructions: 50, stations: 10, editors: 3 }, 10000),
+  base('usine', 'Usine', [], { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true }, { published_instructions: null, stations: 100, editors: 15 }, 40000),
+  addon('academie-usine', 'Académie', 'academy'),
+  addon('releves-usine', 'Relevés', 'records_plus'),
 ]
 
 /* ───────────────────────── Ce que l'usine aurait (dans cet appareil) ───────────────────────── */

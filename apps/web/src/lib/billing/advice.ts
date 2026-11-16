@@ -4,7 +4,7 @@
  */
 import { messages } from '@/lib/i18n'
 import { formatDate } from '../util/cn'
-import { addonFor, type ModuleDef } from './catalog'
+import { addonFor, byQuote, type ModuleDef } from './catalog'
 import type { BillingState, CreditBucket, PublicPlan } from './client'
 
 /** Ce qu'un plan donne pour une feature, en un nombre comparable : crédits, plafond (illimité = ∞) ou 1/0. */
@@ -32,33 +32,42 @@ export function amountNow(state: BillingState | null, key: string): number {
 const monthlyCents = (p: PublicPlan) => p.prices.find((x) => x.interval === 'monthly')?.amount_cents ?? p.prices[0]?.amount_cents ?? 0
 
 /**
- * Le plan à conseiller : jamais le plan actuel, seulement un plan en vente qui donne vraiment plus
- * (plus de crédits, une limite plus haute, la fonction), et le moins cher de ceux-là. Le plan que
- * la plateforme désigne dans son refus passe d'abord. Aucun : `null` (la fenêtre le dit).
+ * Le plan à conseiller : jamais le plan actuel, seulement un plan qui donne vraiment plus (plus de
+ * crédits, une limite plus haute, la fonction). D'abord le moins cher des plans en vente ; s'il n'y en
+ * a pas, le plan sur devis qui le donne (Usine : « Parler à l'équipe CLIP »). Le plan que la plateforme
+ * désigne dans son refus passe d'abord. Aucun : `null` (la fenêtre le dit).
  */
 export function planFor(plans: PublicPlan[], state: BillingState | null, feature?: string, hint?: string | null): PublicPlan | null {
   const currentCode = state?.plan_code ?? plans.find((p) => p.is_current)?.code ?? null
   const current = plans.find((p) => p.code === currentCode) ?? null
-  const forSale = plans.filter((p) => p.kind === 'base' && p.prices.length > 0 && p.code !== currentCode).sort((a, b) => monthlyCents(a) - monthlyCents(b))
+  const others = plans.filter((p) => p.kind === 'base' && p.code !== currentCode)
+  const forSale = others.filter((p) => p.prices.length > 0).sort((a, b) => monthlyCents(a) - monthlyCents(b))
+  const quoted = others.filter((p) => byQuote(p))
   if (hint) {
-    const hinted = forSale.find((p) => p.code === hint)
+    const hinted = forSale.find((p) => p.code === hint) ?? quoted.find((p) => p.code === hint)
     if (hinted) return hinted
   }
   const now = feature ? (current ? amountOf(current, feature) : amountNow(state, feature)) : current ? monthlyCents(current) : 0
-  return forSale.find((p) => (feature ? amountOf(p, feature) : monthlyCents(p)) > now) ?? null
+  const onSale = forSale.find((p) => (feature ? amountOf(p, feature) : monthlyCents(p)) > now)
+  if (onSale) return onSale
+  // Sans fonction précise, un plan sur devis donne plus que tout plan en vente (toute l'usine).
+  return quoted.find((p) => !feature || amountOf(p, feature) > now) ?? null
 }
 
 /**
- * Ce qui ouvre un module : son add-on, si le plan de l'usine le reçoit et qu'il est en vente ;
- * sinon le moins cher des plans qui le reçoivent (« l'Académie s'ajoute à Équipe »). Le module que
- * la plateforme désigne dans son refus (`upgrade_hint.addon_code`) passe d'abord.
+ * Ce qui ouvre un module : son add-on, si le plan de l'usine le reçoit (en vente ou sur devis) ;
+ * sinon le moins cher des plans qui le reçoivent, un plan sur devis en dernier (« l'Académie s'ajoute
+ * à Usine »). Le module que la plateforme désigne dans son refus (`upgrade_hint.addon_code`) passe
+ * d'abord.
  */
 export function moduleOffer(plans: PublicPlan[], state: BillingState | null, m: ModuleDef, hint?: string | null): { addon: PublicPlan | null; plan: PublicPlan | null } {
   const currentCode = state?.plan_code ?? plans.find((p) => p.is_current && p.kind === 'base')?.code ?? null
-  const onSale = (code: string | null | undefined) => (code ? (plans.find((p) => p.kind === 'addon' && p.code === code && p.prices.length > 0) ?? null) : null)
+  const offered = (code: string | null | undefined) => (code ? (plans.find((p) => p.kind === 'addon' && p.code === code && (p.prices.length > 0 || byQuote(p))) ?? null) : null)
   const code = addonFor(m, currentCode)
-  if (code) return { addon: (hint && Object.values(m.addons).includes(hint) ? onSale(hint) : null) ?? onSale(code), plan: null }
-  const eligible = plans.filter((p) => p.kind === 'base' && p.prices.length > 0 && p.code !== currentCode && m.addons[p.code]).sort((a, b) => monthlyCents(a) - monthlyCents(b))
+  if (code) return { addon: (hint && Object.values(m.addons).includes(hint) ? offered(hint) : null) ?? offered(code), plan: null }
+  const eligible = plans
+    .filter((p) => p.kind === 'base' && (p.prices.length > 0 || byQuote(p)) && p.code !== currentCode && m.addons[p.code])
+    .sort((a, b) => Number(byQuote(a)) - Number(byQuote(b)) || monthlyCents(a) - monthlyCents(b))
   return { addon: null, plan: eligible[0] ?? null }
 }
 

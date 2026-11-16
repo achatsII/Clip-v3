@@ -160,8 +160,11 @@ describe('les adresses et le référencement', () => {
       const app = json['@graph'][2]
       expect(app.applicationCategory).toBe('BusinessApplication')
       expect(app.operatingSystem).toBe('Web, iOS, Android')
+      // Le gratuit à 0 $, un prix par intervalle des forfaits payants ; un forfait sur devis n'est pas une offre.
       const paid = siteCatalog().plans.filter((p) => p.paid)
-      expect(app.offers).toHaveLength(siteCatalog().plans.length - paid.length + paid.reduce((n, p) => n + p.prices.length, 0))
+      const free = siteCatalog().plans.filter((p) => !p.paid && !p.quote)
+      expect(app.offers).toHaveLength(free.length + paid.reduce((n, p) => n + p.prices.length, 0))
+      expect(siteCatalog().plans.some((p) => p.quote)).toBe(true)
       for (const o of app.offers) {
         expect(o.priceCurrency).toBe('CAD')
         expect(o.price).toMatch(/^\d+(\.\d{2})?$/)

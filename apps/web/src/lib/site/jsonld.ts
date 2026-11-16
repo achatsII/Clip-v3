@@ -40,6 +40,7 @@ export function softwareLd(lang: SiteLang): Node {
   const c = siteCatalog()
   const offers = c.plans.flatMap((plan) => {
     const name = planName(plan.code, lang, c)
+    if (plan.quote) return []
     if (!plan.paid) return [{ '@type': 'Offer', name, price: '0', priceCurrency: 'CAD', url: absoluteUrl(pathOf('pricing', lang)) }]
     return plan.prices.map((p) => ({
       '@type': 'Offer',

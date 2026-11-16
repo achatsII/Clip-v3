@@ -52,6 +52,8 @@ export interface SitePlan {
   name: string
   featured: boolean
   paid: boolean
+  /** Sur devis : sans prix et pas le forfait gratuit. Il ne s'achète pas : on en parle. */
+  quote: boolean
   prices: SitePrice[]
   /** La banque de crédits d'IA par mois. */
   credits: number
@@ -94,6 +96,7 @@ export function catalogFromManifest(m: RawManifest): SiteCatalog {
     name: p.name,
     featured: p.code === FEATURED_PLAN,
     paid: (p.prices ?? []).length > 0,
+    quote: (p.prices ?? []).length === 0 && p.code !== m.product.default_plan_code,
     prices: prices(p.prices),
     credits: (p.entitlements.credits ?? []).filter((c) => c.feature === 'ai_credits').reduce((n, c) => n + c.amount, 0),
     limits: Object.fromEntries(LIMIT_KEYS.map((k) => [k, p.entitlements.limits?.[k] ?? null])) as Record<LimitKey, number | null>,
