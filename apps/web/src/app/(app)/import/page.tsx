@@ -20,6 +20,7 @@ import { useEntitlement, useGate } from '@/lib/billing/state'
 import { messages, useMessages } from '@/lib/i18n'
 import { ingestFile } from '@/lib/media/ingest'
 import { nowIso, T } from '@/lib/model/repo'
+import { hasLabels, labelsFromAi, ruleStationsFor } from '@/lib/model/nomenclature'
 import { createInstruction, saveDraft } from '@/lib/model/service'
 import type { Instruction, Source } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
@@ -144,8 +145,12 @@ export default function ImportPage() {
     const doc = existing ?? (await createInstruction(data, actor, { title: r.content.title, origin: 'import', sources: [item.source!], kind: r.content.kind, category: r.content.category }))
     const content = await enrichMedia(r.content, files, async (png, name) => (await files.upload(png, name, 'pages')).url)
     const station = matchStation(r.stationGuess, stationList)
+    // Le classement proposé par l'IA, ramené aux familles de l'usine ; ses postes par règle suivent.
+    const nomenclature = org.json_data.nomenclature
+    const labels = labelsFromAi(r.aiLabels, nomenclature)
     await saveDraft(data, doc._id, doc.json_data, content, actor, {
       stationIds: station ? [station] : [],
+      ...(nomenclature?.families.length ? { labels, labelsCheck: hasLabels(labels) ? ('ai' as const) : null, ruleStationIds: ruleStationsFor(stations.data ?? [], labels, content.category) } : {}),
       generation: { at: nowIso(), model: r.model, operation: r.operation, questions: r.questions, choices: r.choices, stationGuess: r.stationGuess, rating: null, comment: null },
     })
     return { instructionId: doc._id, title: content.title }

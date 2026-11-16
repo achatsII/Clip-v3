@@ -1,6 +1,6 @@
 'use client'
 
-import { FileText, MapPin, Tags } from 'lucide-react'
+import { FileText, FolderTree, MapPin, Tags } from 'lucide-react'
 import { Input, Label, Textarea } from '@/components/ui/Field'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
@@ -8,6 +8,7 @@ import type { InstructionContent, Station } from '@/lib/model/types'
 import { FormCard } from './FormParts'
 import { LockoutEditor } from './LockoutEditor'
 import { MetaCard, StationPicker } from './MetaCard'
+import { ClassificationCard, type ClassificationProps } from './ClassificationCard'
 
 export interface InstructionFieldsProps {
   content: InstructionContent
@@ -19,6 +20,8 @@ export interface InstructionFieldsProps {
   stations: Doc<Station>[]
   onStations: (ids: string[]) => void
   onCreateStation?: (name: string) => Promise<string | null>
+  /** Le classement de l'usine (toggle `nomenclature`) ; absent sans le toggle. */
+  classification?: ClassificationProps | null
 }
 
 /**
@@ -26,7 +29,7 @@ export interface InstructionFieldsProps {
  * outils, mises en garde, étiquettes) et cadenassage. `dialog` : d'un bloc, dans la fenêtre des
  * infos (vue « Comme au poste ») ; `cards` : une carte par sujet, dans la fiche.
  */
-export function InstructionFields({ layout, content, onChange, readOnly, block, stationIds, stations, onStations, onCreateStation }: InstructionFieldsProps & { layout: 'dialog' | 'cards' }) {
+export function InstructionFields({ layout, content, onChange, readOnly, block, stationIds, stations, onStations, onCreateStation, classification }: InstructionFieldsProps & { layout: 'dialog' | 'cards' }) {
   const t = useMessages()
   const tp = t.editor.page
   const tf = t.editor.form
@@ -48,6 +51,12 @@ export function InstructionFields({ layout, content, onChange, readOnly, block, 
     return (
       <div className="space-y-5">
         {head}
+        {classification && (
+          <section>
+            <p className="label-caps mb-3 text-slate-500">{t.nomenclature.card.title}</p>
+            <ClassificationCard {...classification} />
+          </section>
+        )}
         <MetaCard embedded noStations={block} content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={onChange} onStations={onStations} onCreateStation={onCreateStation} />
         {lockout}
       </div>
@@ -61,6 +70,11 @@ export function InstructionFields({ layout, content, onChange, readOnly, block, 
       {!block && (
         <FormCard icon={<MapPin className="h-4 w-4" />} title={tf.where}>
           <StationPicker stationIds={stationIds} stations={stations} readOnly={readOnly} onStations={onStations} onCreateStation={onCreateStation} />
+        </FormCard>
+      )}
+      {classification && (
+        <FormCard icon={<FolderTree className="h-4 w-4" />} title={t.nomenclature.card.title}>
+          <ClassificationCard {...classification} />
         </FormCard>
       )}
       <FormCard icon={<Tags className="h-4 w-4" />} title={tf.details}>

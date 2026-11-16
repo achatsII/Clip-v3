@@ -152,7 +152,7 @@ export async function prepareForAi(
 export interface GenerateInput {
   ai: AiApi
   files: FilesApi
-  org: Pick<OrgSettings, 'standard' | 'learnings'>
+  org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>
   sources: Source[]
   intent?: string
   title?: string
@@ -175,6 +175,8 @@ export interface GenerateOutput {
   choices: Record<string, string[]>
   model: string | null
   operation: AiOperation
+  /** Le classement proposé par l'IA, tel quel (`labelsFromAi` le ramène aux familles de l'usine). */
+  aiLabels: unknown
 }
 
 /** La génération prête à partir : la même requête, qu'elle tourne sur l'appareil ou au serveur. */
@@ -243,8 +245,8 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
   if (!result.json) throw new ApiError(messages().capture.generate.noInstruction, 502)
 
   input.onStage?.('finish')
-  const { content, stationGuess, questions, choices, marks } = finishGeneration(result.json, p.sources, p.language)
-  return { content, marks, sources: p.allSources, stationGuess, questions, choices, model: result.model, operation: p.operation }
+  const { content, stationGuess, questions, choices, marks, aiLabels } = finishGeneration(result.json, p.sources, p.language)
+  return { content, marks, sources: p.allSources, stationGuess, questions, choices, model: result.model, operation: p.operation, aiLabels }
 }
 
 function mergeSources(all: Source[], updated: Source[]): Source[] {
@@ -256,7 +258,7 @@ function mergeSources(all: Source[], updated: Source[]): Source[] {
  * La requête d'un import (une ancienne instruction en PDF) : la même pour l'appareil et le serveur
  * (Job_start, branche clip-v3). Le document est S1.
  */
-export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learnings'>; source: Source; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {
+export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>; source: Source; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {
   const language = input.language ?? contentLanguage()
   const pages = input.source.pageCount ?? 5
   const operation: AiOperation = pages > 12 ? 'import_l' : 'import_s'
@@ -283,10 +285,10 @@ export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learning
 /** Import d'une ancienne instruction (PDF) : même résultat qu'une génération. */
 export async function importDocument(input: {
   ai: AiApi
-  org: Pick<OrgSettings, 'standard' | 'learnings'>
+  org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>
   source: Source
   stationNames: string[]
-}): Promise<{ content: InstructionContent; stationGuess: string | null; questions: string[]; choices: Record<string, string[]>; model: string | null; operation: AiOperation }> {
+}): Promise<{ content: InstructionContent; stationGuess: string | null; questions: string[]; choices: Record<string, string[]>; model: string | null; operation: AiOperation; aiLabels: unknown }> {
   const { operation, language, ask } = importAsk(input)
   const result = await input.ai.ask<AiInstruction>(operation, ask, { scope: 'import', timeoutMs: 300_000 })
   if (!result.json) throw new ApiError(messages().capture.generate.unreadableDocument, 502)

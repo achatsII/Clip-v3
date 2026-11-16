@@ -85,6 +85,12 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   poste, pas un GIF), une photo, une image figée tirée de la vidéo, ou une page d'un PDF.
 - L'IA classe l'instruction (production, maintenance, qualité, santé et sécurité, nettoyage, changement de
   format, démarrage et arrêt) et devine son poste, rapproché des postes existants.
+- Chaque usine se donne ses propres façons de classer (Réglages › Classement) : des familles d'étiquettes,
+  une liste de valeurs (Département : Découpe, Assemblage…) ou une valeur libre (Produit : 12345 ; Bon de
+  travail). L'IA classe chaque nouvelle instruction selon elles, d'après les sources, ce que la personne a
+  dit et le nom des fichiers, sans inventer de valeur ; on vérifie d'un coup d'œil, on retire ce qui ne va
+  pas, ou on demande « Proposer avec l'IA » pour une instruction déjà écrite. La bibliothèque se filtre par
+  famille, et la recherche trouve un numéro de produit ou de bon de travail.
 - Ce que les sources ne tranchent pas devient au plus quatre questions (la pastille « à vérifier »), avec des
   réponses proposées ; les réponses corrigent l'instruction.
 - Le standard de rédaction de l'usine guide chaque génération (Réglages › Standard de rédaction : ce par quoi
@@ -172,6 +178,10 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   l'opérateur ouvre ses instructions, sans compte. Au choix : « Ce poste d'abord » (les autres instructions
   restent à un geste) ou « Seulement ce poste ». Une instruction se partage aussi par un lien direct et son
   code QR, qui montrent toujours la version publiée, jamais le brouillon.
+- Un poste reçoit ses instructions à la main, ou par règle (la page du poste, « Instructions par règle ») :
+  par exemple Département : Découpe et Type : Nettoyage ou Maintenance. Une instruction classée ainsi y
+  va d'elle-même, les nouvelles aussi ; la page montre, avant d'enregistrer, combien d'instructions y
+  répondent et lesquelles.
 - Le lecteur pas à pas : une étape à la fois, un grand média, de gros boutons (« Suivant », « Précédent »),
   les EPI, les outils et les mises en garde « Avant de commencer », l'extrait vidéo en boucle, une fois ou au
   toucher, le zoom sur les images, « Tout voir » pour toute l'instruction d'un coup, « Toutes les étapes »

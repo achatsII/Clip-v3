@@ -723,6 +723,47 @@ Aucun écran ne lit la bibliothèque entière : à des milliers d'instructions, 
   complète, traductions comprises, se lit à l'ouverture. « Tout voir » et la recherche (deux lettres
   et plus) cherchent au serveur, dans la portée du lien, une page à la fois.
 
+### La nomenclature de l'usine (toggle `nomenclature`, `src/lib/model/nomenclature.ts`)
+
+D'une usine à l'autre, on ne classe jamais pareil : ici le département et la machine, là le produit,
+la ligne ou le numéro de bon de travail. Chaque usine se donne ses **familles d'étiquettes**
+(Réglages › Classement, `OrgSettings.nomenclature`) : une **liste** (on choisit parmi ses valeurs,
+avec un abrégé facultatif : Découpe, « DEC ») ou une **valeur libre** (on écrit un numéro : 12345,
+BT-7781), une valeur ou plusieurs. Des familles se créent d'un toucher (Département, Machine ou
+équipement, Produit, Ligne, Bon de travail, Client) ; des valeurs se collent d'un coup, une par ligne.
+
+- **Le classement d'une instruction** (`Instruction.labels`) : par famille, ses valeurs, **en texte**
+  (ce qu'on voit est ce qui est gardé : la recherche le trouve tel quel, le poste l'affiche sans lire
+  les réglages). Ce n'est pas du contenu : le changer ne fait pas de version ; la version publiée suit
+  tout de suite (postes, étiquettes, index ; `saveClassification`). `cleanLabels` garde seulement les
+  familles de l'usine, les valeurs de ses listes (accents, casse et abrégé reconnus) et une valeur par
+  famille simple.
+- **L'IA classe** : à la génération et à l'import, la consigne nomme les familles et leurs valeurs
+  (`nomenclatureBlock`) et le schéma demande `labels` ; tout passe tel quel au serveur, rien à changer
+  dans n8n. `labelsFromAi` ramène la proposition aux familles : rien d'inventé dans une liste, une
+  valeur libre seulement si elle est écrite ou dite (sources, intention, titre, nom des fichiers).
+  Une personne qui a déjà classé garde son classement. `labelsCheck: 'ai'` affiche « L'IA a classé
+  cette instruction : vérifiez » jusqu'au premier geste. À la demande, « Proposer avec l'IA »
+  (opération `classify`, `src/lib/ai/classify.ts`) ajoute à ce qu'on a (`mergeLabels`).
+- **Les postes par règle** (`Station.rule`) : dans une famille, l'une des valeurs suffit (OU) ; entre
+  les familles, il les faut toutes (ET) ; la catégorie peut s'y ajouter. La même logique partout : la
+  règle d'un poste, les filtres de la bibliothèque. La règle se calcule à chaque changement de
+  classement, de catégorie (l'éditeur la refait seul) et de règle (`applyStationRule` : celles qui y
+  répondent arrivent, les autres partent, celles mises à la main restent), et s'écrit dans
+  `Instruction.ruleStationIds` et dans `stationIds` de la version publiée (avec `ruleStationIds` pour
+  savoir lesquels refaire). La tablette du poste et la portée de son lien ne changent pas. La page
+  du poste montre, avant d'enregistrer, combien d'instructions répondent et les premières
+  (`previewRule`).
+- **Partout où l'on cherche « les instructions d'un poste »** sur `clip_instruction` (la liste, le
+  filtre « Où ? », « Pour moi », la couverture et le nombre par poste), `atStations` regarde les deux
+  champs : choisis à la main, ou par règle.
+- **Renommer ou retirer** une valeur met à jour les instructions, leurs versions publiques et les
+  règles des postes (`relabelValue`) ; retirer une famille la retire des règles, qui se refont
+  (`forgetFamily`).
+- **La bibliothèque** : une pastille par famille en liste (on coche une ou plusieurs valeurs) ; une
+  valeur libre (un numéro de produit) se cherche dans la barre de recherche, qui la trouve dans
+  l'index. Les cartes affichent les premières valeurs du classement.
+
 ### Les blocs communs (toggle `sharedBlocks`, feature `shared_blocks`, `src/lib/model/blocks.ts`)
 
 Des étapes qui reviennent dans beaucoup d'instructions (le cadenassage d'une presse, le démarrage

@@ -67,7 +67,8 @@ describe('la recherche au serveur', () => {
     const f = libraryFilter({ q: 'Presse  matrice' }, stations) as { $and: Array<Record<string, unknown>> }
     const words = f.$and.filter((c) => '$or' in c && JSON.stringify(c).includes('searchText'))
     expect(words).toHaveLength(2)
-    expect(words[0]).toEqual({ $or: [{ 'json_data.searchText': { $regex: 'presse' } }, { 'json_data.title': { $regex: 'presse', $options: 'i' } }, { 'json_data.stationIds': { $in: ['s1'] } }] })
+    // Un mot qui nomme un poste trouve ses instructions, mises à la main ou arrivées par sa règle.
+    expect(words[0]).toEqual({ $or: [{ 'json_data.searchText': { $regex: 'presse' } }, { 'json_data.title': { $regex: 'presse', $options: 'i' } }, { 'json_data.stationIds': { $in: ['s1'] } }, { 'json_data.ruleStationIds': { $in: ['s1'] } }] })
     expect(words[1]).toEqual({ $or: [{ 'json_data.searchText': { $regex: 'matrice' } }, { 'json_data.title': { $regex: 'matrice', $options: 'i' } }] })
     // Sans recherche, le filtre des brouillons vides n'est pas là ; avec, non plus.
     expect(JSON.stringify(f)).not.toContain('sourceCount')

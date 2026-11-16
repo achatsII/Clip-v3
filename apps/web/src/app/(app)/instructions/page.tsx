@@ -8,6 +8,8 @@ import { CreditPill, LowBalanceBanner } from '@/components/billing/Billing'
 import { UsageMeter } from '@/components/billing/Usage'
 import { InstructionRow, InstructionTile } from '@/components/InstructionCard'
 import { PlacePicker, placeStations, type Place } from '@/components/PlacePicker'
+import { LabelFilters } from '@/components/LabelFilters'
+import { allStationIds, hasLabels, readNomenclature, type Labels } from '@/lib/model/nomenclature'
 import { useSession } from '@/components/providers/Session'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { Segmented } from '@/components/ui/Field'
@@ -55,7 +57,7 @@ export default function InstructionsPage() {
   const router = useRouter()
   const params = useSearchParams()
   const qc = useQueryClient()
-  const { me, can, profile, data, displayName } = useSession()
+  const { me, can, profile, data, displayName, org } = useSession()
   const t = useMessages()
   const tl = t.instructions.list
   const stations = useStations()
@@ -72,6 +74,10 @@ export default function InstructionsPage() {
   const [status, setStatus] = useState<LibraryStatus>(params.get('statut') === 'review' ? 'review' : params.get('statut') === 'revoir' ? 'renew' : 'all')
   const [place, setPlace] = useState<Place>(() => (params.get('poste') ? { kind: 'station', id: params.get('poste')! } : params.get('secteur') ? { kind: 'sector', name: params.get('secteur')! } : null))
   const renewalOn = useToggle('renewal')
+  // Le classement de l'usine (toggle `nomenclature`) : une pastille par famille en liste.
+  const nomenclatureOn = useToggle('nomenclature')
+  const nomenclature = useMemo(() => readNomenclature(org.json_data.nomenclature), [org.json_data.nomenclature])
+  const [labels, setLabels] = useState<Labels>({})
   // Les blocs communs : une vue à part (ils ne vont à aucun poste).
   const blocksOn = useToggle('sharedBlocks')
   const [blocks, setBlocks] = useState(params.get('vue') === 'blocs')
@@ -108,15 +114,15 @@ export default function InstructionsPage() {
   // La vue des blocs communs : ils ne vont à aucun poste, « Pour moi » et « Où ? » n'y servent pas.
   const blocksView = blocksOn && blocks
   const search: LibraryQuery = useMemo(
-    () => ({ q, status, category, stationIds: blocksView ? null : stationIds, blocks: blocksView, mine: scope === 'mine' && hasFocus && !blocksView ? { userId: profile.userId, categories: me.categories, stationIds: me.stationIds } : null }),
-    [q, status, category, stationIds, blocksView, scope, hasFocus, profile.userId, me.categories, me.stationIds],
+    () => ({ q, status, category, stationIds: blocksView ? null : stationIds, blocks: blocksView, labels: nomenclatureOn && !blocksView ? labels : null, mine: scope === 'mine' && hasFocus && !blocksView ? { userId: profile.userId, categories: me.categories, stationIds: me.stationIds } : null }),
+    [q, status, category, stationIds, blocksView, labels, nomenclatureOn, scope, hasFocus, profile.userId, me.categories, me.stationIds],
   )
   const ready = !stations.isLoading
   const results = useInstructionSearch(search, refs, ready)
   const shown = useInstructionCount(search, refs, ready)
   const total = useInstructionCount(blocksView ? { blocks: true } : {}, refs, ready)
   const list = useMemo(() => results.data?.pages.flatMap((p) => p.docs) ?? [], [results.data])
-  const filtered = !!(q || category || status !== 'all' || (!blocksView && (stationIds || (scope === 'mine' && hasFocus))))
+  const filtered = !!(q || category || status !== 'all' || (!blocksView && (stationIds || (scope === 'mine' && hasFocus) || (nomenclatureOn && hasLabels(labels)))))
 
   // Un code scanné qui correspond à une seule instruction l'ouvre directement.
   useEffect(() => {
@@ -142,6 +148,7 @@ export default function InstructionsPage() {
     setStatus('all')
     setScope('all')
     setPlace(null)
+    setLabels({})
   }
   const blocksChip = (
     <button type="button" aria-pressed={blocks} onClick={() => showBlocks(!blocks)} className={cn('btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-xs font-black', blocks ? 'bg-violet-600 text-white' : 'bg-violet-50 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200')}>
@@ -220,6 +227,7 @@ export default function InstructionsPage() {
         )}
         {/* « Où ? » d'abord : au téléphone, il se voit sans faire défiler. */}
         {!blocksView && <PlacePicker value={place} onChange={setPlace} stations={stations.data ?? []} />}
+        {nomenclatureOn && !blocksView && <LabelFilters nomenclature={nomenclature} value={labels} onChange={setLabels} />}
         <Segmented
           size="sm"
           value={status}
@@ -282,13 +290,13 @@ export default function InstructionsPage() {
           {view === 'grid' ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((d) => (
-                <InstructionTile key={d._id} doc={d} stationNames={d.json_data.stationIds.map((s) => stationName.get(s)).filter(Boolean) as string[]} />
+                <InstructionTile key={d._id} doc={d} stationNames={allStationIds(d.json_data.stationIds, d.json_data.ruleStationIds).map((s) => stationName.get(s)).filter(Boolean) as string[]} />
               ))}
             </div>
           ) : (
             <div className="space-y-2">
               {list.map((d) => (
-                <InstructionRow key={d._id} doc={d} stationNames={d.json_data.stationIds.map((s) => stationName.get(s)).filter(Boolean) as string[]} />
+                <InstructionRow key={d._id} doc={d} stationNames={allStationIds(d.json_data.stationIds, d.json_data.ruleStationIds).map((s) => stationName.get(s)).filter(Boolean) as string[]} />
               ))}
             </div>
           )}

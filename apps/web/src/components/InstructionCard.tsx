@@ -58,6 +58,14 @@ function RenewalChip({ i, className }: { i: Instruction; className?: string }) {
   )
 }
 
+/** Le classement d'une instruction en quelques mots (« Découpe · M-1234 »), pour les listes. */
+export function labelLine(i: Pick<Instruction, 'labels'>, max = 3): string {
+  return Object.values(i.labels ?? {})
+    .flat()
+    .slice(0, max)
+    .join(' · ')
+}
+
 export function InstructionTile({ doc, stationNames }: { doc: Doc<Instruction>; stationNames: string[] }) {
   const t = useMessages().instructions.card
   const blockLabel = useMessages().blocks.chip
@@ -89,6 +97,7 @@ export function InstructionTile({ doc, stationNames }: { doc: Doc<Instruction>; 
         {!i.coverUrl && !stage && <CategoryIcon category={i.category} className="absolute top-1/2 right-6 h-16 w-16 -translate-y-1/2 text-white/25" />}
         <span className="absolute inset-x-4 bottom-3">
           <span className={cn('text-lg leading-tight font-black tracking-tight text-balance', stage ? 'line-clamp-1' : 'line-clamp-2')}>{i.title}</span>
+          {!stage && labelLine(i) && <span className="mt-0.5 block truncate text-xs font-bold text-white/85">{labelLine(i)}</span>}
           {stage && (
             <span className="mt-1 flex items-center gap-1.5 text-xs font-bold text-white/90">
               <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> <span className="truncate">{stage}</span>
@@ -125,7 +134,7 @@ export function InstructionRow({ doc, stationNames }: { doc: Doc<Instruction>; s
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{i.title}</span>
         <span className={cn('block truncate text-xs font-bold', stage ? 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-500')}>
-          {stage ?? [i.number, i.block ? blockLabel : cat.label, i.block ? null : stationNames.length ? stationNames.join(', ') : t.noStation, timeAgo(i.updatedAt)].filter(Boolean).join(' · ')}
+          {stage ?? [i.number, i.block ? blockLabel : cat.label, labelLine(i, 2), i.block ? null : stationNames.length ? stationNames.join(', ') : t.noStation, timeAgo(i.updatedAt)].filter(Boolean).join(' · ')}
         </span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-1">

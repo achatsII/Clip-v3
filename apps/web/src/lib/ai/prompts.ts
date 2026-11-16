@@ -3,6 +3,7 @@
  * sont injectés : c'est ainsi qu'une usine « règle » son générateur sans toucher au code.
  */
 import { CATEGORIES, ENERGY, PPE } from '../model/catalog'
+import type { Nomenclature } from '../model/nomenclature'
 import { firstStepOf } from '../model/firstStep'
 import type { InstructionContent, OrgSettings, Step, WritingStandard } from '../model/types'
 
@@ -59,7 +60,23 @@ const LOCKOUT_RULES = `FICHE DE CADENASSAGE — si les sources décrivent l’is
 - "restartSteps" décrit le retrait des cadenas et la remise en marche, dans l’ordre ;
 - une source probable mais non confirmée par les sources est quand même listée, avec « À confirmer » dans sa description, et fait l’objet d’une question.`
 
-export function generationSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, opts: { language: string; forceKind?: 'procedure' | 'lockout' }): string {
+/**
+ * Les familles d'étiquettes de l'usine (toggle `nomenclature`), pour que l'IA classe comme elle :
+ * dans une liste, seulement ses valeurs ; une valeur libre, seulement si elle est écrite ou dite.
+ */
+export function nomenclatureBlock(nomenclature: Nomenclature | null | undefined): string {
+  const families = nomenclature?.families.filter((f) => f.kind === 'free' || f.values.length) ?? []
+  if (!families.length) return ''
+  const lines = families.map((f) => {
+    const how = f.kind === 'list' ? `${f.multiple ? 'une ou plusieurs valeurs' : 'une seule valeur'}, parmi : ${f.values.slice(0, 120).map((v) => (v.code ? `${v.label} (${v.code})` : v.label)).join(', ')}` : `valeur libre${f.multiple ? ', une ou plusieurs' : ''} : écris-la telle qu’elle apparaît${f.values.length ? ` (déjà vues : ${f.values.slice(0, 20).map((v) => v.label).join(', ')})` : ''}`
+    return `- « ${f.name} » — ${how}${f.hint ? ` ; ${f.hint}` : ''}`
+  })
+  return `CLASSEMENT DE L’USINE — labels : pour chaque famille, ce qui s’applique à cette instruction, d’après les sources, ce que la personne a dit, le titre de travail et le nom des fichiers :
+${lines.join('\n')}
+Une famille dont rien ne parle reste absente. Dans une liste, seulement ses valeurs, écrites comme ci-dessus : jamais une valeur inventée. Une valeur libre (numéro de produit, de bon de travail, de pièce) seulement si elle est écrite ou dite, sans la deviner.`
+}
+
+export function generationSystem(org: Pick<OrgSettings, 'standard' | 'learnings'> & { nomenclature?: Nomenclature | null }, opts: { language: string; forceKind?: 'procedure' | 'lockout' }): string {
   return `Tu es un expert en méthodes industrielles et en instructions de travail pour le plancher de production (méthode TWI « Job Instruction », travail standardisé, SST). Tu transformes des notes de terrain — vidéos, photos, notes vocales, notes écrites, anciens documents — en une instruction de travail exacte, claire et visuelle, pour des opérateurs qui lisent peu, debout, parfois avec des gants.
 
 RÈGLES D’ÉCRITURE — le moins de texte possible : l’opérateur lit une étape d’un coup d’œil ; le média montre, le texte dit seulement ce qu’on ne voit pas :
@@ -90,6 +107,7 @@ CLASSEMENT :
 - frequency : seulement si elle est dite.
 - tags : 2 à 6 mots-clés utiles à la recherche, en minuscules.
 - ppe : uniquement parmi ${Object.keys(PPE).join(', ')}, ce qui est requis, dit ou visible.
+${nomenclatureBlock(org.nomenclature)}
 
 ${opts.forceKind === 'lockout' ? 'La personne a choisi le format « fiche de cadenassage » : kind = "lockout".\n' : opts.forceKind === 'procedure' ? 'La personne a choisi le format « instruction de travail » : kind = "procedure".\n' : ''}${LOCKOUT_RULES}
 
@@ -114,7 +132,7 @@ export function generationPrompt(input: { intent?: string; stations: string[]; s
   return parts.join('\n')
 }
 
-export function importSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, language = 'fr'): string {
+export function importSystem(org: Pick<OrgSettings, 'standard' | 'learnings'> & { nomenclature?: Nomenclature | null }, language = 'fr'): string {
   return `${generationSystem(org, { language })}
 
 CONTEXTE PARTICULIER : la source est une ANCIENNE instruction (PDF). Restructure-la fidèlement selon les règles ci-dessus, sans rien perdre d’important et sans rien inventer : chaque consigne, valeur, mise en garde et EPI du document doit se retrouver dans le résultat. Quand une figure, un plan ou une photo d’une page illustre une étape, mets en média {source: "S1", page: n}.`

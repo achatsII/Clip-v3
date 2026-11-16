@@ -50,6 +50,8 @@ export interface AiInstruction {
   category?: string
   tags?: string[]
   station?: string
+  /** Le classement proposé selon les familles de l'usine (`labelsFromAi`). */
+  labels?: unknown
   equipment?: string
   frequency?: string
   durationMin?: number
@@ -201,6 +203,8 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
   choices: Record<string, string[]>
   /** Les images où un repère aide, à annoter sur l'image elle-même. */
   marks: MarkHint[]
+  /** Le classement proposé par l'IA, tel quel ; ramené aux familles de l'usine par `labelsFromAi`. */
+  aiLabels: unknown
 } {
   const sourcesById = new Map<string, Source>()
   sources.forEach((s, i) => sourcesById.set(`S${i + 1}`, s))
@@ -238,6 +242,7 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
     stationGuess: clean(raw.station) || null,
     ...normalizeQuestions(raw.questions),
     marks,
+    aiLabels: Array.isArray(raw.labels) ? raw.labels : [],
   }
 }
 

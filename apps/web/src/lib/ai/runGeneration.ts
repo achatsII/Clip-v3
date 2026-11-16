@@ -15,6 +15,7 @@ import { enrichMedia, finishGeneration, generateInstruction, importAsk, prepareG
 import { runJob } from './jobs'
 import type { AiInstruction, MarkHint } from './normalize'
 import { matchStation } from './normalize'
+import { hasLabels, labelsFromAi, ruleStationsFor, type Nomenclature } from '../model/nomenclature'
 import { DEVICE_ID, jobOutcome, lockedByOther } from './serverJob'
 
 /** Dans la coquille, l'écran reste allumé pendant la génération : un téléphone en veille l'arrêterait. */
@@ -48,6 +49,9 @@ async function completeGeneration(c: {
   choices: Record<string, string[]>
   model: string | null
   operation: string
+  /** Le classement proposé par l'IA, et la nomenclature de l'usine pour le ramener à ses familles. */
+  aiLabels?: unknown
+  nomenclature?: Nomenclature | null
   mode: 'device' | 'server'
   autoAnnotate: boolean
   checkpoints: boolean
@@ -67,9 +71,17 @@ async function completeGeneration(c: {
 
   const matched = matchStation(c.stationGuess, c.stations.map((s) => ({ id: s._id, name: s.json_data.name, code: s.json_data.code })))
   const stationIds = instr.stationIds.length ? instr.stationIds : matched ? [matched] : []
+  // Le classement : celui de l'IA, sauf si une personne a déjà classé l'instruction (il reste).
+  const proposed = labelsFromAi(c.aiLabels, c.nomenclature)
+  const keepMine = hasLabels(instr.labels) && instr.labelsCheck !== 'ai'
+  const labels = keepMine ? instr.labels! : proposed
+  const classification = c.nomenclature?.families.length
+    ? { labels, labelsCheck: keepMine ? (instr.labelsCheck ?? null) : hasLabels(proposed) ? ('ai' as const) : null, ruleStationIds: ruleStationsFor(c.stations, labels, content.category) }
+    : {}
   await c.beforeSave?.()
   await saveDraft(c.data, c.doc._id, instr, content, c.actor, {
     stationIds,
+    ...classification,
     generating: null,
     generationError: null,
     generation: {
@@ -201,6 +213,8 @@ export function startGeneration(input: {
         choices: out.choices,
         model: out.model,
         operation: out.operation,
+        aiLabels: out.aiLabels,
+        nomenclature: org.nomenclature,
         mode: 'device',
         autoAnnotate: input.autoAnnotate !== false,
         checkpoints: !!input.checkpoints,
@@ -236,6 +250,8 @@ export function finishServerGeneration(input: {
   ai: AiApi
   stations: Doc<Station>[]
   actor: Actor
+  /** La nomenclature de l'usine : le classement proposé par l'IA se ramène à ses familles. */
+  nomenclature?: Nomenclature | null
   onDone?: () => void
 }): Promise<void> {
   const { doc, data, files, ai, stations, actor } = input
@@ -281,6 +297,7 @@ export function finishServerGeneration(input: {
         stations,
         actor,
         ...out,
+        nomenclature: input.nomenclature,
         model: outcome.model,
         operation,
         mode: 'server',

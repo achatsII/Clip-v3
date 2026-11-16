@@ -12,6 +12,7 @@ export const settings: typeof Fr = {
     appearance: 'Appearance',
     data: 'Data',
     alerts: 'Alerts',
+    nomenclature: 'Classification',
   },
   plant: {
     title: 'Your plant',

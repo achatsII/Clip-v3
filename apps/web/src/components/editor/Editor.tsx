@@ -92,6 +92,9 @@ import { StageEditor } from './StageEditor'
 import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
 import { attachReel, carryClips } from '@/lib/media/reel'
 import { MediaPlaybackProvider, VideoPool } from '@/lib/media/videoPool'
+import { saveClassification, staleRuleStations } from '@/lib/model/classification'
+import { addValues, hasLabels, mergeLabels, readNomenclature, type Labels } from '@/lib/model/nomenclature'
+import { suggestLabels } from '@/lib/ai/classify'
 import { LiveBadge } from './LiveBadge'
 import { UndoPill } from './UndoControls'
 
@@ -124,6 +127,10 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [content, setContent] = useState<InstructionContent>(instr.draft!)
   const [sources, setSources] = useState<Source[]>(instr.sources)
   const [stationIds, setStationIds] = useState<string[]>(instr.stationIds)
+  // Le classement de l'usine (toggle `nomenclature`) : il n'est pas du contenu, il s'enregistre à part.
+  const [labels, setLabels] = useState<Labels>(instr.labels ?? {})
+  const [labelsCheck, setLabelsCheck] = useState(instr.labelsCheck ?? null)
+  const [ruleStationIds, setRuleStationIds] = useState<string[]>(instr.ruleStationIds ?? [])
   const [selected, setSelected] = useState<string | null>(params.get('etape') ?? instr.draft?.steps[0]?.id ?? null)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [publishing, setPublishing] = useState(false)
@@ -464,6 +471,59 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       toast.error(tp.toasts.stationNotSaved, errorText(e))
     }
   }
+
+  // Le classement relu (la génération, un autre appareil) remplace celui qu'on affiche.
+  const savedLabels = JSON.stringify(instr.labels ?? {})
+  useEffect(() => {
+    setLabels(JSON.parse(savedLabels) as Labels)
+  }, [savedLabels])
+  useEffect(() => setLabelsCheck(instr.labelsCheck ?? null), [instr.labelsCheck])
+  const savedRule = (instr.ruleStationIds ?? []).join(',')
+  useEffect(() => setRuleStationIds(savedRule ? savedRule.split(',') : []), [savedRule])
+
+  const nomenclatureOn = useToggle('nomenclature')
+  const nomenclature = useMemo(() => readNomenclature(org.json_data.nomenclature), [org.json_data.nomenclature])
+  async function changeLabels(next: Labels, confirmed = true) {
+    setLabels(next)
+    if (confirmed) setLabelsCheck(null)
+    try {
+      const r = await saveClassification(data, { ...doc, json_data: { ...docRef.current.json_data, draft: latest.current } }, { labels: next, nomenclature, stations, category: latest.current.category, confirm: confirmed })
+      setRuleStationIds(r.ruleStationIds)
+      refresh()
+    } catch (e) {
+      toast.error(t.nomenclature.card.notSaved, errorText(e))
+    }
+  }
+  async function suggestClassification() {
+    const tc = t.nomenclature.card
+    try {
+      const proposed = await suggestLabels(session.ai, docRef.current.json_data, latest.current, nomenclature)
+      if (!hasLabels(proposed)) {
+        toast.info(tc.nothing, tc.nothingHint)
+        return
+      }
+      await changeLabels(mergeLabels(labels, proposed, nomenclature))
+      toast.success(tc.suggested, tc.suggestedHint)
+    } catch (e) {
+      toast.error(tc.suggestFailed, errorText(e))
+    }
+  }
+  /** Une valeur nouvelle ajoutée à une liste de l'usine, depuis l'éditeur (un administrateur). */
+  async function addListValue(familyIdOf: string, value: string) {
+    const next = { families: nomenclature.families.map((f) => (f.id === familyIdOf ? addValues(f, value) : f)) }
+    await session.updateOrg({ nomenclature: next })
+  }
+  // La catégorie change (l'assistant, une régénération) ou une règle de poste a changé ailleurs :
+  // les postes par règle suivent, sans rien demander.
+  const category = content.category
+  useEffect(() => {
+    if (!nomenclatureOn || readOnly || !nomenclature.families.length) return
+    const want = staleRuleStations({ labels, ruleStationIds, category, draft: null }, stations)
+    if (!want) return
+    const timer = setTimeout(() => void changeLabels(labels, false), 800)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- changeLabels relit l'état courant
+  }, [nomenclatureOn, readOnly, category, labels, ruleStationIds, stations, nomenclature])
 
   async function createStation(name: string): Promise<string | null> {
     if (!name) return null
@@ -930,7 +990,22 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     onDelete: deleteStep,
     onSourceAdded: addSource,
   }
-  const fieldProps = { content, onChange: update, readOnly, block: isBlock, stationIds, stations, onStations: changeStations, onCreateStation: can('stations', 'write') ? createStation : undefined }
+  const classification =
+    nomenclatureOn && !isBlock
+      ? {
+          labels,
+          nomenclature,
+          readOnly,
+          onChange: (next: Labels) => void changeLabels(next),
+          aiCheck: labelsCheck === 'ai',
+          onConfirm: () => void changeLabels(labels),
+          onSuggest: suggestClassification,
+          ruleStations: ruleStationIds.map((id) => stations.find((s) => s._id === id)?.json_data.name).filter((n): n is string => !!n),
+          onAddValue: can('settings', 'write') ? addListValue : undefined,
+          canSetUp: can('settings', 'write'),
+        }
+      : null
+  const fieldProps = { content, onChange: update, readOnly, block: isBlock, stationIds, stations, onStations: changeStations, onCreateStation: can('stations', 'write') ? createStation : undefined, classification }
 
   return (
     <div>

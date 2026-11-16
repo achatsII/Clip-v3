@@ -24,6 +24,7 @@ import { blocks } from './blocks'
 import { academy } from './academy'
 import { reports } from './reports'
 import { decouvrir } from './decouvrir'
+import { nomenclature } from './nomenclature'
 
 /** L'anglais : les mêmes clés que le français (le contrôle de types y veille). */
-export const en: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir }
+export const en: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir, nomenclature }

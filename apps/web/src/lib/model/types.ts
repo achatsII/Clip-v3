@@ -1,3 +1,4 @@
+import type { Labels, Nomenclature, StationRule } from './nomenclature'
 /**
  * Modèle de données de CLIP V3 (contenu de `json_data` sur la Gateway).
  *
@@ -466,6 +467,15 @@ export interface Instruction {
   category: CategoryKey
   tags: string[]
   stationIds: string[]
+  /**
+   * Le classement de l'usine (toggle `nomenclature`, `src/lib/model/nomenclature.ts`) : par famille
+   * d'étiquettes, ses valeurs. Il n'appartient pas au contenu : le changer ne fait pas de version.
+   */
+  labels?: Labels
+  /** `ai` : l'IA a classé l'instruction et personne n'a encore regardé ; effacé au premier geste. */
+  labelsCheck?: 'ai' | null
+  /** Les postes où l'instruction va par leur règle (en plus de `stationIds`, choisis à la main). */
+  ruleStationIds?: string[]
   status: InstructionStatus
   /** Une idée de départ dictée ou tapée par la personne (« nettoyage des rails, machine 1234 »). */
   intent?: string
@@ -579,6 +589,10 @@ export interface Published {
   card?: PublishedCard
   /** L'index de recherche de la version publiée (les liens publics cherchent au serveur). */
   searchText?: string
+  /** Le classement de l'usine, pour l'afficher et le filtrer au poste. */
+  labels?: Labels
+  /** Parmi `stationIds`, ceux qui viennent d'une règle de poste (à refaire quand la règle change). */
+  ruleStationIds?: string[]
 }
 
 /** La fiche légère d'une instruction publiée : la liste d'un poste ne lit qu'elle. */
@@ -617,6 +631,8 @@ export interface Station {
   linkAssistant?: boolean
   /** Au poste, demander qui travaille (nom et code à 4 chiffres) avant d'ouvrir une instruction. */
   askOperator?: boolean
+  /** Les instructions classées ainsi viennent au poste d'elles-mêmes (toggle `nomenclature`). */
+  rule?: StationRule | null
   createdAt: string
 }
 
@@ -849,6 +865,8 @@ export interface OrgSettings {
   academy?: { revalidateMonths: number }
   /** La numérotation des documents : un préfixe (« IT ») et le prochain numéro. */
   numbering?: { prefix: string; next: number }
+  /** Les façons de classer de l'usine : ses familles d'étiquettes (toggle `nomenclature`). */
+  nomenclature?: Nomenclature
   logoUrl?: string | null
   color?: string | null
   /**

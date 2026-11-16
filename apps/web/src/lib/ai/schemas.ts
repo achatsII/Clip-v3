@@ -96,6 +96,18 @@ export const instructionSchema = {
     category: { type: 'string', enum: CATEGORY_KEYS },
     tags: strList('2 à 6 mots-clés de recherche, en minuscules'),
     station: str('Poste, machine ou équipement visé, tel que nommé ; vide si inconnu'),
+    labels: {
+      type: 'array',
+      description: "Le classement selon les familles de l'usine (CLASSEMENT DE L’USINE) ; vide si l'usine n'en a pas ou si rien ne le dit",
+      items: {
+        type: 'object',
+        properties: {
+          family: str('La famille, écrite comme dans la liste (« Département »)'),
+          values: strList('Ses valeurs pour cette instruction : dans une liste, seulement les siennes ; une valeur libre telle qu’écrite ou dite'),
+        },
+        required: ['family', 'values'],
+      },
+    },
     equipment: str('Équipement principal ; vide si inconnu'),
     frequency: str('Fréquence si dite (« une fois par mois ») ; vide sinon'),
     durationMin: num('Durée totale estimée en minutes ; 0 si inconnue'),

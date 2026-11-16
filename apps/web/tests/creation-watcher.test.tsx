@@ -23,7 +23,7 @@ const get = vi.fn(async (type: string, id: string) => {
   return doc ? structuredClone(doc) : null
 })
 vi.mock('@/components/providers/Session', () => ({
-  useSession: () => ({ data: { filter, get, patch: vi.fn() }, files: {}, ai: {}, profile: { userId: 'u1' }, displayName: 'Martin' }),
+  useSession: () => ({ data: { filter, get, patch: vi.fn() }, files: {}, ai: {}, profile: { userId: 'u1' }, displayName: 'Martin', org: { json_data: {} } }),
 }))
 vi.mock('@/hooks/queries', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/hooks/queries')>()), useStations: () => ({ data: [] }) }))
 

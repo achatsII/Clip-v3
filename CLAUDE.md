@@ -163,6 +163,16 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   sous la clé `instructions`). Les postes se regroupent en secteurs (`Station.area`) ; le numéro de
   document (`number`, « IT-0042 ») se donne à la première publication. Au poste, la liste lit la
   fiche des versions publiées (`Published.card`) ; l'instruction complète se lit à l'ouverture.
+- **Nomenclature** (toggle `nomenclature`, Réglages › Classement ; « La nomenclature de l'usine »,
+  `docs/architecture.md`) : chaque usine se donne ses familles d'étiquettes, une liste de valeurs ou
+  une valeur libre (département, machine, produit, BT…). Le classement (`Instruction.labels`) se range
+  en texte par famille, hors du contenu (pas de version), et la version publiée suit aussitôt
+  (`saveClassification`). L'IA le propose à la génération (`nomenclatureBlock`, champ `labels` du
+  schéma : rien à changer dans n8n) et à la demande (`classify`), sans rien inventer dans une liste
+  (`labelsFromAi`). Un poste prend aussi ses instructions par règle (`Station.rule` : OU dans une
+  famille, ET entre les familles) ; elle s'écrit dans `ruleStationIds` et dans `stationIds` de la
+  version publiée (`applyStationRule`), et toute requête « instructions d'un poste » passe par
+  `atStations`.
 - **Académie** (module ; toggle `academy`, feature `academy`), dans Équipe › Compétences : le
   parcours d'un poste = ses instructions publiées ; un superviseur (droit `approve`) valide sur le
   terrain, « qualifié » ou « peut former » (`clip_qualification`, un journal : la plus récente fait foi,

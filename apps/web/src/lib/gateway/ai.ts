@@ -39,6 +39,8 @@ export const AI_OPERATIONS = [
   'look_m',
   'look_l',
   'quiz',
+  // Le classement proposé à la demande, selon les familles de l'usine (toggle `nomenclature`).
+  'classify',
   'report_summary',
   'report_question',
 ] as const
