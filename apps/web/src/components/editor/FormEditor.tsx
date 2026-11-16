@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, GripVertical, ImageOff, Plus, TriangleAlert, Wrench } from 'lucide-react'
+import { Blocks, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, GripVertical, ImageOff, Plus, TriangleAlert, Wrench } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { CategoryIcon } from '@/components/icons'
 import { mediaThumb } from '@/components/media/MediaView'
@@ -378,6 +378,13 @@ function Outline({ p, addAtEnd = true }: { p: Inner; addAtEnd?: boolean }) {
       {addAtEnd && !p.readOnly && (
         <button type="button" onClick={p.onAddEnd} className="btn-press flex h-14 w-full items-center justify-center gap-2 rounded-[22px] border-2 border-dashed border-slate-300 text-sm font-black text-slate-500 hover:border-[var(--primary)] hover:text-[var(--primary)] dark:border-slate-600">
           <Plus className="h-4 w-4" /> {t.editor.form.addStep}
+        </button>
+      )}
+      {/* Les étapes qui reviennent partout (cadenassage, démarrage, EPI) : là où on ajoute une étape
+          (au téléphone, « Ajouter une étape » est dans la barre du bas ; le bloc, au bout de la liste). */}
+      {!p.readOnly && p.onInsertBlock && (
+        <button type="button" onClick={p.onInsertBlock} className="btn-press flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-900/5 hover:text-[var(--primary-strong)] dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-[var(--primary-light)]">
+          <Blocks className="h-4 w-4" /> {t.blocks.insert}
         </button>
       )}
     </nav>

@@ -222,7 +222,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (cadenassage, démarrage, EPI) dans une instruction marquée `block`, qui ne va à aucun poste
   (`src/lib/model/blocks.ts`). Dans une instruction, ses étapes sont des copies verrouillées
   (`Step.fromBlock`, identifiant `copyId`) ; publier le bloc republie les instructions à jour et
-  met à jour le brouillon des autres (`propagateBlock`).
+  met à jour le brouillon des autres (`propagateBlock`). « Insérer un bloc commun » se trouve à côté de
+  « Ajouter une étape » (liste de la Fiche, bande de « Comme au poste »), pas seulement dans le menu « … ».
 - **Formation** (toggle `training`) : 3 à 5 questions par instruction, préparées par l'IA (`quiz`,
   `src/lib/ai/quiz.ts`) et retouchées par l'auteur ; elles vivent dans le brouillon et se traduisent
   avec lui. Au poste, une personne nommée les passe à la fin ; réussie à 80 %, la trace s'écrit dans

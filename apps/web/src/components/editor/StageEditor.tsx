@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, MoreHorizontal, Plus, Radio, Sparkles, TriangleAlert, X } from 'lucide-react'
+import { Blocks, Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, MoreHorizontal, Plus, Radio, Sparkles, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { mediaThumb } from '@/components/media/MediaView'
 import { StepMediaArea } from '@/components/player/StepMediaArea'
@@ -71,6 +71,8 @@ export interface StageEditorProps {
   onInsertAfter: () => void
   /** Ajouter une étape à la fin (bande des étapes, première étape). */
   onAddEnd: () => void
+  /** Insérer un bloc commun à la fin, à côté de « Ajouter une étape » (toggle `sharedBlocks`) ; absent : pas offert. */
+  onInsertBlock?: () => void
   onSourceAdded: (s: Source) => void
   onMove: (dir: -1 | 1) => void
   onDuplicate: () => void
@@ -356,6 +358,11 @@ function StepStrip({ p }: { p: Inner }) {
         {!readOnly && (
           <button type="button" onClick={p.onAddEnd} aria-label={t.editor.stage.addAtEnd} title={t.editor.stage.addAtEnd} className="btn-press flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 text-slate-500 hover:border-[var(--primary)] hover:text-[var(--primary)] dark:border-slate-700">
             <Plus className="h-5 w-5" />
+          </button>
+        )}
+        {!readOnly && p.onInsertBlock && (
+          <button type="button" onClick={p.onInsertBlock} aria-label={t.blocks.insert} title={t.blocks.insert} className="btn-press flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 text-slate-500 hover:border-[var(--primary)] hover:text-[var(--primary)] dark:border-slate-700">
+            <Blocks className="h-5 w-5" />
           </button>
         )}
       </div>

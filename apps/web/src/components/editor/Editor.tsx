@@ -144,6 +144,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [celebrate, setCelebrate] = useState(false)
   // `?formation=1` (le parcours d'un poste, dans l'Académie) ouvre tout de suite les questions de formation.
   const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz' | 'makeBlock' | 'insertBlock'>(() => (params.get('formation') ? 'quiz' : null))
+  // Où un bloc commun s'insère : après l'étape choisie (menu « … »), ou à la fin (à côté de « Ajouter une étape »).
+  const [blockAtEnd, setBlockAtEnd] = useState(false)
   // La formation (toggle `training`) : les questions, et « il faut se re-former » à la publication.
   const trainingToggle = useToggle('training')
   const [retrain, setRetrain] = useState(false)
@@ -735,7 +737,17 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle || isBlock, hint: translations === 'locked' ? <LockBadge /> : undefined },
     // Les blocs communs : faire un bloc de quelques étapes (il se publie tout de suite), ou en insérer un.
     { label: t.blocks.make, icon: <Blocks className="h-4 w-4" />, onClick: () => gate(blocksEnt, 'shared_blocks', () => setDialog('makeBlock')), hidden: !blocksToggle || isBlock || readOnly || approval || !content.steps.some((s) => !s.fromBlock), hint: blocksEnt === 'locked' ? <LockBadge /> : undefined },
-    { label: t.blocks.insert, icon: <Blocks className="h-4 w-4" />, onClick: () => gate(blocksEnt, 'shared_blocks', () => setDialog('insertBlock')), hidden: !blocksToggle || isBlock || readOnly, hint: blocksEnt === 'locked' ? <LockBadge /> : undefined },
+    {
+      label: t.blocks.insert,
+      icon: <Blocks className="h-4 w-4" />,
+      onClick: () =>
+        gate(blocksEnt, 'shared_blocks', () => {
+          setBlockAtEnd(false)
+          setDialog('insertBlock')
+        }),
+      hidden: !blocksToggle || isBlock || readOnly,
+      hint: blocksEnt === 'locked' ? <LockBadge /> : undefined,
+    },
     // Les questions de formation : préparées par l'IA, retouchées ici (toggle `training`).
     { label: t.training.menu, icon: <GraduationCap className="h-4 w-4" />, onClick: () => setDialog('quiz'), hidden: !trainingToggle || isBlock || (readOnly && !content.quiz?.length), hint: content.quiz?.length ? <span className="text-xs font-black text-slate-400 tabular-nums">{content.quiz.length}</span> : undefined },
     { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history'), divider: true },
@@ -986,6 +998,14 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     onSelect: (id: string) => id && setSelected(id),
     onInsertAfter: () => insertAfter(idx),
     onAddEnd: () => insertAfter(steps.length - 1),
+    onInsertBlock:
+      blocksToggle && !isBlock && !readOnly
+        ? () =>
+            gate(blocksEnt, 'shared_blocks', () => {
+              setBlockAtEnd(true)
+              setDialog('insertBlock')
+            })
+        : undefined,
     onMove: moveStep,
     onDuplicate: duplicateStep,
     onDelete: deleteStep,
@@ -1083,7 +1103,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
             open={dialog === 'insertBlock'}
             onClose={() => setDialog(null)}
             content={content}
-            after={idx}
+            after={blockAtEnd ? content.steps.length - 1 : idx}
             onInserted={(next, title) => {
               const first = next.steps.find((s) => s.fromBlock && !content.steps.some((x) => x.id === s.id))
               update(next)
