@@ -142,7 +142,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [renewMonths, setRenewMonths] = useState<number | null>(() => renewalMonthsOf(instr, org.json_data))
   const [renewedAt, setRenewedAt] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(false)
-  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz' | 'makeBlock' | 'insertBlock'>(null)
+  // `?formation=1` (le parcours d'un poste, dans l'Académie) ouvre tout de suite les questions de formation.
+  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz' | 'makeBlock' | 'insertBlock'>(() => (params.get('formation') ? 'quiz' : null))
   // La formation (toggle `training`) : les questions, et « il faut se re-former » à la publication.
   const trainingToggle = useToggle('training')
   const [retrain, setRetrain] = useState(false)

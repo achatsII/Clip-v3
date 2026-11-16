@@ -220,7 +220,7 @@ export const instructionsAtStation = (data: DataApi, stationId: string) => instr
 export function trainingCatalog(data: DataApi): Promise<Doc<Instruction>[]> {
   return data.filter<Instruction>(T.instruction, {
     filter: { $and: [live, { 'json_data.publishedVersion': { $gt: 0 } }, { 'json_data.publishedQuiz': { $gt: 0 } }] },
-    projection: { 'json_data.title': 1, 'json_data.stationIds': 1, 'json_data.status': 1, 'json_data.publishedVersion': 1, 'json_data.publishedQuiz': 1, 'json_data.trainingVersion': 1 },
+    projection: { 'json_data.title': 1, 'json_data.stationIds': 1, 'json_data.ruleStationIds': 1, 'json_data.status': 1, 'json_data.publishedVersion': 1, 'json_data.publishedQuiz': 1, 'json_data.trainingVersion': 1 },
     limit: 10_000,
   })
 }

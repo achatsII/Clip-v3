@@ -239,6 +239,11 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Module Académie (en option) : qualifier chaque personne poste par poste (« Valider sur le terrain »,
   « Qualifié » ou « Peut former »), la revalidation tous les 6, 12 ou 24 mois, la couverture par quart, le
   registre en CSV et l'attestation à imprimer. Ce n'est pas un système de cours.
+- Dans l'Académie, « Former quelqu'un » : un poste, des personnes, une date. « À faire » suit chacun jusqu'à sa
+  validation, le plus pressé d'abord (« En retard », « Prêt à valider ») ; une formation en retard s'affiche
+  dans « À voir ». Les postes habituels d'une personne comptent sans rien faire. « Parcours » montre chaque
+  poste, ses instructions et leurs questions, avec « Préparer les questions » ; un guide en trois gestes
+  explique le tout.
 
 ## 10. Relevés, registre, retours et rapports
 - Relevés : une étape peut demander une mesure (unité et limites), un oui ou non, un choix, un texte (numéro de

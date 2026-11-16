@@ -13,6 +13,7 @@ export const inbox = {
     deviation: 'Écart relevé',
     request: 'Demandé',
     requalify: 'À revalider',
+    lateTraining: 'Formation en retard',
   },
   by: (name: string) => `par ${name}`,
   /** Une demande à l’administrateur : ce qui ouvrirait la fonction. */

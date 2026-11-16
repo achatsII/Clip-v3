@@ -14,6 +14,7 @@ export const inbox: typeof Fr = {
     deviation: 'Deviation recorded',
     request: 'Requested',
     requalify: 'To revalidate',
+    lateTraining: 'Late training',
   },
   by: (name: string) => `by ${name}`,
   comesWith: (name: string) => `With ${name}`,

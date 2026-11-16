@@ -103,7 +103,8 @@ export interface Matrix {
 export function buildMatrix(operators: Doc<Operator>[], stations: Doc<Station>[], instructions: Doc<Instruction>[], trainings: Doc<Training>[]): Matrix {
   const learn = instructions.filter((d) => d.json_data.publishedVersion && (d.json_data.publishedQuiz ?? 0) > 0 && d.json_data.status !== 'archived')
   const byStation = new Map<string, Doc<Instruction>[]>()
-  for (const d of learn) for (const s of d.json_data.stationIds) byStation.set(s, [...(byStation.get(s) ?? []), d])
+  // Les postes de l'instruction, choisis ou pris par leur règle (nomenclature) : le même parcours au poste.
+  for (const d of learn) for (const s of new Set([...d.json_data.stationIds, ...(d.json_data.ruleStationIds ?? [])])) byStation.set(s, [...(byStation.get(s) ?? []), d])
   const cols = stations.filter((s) => byStation.has(s._id)).map((s) => ({ id: s._id, name: s.json_data.name }))
   // La meilleure version validée par personne et par instruction.
   const best = new Map<string, number>()

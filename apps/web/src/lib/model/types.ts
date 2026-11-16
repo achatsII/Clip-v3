@@ -772,6 +772,23 @@ export interface Qualification {
 }
 
 /**
+ * Une personne à former à un poste (`clip_assignment`, Académie) : un journal, où la plus récente
+ * ligne par personne et par poste fait foi ; `removed` la retire de « À faire ».
+ */
+export interface Assignment {
+  operatorId: string
+  operatorName: string
+  stationId: string
+  stationName: string
+  /** D'ici quand (jour, AAAA-MM-JJ) ; null : sans échéance. */
+  due: string | null
+  byId: string
+  byName: string
+  at: string
+  removed?: boolean
+}
+
+/**
  * Une demande à l'administrateur (`clip_request`, conseiller d'achat) : une personne qui ne peut pas
  * acheter voudrait une fonction. « À voir » la montre aux administrateurs 30 jours, ou jusqu'à ce
  * que l'usine l'ait.

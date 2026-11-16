@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Bell, ClipboardCheck, Gem, MessageSquare, RotateCcw, ShieldAlert, Stamp } from 'lucide-react'
+import { Bell, ClipboardCheck, Gem, GraduationCap, MessageSquare, RotateCcw, ShieldAlert, Stamp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
@@ -13,6 +13,7 @@ import { useLang, useMessages } from '@/lib/i18n'
 import { signingGroups } from '@/lib/model/approvals'
 import { useBilling, useEntitlement } from '@/lib/billing/state'
 import { dueQualifications, latestQualifications, listQualifications, QUALIFICATIONS_KEY } from '@/lib/model/academy'
+import { ASSIGNMENTS_KEY, latestAssignments, lateTrainings, listAssignments } from '@/lib/model/assignments'
 import { listOperators } from '@/lib/model/operators'
 import { listExecutions } from '@/lib/model/executions'
 import { recentRequests } from '@/lib/model/requests'
@@ -27,6 +28,7 @@ const ICONS: Record<InboxKind, ReactNode> = {
   deviation: <ClipboardCheck className="h-5 w-5" />,
   request: <Gem className="h-5 w-5" />,
   requalify: <RotateCcw className="h-5 w-5" />,
+  lateTraining: <GraduationCap className="h-5 w-5" />,
 }
 const TONES: Record<InboxKind, string> = {
   review: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200',
@@ -35,6 +37,7 @@ const TONES: Record<InboxKind, string> = {
   deviation: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200',
   request: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200',
   requalify: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200',
+  lateTraining: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200',
 }
 
 /** Ce qui a été vu, par personne et par appareil : sans visite, la dernière semaine compte. */
@@ -76,6 +79,18 @@ export function useInbox() {
   const quals = useQuery({ queryKey: QUALIFICATIONS_KEY, queryFn: () => listQualifications(data), enabled: academy, refetchInterval: 600_000 })
   const team = useQuery({ queryKey: ['operators'], queryFn: () => listOperators(data), enabled: academy })
   const due = useMemo(() => (quals.data && team.data ? dueQualifications(latestQualifications(quals.data), team.data, Date.now()) : []), [quals.data, team.data])
+  const assignments = useQuery({ queryKey: ASSIGNMENTS_KEY, queryFn: () => listAssignments(data), enabled: academy, refetchInterval: 600_000 })
+  // Les formations en retard : l'échéance passée, et pas (ou plus) qualifiée au poste selon le registre.
+  const late = useMemo(() => {
+    if (!assignments.data || !quals.data || !team.data) return []
+    const latest = latestQualifications(quals.data)
+    const now = Date.now()
+    const qualifiedAt = (op: string, st: string) => {
+      const q = latest.get(`${op}:${st}`)
+      return !!q && q.level !== 'none' && (!q.validUntil || Date.parse(q.validUntil) > now)
+    }
+    return lateTrainings(latestAssignments(assignments.data), qualifiedAt, team.data, now)
+  }, [assignments.data, quals.data, team.data])
   const [seenAt, setSeenAt] = useState(() => readSeen(profile.userId))
   const items = useMemo(
     () =>
@@ -90,9 +105,10 @@ export function useInbox() {
             requests: requests.data ?? [],
             granted: billing.state?.features,
             due,
+            late,
           })
         : [],
-    [on, profile.userId, instructions.data, feedback.data, executions.data, org.json_data, multiOn, can, canFeedback, buyer, requests.data, billing.state?.features, due],
+    [on, profile.userId, instructions.data, feedback.data, executions.data, org.json_data, multiOn, can, canFeedback, buyer, requests.data, billing.state?.features, due, late],
   )
   const markSeen = () => {
     const now = new Date().toISOString()

@@ -38,6 +38,8 @@ export const T = {
   request: 'clip_request',
   /** L'Académie : les validations sur le terrain (le registre des qualifications). */
   qualification: 'clip_qualification',
+  /** L'Académie : qui doit être formé à quel poste, et pour quand (un journal, le plus récent fait foi). */
+  assignment: 'clip_assignment',
   /**
    * Une génération qui tourne au serveur (branche clip-v3 de Job_start, n8n) : son état et le
    * résultat de l'IA. n8n l'écrit avec les droits de la personne qui l'a lancée ; l'app la relit.

@@ -911,6 +911,23 @@ n'est pas un LMS (pas de cours libres, de catalogue ni de palmarès, `VISION.md`
   l'attestation d'une personne s'imprime (`/equipe/attestation/[id]`, `buildAttestationHtml`).
 - **Sans le module**, l'onglet garde la matrice simple, avec une carte qui propose l'essai
   (`AcademyTeaser`, la fenêtre d'achat du module).
+- **Qui doit être formé** (`src/lib/model/assignments.ts`) : une personne doit tenir ses postes
+  habituels (`Operator.stationIds`) et ceux où on l'envoie se former. « Former quelqu'un » (un poste,
+  des personnes, une date ; `AssignDialog`) ou la fiche d'une case l'écrivent dans `clip_assignment`, un
+  journal où la plus récente ligne par personne et par poste fait foi (`removed` la retire).
+- **« À faire »**, la vue d'entrée (`todoList`, `AcademyTodo`) : chaque personne attendue à un poste et
+  pas (ou plus) qualifiée. En retard d'abord, puis par échéance, puis « Prêt à valider » (toutes les
+  questions du poste répondues, il reste le terrain). Une formation en retard paraît dans « À voir » à
+  qui valide (`lateTrainings`, type `lateTraining`).
+- **La matrice** met en avant ce qui est attendu ; une case sans attente (ni poste habituel, ni
+  formation demandée, ni rien de commencé) reste un point discret, qu'on touche pour l'affecter.
+- **Les parcours** (`AcademyPaths`) : chaque poste, ses instructions publiées et combien ont leurs
+  questions ; « Préparer les questions » ouvre celles de l'instruction dans l'éditeur (`?formation=1`).
+  Le parcours compte aussi les instructions qui vont au poste par leur règle (`ruleStationIds`).
+- **Le guide** « L'Académie en trois gestes » (`AcademyGuide`) dit où l'usine en est à chaque geste ;
+  « Compris » le replie, sur l'appareil.
+- Inspirée de l'Académie d'EcoClip pour le suivi (affectations, échéances, « à faire »), pas pour les
+  cours : EcoClip génère des parcours de leçons ; ici, l'instruction reste la leçon (`VISION.md`).
 
 ### Les rapports (toggle `reports`, `src/lib/reports`, pages `/rapports`)
 

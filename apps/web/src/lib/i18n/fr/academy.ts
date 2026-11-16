@@ -2,7 +2,7 @@ const num = (n: number) => n.toLocaleString('fr-CA')
 
 /** L’Académie (module) : qualifier chaque personne, poste par poste, et la garder qualifiée. */
 export const academy = {
-  views: { matrix: 'Qualifications', coverage: 'Couverture par quart' },
+  views: { todo: 'À faire', matrix: 'Qualifications', paths: 'Parcours', coverage: 'Couverture par quart' },
   /** L’état d’une personne à un poste. */
   levels: { none: 'Pas formé', learning: 'En formation', qualified: 'Qualifié', trainer: 'Peut former', expired: 'À revalider' },
   /** Une signature du registre. */
@@ -74,6 +74,7 @@ export const academy = {
     kind: 'À revalider',
     due: (station: string, date: string) => `${station} : avant le ${date}`,
     expired: (station: string, date: string) => `${station} : échue le ${date}`,
+    late: (station: string, date: string) => `${station} : formation prévue d’ici le ${date}`,
   },
   onlyDue: 'Ne montrer que les personnes à revalider',
   dueCount: (n: number) => (n ? `${num(n)} qualification${n > 1 ? 's' : ''} à revalider` : 'Toutes les qualifications sont à jour'),
@@ -83,4 +84,66 @@ export const academy = {
   withoutQuestions: 'Sans questions',
   empty: 'Aucun poste n’a encore d’instruction publiée',
   emptyHint: 'Le parcours d’un poste, ce sont ses instructions publiées : publiez-en une à un poste.',
+  /** Le guide : l’Académie en trois gestes (masquable, retenu sur l’appareil). */
+  guide: {
+    title: 'L’Académie en trois gestes',
+    steps: [
+      { title: 'Le parcours de chaque poste', text: 'Ce sont ses instructions publiées. Donnez-leur des questions : l’IA les prépare, vous les retouchez.' },
+      { title: 'Qui doit être formé', text: 'Un poste, des personnes, une date. Les postes habituels de chacun comptent déjà.' },
+      { title: 'Au poste, puis sur le terrain', text: 'La personne suit les instructions à la tablette et répond aux questions à la fin ; vous la validez en la voyant faire.' },
+    ],
+    pathsState: (n: number) => (n ? `${num(n)} instruction${n > 1 ? 's ont' : ' a'} des questions` : 'Aucune instruction n’a encore de questions'),
+    peopleState: (n: number) => (n ? `${num(n)} à former` : 'Personne à former pour l’instant'),
+    signedState: (n: number) => (n ? `${num(n)} validation${n > 1 ? 's' : ''} sur le terrain` : 'Aucune validation pour l’instant'),
+    seePaths: 'Voir les parcours',
+    hide: 'Compris',
+    show: 'Comment ça marche',
+  },
+  /** Envoyer des personnes se former à un poste. */
+  assign: {
+    open: 'Former quelqu’un',
+    title: 'Former quelqu’un',
+    station: 'Au poste',
+    pickStation: 'Choisissez un poste',
+    people: 'Qui',
+    due: 'D’ici le',
+    noDue: 'Sans date',
+    submit: (n: number) => (n > 1 ? `Former ces ${num(n)} personnes` : n ? 'Former cette personne' : 'Former'),
+    done: (n: number, station: string) => `${num(n)} personne${n > 1 ? 's' : ''} à former au poste ${station}`,
+    doneHint: 'Chacune paraît dans « À faire » jusqu’à sa validation sur le terrain.',
+    failed: 'L’affectation n’a pas été enregistrée',
+    qualified: 'Déjà qualifiée',
+    noPeople: 'Ajoutez d’abord les personnes de l’équipe.',
+  },
+  /** « À faire » : chaque personne à former, la plus pressée d’abord. */
+  todo: {
+    empty: 'Personne à former',
+    emptyHint: 'Dites qui doit être formé à quel poste : la liste suit chacun jusqu’à sa validation sur le terrain.',
+    progress: (done: number, total: number) => `${num(done)} instruction${done > 1 ? 's' : ''} sur ${num(total)} répondue${done > 1 ? 's' : ''}`,
+    noQuestions: 'Pas de questions à ce poste',
+    ready: 'Prêt à valider',
+    usual: 'Poste habituel',
+    due: (date: string) => `D’ici le ${date}`,
+    overdue: (date: string) => `En retard : prévu le ${date}`,
+    validate: 'Valider',
+    open: 'Voir',
+  },
+  /** Les parcours : chaque poste et ses instructions. */
+  paths: {
+    hint: 'Le parcours d’un poste, ce sont ses instructions publiées ; leurs questions se répondent au poste, à la fin. Touchez un poste pour voir ses instructions.',
+    summary: (total: number, withQuestions: number) => `${num(total)} instruction${total > 1 ? 's' : ''} · ${num(withQuestions)} avec questions`,
+    questions: (n: number) => `${num(n)} question${n > 1 ? 's' : ''}`,
+    prepare: 'Préparer les questions',
+    learners: (n: number) => `${num(n)} à former`,
+  },
+  /** Une personne à un poste : l’affectation. */
+  cell: {
+    assigned: (date: string | null) => (date ? `À former d’ici le ${date}` : 'À former'),
+    usual: 'C’est un de ses postes habituels.',
+    assign: 'Mettre à former',
+    unassign: 'Retirer de « À faire »',
+    assignedToast: 'Ajouté à « À faire »',
+    removedToast: 'Retiré de « À faire »',
+  },
+  notRequired: 'Non attendu',
 }

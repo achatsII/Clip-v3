@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Award, Check, CircleDashed, Clock, Download, GraduationCap, Hourglass, Printer, RotateCcw, X } from 'lucide-react'
+import { Award, Check, CircleDashed, Clock, Download, GraduationCap, Hourglass, Printer, RotateCcw, UserPlus, X } from 'lucide-react'
 import Link from 'next/link'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
@@ -11,17 +11,22 @@ import { Input, Label, Segmented, Select } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState, errorText, ErrorState, SkeletonRows } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { useStationInstructions, useStations, useTrainingCatalog } from '@/hooks/queries'
+import { useStationCounts, useStationInstructions, useStations, useTrainingCatalog } from '@/hooks/queries'
 import { nativeEnv } from '@/lib/bridge/native'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import type { Doc } from '@/lib/gateway/data'
 import { getLang, useMessages } from '@/lib/i18n'
 import { coverage, dueQualifications, latestQualifications, listQualifications, QUALIFICATIONS_KEY, registerCsv, revalidateMonths, REVALIDATE_CHOICES, signOff, standingOf, type CoverageCell, type Level, type ShiftKey, type Standing } from '@/lib/model/academy'
 import { coveredStations } from '@/lib/model/search'
+import { ASSIGNMENTS_KEY, assignmentOf, assignTraining, defaultDue, latestAssignments, listAssignments, removeAssignment, requiredOf, todoList, type TodoItem } from '@/lib/model/assignments'
 import { buildMatrix, listTrainings } from '@/lib/model/training'
-import type { Operator, QualificationLevel } from '@/lib/model/types'
+import type { Assignment, Operator, QualificationLevel } from '@/lib/model/types'
 import { cn, formatDate } from '@/lib/util/cn'
 import { csvDate, csvSeparator, downloadCsv } from '@/lib/util/csv'
+import { AcademyGuide } from './AcademyGuide'
+import { AcademyPaths, type PathRow } from './AcademyPaths'
+import { AcademyTodo, dayLabel } from './AcademyTodo'
+import { AssignDialog } from './AssignDialog'
 import { TRAININGS_KEY } from './SkillsMatrix'
 
 /** L'apparence de chaque niveau : une couleur, et toujours une icône ou un compte (jamais la couleur seule). */
@@ -63,7 +68,11 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
   const trainings = useQuery({ queryKey: TRAININGS_KEY, queryFn: () => listTrainings(data) })
   const quals = useQuery({ queryKey: QUALIFICATIONS_KEY, queryFn: () => listQualifications(data) })
   const covered = useQuery({ queryKey: ['instructions', 'covered-stations'], queryFn: () => coveredStations(data) })
-  const [view, setView] = useState<'matrix' | 'coverage'>('matrix')
+  const assignments = useQuery({ queryKey: ASSIGNMENTS_KEY, queryFn: () => listAssignments(data) })
+  const counts = useStationCounts()
+  // « À faire » d'abord : qui former, la plus pressée en tête.
+  const [view, setView] = useState<'todo' | 'matrix' | 'paths' | 'coverage'>('todo')
+  const [assigning, setAssigning] = useState(false)
   const [open, setOpen] = useState<{ op: Doc<Operator>; station: { id: string; name: string } } | null>(null)
   const [person, setPerson] = useState<Doc<Operator> | null>(null)
   const [cover, setCover] = useState<{ station: string; shift: ShiftKey; cell: CoverageCell } | null>(null)
@@ -73,18 +82,25 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
   const active = useMemo(() => operators.filter((o) => o.json_data.active !== false), [operators])
 
   const model = useMemo(() => {
-    if (!stations.data || !catalog.data || !trainings.data || !quals.data || !covered.data) return null
+    if (!stations.data || !catalog.data || !trainings.data || !quals.data || !covered.data || !assignments.data) return null
     const matrix = buildMatrix(active, stations.data, catalog.data, trainings.data)
     const latest = latestQualifications(quals.data)
+    const assigned = latestAssignments(assignments.data)
     const signedAt = new Set(quals.data.map((q) => q.json_data.stationId))
     // Les postes qui ont un parcours (une instruction publiée), ou déjà une validation.
     const cols = stations.data.filter((s) => covered.data.has(s._id) || signedAt.has(s._id)).map((s) => ({ id: s._id, name: s.json_data.name }))
     const standing = (op: string, st: string) => standingOf(matrix.cells[op]?.[st], latest.get(`${op}:${st}`), now)
-    return { latest, cols, standing, due: dueQualifications(latest, active, now) }
-  }, [stations.data, catalog.data, trainings.data, quals.data, covered.data, active, now])
+    const todo = todoList(active, cols, assigned, standing, now)
+    // Les questions de chaque poste : les instructions publiées qui en ont, par poste (choisi ou par règle).
+    const withQuestions = new Map<string, number>()
+    for (const d of catalog.data) for (const st of new Set([...d.json_data.stationIds, ...(d.json_data.ruleStationIds ?? [])])) withQuestions.set(st, (withQuestions.get(st) ?? 0) + 1)
+    const learners = new Map<string, number>()
+    for (const it of todo) learners.set(it.station.id, (learners.get(it.station.id) ?? 0) + 1)
+    return { latest, assigned, cols, standing, todo, withQuestions, learners, due: dueQualifications(latest, active, now) }
+  }, [stations.data, catalog.data, trainings.data, quals.data, covered.data, assignments.data, active, now])
 
-  const failed = [stations, catalog, trainings, quals, covered].find((q) => q.error)
-  if (failed) return <ErrorState error={failed.error} onRetry={() => void Promise.all([stations.refetch(), catalog.refetch(), trainings.refetch(), quals.refetch(), covered.refetch()])} />
+  const failed = [stations, catalog, trainings, quals, covered, assignments].find((q) => q.error)
+  if (failed) return <ErrorState error={failed.error} onRetry={() => void Promise.all([stations.refetch(), catalog.refetch(), trainings.refetch(), quals.refetch(), covered.refetch(), assignments.refetch()])} />
   if (!model) return <SkeletonRows />
   if (!model.cols.length) return <EmptyState icon={<GraduationCap className="h-7 w-7" />} title={t.empty} description={t.emptyHint} />
 
@@ -92,6 +108,14 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
   const rows = active.filter(query).filter((o) => !onlyDue || dueIds.has(o._id))
   const months = revalidateMonths(org.json_data)
   const cov = coverage(active, model.cols.map((c) => c.id), model.standing)
+  const canSign = can('approve', 'write')
+  const todo = model.todo.filter((it) => query(it.operator))
+  const pathRows: PathRow[] = model.cols.map((c) => ({ id: c.id, name: c.name, total: counts.data?.get(c.id) ?? 0, withQuestions: model.withQuestions.get(c.id) ?? 0, learners: model.learners.get(c.id) ?? 0 }))
+  const assignButton = canSign ? (
+    <Button variant="primary" icon={<UserPlus className="h-4 w-4" />} onClick={() => setAssigning(true)}>
+      {t.assign.open}
+    </Button>
+  ) : null
 
   function downloadRegister() {
     const levels: Record<QualificationLevel, string> = t.signatures
@@ -101,16 +125,24 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
 
   return (
     <div className="space-y-3">
+      <AcademyGuide withQuestions={catalog.data?.length ?? 0} toTrain={model.todo.length} signed={quals.data?.length ?? 0} onPaths={() => setView('paths')} />
       <div className="flex flex-wrap items-center gap-2">
-        <Segmented
-          size="sm"
-          value={view}
-          onChange={setView}
-          options={[
-            { value: 'matrix', label: t.views.matrix },
-            { value: 'coverage', label: t.views.coverage },
-          ]}
-        />
+        {/* Quatre vues : au téléphone, la rangée défile au lieu de pousser la page de côté. */}
+        <div className="no-scrollbar max-w-full min-w-0 overflow-x-auto">
+          <Segmented
+            size="sm"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'todo', label: `${t.views.todo}${model.todo.length ? ` · ${model.todo.length}` : ''}` },
+              { value: 'matrix', label: t.views.matrix },
+              { value: 'paths', label: t.views.paths },
+              { value: 'coverage', label: t.views.coverage },
+            ]}
+          />
+        </div>
+        {assignButton}
+        {view === 'matrix' && (
         <button
           type="button"
           aria-pressed={onlyDue}
@@ -122,6 +154,7 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
           {model.due.length ? <RotateCcw className="h-4 w-4" /> : <Check className="h-4 w-4" />} {t.dueCount(model.due.length)}
           {onlyDue && <X className="h-4 w-4" aria-hidden />}
         </button>
+        )}
         <span className="flex-1" />
         {/* Les outils d'administration restent à l'ordinateur : au téléphone, la matrice d'abord. */}
         {can('settings', 'write') && (
@@ -152,6 +185,10 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
         )}
       </div>
 
+      {view === 'todo' && <AcademyTodo items={todo} onOpen={(it: TodoItem) => setOpen({ op: it.operator, station: it.station })} action={assignButton} />}
+      {view === 'paths' && <AcademyPaths rows={pathRows} />}
+      {(view === 'matrix' || view === 'coverage') && (
+      <>
       <Surface>
         <table className="w-full border-separate border-spacing-0">
           <thead>
@@ -183,11 +220,13 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
                     </th>
                     {model.cols.map((s) => {
                       const st = model.standing(op._id, s.id)
-                      const label = t.cellLabel(op.json_data.name, s.name, t.levels[st.level])
+                      // Rien d'attendu ici (ni poste habituel, ni formation demandée, ni rien de commencé) : une case discrète.
+                      const quiet = st.level === 'none' && !requiredOf(op, s.id, model.assigned)
+                      const label = t.cellLabel(op.json_data.name, s.name, quiet ? t.notRequired : t.levels[st.level])
                       return (
                         <td key={s.id} className="border-t border-slate-900/5 px-1.5 py-2 text-center sm:px-2 dark:border-white/5">
-                          <button type="button" onClick={() => setOpen({ op, station: s })} aria-label={label} title={label} className={cn('btn-press relative mx-auto flex h-11 w-11 items-center justify-center rounded-2xl', LOOK[st.level])}>
-                            <LevelMark s={st} />
+                          <button type="button" onClick={() => setOpen({ op, station: s })} aria-label={label} title={label} className={cn('btn-press relative mx-auto flex h-11 w-11 items-center justify-center rounded-2xl', quiet ? 'text-slate-300 hover:bg-slate-900/5 dark:text-slate-600 dark:hover:bg-white/5' : LOOK[st.level])}>
+                            {quiet ? <span className="h-1.5 w-1.5 rounded-full bg-current" /> : <LevelMark s={st} />}
                             {(st.dueSoon || (st.retrain && (st.level === 'qualified' || st.level === 'trainer'))) && (
                               <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-white ring-2 ring-white dark:ring-[#151e2e]">
                                 <Clock className="h-3 w-3" strokeWidth={3} />
@@ -236,6 +275,12 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
             </span>
             {t.dueSoonLegend}
           </li>
+          <li className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+            <span className="flex h-6 w-6 items-center justify-center text-slate-300 dark:text-slate-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            </span>
+            {t.notRequired}
+          </li>
         </ul>
       ) : (
         <>
@@ -249,8 +294,21 @@ export function Academy({ operators, query }: { operators: Array<Doc<Operator>>;
           <p className="px-1 text-xs font-bold text-slate-400">{t.coverageHint}</p>
         </>
       )}
+      </>
+      )}
 
-      {open && <CellDialog op={open.op} station={open.station} standing={model.standing(open.op._id, open.station.id)} months={months} onClose={() => setOpen(null)} />}
+      {open && (
+        <CellDialog
+          op={open.op}
+          station={open.station}
+          standing={model.standing(open.op._id, open.station.id)}
+          months={months}
+          assignment={assignmentOf(model.assigned, open.op._id, open.station.id) ?? null}
+          usual={requiredOf(open.op, open.station.id, new Map()) === 'usual'}
+          onClose={() => setOpen(null)}
+        />
+      )}
+      <AssignDialog open={assigning} onClose={() => setAssigning(false)} stations={model.cols} operators={active} standing={model.standing} />
       {person && <PersonDialog op={person} cols={model.cols} standing={model.standing} onClose={() => setPerson(null)} />}
       <Modal open={!!cover} onClose={() => setCover(null)} title={cover ? t.coverTitle(cover.station, t.shifts[cover.shift]) : undefined}>
         {cover && !cover.cell.people.length ? (
@@ -281,7 +339,7 @@ function Surface({ children }: { children: ReactNode }) {
 }
 
 /** Une personne à un poste : où elle en est, le parcours du poste, et la validation sur le terrain. */
-function CellDialog({ op, station, standing, months, onClose }: { op: Doc<Operator>; station: { id: string; name: string }; standing: Standing; months: number; onClose: () => void }) {
+function CellDialog({ op, station, standing, months, assignment, usual, onClose }: { op: Doc<Operator>; station: { id: string; name: string }; standing: Standing; months: number; assignment: Assignment | null; usual: boolean; onClose: () => void }) {
   const t = useMessages().academy
   const tt = useMessages().training
   const { data, can, profile, displayName } = useSession()
@@ -293,8 +351,26 @@ function CellDialog({ op, station, standing, months, onClose }: { op: Doc<Operat
   const [level, setLevel] = useState<'qualified' | 'trainer'>(standing.level === 'trainer' ? 'trainer' : 'qualified')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const [due, setDue] = useState(() => assignment?.due ?? defaultDue())
   const canSign = can('approve', 'write')
   const q = standing.current
+  const qualified = standing.level === 'qualified' || standing.level === 'trainer'
+
+  /** Mettre à former à ce poste (ou changer l'échéance), ou retirer de « À faire ». */
+  async function setAssigned(on: boolean) {
+    setBusy(true)
+    try {
+      const by = { id: profile.userId, name: displayName }
+      if (on) await assignTraining(data, [{ id: op._id, name: op.json_data.name }], station, due || null, by)
+      else if (assignment) await removeAssignment(data, assignment, by)
+      await qc.invalidateQueries({ queryKey: ASSIGNMENTS_KEY })
+      toast.success(on ? t.cell.assignedToast : t.cell.removedToast)
+    } catch (e) {
+      toast.error(t.assign.failed, errorText(e))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   // Ce que la personne a validé de chaque instruction du poste (la meilleure version validée).
   const best = useMemo(() => {
@@ -344,6 +420,31 @@ function CellDialog({ op, station, standing, months, onClose }: { op: Doc<Operat
             {standing.retrain && <p className="text-sm font-black text-orange-700 dark:text-orange-300">{t.retrain}</p>}
           </div>
         </div>
+
+        {canSign && !qualified && (
+          <section className="rounded-[24px] bg-slate-900/[0.03] p-4 dark:bg-white/5">
+            {assignment ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="flex-1 font-black">{t.cell.assigned(assignment.due ? dayLabel(assignment.due) : null)}</p>
+                <button type="button" disabled={busy} onClick={() => void setAssigned(false)} className="btn-press h-11 rounded-2xl px-3 text-sm font-black text-slate-600 hover:bg-slate-900/5 dark:text-slate-300 dark:hover:bg-white/10">
+                  {t.cell.unassign}
+                </button>
+              </div>
+            ) : usual ? (
+              <p className="font-bold text-slate-600 dark:text-slate-300">{t.cell.usual}</p>
+            ) : (
+              <div className="flex flex-wrap items-end gap-2">
+                <div>
+                  <Label htmlFor="cell-due">{t.assign.due}</Label>
+                  <Input id="cell-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-auto" />
+                </div>
+                <Button loading={busy} icon={<UserPlus className="h-4 w-4" />} onClick={() => void setAssigned(true)}>
+                  {t.cell.assign}
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
 
         <section>
           <p className="label-caps text-slate-500">{t.path}</p>

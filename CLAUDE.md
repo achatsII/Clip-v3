@@ -207,8 +207,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   famille, ET entre les familles) ; elle s'écrit dans `ruleStationIds` et dans `stationIds` de la
   version publiée (`applyStationRule`), et toute requête « instructions d'un poste » passe par
   `atStations`.
-- **Académie** (module ; toggle `academy`, feature `academy`), dans Équipe › Compétences : le
-  parcours d'un poste = ses instructions publiées ; un superviseur (droit `approve`) valide sur le
+- **Académie** (module ; toggle `academy`, feature `academy`), dans Équipe › Compétences, en quatre
+  vues : « À faire » (d'entrée : qui former, le plus pressé d'abord, `todoList`), Qualifications,
+  Parcours, Couverture ; « Former quelqu'un » (un poste, des personnes, une date) écrit `clip_assignment`
+  (`src/lib/model/assignments.ts` ; les postes habituels comptent aussi), une formation en retard paraît
+  dans « À voir », et un guide en trois gestes dit où l'usine en est. Le parcours d'un poste = ses
+  instructions publiées (y compris par règle) ; un superviseur (droit `approve`) valide sur le
   terrain, « qualifié » ou « peut former » (`clip_qualification`, un journal : la plus récente fait foi,
   et c'est le registre) ; la qualification se revalide tous les 6, 12 ou 24 mois
   (`OrgSettings.academy`), rappelée dans « À voir » un mois avant ; couverture par quart, registre

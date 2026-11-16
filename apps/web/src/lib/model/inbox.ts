@@ -7,11 +7,12 @@ import { FEATURE_LABELS, featureLabel, type FeatureKey } from '../billing/catalo
 import { messages } from '../i18n/core'
 import { formatDate } from '../util/cn'
 import { DUE_SOON_DAYS, type Due } from './academy'
+import type { LateTraining } from './assignments'
 import type { Doc } from '../gateway/data'
 import { canSign } from './approvals'
 import type { ApprovalGroup, Execution, Feedback, Instruction, UpgradeRequest } from './types'
 
-export type InboxKind = 'review' | 'changes' | 'danger' | 'deviation' | 'request' | 'requalify'
+export type InboxKind = 'review' | 'changes' | 'danger' | 'deviation' | 'request' | 'requalify' | 'lateTraining'
 
 export interface InboxItem {
   id: string
@@ -39,6 +40,8 @@ export interface InboxInput {
   granted?: Record<string, boolean>
   /** L'Académie : les qualifications à revalider (échues, ou dans le mois). */
   due?: Due[]
+  /** L'Académie : les formations dont l'échéance est passée. */
+  late?: LateTraining[]
 }
 
 export function buildInbox(x: InboxInput): InboxItem[] {
@@ -76,6 +79,11 @@ export function buildInbox(x: InboxInput): InboxItem[] {
       const until = Date.parse(d.validUntil)
       const start = new Date(d.expired ? until : until - DUE_SOON_DAYS * 86400_000).toISOString()
       items.push({ id: `requalify:${d.operatorId}:${d.stationId}:${d.validUntil}`, kind: 'requalify', title: d.operatorName, text: (d.expired ? t.expired : t.due)(d.stationName, formatDate(d.validUntil)), at: start, href: `/equipe?vue=competences&q=${encodeURIComponent(d.operatorName)}` })
+    }
+    // Une formation en retard : « nouvelle » le lendemain de son échéance.
+    for (const d of x.late ?? []) {
+      const at = new Date(Date.parse(`${d.due}T23:59:59`) + 1000).toISOString()
+      items.push({ id: `late:${d.operatorId}:${d.stationId}:${d.due}`, kind: 'lateTraining', title: d.operatorName, text: t.late(d.stationName, formatDate(`${d.due}T12:00:00`)), at, href: `/equipe?vue=competences&q=${encodeURIComponent(d.operatorName)}` })
     }
   }
 
