@@ -43,6 +43,8 @@ export const AI_OPERATIONS = [
   'classify',
   // La boîte des figures d'une page de document, recadrées pour les étapes (toggle `documentFigures`).
   'figures',
+  // Le gabarit du PDF repris d'un exemple de l'usine (toggle `printTemplates`).
+  'print_template',
   'report_summary',
   'report_question',
 ] as const

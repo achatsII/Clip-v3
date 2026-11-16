@@ -1,3 +1,4 @@
+import type { PrintTemplate } from '../pdf/template'
 import type { Labels, Nomenclature, StationRule } from './nomenclature'
 import type { PreviousVersion, PublishedChanges } from './updates'
 /**
@@ -907,6 +908,8 @@ export interface OrgSettings {
   nomenclature?: Nomenclature
   logoUrl?: string | null
   color?: string | null
+  /** Le gabarit du PDF de l'usine (toggle `printTemplates`, `src/lib/pdf/template.ts`). */
+  print?: PrintTemplate
   /**
    * `none` : on publie directement ; `one` : une approbation suffit ; `all` : chaque groupe signe
    * (toggle `multiApproval` ; coupé, `all` se comporte comme `one`).

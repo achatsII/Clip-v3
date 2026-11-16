@@ -275,6 +275,11 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Chaque instruction s'exporte en PDF et en JSON, à tous les forfaits ; « Exporter tout (JSON) » réunit toutes
   les instructions et leurs versions dans un seul fichier (forfait Usine).
 - Le PDF suit la langue de l'instruction ; il porte sa version et rappelle qu'une copie imprimée peut être périmée.
+- « Mise en page » à côté de l'aperçu : les étapes en grand, un tableau (une ligne par étape, l'image à côté) ou
+  une seule page à afficher au poste, en portrait ou en paysage. Avec le logo et les couleurs de l'usine : ce que
+  montre l'en-tête, le pied de page de l'usine, le numéro, la version et la page en bas de chaque page, la
+  couleur, et une mise en page reprise d'une de ses instructions actuelles par l'IA. L'usine l'enregistre une
+  fois pour toutes ses instructions.
 
 ## Intégrations
 - Le scan de l'app mobile lit les codes QR et les codes-barres (Code 128, Code 39, EAN, UPC, DataMatrix) :

@@ -1081,6 +1081,31 @@ fichier pour les vidéos d'iPhone) et les anciens téléchargeaient encore.
   requêtes, huit téléchargements à la fois et la moitié des vidéos prêtes après 12 s ; avec le toggle,
   deux requêtes, et seule la vidéo à l'écran joue.
 
+### Le PDF et ses gabarits (toggle `printTemplates`, `src/lib/pdf/template.ts`)
+
+Le PDF s'imprime depuis l'aperçu (`/instructions/[id]/imprimer`) : un HTML autonome (`buildPrintHtml`),
+imprimé par le navigateur ou par la coquille (`print`). À côté de l'aperçu, « Mise en page » :
+
+- **Pour toutes les usines** : trois dispositions (« Étapes en grand », des cartes ; « Tableau », une
+  ligne par étape avec l'image à côté, la forme classique d'une instruction de travail ; « Une page »,
+  tout sur une feuille à afficher au poste), en portrait ou en paysage, sur du papier lettre.
+- **Avec le logo et les couleurs** (`brand_kit`) : ce que montre le cartouche (numéro, version et date,
+  approbation, poste, durée, code QR), le pied de page de l'usine sur chaque page, le numéro, la version
+  et la page en bas de chaque page (« IT-0042 · Version 4 · Page 2 de 4 », boîtes de marge `@page`), la
+  couleur du PDF, et « D'après un exemple » : une instruction actuelle de l'usine (PDF, Word converti ou
+  photo) que l'IA lit (usage `print_template`, `templateFromExample`) pour proposer sa mise en page. Sans
+  ce droit, un toucher ouvre les forfaits (`useGate`), et le PDF garde la disposition et l'orientation
+  (`withoutBrandKit`).
+- L'usine garde sa mise en page dans `OrgSettings.print` (« Enregistrer pour l'usine », qui règle
+  l'usine) ; chacun peut l'ajuster pour son impression sans rien enregistrer.
+- La feuille se compose à la largeur de la page (`#sheet`, `pageBox`) : l'aperçu montre le papier.
+  « Une page » mesure la feuille dans l'aperçu une fois chargée et la réduit (`zoom`, à la largeur de la
+  page) jusqu'à ce qu'elle tienne (`nextScale`, une ou deux passes, jamais sous 50 %) ; au-delà, elle
+  dit combien de pages il faut. Mesuré dans Chromium : douze étapes tiennent sur une page en paysage
+  (68 %) comme en portrait (74 %), en une passe.
+- La coquille iOS imprime sans les boîtes de marge (pas de numéro de page) ; le pied de page de fin de
+  document reste.
+
 ## 5. Compatibilité et pilotage
 
 - **Feature toggles** servis par `GET /api/config` (variables d'environnement du serveur web). Sans

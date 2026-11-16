@@ -130,6 +130,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   480p, 15 s au plus), téléchargé ou partagé par la feuille du téléphone (`saveFile`). Il sort une étape de
   CLIP ; le média de l'étape reste l'extrait (au poste, il joue déjà en boucle) : pas de « GIF » à la
   génération.
+- **Gabarits du PDF** (toggle `printTemplates`, `src/lib/pdf/template.ts`, « Mise en page » à côté de
+  l'aperçu d'impression) : pour tous, trois dispositions (étapes en grand, tableau, une page) en portrait ou
+  en paysage ; avec `brand_kit`, le cartouche, le pied de page de chaque page (numéro, version, page), la
+  couleur et « D'après un exemple » (l'IA lit une instruction de l'usine, usage `print_template`). L'usine
+  garde la sienne (`OrgSettings.print`) ; « Une page » se réduit pour tenir (`nextScale`, mesuré dans
+  l'aperçu).
 - **Parler pendant les photos** (toggle `photoVoice`) : le micro s'ouvre avec la caméra photo (une pastille
   le dit et le ferme ; le dernier geste se retient sur l'appareil). Un seul enregistrement par série,
   jamais coupé ; chaque photo garde son instant (`Source.voice`, `src/lib/media/photoVoice.ts` ; dans l'app,

@@ -184,6 +184,24 @@ export const imageTextSchema = {
   required: ['texts'],
 }
 
+/** Le gabarit d'impression vu sur un exemple de l'usine. */
+export const printTemplateSchema = {
+  type: 'object',
+  properties: {
+    layout: { type: 'string', enum: ['cards', 'table', 'onePage'], description: 'cards : des cartes en grille, l’image au-dessus du texte ; table : une ligne par étape, l’image à côté du texte ; onePage : toute l’instruction sur une seule page dense' },
+    orientation: { type: 'string', enum: ['portrait', 'landscape'] },
+    number: { type: 'boolean', description: 'L’en-tête montre un numéro de document' },
+    version: { type: 'boolean', description: 'L’en-tête montre une version, une révision ou une date' },
+    approvedBy: { type: 'boolean', description: 'L’en-tête montre qui a approuvé ou vérifié' },
+    stations: { type: 'boolean', description: 'L’en-tête montre le poste, la machine ou la ligne' },
+    duration: { type: 'boolean', description: 'L’en-tête montre une durée ou une fréquence' },
+    qr: { type: 'boolean', description: 'La page montre un code QR' },
+    footer: str('Le texte fixe du pied de page, mot pour mot, sans numéro de page ni date ; vide s’il n’y en a pas'),
+    color: str('La couleur principale du document (bandeaux, titres) en hexadécimal #RRGGBB ; vide si elle n’est pas nette ou si c’est du noir'),
+  },
+  required: ['layout', 'orientation', 'number', 'version', 'approvedBy', 'stations', 'duration', 'qr', 'footer', 'color'],
+}
+
 /** Les figures d'une page de document : leur boîte, dans l'ordre de la demande. */
 export const figuresSchema = {
   type: 'object',
