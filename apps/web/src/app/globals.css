@@ -6,7 +6,9 @@
 :root {
   --primary: #0078ff;
   --primary-strong: #0056d6;
-  --primary-soft: #e5f1ff;
+  /* La couleur de l'usine pose son ton pâle dans --brand-soft (theme.ts), jamais dans --primary-soft :
+     un style posé sur la racine battrait le mode sombre plus bas, et le fond resterait pâle. */
+  --primary-soft: var(--brand-soft, #e5f1ff);
   --primary-rgb: 0, 120, 255;
   --gradient-primary: linear-gradient(135deg, #00c6ff 0%, #0078ff 100%);
   --shadow-primary: 0 10px 20px rgba(0, 120, 255, 0.3);
@@ -28,7 +30,10 @@
 }
 
 :root.dark {
-  --primary-soft: rgba(0, 120, 255, 0.16);
+  /* Le fond teinté suit la primaire du moment (thème ou couleur de l'usine), translucide sur le sombre. */
+  --primary-soft: rgba(var(--primary-rgb), 0.16);
+  /* Le gris des textes secondaires : slate-500 n'a que 3,4:1 sur un fond sombre ; slate-400 se lit. */
+  --color-slate-500: var(--color-slate-400, #90a1b9);
   color-scheme: dark;
 }
 

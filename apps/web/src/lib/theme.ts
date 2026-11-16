@@ -61,10 +61,14 @@ function shade(rgb: [number, number, number], f: number): string {
   return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`
 }
 
-/** Applique la couleur de marque de l'usine aux tokens primaires (seulement avec le preset Océan). */
+/**
+ * Applique la couleur de marque de l'usine aux tokens primaires (seulement avec le preset Océan).
+ * Son ton pâle va dans `--brand-soft`, que `--primary-soft` reprend en mode clair seulement : posé
+ * directement sur la racine, il battrait le mode sombre et laisserait un fond pâle sous un texte blanc.
+ */
 export function applyBrandColor(color: string | null | undefined) {
   const root = document.documentElement
-  const props = ['--primary', '--primary-strong', '--primary-soft', '--primary-rgb', '--gradient-primary', '--shadow-primary']
+  const props = ['--primary', '--primary-strong', '--brand-soft', '--primary-soft', '--primary-rgb', '--gradient-primary', '--shadow-primary']
   const rgb = color ? hexToRgb(color) : null
   if (!rgb || root.dataset.preset !== 'ocean') {
     props.forEach((p) => root.style.removeProperty(p))
@@ -73,7 +77,8 @@ export function applyBrandColor(color: string | null | undefined) {
   const [r, g, b] = rgb
   root.style.setProperty('--primary', color as string)
   root.style.setProperty('--primary-strong', shade(rgb, -0.18))
-  root.style.setProperty('--primary-soft', shade(rgb, 0.9))
+  root.style.removeProperty('--primary-soft')
+  root.style.setProperty('--brand-soft', shade(rgb, 0.9))
   root.style.setProperty('--primary-rgb', `${r}, ${g}, ${b}`)
   root.style.setProperty('--gradient-primary', `linear-gradient(135deg, ${shade(rgb, 0.3)} 0%, ${color} 100%)`)
   root.style.setProperty('--shadow-primary', `0 10px 20px rgba(${r}, ${g}, ${b}, 0.3)`)

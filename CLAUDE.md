@@ -187,7 +187,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`useMessages()` dans un composant, `messages()` ailleurs ; aucun texte écrit dans un écran, aucun
   `'fr-CA'` en dur ; règles dans `docs/architecture.md` §7). Design system « verre » de
   `src/app/globals.css` (tokens, `glass-*`), une seule action principale par écran, trois états pour
-  toute donnée asynchrone, cibles d'au moins 44 px, mode sombre.
+  toute donnée asynchrone, cibles d'au moins 44 px, mode sombre (le gris `slate-500` y passe à
+  `slate-400`, et `--primary-soft` à une teinte translucide de la primaire).
 - **Des dizaines de personnes** : toute liste de personnes (ou qui peut grandir) a sa recherche dès
   8 éléments (`SearchField`, chaque mot cherché : `searchTokens`/`matchesTokens`,
   `src/lib/util/people.ts`) et des filtres simples où ils servent (quart, lieu, rôle, « à revalider ») ;
@@ -197,6 +198,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 
 ## Pièges déjà rencontrés
 
+- Un style posé sur la racine (la couleur de l'usine, `applyBrandColor`) bat la règle `:root.dark` : un
+  ton qui doit changer en sombre passe par sa propre variable (`--brand-soft`, que `--primary-soft`
+  reprend en clair seulement). Sinon, fond pâle et texte blanc en sombre (points clés illisibles,
+  novembre 2026). Le bleu foncé `text-[var(--primary-strong)]` a toujours sa couleur `dark:` dans la
+  même chaîne de classes (`tests/theme-dark.test.ts`).
 - La Gateway refuse l'envoi de fichiers au rôle `guest` d'un lien public (routes
   `files/upload/generate/presigned-url` et `files/upload/direct` : `user` et `admin` seulement) : une
   photo prise au poste passe par la base (`guestPhotoSaver`), jamais par `files.upload`.

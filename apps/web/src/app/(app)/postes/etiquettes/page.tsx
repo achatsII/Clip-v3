@@ -40,9 +40,9 @@ export default function LabelsPage() {
             <div key={s._id} className="print-avoid flex items-center gap-4 rounded-[24px] border-2 border-slate-900 bg-white p-4 text-slate-900">
               <QrCode value={linkUrl('station', s.json_data.linkId!)} size={150} className="shrink-0 p-0" />
               <div className="min-w-0">
-                {org.json_data.logoUrl ? <img src={org.json_data.logoUrl} alt="" className="mb-2 h-8 max-w-28 object-contain" /> : <p className="label-caps text-slate-500">{org.json_data.name}</p>}
+                {org.json_data.logoUrl ? <img src={org.json_data.logoUrl} alt="" className="mb-2 h-8 max-w-28 object-contain" /> : <p className="label-caps text-slate-600">{org.json_data.name}</p>}
                 <p className="text-2xl leading-tight font-black tracking-tight">{s.json_data.name}</p>
-                {s.json_data.code && <p className="text-lg font-black text-slate-500">{s.json_data.code}</p>}
+                {s.json_data.code && <p className="text-lg font-black text-slate-600">{s.json_data.code}</p>}
                 <p className="mt-2 text-sm font-bold">📱 {t.scan}</p>
               </div>
             </div>
