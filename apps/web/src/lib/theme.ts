@@ -20,7 +20,7 @@ export interface UiTheme {
  * mise en page racine, rendue par le serveur, qui ne charge pas les langues.
  */
 export const THEME_PRESETS: Array<{ value: ThemePreset; swatch: string }> = [
-  { value: 'ocean', swatch: 'linear-gradient(135deg,#8C7CFF,#4F46E5)' },
+  { value: 'ocean', swatch: 'linear-gradient(135deg,#7C5CFF,#3D6BF5)' },
   { value: 'bleu', swatch: 'linear-gradient(135deg,#00C6FF,#0078FF)' },
   { value: 'nature', swatch: 'linear-gradient(135deg,#3ee0a1,#10a96d)' },
   { value: 'crepuscule', swatch: 'linear-gradient(135deg,#ffb000,#ff6b00)' },

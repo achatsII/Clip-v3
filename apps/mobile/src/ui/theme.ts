@@ -7,7 +7,7 @@
 export const colors = {
   primary: '#5B4CF0',
   primaryStrong: '#4338CA',
-  gradientPrimary: ['#8C7CFF', '#4F46E5'] as const,
+  gradientPrimary: ['#7C5CFF', '#3D6BF5'] as const,
   danger: '#FF2B5E',
   gradientDanger: ['#FF2B5E', '#FF6B00'] as const,
   success: '#18c480',

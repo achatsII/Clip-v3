@@ -199,10 +199,14 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `slate-400`, `--primary-soft` à une teinte translucide de la primaire, et le texte teinté à
   `--primary-light`, qui suit le thème : jamais un bleu ciel codé en dur).
 - **Couleur et logo** (décision du 2026-11-16) : la couleur par défaut est l'indigo de CLIP, `#5B4CF0`
-  (`BRAND`, `src/lib/brand/colors.ts`, mêmes valeurs que `:root`, un test les compare). Le thème par
+  (`BRAND`, `src/lib/brand/colors.ts`, mêmes valeurs que `:root`, un test les compare) ; les boutons et
+  le logo prennent un dégradé de l'indigo vers le bleu (`#7C5CFF` → `#3D6BF5`), sans rose. Le thème par
   défaut garde son identifiant historique `ocean` (« Indigo ») ; le bleu II d'avant est le thème `bleu`
-  (« Océan ») d'Apparence. Le fond reste calme : des voiles légers d'indigo et de bleu froid, jamais de
-  rose ni de violet (un dégradé soutenu « fait princesse » au bureau ; un test le tient). La couleur de
+  (« Océan ») d'Apparence, et le dégradé violet vers bleu, celui de l'accent, le thème « Royal ». Chaque
+  thème garde un fond calme : des voiles de sa couleur à 12 % au plus, jamais de rose (un dégradé
+  soutenu « fait princesse » au bureau ; un test le tient), sans réglage pour l'enlever. Une personne
+  (`Avatar`, `src/components/ui/Avatar.tsx`) prend le ton pâle de la couleur : ni le dégradé du logo, ni
+  celui de l'accent, réservé à l'IA et aux modules. La couleur de
   l'usine ne compte que si ce n'est pas une couleur par défaut (`brandColorOf` : l'ancien `#0078FF`, que
   Réglages enregistrait tel quel, et le violet d'une heure ne comptent pas). Le logo est le 6, « La pile
   d'extraits », pris dans la banque des 10 propositions (`src/lib/brand/marks.ts`, `BRAND_MARK` ;

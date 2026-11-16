@@ -20,8 +20,9 @@ import { currentGrantId, isNotAdmin, orgApi, type Member } from '@/lib/gateway/o
 import { messages, num, useMessages } from '@/lib/i18n'
 import { CATEGORIES, CATEGORY_KEYS, ROLES, type Feature } from '@/lib/model/catalog'
 import type { CategoryKey, MemberRole, MemberSettings } from '@/lib/model/types'
-import { cn, initials } from '@/lib/util/cn'
+import { cn } from '@/lib/util/cn'
 import { SearchField } from '@/components/ui/SearchField'
+import { Avatar } from '@/components/ui/Avatar'
 import { matchesTokens, SEARCH_FROM, searchTokens } from '@/lib/util/people'
 
 const org$ = orgApi(gateway)
@@ -134,7 +135,7 @@ export function MembersTab() {
               return (
                 <li key={m.user_id} className="glass-card flex flex-col gap-3 rounded-[22px] p-3 sm:flex-row sm:items-center">
                   <span className="flex items-center gap-3 sm:flex-1">
-                    <span className="bg-gradient-accent flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-black text-white">{initials(name)}</span>
+                    <Avatar name={name} className="h-11 w-11 rounded-2xl text-sm" />
                     <span className="min-w-0">
                       <span className="block truncate text-[15px] font-black">
                         {name} {m.user_id === profile.userId && <span className="text-xs text-slate-400">{t.you}</span>}

@@ -30,13 +30,14 @@ import { Logo } from '@/components/Logo'
 import { AppearanceControls } from '@/components/settings/Appearance'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
+import { Avatar } from '@/components/ui/Avatar'
 import { callNative, hasCapability } from '@/lib/bridge/native'
 import { logout } from '@/lib/gateway/client'
 import { useLangVersion, useMessages } from '@/lib/i18n'
 import { canScan, clipPathFromScan, scanNative } from '@/lib/media/scan'
 import { T } from '@/lib/model/repo'
 import { ROLES } from '@/lib/model/catalog'
-import { cn, initials } from '@/lib/util/cn'
+import { cn } from '@/lib/util/cn'
 import { CreationWatcher } from '@/hooks/useCreations'
 import { RealtimeBridge } from '@/hooks/useRealtime'
 import { useBilling } from '@/lib/billing/state'
@@ -169,7 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Settings className="h-4 w-4" /> {t.shell.nav.settings}
           </Link>
           <div className="glass-card mt-3 flex items-center gap-3 rounded-[22px] p-3">
-            <span className="bg-gradient-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-black text-white">{initials(displayName)}</span>
+            <Avatar name={displayName} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-black text-slate-900 dark:text-white">{displayName}</span>
               <span className="block truncate text-xs font-bold text-slate-500">{ROLES[role].label}</span>
@@ -194,8 +195,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               </button>
             )}
             <InboxButton />
-            <button type="button" onClick={() => setMoreOpen(true)} className="bg-gradient-accent btn-press ml-1 flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-black text-white" aria-label={t.shell.account}>
-              {initials(displayName)}
+            <button type="button" onClick={() => setMoreOpen(true)} className="btn-press ml-1 flex h-11 w-11 items-center justify-center rounded-2xl" aria-label={t.shell.account}>
+              <Avatar name={displayName} />
             </button>
           </div>
         </div>

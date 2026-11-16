@@ -14,7 +14,7 @@
   /* Le texte teinté en mode sombre (dark:text-[var(--primary-light)]) : il suit le thème. */
   --primary-light: #c7d2fe;
   --primary-rgb: 91, 76, 240;
-  --gradient-primary: linear-gradient(135deg, #8c7cff 0%, #4f46e5 100%);
+  --gradient-primary: linear-gradient(135deg, #7c5cff 0%, #3d6bf5 100%);
   --shadow-primary: 0 10px 20px rgba(91, 76, 240, 0.3);
 
   --gradient-accent: linear-gradient(135deg, #9b2cfa 0%, #2c62fa 100%);
@@ -47,7 +47,8 @@
 .dark[data-preset='ocean'] {
   --primary: #8b80ff;
 }
-/* « Océan » : le bleu II, couleur par défaut jusqu'au 2026-11-16. */
+/* Chaque thème garde le même fond calme : des voiles de sa couleur à 12 % au plus, jamais de rose.
+   « Océan » : le bleu II, couleur par défaut jusqu'au 2026-11-16. */
 [data-preset='bleu'] {
   --primary: #0078ff;
   --primary-strong: #0056d6;
@@ -56,9 +57,9 @@
   --primary-rgb: 0, 120, 255;
   --gradient-primary: linear-gradient(135deg, #00c6ff 0%, #0078ff 100%);
   --shadow-primary: 0 10px 20px rgba(0, 120, 255, 0.3);
-  --orb-1: rgba(59, 130, 246, 0.3);
-  --orb-2: rgba(6, 182, 212, 0.3);
-  --orb-3: rgba(56, 189, 248, 0.2);
+  --orb-1: rgba(59, 130, 246, 0.1);
+  --orb-2: rgba(6, 182, 212, 0.09);
+  --orb-3: rgba(148, 163, 184, 0.12);
 }
 [data-preset='nature'] {
   --primary: #18c480;
@@ -68,9 +69,9 @@
   --primary-rgb: 24, 196, 128;
   --gradient-primary: linear-gradient(135deg, #3ee0a1 0%, #10a96d 100%);
   --shadow-primary: 0 10px 20px rgba(24, 196, 128, 0.3);
-  --orb-1: rgba(16, 185, 129, 0.3);
-  --orb-2: rgba(20, 184, 166, 0.3);
-  --orb-3: rgba(163, 230, 53, 0.2);
+  --orb-1: rgba(16, 185, 129, 0.1);
+  --orb-2: rgba(20, 184, 166, 0.09);
+  --orb-3: rgba(148, 163, 184, 0.12);
 }
 [data-preset='crepuscule'] {
   --primary: #ff6b00;
@@ -80,9 +81,9 @@
   --primary-rgb: 255, 107, 0;
   --gradient-primary: linear-gradient(135deg, #ffb000 0%, #ff6b00 100%);
   --shadow-primary: 0 10px 20px rgba(255, 107, 0, 0.3);
-  --orb-1: rgba(249, 115, 22, 0.3);
-  --orb-2: rgba(244, 63, 94, 0.25);
-  --orb-3: rgba(251, 191, 36, 0.2);
+  --orb-1: rgba(249, 115, 22, 0.09);
+  --orb-2: rgba(251, 191, 36, 0.09);
+  --orb-3: rgba(148, 163, 184, 0.12);
 }
 [data-preset='royal'] {
   --primary: #9b2cfa;
@@ -92,9 +93,9 @@
   --primary-rgb: 155, 44, 250;
   --gradient-primary: linear-gradient(135deg, #9b2cfa 0%, #2c62fa 100%);
   --shadow-primary: 0 10px 20px rgba(155, 44, 250, 0.3);
-  --orb-1: rgba(139, 92, 246, 0.3);
-  --orb-2: rgba(99, 102, 241, 0.3);
-  --orb-3: rgba(217, 70, 239, 0.2);
+  --orb-1: rgba(139, 92, 246, 0.1);
+  --orb-2: rgba(99, 102, 241, 0.09);
+  --orb-3: rgba(148, 163, 184, 0.12);
 }
 [data-preset='monochrome'] {
   --primary: #334155;
@@ -104,9 +105,9 @@
   --primary-rgb: 51, 65, 85;
   --gradient-primary: linear-gradient(135deg, #64748b 0%, #334155 100%);
   --shadow-primary: 0 10px 20px rgba(51, 65, 85, 0.3);
-  --orb-1: rgba(100, 116, 139, 0.25);
-  --orb-2: rgba(148, 163, 184, 0.25);
-  --orb-3: rgba(203, 213, 225, 0.2);
+  --orb-1: rgba(100, 116, 139, 0.1);
+  --orb-2: rgba(148, 163, 184, 0.1);
+  --orb-3: rgba(203, 213, 225, 0.12);
 }
 .dark[data-preset='monochrome'] {
   --primary: #94a3b8;

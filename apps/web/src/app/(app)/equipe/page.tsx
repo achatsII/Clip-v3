@@ -15,6 +15,7 @@ import { EmptyState, ErrorState, errorText, SkeletonRows } from '@/components/ui
 import { SearchField } from '@/components/ui/SearchField'
 import { PageHeader } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
+import { Avatar } from '@/components/ui/Avatar'
 import { Academy, AcademyTeaser } from '@/components/team/Academy'
 import { useEntitlement } from '@/lib/billing/state'
 import { SkillsMatrix } from '@/components/team/SkillsMatrix'
@@ -28,7 +29,7 @@ import { usePublicConfig } from '@/lib/toggles'
 import { FALLBACK_TOGGLES } from '@/lib/toggleDefaults'
 import { codesSheet } from '@/lib/pdf/codesSheet'
 import { printHtml } from '@/lib/pdf/print'
-import { cn, formatDate, initials } from '@/lib/util/cn'
+import { cn, formatDate } from '@/lib/util/cn'
 import { matchesTokens, SEARCH_FROM, searchTokens } from '@/lib/util/people'
 import { mapPool } from '@/lib/util/pool'
 
@@ -202,7 +203,7 @@ export default function TeamPage() {
               const meta = [op.shift ? t.shifts[op.shift] : null, op.team, ...op.stationIds.map((id) => stationName.get(id)).filter(Boolean)].filter(Boolean).join(' · ')
               return (
                 <div key={o._id} className="glass-card relative flex items-center gap-3 rounded-[24px] p-3 has-[[aria-expanded=true]]:z-20">
-                  <span className="bg-gradient-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-black text-white">{initials(op.name)}</span>
+                  <Avatar name={op.name} className="h-12 w-12 rounded-2xl text-base" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{op.name}</span>
                     <span className="block truncate text-xs font-bold text-slate-500">

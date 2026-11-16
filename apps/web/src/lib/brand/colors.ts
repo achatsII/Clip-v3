@@ -12,9 +12,9 @@ export const BRAND = {
   /** Le texte teinté en mode sombre (étiquettes, entrée active du menu). */
   light: '#C7D2FE',
   rgb: '91, 76, 240',
-  /** Le dégradé des actions principales et des icônes, à 135°. */
-  from: '#8C7CFF',
-  to: '#4F46E5',
+  /** Le dégradé des actions principales et des icônes, à 135° : de l'indigo vers le bleu, sans rose. */
+  from: '#7C5CFF',
+  to: '#3D6BF5',
   /** En mode sombre, l'indigo s'éclaircit pour se lire en texte (3,3:1 sinon). */
   darkPrimary: '#8B80FF',
 } as const
