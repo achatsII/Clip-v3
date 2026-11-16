@@ -12,6 +12,8 @@ export const instructions = {
     searchByVoice: 'Chercher en parlant',
     clear: 'Effacer',
     scope: { mine: 'Pour moi', all: 'Tout' },
+    /** Ce que fait le toucher d'une carte : modifier le brouillon, ou lire la version publiée. */
+    mode: { edit: 'Modifier', read: 'Lire' },
     filters: { all: 'Toutes', published: 'Publiées', draft: 'Brouillons', review: 'À approuver', renew: 'À revoir' },
     tiles: 'Tuiles',
     rows: 'Liste',

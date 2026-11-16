@@ -13,6 +13,7 @@ export const instructions: typeof Fr = {
     searchByVoice: 'Search by voice',
     clear: 'Clear',
     scope: { mine: 'For me', all: 'All' },
+    mode: { edit: 'Edit', read: 'Read' },
     filters: { all: 'All', published: 'Published', draft: 'Drafts', review: 'To approve', renew: 'To review' },
     tiles: 'Tiles',
     rows: 'List',

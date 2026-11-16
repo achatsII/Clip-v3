@@ -394,14 +394,14 @@ function FormCanvas(p: Inner) {
     panel.current?.scrollTo({ top: 0 })
   }, [shown])
   return (
-    <div className={cn('fixed inset-y-0 left-0 z-40 flex flex-col bg-slate-50 dark:bg-slate-950', p.agentOpen ? 'right-[424px]' : 'right-0')} role="region" aria-label={t.editor.stage.region}>
+    <div className="fixed inset-0 z-40 flex flex-col bg-slate-50 dark:bg-slate-950" role="region" aria-label={t.editor.stage.region}>
       <EditorHeader wide top={p.top} readOnly={p.readOnly} history={p.history} badge={p.badge} assist={p.pane === 'step' && p.step && !p.step.fromBlock ? p.assist : null} showAssist onAssistant={p.onAssistant} agentOpen={p.agentOpen} />
       <div className="flex min-h-0 flex-1">
         <aside className="w-[300px] shrink-0 overflow-y-auto overscroll-contain border-r border-slate-900/5 bg-white/40 p-3 xl:w-[340px] dark:border-white/5 dark:bg-slate-900/40">
           <Outline p={p} />
         </aside>
         <div ref={panel} className="min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-3xl space-y-4 p-6 xl:p-8">
+          <div className="mx-auto max-w-3xl space-y-4 p-6 xl:max-w-6xl xl:p-8">
             {p.notices && <div className="space-y-2">{p.notices}</div>}
             <OpenPane p={p} />
           </div>

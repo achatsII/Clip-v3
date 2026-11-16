@@ -15,6 +15,7 @@ import {
   Lock,
   MessageCircleQuestion,
   Mic,
+  PenLine,
   RotateCcw,
   Send,
   Sparkles,
@@ -130,6 +131,8 @@ export interface PlayerProps {
    * « Mise à jour le … », les étapes marquées, et la version précédente à revoir en lecture.
    */
   update?: { publishedAt: string | null; changes?: PublishedChanges | null; previous?: PreviousVersion | null } | null
+  /** Dans l'app, pour qui rédige : « Modifier » ouvre l'éditeur (on sait toujours si on lit ou si on modifie). */
+  onEdit?: () => void
 }
 
 function deviceId(): string {
@@ -146,7 +149,7 @@ function deviceId(): string {
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false, update } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false, update, onEdit } = props
   const who = { operatorId: operator?.id ?? null, operatorName: operator?.name ?? null }
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
@@ -435,6 +438,11 @@ export function Player(props: PlayerProps) {
             </button>
           )}
           {showBranding && branding?.logoUrl && <img src={branding.logoUrl} alt={branding.orgName} className="hidden h-9 max-w-28 object-contain sm:block" />}
+          {onEdit && (
+            <button type="button" onClick={onEdit} className="btn-press glass-card flex h-12 shrink-0 items-center gap-2 rounded-2xl px-3 text-sm font-black">
+              <PenLine className="h-5 w-5" /> <span className="hidden sm:inline">{t.edit}</span>
+            </button>
+          )}
           {sectionsOn && index >= 0 && index < total ? (
             // Le titre et « Étape 3 sur 12 » ouvrent le sommaire : toute la zone se touche.
             <button type="button" onClick={() => setSummaryOpen(true)} aria-label={t.openSummary} title={t.openSummary} className="btn-press min-w-0 flex-1 rounded-2xl px-1 py-1 text-left hover:bg-slate-900/5 dark:hover:bg-white/5">

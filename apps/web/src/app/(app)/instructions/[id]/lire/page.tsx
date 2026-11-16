@@ -75,6 +75,8 @@ export default function ReadInstructionPage() {
     canRecord: !preview,
     recorder: { id: session.profile.userId, name: session.displayName },
     update: preview || !published.data ? null : { publishedAt: published.data.json_data.publishedAt, changes: published.data.json_data.changes, previous: published.data.json_data.previous },
+    // On lit la version publiée ; qui rédige passe à l'éditeur d'un toucher.
+    onEdit: !preview && session.can('instructions', 'write') ? () => router.push(`/instructions/${id}`) : undefined,
   }
   if (editable) return <PreviewEditing key={id} doc={doc} player={player} />
   return <Player content={content} {...player} />

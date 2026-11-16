@@ -123,7 +123,13 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   rejoint la section où on la lâche, `placeStep`), retenues sur l'appareil
   (`clip_pref_editor_view` ; sans choix, la fiche au bureau, le poste au téléphone). Une fonction
   nouvelle de l'éditeur existe dans les deux. L'Aperçu (l'œil) est le lecteur du poste, pas une vue.
-  En-tête commun : `src/components/editor/EditorBar.tsx`. Au téléphone, glisser change d'étape comme au
+  En-tête commun : `src/components/editor/EditorBar.tsx`. L'assistant flotte par-dessus l'éditeur, dans
+  le coin, sans le tasser, et se réduit en pastille ; au bureau large (≥ 1280 px), la Fiche va sur deux
+  colonnes (ce qu'on écrit à gauche, ce qu'on montre et relève à droite).
+- **Lire ou modifier** (`src/lib/ui/libraryMode.ts`) : dans la bibliothèque, qui rédige choisit ce que
+  fait le toucher d'une carte (« Modifier » ou « Lire », retenu sur l'appareil, `clip_pref_library_mode`) ;
+  « Lire » ouvre la version publiée (`/instructions/[id]/lire`), avec « Modifier » dans son en-tête.
+  Qui ne rédige pas lit toujours la version publiée : `/instructions/[id]` l'y envoie. Au téléphone, glisser change d'étape comme au
   poste (toggle `editorSwipe`, `src/lib/ui/swipe.ts`) : sur un champ qu'on n'écrit pas aussi, jamais
   clavier ouvert, depuis une vidéo, une rangée qui défile ou par un appui long.
 - **La lecture au téléphone** (toggle `phoneReader`) : le média à ses vraies proportions, qui cède au

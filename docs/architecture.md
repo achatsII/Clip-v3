@@ -723,6 +723,15 @@ Aucun écran ne lit la bibliothèque entière : à des milliers d'instructions, 
   complète, traductions comprises, se lit à l'ouverture. « Tout voir » et la recherche (deux lettres
   et plus) cherchent au serveur, dans la portée du lien, une page à la fois.
 
+### Lire ou modifier (`src/lib/ui/libraryMode.ts`)
+
+Une personne qui rédige consulte aussi : la bibliothèque dit ce que fait le toucher d'une carte.
+« Modifier » ouvre le brouillon dans l'éditeur ; « Lire » ne montre que les instructions publiées et
+ouvre la version publiée dans le lecteur du poste (`/instructions/[id]/lire`), qui porte « Modifier »
+dans son en-tête. Le choix se retient sur l'appareil ; un code scanné qui ne trouve qu'une
+instruction l'ouvre de la même façon. Qui ne rédige pas (rôle lecteur) lit toujours : la page de
+l'éditeur l'envoie à la lecture dès que l'instruction est publiée.
+
 ### Les mises à jour vues par l'opérateur (toggle `operatorUpdates`, `src/lib/model/updates.ts`)
 
 Une instruction republiée le dit au poste, sans qu'on aille la chercher.

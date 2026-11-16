@@ -256,11 +256,12 @@ export function AgentPanel({
   }
 
   if (minimized) {
+    // Réduit : une pastille en bas (au bureau, dans le coin) ; l'éditeur reste tout entier visible.
     return (
-      <div className={cn('kb-bottom pb-safe fixed inset-x-0 bottom-0 px-3 pb-3 lg:hidden', bubble ? 'z-[60]' : 'z-50')}>
-        <button type="button" onClick={() => setMinimized(false)} className="glass-float flex h-14 w-full items-center gap-3 rounded-full px-4 text-left">
-          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[var(--primary)]" />
-          <span className="min-w-0 flex-1 truncate text-sm font-black">{current?.label ?? t.editorTools.agent.busy}</span>
+      <div className={cn('kb-bottom pb-safe fixed inset-x-0 bottom-0 px-3 pb-3 lg:inset-x-auto lg:right-6 lg:bottom-6 lg:px-0 lg:pb-0', bubble ? 'z-[60]' : 'z-50')}>
+        <button type="button" onClick={() => setMinimized(false)} aria-label={t.editorTools.agent.title} className="glass-float flex h-14 w-full items-center gap-3 rounded-full px-4 text-left lg:w-[320px]">
+          {busy ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[var(--primary)]" /> : <Sparkles className="h-5 w-5 shrink-0 text-[var(--primary)]" />}
+          <span className="min-w-0 flex-1 truncate text-sm font-black">{busy ? (current?.label ?? t.editorTools.agent.busy) : t.editorTools.agent.title}</span>
           <ChevronUp className="h-5 w-5 shrink-0 text-slate-400" />
         </button>
       </div>
@@ -272,7 +273,8 @@ export function AgentPanel({
       aria-label={t.editorTools.agent.label}
       // Ses champs gardent leur propre annulation : Ctrl+Z n'y annule pas l'instruction.
       data-own-undo=""
-      className={cn('kb-bottom fixed inset-x-0 bottom-0 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:max-h-none lg:w-[400px] lg:rounded-[32px] dark:border-white/10 dark:bg-slate-900', bubble ? 'z-[60] lg:top-6' : 'z-50 lg:top-6')}
+      // Au bureau, une fenêtre qui flotte par-dessus l'éditeur, dans le coin : rien n'est tassé, on voit ce qui change.
+      className={cn('kb-bottom fixed inset-x-0 bottom-0 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:h-[min(640px,calc(100dvh-7rem))] lg:max-h-none lg:w-[380px] lg:rounded-[32px] lg:shadow-[0_24px_60px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-slate-900', bubble ? 'z-[60]' : 'z-50')}
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-slate-900/5 px-4 py-3 dark:border-white/5">
         <span className="bg-gradient-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">
@@ -283,7 +285,7 @@ export function AgentPanel({
           <p className="truncate text-xs font-bold text-slate-500">{t.editorTools.agent.subtitle}</p>
         </div>
         {voiceToggle && !liveOn && <LiveButton locked={voiceRight === 'locked'} onClick={() => gate(voiceRight, 'voice_assistant', () => setLiveOn(true))} />}
-        <button type="button" onClick={() => setMinimized(true)} aria-label={t.editorTools.agent.minimize} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 lg:hidden">
+        <button type="button" onClick={() => setMinimized(true)} aria-label={t.editorTools.agent.minimize} title={t.editorTools.agent.minimize} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5">
           <ChevronDown className="h-5 w-5" />
         </button>
         <button type="button" onClick={() => { setLiveOn(false); setOpen(false) }} disabled={busy} aria-label={t.editorTools.agent.close} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 disabled:opacity-40">

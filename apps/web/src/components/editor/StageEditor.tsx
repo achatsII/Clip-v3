@@ -212,7 +212,7 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
       {p.sections && !!step.section && <SectionField steps={p.content.steps} index={index} readOnly={p.readOnly} naming={p.namingSection} onNamed={() => p.setNamingSection(false)} onSteps={p.onSteps} className="-mb-2" />}
       <div className="flex items-start gap-4">
         <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
-        <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label={t.editor.stage.titleLabel} placeholder={t.editor.stage.titlePlaceholder} className={cn(editable, 'min-w-0 flex-1 px-2 pt-1 leading-[1.05] font-black tracking-tighter hyphens-auto text-slate-900 dark:text-white', p.agentOpen ? 'text-3xl' : 'text-3xl sm:text-4xl')} />
+        <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label={t.editor.stage.titleLabel} placeholder={t.editor.stage.titlePlaceholder} className={cn(editable, 'min-w-0 flex-1 px-2 pt-1 leading-[1.05] font-black tracking-tighter hyphens-auto text-slate-900 dark:text-white', 'text-3xl sm:text-4xl')} />
         {menu && !readOnly && <StepMenu p={p} step={step} />}
       </div>
 
@@ -386,7 +386,7 @@ function StageCanvas(p: Inner) {
   }, [p, content.steps, index])
 
   return (
-    <div className={cn('fixed inset-y-0 left-0 z-40 flex flex-col bg-slate-50 dark:bg-slate-950', p.agentOpen ? 'right-[424px]' : 'right-0')} role="region" aria-label={t.editor.stage.region}>
+    <div className="fixed inset-0 z-40 flex flex-col bg-slate-50 dark:bg-slate-950" role="region" aria-label={t.editor.stage.region}>
       <EditorHeader wide top={top} readOnly={readOnly} history={p.history} badge={p.badge} assist={p.assist} showAssist={!!step && !step.fromBlock} onAssistant={p.onAssistant} agentOpen={p.agentOpen} progress={step ? (index + 1) / Math.max(1, total) : 0} />
       {p.notices && <div className="shrink-0 space-y-2 px-4 pt-3">{p.notices}</div>}
 

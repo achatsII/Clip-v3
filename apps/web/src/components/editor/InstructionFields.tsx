@@ -62,8 +62,9 @@ export function InstructionFields({ layout, content, onChange, readOnly, block, 
       </div>
     )
   }
+  // Au bureau large, les cartes vont sur deux colonnes (chacune entière), pour ne pas tout empiler.
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 xl:columns-2 xl:gap-4 xl:space-y-0 xl:[&>*]:mb-4 xl:[&>*]:break-inside-avoid">
       <FormCard icon={<FileText className="h-4 w-4" />} title={block ? t.blocks.infoTitle : tf.instruction}>
         <div className="space-y-4">{head}</div>
       </FormCard>
