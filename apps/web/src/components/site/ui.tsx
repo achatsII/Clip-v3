@@ -28,7 +28,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useId, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
+import { LogoMark, Wordmark as ClipWordmark } from '@/components/Logo'
 import type { SiteCta } from '@/lib/site/routes'
 
 /** Joindre des classes (le site n'importe pas `cn` de l'app, lié aux langues de l'outil). */
@@ -43,7 +44,7 @@ export function Eyebrow({ children, tone = 'primary', className }: { children: R
     <p
       className={cx(
         'label-caps inline-flex items-center gap-2',
-        tone === 'primary' && 'text-[var(--primary-strong)] dark:text-sky-300',
+        tone === 'primary' && 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]',
         tone === 'ai' && 'text-[#7a14d6] dark:text-violet-300',
         tone === 'light' && 'text-sky-200',
         className,
@@ -68,29 +69,16 @@ export function SectionHeading({ eyebrow, title, text, center, id }: { eyebrow?:
   )
 }
 
-/** Le logo de Clip (le même que `LogoMark` de l'app), un dégradé unique par instance. */
+/** Le logo de Clip : le même que `LogoMark` de l'app (banque `src/lib/brand/marks.ts`). */
 export function ClipMark({ className }: { className?: string }) {
-  const id = `site-mark-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
-  return (
-    <svg viewBox="0 0 64 64" className={cx('h-9 w-9 shrink-0', className)} aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#00C6FF" />
-          <stop offset="1" stopColor="#0078FF" />
-        </linearGradient>
-      </defs>
-      <rect width="64" height="64" rx="18" fill={`url(#${id})`} />
-      <path d="M41.5 22.5a13 13 0 1 0 0 19" fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round" />
-      <circle cx="44" cy="32" r="4" fill="#fff" />
-    </svg>
-  )
+  return <LogoMark className={className || 'h-9 w-9'} />
 }
 
 export function Wordmark({ name, className }: { name: string; className?: string }) {
   return (
     <span className={cx('inline-flex items-center gap-2.5', className)}>
       <ClipMark />
-      <span className="text-xl font-black tracking-tighter text-slate-900 dark:text-white">{name}</span>
+      <ClipWordmark label={name} className="h-6 w-[39px] text-slate-900 dark:text-white" />
     </span>
   )
 }
@@ -176,7 +164,7 @@ export function CheckList({ items, className, tone = 'primary' }: { items: strin
           <span
             className={cx(
               'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
-              tone === 'light' ? 'bg-white/20' : 'bg-[var(--primary-soft)] text-[var(--primary-strong)] dark:text-sky-300',
+              tone === 'light' ? 'bg-white/20' : 'bg-[var(--primary-soft)] text-[var(--primary-strong)] dark:text-[var(--primary-light)]',
             )}
           >
             <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />

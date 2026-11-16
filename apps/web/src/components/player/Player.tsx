@@ -528,7 +528,7 @@ export function Player(props: PlayerProps) {
                 !step.media[0] ? cn('mx-auto w-full max-w-3xl', layout === 'legacy' ? 'pt-8 sm:pt-12' : 'flex-1 pt-6 sm:pt-12') : layout === 'legacy' ? 'lg:max-w-[560px] lg:overflow-y-auto' : layout === 'row' && 'max-w-[48%]',
               )}
             >
-              {sectionsOn && step.section && <p className="label-caps -mb-2 text-[var(--primary-strong)] dark:text-sky-300">{step.section}</p>}
+              {sectionsOn && step.section && <p className="label-caps -mb-2 text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{step.section}</p>}
               <div className={cn('flex items-start', layout === 'legacy' ? 'gap-4' : 'gap-3')}>
                 {/* Au téléphone, le numéro est aussi dans l'en-tête : la pastille se fait plus petite et laisse la place au titre. */}
                 <span className={cn('bg-gradient-primary shadow-primary flex shrink-0 items-center justify-center font-black text-white tabular-nums', layout === 'legacy' ? 'h-16 w-16 rounded-3xl text-3xl' : 'h-12 w-12 rounded-2xl text-2xl sm:h-16 sm:w-16 sm:rounded-3xl sm:text-3xl')}>{index + 1}</span>
@@ -547,7 +547,7 @@ export function Player(props: PlayerProps) {
               {step.text && <p className="text-xl leading-relaxed font-bold text-slate-700 sm:text-2xl dark:text-slate-200">{step.text}</p>}
               {!!step.keyPoints?.length && (
                 <div className="rounded-3xl bg-primary-soft p-4">
-                  <p className="label-caps mb-2 text-[var(--primary-strong)] dark:text-sky-300">{t.keyPoints}</p>
+                  <p className="label-caps mb-2 text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{t.keyPoints}</p>
                   <ul className="space-y-2">
                     {step.keyPoints.map((k) => (
                       <li key={k} className="flex items-start gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -656,7 +656,7 @@ export function Player(props: PlayerProps) {
           )}
           {sectionGroups(content.steps).map((g) => (
             <section key={g.start}>
-              {g.name && <p className="label-caps mb-1.5 px-1 text-[var(--primary-strong)] dark:text-sky-300">{g.name}</p>}
+              {g.name && <p className="label-caps mb-1.5 px-1 text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{g.name}</p>}
               <div className="grid gap-1.5">
                 {content.steps.slice(g.start, g.end).map((s, k) => {
                   const i = g.start + k
@@ -926,7 +926,7 @@ function DocumentView({ content, t, energyById, sections, records }: { content: 
       <Intro content={content} t={t} onStart={() => document.getElementById('doc-step-0')?.scrollIntoView({ behavior: 'smooth' })} />
       {content.steps.map((s, i) => (
         <div key={s.id} className="space-y-6">
-        {sections && s.section && (i === 0 || content.steps[i - 1].section !== s.section) && <h2 className="label-caps px-1 pt-2 text-base text-[var(--primary-strong)] dark:text-sky-300">{s.section}</h2>}
+        {sections && s.section && (i === 0 || content.steps[i - 1].section !== s.section) && <h2 className="label-caps px-1 pt-2 text-base text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{s.section}</h2>}
         <article id={`doc-step-${i}`} className="glass-panel overflow-hidden rounded-[32px] p-0">
           {s.media[0] && (
             <div className={cn('bg-slate-900', layoutOf(s) === 'focus' ? 'aspect-video' : 'aspect-[16/7]')}>

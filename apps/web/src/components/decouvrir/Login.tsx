@@ -112,7 +112,7 @@ export function DecouvrirLogin() {
             className={cn(
               'flex items-start gap-2.5 rounded-2xl px-4 py-3 text-sm font-bold',
               notice.tone === 'warning' && 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-200',
-              notice.tone === 'info' && 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-200',
+              notice.tone === 'info' && 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]',
               notice.tone === 'danger' && 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-200',
             )}
           >

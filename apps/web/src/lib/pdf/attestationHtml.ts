@@ -4,9 +4,10 @@
  * quand). Une page autonome : elle s'imprime telle quelle, par le navigateur ou par la coquille.
  */
 import type { QualificationLevel } from '../model/types'
+import { BRAND, brandColorOf } from '../brand/colors'
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
-const safeColor = (c: string | null | undefined) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : '#0078FF')
+const safeColor = (c: string | null | undefined) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : BRAND.primary)
 const safeUrl = (u: string | null | undefined) => (u && /^https:\/\//i.test(u) ? u : null)
 
 export interface AttestationRow {
@@ -29,7 +30,7 @@ export interface AttestationMeta {
 }
 
 export function buildAttestationHtml(m: AttestationMeta): string {
-  const color = safeColor(m.color)
+  const color = safeColor(brandColorOf(m.color))
   const logo = safeUrl(m.logoUrl)
   const rows = m.rows
     .map((r) => `<tr><td><b>${esc(r.stationName)}</b></td><td>${esc(m.texts.levels[r.level])}</td><td>${esc(r.byName)}</td><td>${esc(m.date(r.at))}</td><td>${esc(r.validUntil ? m.date(r.validUntil) : m.texts.noExpiry)}</td></tr>`)

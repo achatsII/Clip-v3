@@ -83,7 +83,7 @@ export function DailyBars({ days, label, unit }: { days: Array<{ date: string; v
                   onMouseLeave={() => setHover(null)}
                   onTouchStart={() => setHover(i)}
                 >
-                  <div className={cn('w-full max-w-6 rounded-t-[4px] bg-[#0078FF] transition-opacity dark:bg-[#1a85ff]', hover !== null && hover !== i && 'opacity-50')} style={{ height: d.value ? `${Math.max(2, (d.value / max) * 100)}%` : 0 }} />
+                  <div className={cn('w-full max-w-6 rounded-t-[4px] bg-[var(--primary)] transition-opacity', hover !== null && hover !== i && 'opacity-50')} style={{ height: d.value ? `${Math.max(2, (d.value / max) * 100)}%` : 0 }} />
                   {hover === i && (
                     <div className="pointer-events-none absolute bottom-full z-10 mb-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold whitespace-nowrap text-white shadow-lg dark:bg-white dark:text-slate-900">
                       {fmt(d.date)} · <span className="tabular-nums">{num(d.value)}</span> {unit}

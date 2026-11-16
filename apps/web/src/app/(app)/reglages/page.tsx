@@ -24,6 +24,7 @@ import { useMessages, type Messages } from '@/lib/i18n'
 import { compressImage } from '@/lib/media/image'
 import { listVersions } from '@/lib/model/repo'
 import { cleanPrefix, DEFAULT_PREFIX, everyInstruction, formatNumber } from '@/lib/model/search'
+import { BRAND, brandColorOf } from '@/lib/brand/colors'
 import { applyBrandColor } from '@/lib/theme'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { cn } from '@/lib/util/cn'
@@ -95,7 +96,7 @@ function PlantTab() {
   const brand = useEntitlement('brand_kit')
   const gate = useGate()
   const [name, setName] = useState(org.json_data.name)
-  const [color, setColor] = useState(org.json_data.color ?? '#0078FF')
+  const [color, setColor] = useState(brandColorOf(org.json_data.color) ?? BRAND.primary)
   const [uploading, setUploading] = useState(false)
   const input = useRef<HTMLInputElement>(null)
 
@@ -178,9 +179,9 @@ function PlantTab() {
               >
                 {t.apply}
               </Button>
-              {org.json_data.color && (
-                <Button size="sm" variant="ghost" onClick={() => void updateOrg({ color: null }).then(() => applyBrandColor(null))}>
-                  {t.defaultBlue}
+              {brandColorOf(org.json_data.color) && (
+                <Button size="sm" variant="ghost" onClick={() => void updateOrg({ color: null }).then(() => { setColor(BRAND.primary); applyBrandColor(null) })}>
+                  {t.defaultColor}
                 </Button>
               )}
             </div>
@@ -242,7 +243,7 @@ function AppearanceTab() {
   return (
     <Panel className="max-w-2xl">
       <h2 className="mb-4 text-xl font-black tracking-tight">{t.title}</h2>
-      <AppearanceControls brandColor={org.json_data.color} />
+      <AppearanceControls brandColor={brandColorOf(org.json_data.color)} />
       <div className="mt-8 flex items-start gap-3 rounded-[24px] bg-primary-soft p-4">
         <Smartphone className="mt-0.5 h-6 w-6 shrink-0 text-[var(--primary)]" />
         <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t.mobileNote}</p>

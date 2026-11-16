@@ -223,7 +223,7 @@ export function CompareTable({ lang }: { lang: SiteLang }) {
               {t.pricing.compare.feature}
             </th>
             {c.plans.map((p) => (
-              <th key={p.code} scope="col" className={cx('p-5 text-center text-base font-black', p.featured ? 'text-[var(--primary-strong)] dark:text-sky-300' : 'text-slate-900 dark:text-white')}>
+              <th key={p.code} scope="col" className={cx('p-5 text-center text-base font-black', p.featured ? 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-900 dark:text-white')}>
                 {planName(p.code, lang)}
               </th>
             ))}

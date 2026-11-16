@@ -5,6 +5,7 @@
  */
 import { escapeHtml } from '../pdf/print'
 import type { Block } from './catalog'
+import { BRAND } from '../brand/colors'
 
 export interface PrintMeta {
   orgName: string
@@ -31,7 +32,7 @@ export function reportHtml(blocks: Block[], m: PrintMeta): string {
   })
   return `<!doctype html><html lang="${e(m.lang)}"><head><meta charset="utf-8"><title>${e(m.title)}</title><style>
 @page{margin:14mm}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#0f172a;margin:0;font-size:12px}
-header{border-bottom:3px solid #0078FF;padding-bottom:10px;margin-bottom:14px}.org{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
+header{border-bottom:3px solid ${BRAND.primary};padding-bottom:10px;margin-bottom:14px}.org{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
 h1{font-size:22px;margin:4px 0}.q{color:#475569;margin:0}.period{color:#475569;margin:4px 0 0;font-weight:700}
 h2{font-size:15px;margin:18px 0 6px}.hint{color:#64748b;margin:0 0 6px}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.kpi{border:1px solid #e2e8f0;border-radius:10px;padding:8px}.kpi span{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#64748b}.kpi b{display:block;font-size:20px}.kpi i{font-style:normal;font-weight:800;margin-right:6px}.kpi small{color:#64748b}

@@ -1035,7 +1035,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
             <p className="flex items-start gap-2 font-medium text-slate-600 dark:text-slate-300">
               <Blocks className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" /> {t.blocks.publishImpact(usedBy.data ?? 0)}
             </p>
-            {propagation && <p className="mt-3 text-sm font-black text-[var(--primary-strong)] dark:text-sky-300" role="status">{t.blocks.propagating(propagation.done, propagation.total)}</p>}
+            {propagation && <p className="mt-3 text-sm font-black text-[var(--primary-strong)] dark:text-[var(--primary-light)]" role="status">{t.blocks.propagating(propagation.done, propagation.total)}</p>}
           </>
         ) : (
           <>

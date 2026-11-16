@@ -69,7 +69,7 @@ export function StepForm(p: StepFormProps) {
         <span className="bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl font-black text-white tabular-nums">{index + 1}</span>
         <div className="min-w-0 flex-1">
           <p className="label-caps truncate text-slate-500">{t.editor.step.of(index + 1, total)}</p>
-          {p.sections && step.section && <p className="label-caps truncate text-[var(--primary-strong)] dark:text-sky-300">{step.section}</p>}
+          {p.sections && step.section && <p className="label-caps truncate text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{step.section}</p>}
         </div>
         {!readOnly && (
           <div className="flex shrink-0 items-center" role="group" aria-label={t.editor.stage.stepActions}>

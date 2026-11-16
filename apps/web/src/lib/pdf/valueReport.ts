@@ -8,6 +8,7 @@
  */
 import { locale, messages } from '../i18n'
 import type { Roi } from '../stats/adoption'
+import { BRAND, brandColorOf } from '../brand/colors'
 
 export interface ValueReportProposal {
   planName: string
@@ -53,7 +54,7 @@ const esc = (s: unknown) =>
     .replace(/"/g, '&quot;')
 
 /** Une couleur de marque sûre dans du CSS ; sinon le bleu de CLIP. */
-const safeColor = (c?: string | null) => (c && /^#[0-9a-f]{3,8}$/i.test(c) ? c : '#0078FF')
+const safeColor = (c?: string | null) => (c && /^#[0-9a-f]{3,8}$/i.test(c) ? c : BRAND.primary)
 
 function tile(label: string, value: string, hint: string) {
   return `<div class="tile"><p class="eyebrow">${esc(label)}</p><p class="big">${esc(value)}</p><p class="hint">${esc(hint)}</p></div>`
@@ -63,7 +64,7 @@ export function buildValueReportHtml(r: ValueReport): string {
   // Les textes et les nombres dans la langue de l'outil, lus au moment de bâtir le dossier.
   const t = messages().stats.pdf
   const num = t.number
-  const color = safeColor(r.color)
+  const color = safeColor(brandColorOf(r.color))
   const p = r.proposal
   const tiles = [
     tile(t.views, num(r.views), t.viewsHint(r.completionRate)),

@@ -74,7 +74,7 @@ export function QuizDialog({ open, onClose, content, ai, readOnly, published, on
       <p className="font-medium text-slate-600 dark:text-slate-300">{t.intro}</p>
       {busy ? (
         <div className="mt-4 space-y-3" aria-busy="true">
-          <p className="text-sm font-black text-[var(--primary-strong)] dark:text-sky-300">{t.making}</p>
+          <p className="text-sm font-black text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{t.making}</p>
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-36 w-full rounded-3xl" />
           ))}
@@ -141,7 +141,7 @@ export function QuizDialog({ open, onClose, content, ai, readOnly, published, on
                 })}
               </ul>
               {!readOnly && q.choices.length < MAX_CHOICES && (
-                <button type="button" onClick={() => patch(q.id, { choices: [...q.choices, ''] })} className="btn-press flex min-h-11 items-center gap-2 rounded-2xl px-2 text-sm font-black text-[var(--primary-strong)] dark:text-sky-300">
+                <button type="button" onClick={() => patch(q.id, { choices: [...q.choices, ''] })} className="btn-press flex min-h-11 items-center gap-2 rounded-2xl px-2 text-sm font-black text-[var(--primary-strong)] dark:text-[var(--primary-light)]">
                   <Plus className="h-4 w-4" /> {t.addChoice}
                 </button>
               )}

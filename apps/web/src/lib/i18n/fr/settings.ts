@@ -33,7 +33,7 @@ export const settings = {
     color: 'Couleur principale',
     apply: 'Appliquer',
     colorApplied: 'Couleur appliquée',
-    defaultBlue: 'Bleu par défaut',
+    defaultColor: 'Couleur par défaut',
     /** Où tourne la génération par l'IA (toggle `serverGeneration`). */
     generationTitle: 'Génération par l’IA',
     generationDevice: 'Sur l’appareil',
@@ -233,7 +233,7 @@ export const settings = {
     dark: 'Sombre',
     system: 'Système',
     color: 'Couleur de l’interface',
-    brandColorNote: 'Avec « Océan », la couleur de votre usine remplace le bleu.',
+    brandColorNote: 'Avec « Violet », la couleur de votre usine remplace le violet.',
     mobileNote: 'Sur le plancher, l’app mobile CLIP filme en 720p et réduit les photos : des médias légers, envoyés même si le réseau coupe un instant.',
   },
   /** L'onglet Données : export et connexion. */

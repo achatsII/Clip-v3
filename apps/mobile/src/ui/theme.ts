@@ -1,12 +1,13 @@
 /**
  * Les tokens de la coquille, transposés de la direction « Glassmorphism Industriel Premium »
- * (skill ux-design-ii) : bleu II en dégradé pour l'action principale, verre sombre sur la
+ * (skill ux-design-ii) : le violet de CLIP en dégradé pour l'action principale (2026-11-16 ; mêmes
+ * valeurs que BRAND du web, apps/web/src/lib/brand/colors.ts), verre sombre sur la
  * caméra, rayons généreux, gros boutons utilisables avec des gants.
  */
 export const colors = {
-  primary: '#0078FF',
-  primaryStrong: '#0056D6',
-  gradientPrimary: ['#00C6FF', '#0078FF'] as const,
+  primary: '#7C3AED',
+  primaryStrong: '#6D28D9',
+  gradientPrimary: ['#A36CFF', '#7C3AED'] as const,
   danger: '#FF2B5E',
   gradientDanger: ['#FF2B5E', '#FF6B00'] as const,
   success: '#18c480',
@@ -37,7 +38,7 @@ export const type = {
 }
 
 export const shadowPrimary = {
-  shadowColor: '#0078FF',
+  shadowColor: '#7C3AED',
   shadowOpacity: 0.3,
   shadowRadius: 12,
   shadowOffset: { width: 0, height: 8 },

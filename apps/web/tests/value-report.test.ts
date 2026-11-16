@@ -3,6 +3,7 @@ import type { Doc } from '@/lib/gateway/data'
 import type { Feedback, Instruction, Station, UsageEvent } from '@/lib/model/types'
 import { buildValueReportHtml, type ValueReport } from '@/lib/pdf/valueReport'
 import { adoptionStats, periodFacts, valueOf } from '@/lib/stats/adoption'
+import { BRAND } from '@/lib/brand/colors'
 
 const NOW = Date.parse('2026-11-11T15:00:00Z')
 const day = (n: number) => new Date(NOW - n * 86400_000).toISOString()
@@ -103,7 +104,7 @@ describe('le dossier pour la direction', () => {
     expect(html).not.toContain('<img src=x')
     expect(html).toContain('&lt;script&gt;')
     expect(html).not.toContain('display:none')
-    expect(html).toContain('#0078FF')
+    expect(html, 'la couleur par défaut de CLIP').toContain(BRAND.primary)
   })
 
   it('la proposition : le plan, l’usage d’aujourd’hui, le prix et le rapport à la valeur', () => {

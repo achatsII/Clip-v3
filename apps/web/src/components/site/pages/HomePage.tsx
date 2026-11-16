@@ -163,7 +163,7 @@ export function HomePage({ lang }: { lang: SiteLang }) {
               <li key={s.title} className="site-reveal flex flex-col">
                 <div className="flex items-center gap-3">
                   <span className="bg-gradient-primary shadow-primary flex h-10 w-10 items-center justify-center rounded-2xl text-lg font-black text-white tabular-nums">{i + 1}</span>
-                  <p className="label-caps text-[var(--primary-strong)] dark:text-sky-300">{s.eyebrow}</p>
+                  <p className="label-caps text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{s.eyebrow}</p>
                 </div>
                 <h3 className="mt-4 text-2xl leading-tight font-black tracking-tighter text-slate-900 dark:text-white">{s.title}</h3>
                 <p className="mt-2 text-base leading-relaxed font-medium text-slate-600 dark:text-slate-300">{s.text}</p>

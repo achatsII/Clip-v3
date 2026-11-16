@@ -4,7 +4,19 @@
   "start_url": "/accueil",
   "display": "standalone",
   "background_color": "#f8fafc",
-  "theme_color": "#0078FF",
+  "theme_color": "#7C3AED",
   "lang": "fr-CA",
-  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
 }

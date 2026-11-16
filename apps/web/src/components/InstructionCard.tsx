@@ -124,7 +124,7 @@ export function InstructionRow({ doc, stationNames }: { doc: Doc<Instruction>; s
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{i.title}</span>
-        <span className={cn('block truncate text-xs font-bold', stage ? 'text-[var(--primary-strong)] dark:text-sky-300' : 'text-slate-500')}>
+        <span className={cn('block truncate text-xs font-bold', stage ? 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-500')}>
           {stage ?? [i.number, i.block ? blockLabel : cat.label, i.block ? null : stationNames.length ? stationNames.join(', ') : t.noStation, timeAgo(i.updatedAt)].filter(Boolean).join(' · ')}
         </span>
       </span>

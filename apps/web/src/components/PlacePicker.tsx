@@ -64,14 +64,14 @@ export function PlacePicker({ value, onChange, stations }: { value: Place; onCha
       <Modal open={open} onClose={() => setOpen(false)} title={t.title}>
         {stations.length > 8 && <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.search} aria-label={t.search} className="mb-3 h-12" />}
         <div className="space-y-4">
-          <button type="button" onClick={() => pick(null)} className={cn('btn-press flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-left font-black', !value ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-300' : 'glass-card')}>
+          <button type="button" onClick={() => pick(null)} className={cn('btn-press flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-left font-black', !value ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'glass-card')}>
             <MapPin className="h-5 w-5 shrink-0" /> <span className="flex-1">{t.everywhere}</span> {!value && <Check className="h-5 w-5" />}
           </button>
           {shown.map(([name, items]) => {
             const on = value?.kind === 'sector' && value.name === name
             return (
               <section key={name}>
-                <button type="button" onClick={() => pick({ kind: 'sector', name })} className={cn('btn-press flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-left', on ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-300' : 'hover:bg-slate-900/5 dark:hover:bg-white/5')}>
+                <button type="button" onClick={() => pick({ kind: 'sector', name })} className={cn('btn-press flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-left', on ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'hover:bg-slate-900/5 dark:hover:bg-white/5')}>
                   <span className="label-caps flex-1 text-slate-600 dark:text-slate-300">{name}</span>
                   <span className="text-xs font-bold text-slate-400">{t.sector(items.length)}</span>
                   {on && <Check className="h-5 w-5" />}
@@ -80,7 +80,7 @@ export function PlacePicker({ value, onChange, stations }: { value: Place; onCha
                   {items.map((s) => {
                     const sel = value?.kind === 'station' && value.id === s._id
                     return (
-                      <button key={s._id} type="button" onClick={() => pick({ kind: 'station', id: s._id })} className={cn('btn-press flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-black', sel ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-300' : 'glass-card')}>
+                      <button key={s._id} type="button" onClick={() => pick({ kind: 'station', id: s._id })} className={cn('btn-press flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-black', sel ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'glass-card')}>
                         <span className="min-w-0 flex-1 truncate">{s.json_data.name}</span>
                         {s.json_data.code && <span className="shrink-0 text-xs font-bold text-slate-400">{s.json_data.code}</span>}
                         {sel && <Check className="h-4 w-4 shrink-0" />}

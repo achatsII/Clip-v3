@@ -1,5 +1,6 @@
 'use client'
 
+import { brandColorOf } from '@/lib/brand/colors'
 import { useToggle } from '@/lib/toggles'
 import { AiConsentHost, DeleteAccountDialog } from '@/components/settings/Account'
 import { useQuery } from '@tanstack/react-query'
@@ -138,7 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               href={n.href}
               className={cn(
                 'btn-press flex h-12 items-center gap-3 rounded-2xl px-4 text-[15px] font-black',
-                isActive(n.href) ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-300' : 'text-slate-600 hover:bg-slate-900/5 dark:text-slate-300 dark:hover:bg-white/5',
+                isActive(n.href) ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-600 hover:bg-slate-900/5 dark:text-slate-300 dark:hover:bg-white/5',
               )}
               aria-current={isActive(n.href) ? 'page' : undefined}
             >
@@ -155,16 +156,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
           )}
           {canCreate && (
-            <Link href="/import" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/import') ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-300' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
+            <Link href="/import" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/import') ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
               <Upload className="h-4 w-4" /> {t.shell.nav.import}
             </Link>
           )}
           {billingOn && (
-            <Link href="/reglages/abonnement" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/reglages/abonnement') ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-300' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
+            <Link href="/reglages/abonnement" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/reglages/abonnement') ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
               <CreditCard className="h-4 w-4" /> {t.shell.nav.billing}
             </Link>
           )}
-          <Link href="/reglages" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/reglages') && !isActive('/reglages/abonnement') ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-300' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
+          <Link href="/reglages" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/reglages') && !isActive('/reglages/abonnement') ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
             <Settings className="h-4 w-4" /> {t.shell.nav.settings}
           </Link>
           <div className="glass-card mt-3 flex items-center gap-3 rounded-[22px] p-3">
@@ -270,7 +271,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* L'accord avant le premier envoi à l'IA. */}
       <AiConsentHost />
 
-      <AppearanceDialog open={appearanceOpen} onClose={() => setAppearanceOpen(false)} brandColor={org.json_data.color} />
+      <AppearanceDialog open={appearanceOpen} onClose={() => setAppearanceOpen(false)} brandColor={brandColorOf(org.json_data.color)} />
       <ScanSheet open={scanOpen} onClose={() => setScanOpen(false)} onResult={handleScanValue} />
     </div>
   )

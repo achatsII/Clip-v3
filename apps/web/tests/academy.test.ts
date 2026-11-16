@@ -6,6 +6,7 @@ import { buildAttestationHtml } from '@/lib/pdf/attestationHtml'
 import type { MatrixCell } from '@/lib/model/training'
 import type { Operator, Qualification } from '@/lib/model/types'
 import { fakeGateway } from './fakeClient'
+import { BRAND } from '@/lib/brand/colors'
 
 const NOW = Date.parse('2026-11-13T12:00:00Z')
 const q = (op: string, st: string, at: string, over: Partial<Qualification> = {}): Doc<Qualification> => ({
@@ -121,6 +122,6 @@ describe('les rappels dans « À voir » et l’attestation', () => {
     expect(html).toContain('<td><b>Presse &lt;P-12&gt;</b></td><td>Peut former</td><td>Mélanie</td><td>2026-06-01</td><td>Sans échéance</td>')
     expect(html).not.toContain('javascript:')
     expect(html).not.toContain('display:none')
-    expect(html).toContain('#0078FF')
+    expect(html, 'la couleur par défaut de CLIP').toContain(BRAND.primary)
   })
 })

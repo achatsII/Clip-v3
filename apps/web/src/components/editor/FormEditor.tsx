@@ -177,7 +177,7 @@ function InstructionItem({ p, active }: { p: Inner; active: boolean }) {
         <CategoryIcon category={content.category} className="h-6 w-6" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="label-caps block text-[var(--primary-strong)] dark:text-sky-300">{t.editor.form.instruction}</span>
+        <span className="label-caps block text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{t.editor.form.instruction}</span>
         <span className="block truncate text-sm font-black text-slate-900 dark:text-white">{content.title.trim() || t.editor.page.info.untitled}</span>
         <span className="block truncate text-xs font-bold text-slate-500">{p.block ? t.editor.form.blockLine(content.steps.length) : t.editor.form.instructionLine(content.steps.length, p.stationCount)}</span>
       </span>
@@ -230,7 +230,7 @@ function StepItem({ p, step, index, active, drag }: { p: Inner; step: Step; inde
                 </span>
               )}
               {checks > 0 && (
-                <span className="bg-primary-soft inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[10px] font-black text-[var(--primary-strong)] uppercase dark:text-sky-300">
+                <span className="bg-primary-soft inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[10px] font-black text-[var(--primary-strong)] uppercase dark:text-[var(--primary-light)]">
                   <ClipboardCheck className="h-3 w-3" /> {t.editor.form.checksCount(checks)}
                 </span>
               )}
@@ -363,7 +363,7 @@ function Outline({ p, addAtEnd = true }: { p: Inner; addAtEnd?: boolean }) {
         {groups.map((g) => (
           <div key={g.start} className="space-y-2">
             {g.name && (
-              <p data-section-start={g.start} className="label-caps px-2 pt-2 text-[var(--primary-strong)] dark:text-sky-300">
+              <p data-section-start={g.start} className="label-caps px-2 pt-2 text-[var(--primary-strong)] dark:text-[var(--primary-light)]">
                 {g.name}
               </p>
             )}
@@ -463,7 +463,7 @@ function FormPhone(p: Inner & { detail: boolean; onList: () => void }) {
               <ChevronLeft className="h-4 w-4 shrink-0" /> <span className="truncate">{t.editor.form.allSteps}</span>
             </button>
           ) : !readOnly ? (
-            <button type="button" onClick={p.onAddEnd} className="btn-press bg-primary-soft flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-3 text-sm font-black text-[var(--primary-strong)] dark:text-sky-300">
+            <button type="button" onClick={p.onAddEnd} className="btn-press bg-primary-soft flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-3 text-sm font-black text-[var(--primary-strong)] dark:text-[var(--primary-light)]">
               <Plus className="h-4 w-4 shrink-0" /> <span className="truncate">{t.editor.form.addStep}</span>
             </button>
           ) : (

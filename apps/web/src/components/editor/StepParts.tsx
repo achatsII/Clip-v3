@@ -83,7 +83,7 @@ export function SectionField({ steps, index, readOnly, naming, onNamed, onSteps,
         if (r) onSteps(settleSection(steps, r.start, r.end))
       }}
       aria-label={t.editor.stage.sectionLabel}
-      className={cn('label-caps w-full rounded-xl bg-transparent px-2 py-1.5 text-[var(--primary-strong)] transition hover:bg-slate-900/[0.03] focus:bg-white/80 focus:ring-4 focus:ring-[rgba(var(--primary-rgb),0.18)] focus:outline-none dark:text-sky-300 dark:hover:bg-white/5 dark:focus:bg-slate-900/60', className)}
+      className={cn('label-caps w-full rounded-xl bg-transparent px-2 py-1.5 text-[var(--primary-strong)] transition hover:bg-slate-900/[0.03] focus:bg-white/80 focus:ring-4 focus:ring-[rgba(var(--primary-rgb),0.18)] focus:outline-none dark:text-[var(--primary-light)] dark:hover:bg-white/5 dark:focus:bg-slate-900/60', className)}
     />
   )
 }
@@ -146,7 +146,7 @@ export function ChecksBlock({ step, language, readOnly, onEdit, onKeep, onDismis
   if (bare) return list
   return (
     <div className="rounded-3xl border-2 border-[var(--primary)]/25 bg-white/70 p-3 dark:bg-white/5">
-      <p className="label-caps mb-1 flex items-center gap-1.5 px-1 text-[var(--primary-strong)] dark:text-sky-300">
+      <p className="label-caps mb-1 flex items-center gap-1.5 px-1 text-[var(--primary-strong)] dark:text-[var(--primary-light)]">
         <ClipboardCheck className="h-4 w-4" /> {t.title}
       </p>
       {list}

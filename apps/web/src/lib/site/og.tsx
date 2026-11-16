@@ -7,6 +7,8 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
+import { BRAND } from '../brand/colors'
+import { iconSvg } from '../brand/marks'
 import { content } from './content'
 import type { SiteLang } from './lang'
 import type { PageKey } from './routes'
@@ -24,9 +26,8 @@ const loadPhoto = () => (photo ??= readFile(join(ASSET_DIR, 'filmer.jpg')).then(
 /** Le texte de remplacement de l'image d'une page. */
 export const ogAlt = (lang: SiteLang, page: PageKey) => `${content(lang).og.alt} — ${content(lang).og[page]}`
 
-const MARK = `data:image/svg+xml;base64,${Buffer.from(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00C6FF"/><stop offset="1" stop-color="#0078FF"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#g)"/><path d="M41.5 22.5a13 13 0 1 0 0 19" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="44" cy="32" r="4" fill="#fff"/></svg>',
-).toString('base64')}`
+// Le logo de CLIP (banque `src/lib/brand/marks.ts`), dans la couleur par défaut.
+const MARK = `data:image/svg+xml;base64,${Buffer.from(iconSvg({ from: BRAND.from, to: BRAND.to, shape: 'rounded' })).toString('base64')}`
 
 export async function siteOgImage(lang: SiteLang, page: PageKey): Promise<ImageResponse> {
   const t = content(lang)
@@ -55,7 +56,7 @@ export async function siteOgImage(lang: SiteLang, page: PageKey): Promise<ImageR
           height: 450,
           borderRadius: 48,
           transform: 'rotate(7deg)',
-          backgroundImage: 'linear-gradient(135deg, #00C6FF 0%, #0078FF 100%)',
+          backgroundImage: `linear-gradient(135deg, ${BRAND.from} 0%, ${BRAND.to} 100%)`,
           boxShadow: '0 40px 80px rgba(15,23,42,0.30)',
           padding: 14,
           display: 'flex',
@@ -71,7 +72,7 @@ export async function siteOgImage(lang: SiteLang, page: PageKey): Promise<ImageR
           <span style={{ fontSize: 40, fontWeight: 900, letterSpacing: -2 }}>{t.brand.wordmark}</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-          <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', color: '#0056d6' }}>{t.og.kicker}</span>
+          <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', color: BRAND.strong }}>{t.og.kicker}</span>
           <span style={{ fontSize: title.length > 44 ? 60 : 72, fontWeight: 900, lineHeight: 1.03, letterSpacing: -3 }}>{title}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 24, fontWeight: 700, color: '#475569' }}>

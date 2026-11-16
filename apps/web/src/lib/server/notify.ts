@@ -10,6 +10,7 @@ import { T } from '@/lib/model/repo'
 import type { Contact } from '@/lib/model/types'
 import { dataWith, GATEWAY_URL, gatewayJson } from './gateway'
 import { unseal } from './keys'
+import { BRAND } from '@/lib/brand/colors'
 
 /** L'usage de la clé qui scelle le lien de service. */
 export const NOTIFY_PURPOSE = 'notify-link-v1'
@@ -81,7 +82,7 @@ export function compose(m: Message, lang: string): { title: string; body: string
               : m.kind === 'request'
                 ? [t.request.title(who, text), t.request.body(instruction)]
                 : [t.test.title, t.test.body]
-  const html = `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#0f172a;max-width:520px"><h2 style="margin:0 0 8px;font-size:20px">${esc(title)}</h2><p style="margin:0 0 18px;font-size:15px;color:#334155">${esc(body)}</p><a href="${esc(m.url)}" style="display:inline-block;background:#0078FF;color:#fff;text-decoration:none;font-weight:800;padding:12px 20px;border-radius:999px">${esc(t.open)}</a><p style="margin:24px 0 0;font-size:12px;color:#94a3b8">${esc(t.footer)}</p></div>`
+  const html = `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#0f172a;max-width:520px"><h2 style="margin:0 0 8px;font-size:20px">${esc(title)}</h2><p style="margin:0 0 18px;font-size:15px;color:#334155">${esc(body)}</p><a href="${esc(m.url)}" style="display:inline-block;background:${BRAND.primary};color:#fff;text-decoration:none;font-weight:800;padding:12px 20px;border-radius:999px">${esc(t.open)}</a><p style="margin:24px 0 0;font-size:12px;color:#94a3b8">${esc(t.footer)}</p></div>`
   return { title, body, html }
 }
 

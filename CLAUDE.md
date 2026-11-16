@@ -196,7 +196,17 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `'fr-CA'` en dur ; règles dans `docs/architecture.md` §7). Design system « verre » de
   `src/app/globals.css` (tokens, `glass-*`), une seule action principale par écran, trois états pour
   toute donnée asynchrone, cibles d'au moins 44 px, mode sombre (le gris `slate-500` y passe à
-  `slate-400`, et `--primary-soft` à une teinte translucide de la primaire).
+  `slate-400`, `--primary-soft` à une teinte translucide de la primaire, et le texte teinté à
+  `--primary-light`, qui suit le thème : jamais un bleu ciel codé en dur).
+- **Couleur et logo** (décision du 2026-11-16) : la couleur par défaut est le violet de CLIP (`BRAND`,
+  `src/lib/brand/colors.ts`, mêmes valeurs que `:root`, un test les compare). Le thème par défaut garde
+  son identifiant historique `ocean` ; le bleu II d'avant est le thème `bleu` (« Océan ») d'Apparence.
+  La couleur de l'usine ne compte que si ce n'est pas une couleur par défaut (`brandColorOf` : l'ancien
+  `#0078FF`, que Réglages enregistrait tel quel, ne compte pas). Le logo est le 6, « La pile
+  d'extraits », pris dans la banque des 10 propositions (`src/lib/brand/marks.ts`, `BRAND_MARK` ;
+  planche : https://claude.ai/artifact/1AZ4YAPmZyxX5L9fGKiG1N) ; `LogoMark` le pose sur le dégradé
+  du thème. Changer de logo : `BRAND_MARK`, puis `npm run brand-icons` (apps/web) refait le favicon,
+  l'icône d'accueil et les icônes de l'app mobile, prises à la prochaine build native.
 - **Des dizaines de personnes** : toute liste de personnes (ou qui peut grandir) a sa recherche dès
   8 éléments (`SearchField`, chaque mot cherché : `searchTokens`/`matchesTokens`,
   `src/lib/util/people.ts`) et des filtres simples où ils servent (quart, lieu, rôle, « à revalider ») ;

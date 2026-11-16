@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "Filmez, parlez, l'IA rédige l'instruction de travail. Vos opérateurs la trouvent au bon poste, au bon moment.", // i18n-ignore : rendu au serveur
   applicationName: 'CLIP',
   appleWebApp: { capable: true, title: 'CLIP', statusBarStyle: 'default' },
-  icons: { icon: '/icon.svg' },
+  icons: { icon: '/icon.svg', apple: '/apple-touch-icon.png' },
   manifest: '/manifest.webmanifest',
 }
 

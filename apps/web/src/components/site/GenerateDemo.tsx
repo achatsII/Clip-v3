@@ -270,7 +270,7 @@ export function GenerateDemo({ t, title, steps, stationHref }: { t: GenerateDemo
         <div className={cx('relative min-h-[320px] rounded-[26px] bg-white/40 p-4 sm:p-5 dark:bg-slate-900/30', phase === 'idle' && 'max-lg:hidden')}>
           {phase === 'done' ? (
             <div className="glass-float animate-pop-in rounded-[24px] p-4 sm:p-5">
-              <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[var(--primary-soft)] px-3 text-xs font-black text-[var(--primary-strong)] dark:text-sky-300">
+              <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[var(--primary-soft)] px-3 text-xs font-black text-[var(--primary-strong)] dark:text-[var(--primary-light)]">
                 <Wrench className="h-3.5 w-3.5" aria-hidden />
                 {t.category}
               </span>

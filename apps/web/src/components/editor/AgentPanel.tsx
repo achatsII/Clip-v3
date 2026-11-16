@@ -248,7 +248,7 @@ export function AgentPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="glass-float btn-press kb-hide fixed right-4 bottom-24 z-40 flex h-12 items-center gap-2 rounded-full px-4 text-sm font-black text-[var(--primary-strong)] lg:right-6 lg:bottom-28 dark:text-sky-300"
+        className="glass-float btn-press kb-hide fixed right-4 bottom-24 z-40 flex h-12 items-center gap-2 rounded-full px-4 text-sm font-black text-[var(--primary-strong)] lg:right-6 lg:bottom-28 dark:text-[var(--primary-light)]"
       >
         <Sparkles className="h-5 w-5" /> {t.editorTools.agent.title}
       </button>
@@ -360,7 +360,7 @@ export function AgentPanel({
 export function AgentBubble({ onClick }: { onClick: () => void }) {
   const t = useMessages()
   return (
-    <button type="button" onClick={onClick} aria-label={t.editorTools.agent.title} title={t.editorTools.agent.subtitle} className="glass-float btn-press flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[var(--primary-strong)] dark:text-sky-300">
+    <button type="button" onClick={onClick} aria-label={t.editorTools.agent.title} title={t.editorTools.agent.subtitle} className="glass-float btn-press flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[var(--primary-strong)] dark:text-[var(--primary-light)]">
       <Sparkles className="h-6 w-6" />
     </button>
   )

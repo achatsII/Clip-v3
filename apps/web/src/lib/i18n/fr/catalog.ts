@@ -55,5 +55,5 @@ export const catalog = {
     reader: { label: 'Lecteur', summary: 'Consulte les instructions publiées et signale ce qui n’est pas clair.' },
   },
   status: { draft: 'Brouillon', review: 'À approuver', published: 'Publiée', archived: 'Archivée' },
-  themes: { ocean: 'Océan', nature: 'Nature', crepuscule: 'Crépuscule', royal: 'Royal', monochrome: 'Monochrome' },
+  themes: { ocean: 'Violet', bleu: 'Océan', nature: 'Nature', crepuscule: 'Crépuscule', royal: 'Royal', monochrome: 'Monochrome' },
 }

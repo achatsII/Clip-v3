@@ -5,6 +5,7 @@
  * Il s'écrit dans la langue de l'instruction (`content.language`), pas dans celle de l'outil : les
  * titres que le lecteur des opérateurs a déjà viennent de ses mots, le reste du groupe `print`.
  */
+import { BRAND, brandColorOf } from '../brand/colors'
 import { liveChecks } from '../model/checks'
 import { rangeText, strings, type PlayerStrings } from '@/components/player/i18n'
 import { LANGS, messagesIn, type Messages } from '../i18n'
@@ -106,7 +107,8 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
   const cat = words.catalog
   // « fr-CA », « en-CA » ; une langue que l'outil ne parle pas garde son code.
   const htmlLang = (LANGS as readonly string[]).includes(lang) ? t.locale : lang
-  const color = meta.branding.color || '#0078FF'
+  // La couleur de l'usine, sinon celle de CLIP ; les teintes des repères en découlent.
+  const color = brandColorOf(meta.branding.color) ?? BRAND.primary
   const date = meta.publishedAt ? t.date(meta.publishedAt) : t.today()
   const ppe = content.ppe.map((k) => `<span class="chip">${esc((cat.ppe as Record<string, string>)[k] ?? k)}</span>`).join('')
   const steps = content.steps
@@ -155,12 +157,12 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .block{border:1px solid #e2e8f0;border-radius:14px;padding:12px 14px;break-inside:avoid;margin-bottom:12px}
 .block h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px;color:#334155}
-.chip{display:inline-block;background:#e0f2fe;color:#075985;border-radius:8px;padding:4px 8px;margin:0 6px 6px 0;font-size:12px;font-weight:800}
+.chip{display:inline-block;background:color-mix(in srgb,${esc(color)} 12%,white);color:color-mix(in srgb,${esc(color)} 75%,black);border-radius:8px;padding:4px 8px;margin:0 6px 6px 0;font-size:12px;font-weight:800}
 .safety{background:#fff1f2;border-color:#fecdd3}.safety li{font-weight:700}
 .steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.steps .section{grid-column:1/-1;margin:10px 0 0;font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#0056D6;break-after:avoid;page-break-after:avoid}
+.steps .section{grid-column:1/-1;margin:10px 0 0;font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:color-mix(in srgb,${esc(color)} 85%,black);break-after:avoid;page-break-after:avoid}
 .step{border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
-.checks{margin-top:8px;border:1.5px solid #bfdbfe;border-radius:10px;padding:6px 8px}.checks p{margin:0 0 4px;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#0056D6}
+.checks{margin-top:8px;border:1.5px solid color-mix(in srgb,${esc(color)} 30%,white);border-radius:10px;padding:6px 8px}.checks p{margin:0 0 4px;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:color-mix(in srgb,${esc(color)} 85%,black)}
 .ck{font-size:11px;margin:4px 0;line-height:1.6}.ck small{display:block;color:#64748b;font-size:9px}.fill{display:inline-block;width:70px;border-bottom:1.5px solid #334155;height:12px;vertical-align:bottom}.fill.wide{width:150px}.box{display:inline-block;width:10px;height:10px;border:1.5px solid #334155;border-radius:2px;margin:0 3px 0 6px;vertical-align:-1px}
 .media{position:relative;background:#0f172a;display:flex;justify-content:center}.frame{position:relative}.frame img{width:100%;height:100%;display:block}
 .ann{position:absolute;inset:0;container-type:inline-size}

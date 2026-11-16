@@ -61,7 +61,7 @@ describe('la langue de l’outil', () => {
     expect(PPE.casque).toBe('Casque')
     expect(ROLES.author.label).toBe('Rédacteur')
     expect(LANGUAGES.es.label).toBe('Espagnol')
-    expect(messages().catalog.themes.ocean).toBe('Océan')
+    expect(messages().catalog.themes.bleu).toBe('Océan')
     setLang('en')
     expect(CATEGORIES.sst.label).toBe('Health and safety')
     expect(CATEGORIES.sst.tile).toBe('from-rose-500 to-red-600')
@@ -72,7 +72,7 @@ describe('la langue de l’outil', () => {
     expect(ROLES.author.permissions.instructions).toBe('write')
     expect(LANGUAGES.es.label).toBe('Spanish')
     expect(LANGUAGES.es.native).toBe('Español')
-    expect(messages().catalog.themes.ocean).toBe('Ocean')
+    expect(messages().catalog.themes.bleu).toBe('Ocean')
   })
 
   it('écrit dates, nombres et tailles dans la langue choisie', () => {

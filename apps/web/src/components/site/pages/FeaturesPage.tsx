@@ -106,7 +106,7 @@ export function FeaturesPage({ lang }: { lang: SiteLang }) {
                         <li key={item.title} className="glass-card rounded-[22px] p-4">
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-base font-black text-slate-900 dark:text-white">{item.title}</h3>
-                            {b && <span className="label-caps rounded-lg bg-[var(--primary-soft)] px-2 py-0.5 text-[10px] text-[var(--primary-strong)] dark:text-sky-300">{b}</span>}
+                            {b && <span className="label-caps rounded-lg bg-[var(--primary-soft)] px-2 py-0.5 text-[10px] text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{b}</span>}
                           </div>
                           <p className="mt-1 text-[15px] leading-relaxed font-medium text-slate-600 dark:text-slate-300">{item.text}</p>
                         </li>
@@ -135,7 +135,7 @@ export function FeaturesPage({ lang }: { lang: SiteLang }) {
           <div className="site-reveal glass-panel rounded-[32px] p-6 text-center sm:p-10">
             <h2 className="text-2xl font-black tracking-tighter text-slate-900 sm:text-3xl dark:text-white">{f.platforms.title}</h2>
             <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed font-medium text-slate-600 dark:text-slate-300">{f.platforms.text}</p>
-            <Link href={ROUTES.pricing[lang]} className="mt-5 inline-flex min-h-11 items-center text-sm font-black text-[var(--primary-strong)] underline underline-offset-4 dark:text-sky-300">
+            <Link href={ROUTES.pricing[lang]} className="mt-5 inline-flex min-h-11 items-center text-sm font-black text-[var(--primary-strong)] underline underline-offset-4 dark:text-[var(--primary-light)]">
               {t.cta.pricing}
             </Link>
           </div>

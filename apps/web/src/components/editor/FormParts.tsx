@@ -40,7 +40,7 @@ export function ToolsGrid({ items }: { items: MenuItem[] }) {
         item.danger ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-100',
       )}
     >
-      <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', item.danger ? 'bg-rose-50 dark:bg-rose-500/10' : 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-300')}>{item.icon}</span>
+      <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', item.danger ? 'bg-rose-50 dark:bg-rose-500/10' : 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]')}>{item.icon}</span>
       <span className="min-w-0 flex-1">{item.label}</span>
       {item.hint}
     </button>

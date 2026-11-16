@@ -1,9 +1,15 @@
 /**
  * Thème de l'utilisateur (ux-design-ii 5.16) : clé `ui_theme` = { mode, preset }, préservée à la
- * déconnexion. La couleur de l'usine (réglages) surcharge la primaire du preset « Océan ».
+ * déconnexion. La couleur de l'usine (réglages) surcharge la primaire du thème par défaut.
+ *
+ * Le thème par défaut garde son identifiant historique `ocean`, mais il porte le violet de CLIP depuis
+ * le 2026-11-16 : les préférences déjà enregistrées passent au violet sans migration. Le bleu II d'avant
+ * est le thème `bleu`, nommé « Océan ».
  */
+import { brandColorOf } from './brand/colors'
+
 export type ThemeMode = 'light' | 'dark' | 'system'
-export type ThemePreset = 'ocean' | 'nature' | 'crepuscule' | 'royal' | 'monochrome'
+export type ThemePreset = 'ocean' | 'bleu' | 'nature' | 'crepuscule' | 'royal' | 'monochrome'
 export interface UiTheme {
   mode: ThemeMode
   preset: ThemePreset
@@ -14,7 +20,8 @@ export interface UiTheme {
  * mise en page racine, rendue par le serveur, qui ne charge pas les langues.
  */
 export const THEME_PRESETS: Array<{ value: ThemePreset; swatch: string }> = [
-  { value: 'ocean', swatch: 'linear-gradient(135deg,#00C6FF,#0078FF)' },
+  { value: 'ocean', swatch: 'linear-gradient(135deg,#A36CFF,#7C3AED)' },
+  { value: 'bleu', swatch: 'linear-gradient(135deg,#00C6FF,#0078FF)' },
   { value: 'nature', swatch: 'linear-gradient(135deg,#3ee0a1,#10a96d)' },
   { value: 'crepuscule', swatch: 'linear-gradient(135deg,#ffb000,#ff6b00)' },
   { value: 'royal', swatch: 'linear-gradient(135deg,#9b2cfa,#2c62fa)' },
@@ -62,13 +69,15 @@ function shade(rgb: [number, number, number], f: number): string {
 }
 
 /**
- * Applique la couleur de marque de l'usine aux tokens primaires (seulement avec le preset Océan).
+ * Applique la couleur de marque de l'usine aux tokens primaires (seulement avec le thème par défaut).
  * Son ton pâle va dans `--brand-soft`, que `--primary-soft` reprend en mode clair seulement : posé
  * directement sur la racine, il battrait le mode sombre et laisserait un fond pâle sous un texte blanc.
+ * Une couleur par défaut enregistrée (l'ancien bleu, le violet) ne compte pas : `brandColorOf`.
  */
-export function applyBrandColor(color: string | null | undefined) {
+export function applyBrandColor(stored: string | null | undefined) {
   const root = document.documentElement
-  const props = ['--primary', '--primary-strong', '--brand-soft', '--primary-soft', '--primary-rgb', '--gradient-primary', '--shadow-primary']
+  const props = ['--primary', '--primary-strong', '--brand-soft', '--primary-soft', '--primary-light', '--primary-rgb', '--gradient-primary', '--shadow-primary']
+  const color = brandColorOf(stored)
   const rgb = color ? hexToRgb(color) : null
   if (!rgb || root.dataset.preset !== 'ocean') {
     props.forEach((p) => root.style.removeProperty(p))
@@ -79,6 +88,7 @@ export function applyBrandColor(color: string | null | undefined) {
   root.style.setProperty('--primary-strong', shade(rgb, -0.18))
   root.style.removeProperty('--primary-soft')
   root.style.setProperty('--brand-soft', shade(rgb, 0.9))
+  root.style.setProperty('--primary-light', shade(rgb, 0.55))
   root.style.setProperty('--primary-rgb', `${r}, ${g}, ${b}`)
   root.style.setProperty('--gradient-primary', `linear-gradient(135deg, ${shade(rgb, 0.3)} 0%, ${color} 100%)`)
   root.style.setProperty('--shadow-primary', `0 10px 20px rgba(${r}, ${g}, ${b}, 0.3)`)

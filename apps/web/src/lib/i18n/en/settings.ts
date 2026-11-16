@@ -33,7 +33,7 @@ export const settings: typeof Fr = {
     color: 'Main color',
     apply: 'Apply',
     colorApplied: 'Color applied',
-    defaultBlue: 'Default blue',
+    defaultColor: 'Default color',
     generationTitle: 'AI generation',
     generationDevice: 'On the device',
     generationServer: 'On the server',
@@ -220,7 +220,7 @@ export const settings: typeof Fr = {
     dark: 'Dark',
     system: 'System',
     color: 'Interface color',
-    brandColorNote: 'With “Ocean”, your plant’s color replaces the blue.',
+    brandColorNote: 'With “Violet”, your plant’s color replaces the violet.',
     mobileNote: 'On the floor, the CLIP mobile app films in 720p and shrinks photos: light media, sent even if the network drops for a moment.',
   },
   data: {

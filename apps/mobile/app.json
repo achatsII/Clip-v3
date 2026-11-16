@@ -22,7 +22,7 @@
     "android": {
       "package": "com.intelligenceindustrielle.clip",
       "adaptiveIcon": {
-        "backgroundColor": "#0078FF",
+        "backgroundColor": "#7C3AED",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -82,7 +82,7 @@
       [
         "expo-notifications",
         {
-          "color": "#0078FF"
+          "color": "#7C3AED"
         }
       ]
     ],

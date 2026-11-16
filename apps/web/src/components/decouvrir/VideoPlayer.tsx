@@ -193,7 +193,7 @@ export function VideoPlayer({ id, meta, next, onNext, autoplay }: { id: VideoId;
                 type="button"
                 onClick={() => seek(c.t)}
                 aria-current={i === activeChapter ? 'true' : undefined}
-                className={cn('btn-press flex min-h-11 w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors', i === activeChapter ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-300' : 'hover:bg-slate-900/5 dark:hover:bg-white/5')}
+                className={cn('btn-press flex min-h-11 w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors', i === activeChapter ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'hover:bg-slate-900/5 dark:hover:bg-white/5')}
               >
                 <span className="mt-0.5 w-5 shrink-0 text-[12px] font-black text-slate-400 tabular-nums">{i + 1}</span>
                 <span className={cn('min-w-0 flex-1 text-[14px] leading-snug font-bold', i !== activeChapter && 'text-slate-800 dark:text-slate-100')}>{c.title}</span>

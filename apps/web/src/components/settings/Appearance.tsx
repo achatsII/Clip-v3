@@ -37,7 +37,7 @@ export function AppearanceControls({ brandColor, compact = false }: { brandColor
         ]}
       />
       <p className="label-caps mt-6 mb-2 text-slate-500">{t.color}</p>
-      <div className={compact ? 'grid grid-cols-5 gap-2' : 'flex flex-wrap gap-3'}>
+      <div className={compact ? 'grid grid-cols-3 gap-2' : 'flex flex-wrap gap-3'}>
         {THEME_PRESETS.map((p) => (
           <button
             key={p.value}

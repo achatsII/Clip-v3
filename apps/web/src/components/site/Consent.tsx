@@ -44,7 +44,7 @@ export function ConsentBanner({ hubId, t, privacyUrl }: { hubId: string; t: { ti
         </p>
         <p className="mt-1.5 text-sm leading-relaxed font-medium text-slate-600 dark:text-slate-300">
           {t.text}{' '}
-          <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--primary-strong)] underline underline-offset-2 dark:text-sky-300">
+          <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--primary-strong)] underline underline-offset-2 dark:text-[var(--primary-light)]">
             {t.policy}
           </a>
         </p>

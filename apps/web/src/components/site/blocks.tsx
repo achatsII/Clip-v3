@@ -87,7 +87,7 @@ export function FinalCta({ lang, title, text, secondary }: { lang: SiteLang; tit
       <Container wide>
         <div className="site-reveal relative isolate overflow-hidden rounded-[40px] px-6 py-16 text-center sm:px-12 sm:py-24">
           <Image src={photo.src} alt="" fill sizes="(min-width: 1280px) 1216px, 100vw" className="-z-20 object-cover" />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-slate-950/90 via-slate-950/75 to-[#0056d6]/70" aria-hidden />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-slate-950/90 via-slate-950/75 to-[rgba(var(--primary-rgb),0.6)]" aria-hidden />
           <h2 className="mx-auto max-w-3xl text-[2rem] leading-[1.04] font-black tracking-tighter text-balance text-white sm:text-6xl">{title}</h2>
           <p className="mx-auto mt-5 max-w-xl text-lg font-medium text-white/85 sm:text-xl">{text}</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">

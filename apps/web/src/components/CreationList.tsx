@@ -37,7 +37,7 @@ export function CreationList() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{d.json_data.title}</span>
-                <span className={cn('block truncate text-xs font-bold', c.kind === 'running' ? 'text-[var(--primary-strong)] dark:text-sky-300' : 'text-slate-500')}>
+                <span className={cn('block truncate text-xs font-bold', c.kind === 'running' ? 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-500')}>
                   {c.kind === 'running' ? t.creations.running(stageLabel(c.info.stage) ?? t.creations.inProgress, launchedFrom(c.info.device, c.info.byName, true), timeAgo(c.info.startedAt)) : t.creations.interrupted}
                 </span>
               </span>

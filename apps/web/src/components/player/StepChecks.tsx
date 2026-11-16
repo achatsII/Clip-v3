@@ -31,7 +31,7 @@ export function StepChecks({ step, answers, onAnswer, t, photos, nudge, preview 
   if (!checks.length) return null
   return (
     <section ref={box} aria-label={t.title} className={cn('rounded-3xl border-2 bg-white/70 p-4 dark:bg-white/5', nudge && missing ? 'animate-shake border-rose-400' : 'border-[var(--primary)]/25')}>
-      <p className="label-caps mb-3 flex items-center gap-1.5 text-[var(--primary-strong)] dark:text-sky-300">
+      <p className="label-caps mb-3 flex items-center gap-1.5 text-[var(--primary-strong)] dark:text-[var(--primary-light)]">
         <ClipboardCheck className="h-4 w-4" /> {t.title}
       </p>
       <div className="space-y-5">

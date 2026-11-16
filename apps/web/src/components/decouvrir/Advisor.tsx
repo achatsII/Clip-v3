@@ -249,7 +249,7 @@ export function AdvisorView({ chapters, published }: { chapters: Record<string, 
         <div className="border-t border-slate-900/5 p-3 sm:p-4 dark:border-white/5">
           {file && (
             <div className="mb-2 flex items-center gap-2">
-              <span className="inline-flex min-w-0 items-center gap-1.5 rounded-xl bg-primary-soft px-2.5 py-1.5 text-[13px] font-bold text-[var(--primary-strong)] dark:text-sky-200">
+              <span className="inline-flex min-w-0 items-center gap-1.5 rounded-xl bg-primary-soft px-2.5 py-1.5 text-[13px] font-bold text-[var(--primary-strong)] dark:text-[var(--primary-light)]">
                 <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden /> <span className="truncate">{file.name}</span>
               </span>
               <button type="button" onClick={() => setFile(null)} className="btn-press flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-900/5" aria-label={t.removeFile}>
@@ -324,7 +324,7 @@ function NeedBadge({ state }: { state: NonNullable<AdvisorMessage['need']> }) {
   const look: Record<typeof state, { icon: LucideIcon; text: string; className: string; spin?: boolean }> = {
     envoi: { icon: Loader2, text: t.needSending, className: 'bg-slate-900/[0.06] text-slate-600 dark:bg-white/10 dark:text-slate-300', spin: true },
     ok: { icon: CheckCircle2, text: t.needSaved, className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
-    noted: { icon: Lightbulb, text: t.needNoted, className: 'bg-primary-soft text-[var(--primary-strong)] dark:text-sky-200' },
+    noted: { icon: Lightbulb, text: t.needNoted, className: 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' },
   }
   const l = look[state]
   return (

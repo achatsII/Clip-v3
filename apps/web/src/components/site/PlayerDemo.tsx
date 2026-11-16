@@ -203,7 +203,7 @@ export function PlayerDemo({
                 aria-pressed={speaking}
                 className={cx(
                   'btn-press inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl px-3 text-sm font-black',
-                  speaking ? 'bg-[#0078ff] text-white shadow-primary' : 'glass-card text-slate-900 dark:text-white',
+                  speaking ? 'bg-[var(--primary)] text-white shadow-primary' : 'glass-card text-slate-900 dark:text-white',
                 )}
               >
                 {speaking ? (
@@ -257,7 +257,7 @@ export function PlayerDemo({
                   <p className="text-lg leading-relaxed font-bold text-slate-700 dark:text-slate-200">{step.text}</p>
                   {step.keyPoints.length > 0 && (
                     <div className="rounded-[22px] bg-[var(--primary-soft)] px-4 py-3">
-                      <p className="label-caps text-[10px] text-[var(--primary-strong)] dark:text-sky-300">{w.keyPoints}</p>
+                      <p className="label-caps text-[10px] text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{w.keyPoints}</p>
                       <ul className="mt-1.5 space-y-1">
                         {step.keyPoints.map((k) => (
                           <li key={k} className="flex items-center gap-2 text-[15px] font-bold text-slate-800 dark:text-slate-100">
@@ -331,7 +331,7 @@ export function PlayerDemo({
 
           {phase === 'quiz' && question && (
             <div key={`q-${quiz.i}`} className="animate-slide-up mx-auto flex min-h-[420px] max-w-xl flex-col justify-center gap-4 p-5 sm:p-8">
-              <p className="label-caps text-[var(--primary-strong)] tabular-nums dark:text-sky-300">{fmt(w.training.questionOf, { i: quiz.i + 1, n: instr.quiz.length })}</p>
+              <p className="label-caps text-[var(--primary-strong)] tabular-nums dark:text-[var(--primary-light)]">{fmt(w.training.questionOf, { i: quiz.i + 1, n: instr.quiz.length })}</p>
               <p className="text-2xl leading-tight font-black tracking-tighter sm:text-3xl">{question.q}</p>
               <div className="grid gap-2">
                 {question.choices.map((c, k) => {

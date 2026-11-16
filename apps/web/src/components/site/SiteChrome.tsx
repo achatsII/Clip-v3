@@ -12,7 +12,7 @@ import { II_LOGO } from '@/lib/site/media'
 import { HUBSPOT_ID, LOGIN_PATH, primaryCta, ROUTES, SOLUTIONS, type SolutionKey } from '@/lib/site/routes'
 import { LangLink, NavLink, PopoverCloser, SiteLanguage } from './client'
 import { ConsentBanner, CookieSettingsButton } from './Consent'
-import { ClipMark, Container, cx, PrimaryCta, SiteIcon } from './ui'
+import { Container, cx, PrimaryCta, SiteIcon, Wordmark } from './ui'
 
 const SOLUTION_ICONS: Record<SolutionKey, string> = { knowledge: 'brain', training: 'graduation', lockout: 'lock', translation: 'languages' }
 const SOLUTION_TILES: Record<SolutionKey, string> = {
@@ -69,15 +69,12 @@ export function SiteHeader({ lang }: { lang: SiteLang }) {
   const cta = primaryCta(lang)
   const nav =
     'inline-flex h-11 items-center rounded-full px-4 text-[15px] font-bold text-slate-700 hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white'
-  const active = 'bg-[var(--primary-soft)] text-[var(--primary-strong)] dark:text-sky-300'
+  const active = 'bg-[var(--primary-soft)] text-[var(--primary-strong)] dark:text-[var(--primary-light)]'
   return (
     <header className="glass-nav fixed inset-x-0 top-0 z-40 border-b">
       <Container wide className="flex h-16 items-center gap-2">
         <Link href={ROUTES.home[lang]} aria-label={t.a11y.home} className="btn-press -ml-1 inline-flex h-11 items-center gap-2.5 rounded-2xl px-1">
-          <ClipMark />
-          <span className="text-xl font-black tracking-tighter text-slate-900 dark:text-white" aria-hidden>
-            {t.brand.wordmark}
-          </span>
+          <Wordmark name={t.brand.wordmark} />
         </Link>
         <nav aria-label={t.a11y.mainNav} className="ml-4 hidden items-center gap-1 lg:flex">
           <NavLink href={ROUTES.features[lang]} className={nav} activeClassName={active}>
@@ -128,10 +125,7 @@ export function SiteHeader({ lang }: { lang: SiteLang }) {
         <div className="mx-auto flex min-h-full max-w-lg flex-col px-4 pb-8">
           <div className="flex h-16 items-center justify-between">
             <span className="inline-flex items-center gap-2.5">
-              <ClipMark />
-              <span className="text-xl font-black tracking-tighter text-slate-900 dark:text-white" aria-hidden>
-                {t.brand.wordmark}
-              </span>
+              <Wordmark name={t.brand.wordmark} />
             </span>
             <button
               type="button"
@@ -182,10 +176,7 @@ export function SiteFooter({ lang }: { lang: SiteLang }) {
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <Link href={ROUTES.home[lang]} aria-label={t.a11y.home} className="inline-flex h-11 items-center gap-2.5">
-              <ClipMark />
-              <span className="text-xl font-black tracking-tighter text-slate-900 dark:text-white" aria-hidden>
-                {t.brand.wordmark}
-              </span>
+              <Wordmark name={t.brand.wordmark} />
             </Link>
             <p className="mt-3 max-w-xs text-[15px] font-medium text-slate-600 dark:text-slate-300">{t.footer.tagline}</p>
             <a

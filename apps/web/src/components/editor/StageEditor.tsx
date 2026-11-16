@@ -252,7 +252,7 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
 
       {keyPoints.length > 0 && (
         <div className="bg-primary-soft rounded-3xl p-4">
-          <p className="label-caps mb-2 text-[var(--primary-strong)] dark:text-sky-300">{t.editor.step.keyPoints}</p>
+          <p className="label-caps mb-2 text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{t.editor.step.keyPoints}</p>
           <ul className="space-y-1">
             {keyPoints.map((k, i) => (
               <li key={i} className="flex items-start gap-2">
@@ -337,7 +337,7 @@ function StepStrip({ p }: { p: Inner }) {
           const opens = !!p.sections && startsSection(content.steps, i)
           return (
             <div key={s.id} className={cn('flex shrink-0 flex-col gap-1', opens && i > 0 && 'ml-2 border-l-2 border-[var(--primary)]/30 pl-3')}>
-              <span className={cn('label-caps block h-3 max-w-28 truncate text-[10px] leading-3 text-[var(--primary-strong)] dark:text-sky-300', !opens && 'invisible')}>{opens ? s.section : '·'}</span>
+              <span className={cn('label-caps block h-3 max-w-28 truncate text-[10px] leading-3 text-[var(--primary-strong)] dark:text-[var(--primary-light)]', !opens && 'invisible')}>{opens ? s.section : '·'}</span>
             <button ref={active ? current : undefined} type="button" onClick={() => p.onSelect(s.id)} aria-current={active ? 'step' : undefined} title={t.editor.stage.thumbTitle(i + 1, s.title)} className={cn('btn-press relative h-16 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 text-left', active ? 'ring-4 ring-[var(--primary)]' : 'opacity-80 hover:opacity-100')}>
               {img && <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />}
               <span className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
