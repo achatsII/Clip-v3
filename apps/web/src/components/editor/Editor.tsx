@@ -91,6 +91,7 @@ import { cleanQuiz } from '@/lib/model/training'
 import { StageEditor } from './StageEditor'
 import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
 import { attachReel, carryClips } from '@/lib/media/reel'
+import { MediaPlaybackProvider, VideoPool } from '@/lib/media/videoPool'
 import { LiveBadge } from './LiveBadge'
 import { UndoPill } from './UndoControls'
 
@@ -396,6 +397,14 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   // « Fiche ». Changer de vue garde l'étape ; la fiche l'ouvre directement.
   const viewsToggle = useToggle('editorViews')
   const [view, saveView] = useEditorView(viewsToggle)
+  // Les vidéos des deux vues (lecture fluide, toggle `smoothVideos`) : un lecteur gardé par vidéo
+  // d'une étape à l'autre, comme au poste ; il saute au début de l'extrait avec ce qu'il a déjà. Avant,
+  // chaque étape ouvrait un lecteur neuf et les anciens téléchargeaient encore. Jamais la vidéo des
+  // étapes : l'éditeur montre la vidéo d'origine.
+  const smoothVideos = useToggle('smoothVideos')
+  const videoPool = useMemo(() => new VideoPool(3), [])
+  useEffect(() => () => videoPool.dispose(), [videoPool])
+  const playback = useMemo(() => ({ pool: smoothVideos ? videoPool : null, reel: false, smooth: smoothVideos }), [smoothVideos, videoPool])
   const switched = useRef(false)
   const chooseView = (v: EditorView) => {
     switched.current = true
@@ -926,7 +935,9 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   return (
     <div>
       <Confetti show={celebrate} />
-      {viewsToggle && view === 'form' ? <FormEditor {...viewProps} info={<InstructionFields layout="cards" {...fieldProps} />} tools={tools} focus={formFocus} startOn={switched.current || formFocus ? 'step' : 'list'} stationCount={stationIds.length} block={isBlock} /> : <StageEditor {...viewProps} />}
+      <MediaPlaybackProvider value={playback}>
+        {viewsToggle && view === 'form' ? <FormEditor {...viewProps} info={<InstructionFields layout="cards" {...fieldProps} />} tools={tools} focus={formFocus} startOn={switched.current || formFocus ? 'step' : 'list'} stationCount={stationIds.length} block={isBlock} /> : <StageEditor {...viewProps} />}
+      </MediaPlaybackProvider>
       <QuestionsDialog open={questionsOpen} questions={questions} choices={instr.generation?.choices ?? {}} onClose={() => setQuestionsOpen(false)} onApply={answerQuestions} onChecked={(q) => settleQuestions([q])} />
 
       {!readOnly && (

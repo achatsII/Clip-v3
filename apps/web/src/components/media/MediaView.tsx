@@ -7,7 +7,7 @@ import { useMessages, type Messages } from '@/lib/i18n'
 import { isFresh } from '@/lib/annotations/fresh'
 import { reportRatio } from '@/lib/media/ratio'
 import { playable } from '@/lib/media/reel'
-import { useMediaPlayback } from '@/lib/media/videoPool'
+import { stopWhenGone, useMediaPlayback } from '@/lib/media/videoPool'
 import { VIDEO_MODES, setVideoMode, type VideoMode } from '@/lib/media/videoMode'
 import type { Annotation, StepMedia } from '@/lib/model/types'
 import { cn, formatClock } from '@/lib/util/cn'
@@ -129,6 +129,7 @@ export function VideoSegment({
   mode,
   modeControl,
   bare,
+  lazy,
   className,
   big,
 }: {
@@ -143,16 +144,25 @@ export function VideoSegment({
   modeControl?: boolean
   /** Sans barre de commandes : une tuile de grille ou de comparaison (toucher = lecture ou pause). */
   bare?: boolean
+  /**
+   * Une vidéo parmi d'autres sur la même page (« Tout voir ») : avec la lecture fluide, elle ne se
+   * charge qu'en approchant de l'écran et ne joue que bien visible. Sinon, toutes chargeaient et
+   * jouaient à la fois, et la plupart restaient bloquées.
+   */
+  lazy?: boolean
   className?: string
   big?: boolean
 }) {
   const labels = useMediaLabels()
   const ref = useRef<HTMLVideoElement>(null)
-  // Au lecteur d'instruction, un lecteur gardé d'une étape à l'autre (videoPool.ts) : il saute au bon
-  // moment sans rien recharger. Ailleurs (et pour une tuile), le sien.
-  const { pool } = useMediaPlayback()
-  const pooled = !!pool && !bare
+  // Un lecteur gardé d'une étape à l'autre (videoPool.ts), au lecteur d'instruction et, avec la
+  // lecture fluide, dans l'éditeur : il saute au bon moment sans rien recharger. Ailleurs (une tuile,
+  // une vidéo de la liste « Tout voir »), le sien.
+  const { pool, smooth } = useMediaPlayback()
+  const lazyOn = !!lazy && !!smooth
+  const pooled = !!pool && !bare && !lazyOn
   const host = useRef<HTMLDivElement>(null)
+  const box = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<() => void>(() => undefined)
   useLayoutEffect(() => {
     if (!pooled || !pool || !host.current) return
@@ -165,18 +175,48 @@ export function VideoSegment({
     return () => {
       v.removeEventListener('click', onClick)
       v.remove()
+      // Repris par une autre étape, il repartira au début de l'extrait de celle-ci (`dataset.seg`).
+      v.removeAttribute('data-seg')
       pool.release(v)
       if (ref.current === v) ref.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- le début ne sert qu'à créer le lecteur ; ensuite il saute seul
   }, [pooled, pool, url])
+  // Dans une liste : la vidéo approche de l'écran (elle se charge), puis s'y voit à moitié (elle joue).
+  const [seen, setSeen] = useState({ near: false, visible: false })
+  useEffect(() => {
+    const el = box.current
+    if (!lazyOn || !el || typeof IntersectionObserver === 'undefined') return
+    const approach = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && setSeen((s) => (s.near ? s : { ...s, near: true })), { rootMargin: '400px 0px' })
+    const half = new IntersectionObserver(
+      (es) => {
+        const visible = es.some((e) => e.intersectionRatio >= 0.5)
+        setSeen((s) => (s.visible === visible && (s.near || !visible) ? s : { near: s.near || visible, visible }))
+      },
+      { threshold: [0, 0.5, 1] },
+    )
+    approach.observe(el)
+    half.observe(el)
+    return () => {
+      approach.disconnect()
+      half.disconnect()
+    }
+  }, [lazyOn])
+  const observed = lazyOn && typeof IntersectionObserver !== 'undefined'
+  // Une vidéo déjà chargée (les toggles arrivés après elle) garde sa source : la retirer ne
+  // l'arrêterait pas ; elle se met en pause hors de l'écran, comme les autres.
+  const wasNear = useRef(false)
+  const near = !observed || seen.near || wasNear.current
+  wasNear.current = near
+  const visible = !observed || seen.visible
   const [playing, setPlaying] = useState(false)
   const [ended, setEnded] = useState(false)
   const [muted, setMuted] = useState(true)
   const [t, setT] = useState(start)
   const [menu, setMenu] = useState(false)
   const effective: VideoMode = mode ?? (autoPlay ? 'loop' : 'tap')
-  const auto = effective !== 'tap'
+  // Dans une liste, une vidéo ne part d'elle-même que bien visible.
+  const auto = effective !== 'tap' && visible
   const modeRef = useRef(effective)
   modeRef.current = effective
   // La vidéo s'ouvre au bon instant, même avant que le script la positionne.
@@ -192,15 +232,25 @@ export function VideoSegment({
     const play = () => {
       v.play()?.catch(() => setPlaying(false))
     }
+    // Un extrait trop court pour boucler (début et fin confondus) se joue une fois, sans sauter sans fin.
+    const loops = () => modeRef.current === 'loop' && end - start > 0.2
+    // Lecture fluide : un lecteur repris d'une autre étape (ou dont l'extrait change) repart au début
+    // de son extrait, même si l'endroit où il était y tombe ; changer de mode ne le déplace pas.
+    const seg = `${url}#${start}-${end}`
+    let jump = !!smooth && v.dataset.seg !== seg
+    v.dataset.seg = seg
     const onMeta = () => {
       if (v.videoWidth && v.videoHeight) reportRatio(url, v.videoWidth / v.videoHeight)
-      if (v.currentTime < start - 0.3 || v.currentTime > end) v.currentTime = start
+      const off = jump ? Math.abs(v.currentTime - start) > 0.05 : v.currentTime < start - 0.3 || v.currentTime > end
+      jump = false
+      if (off) v.currentTime = start
       if (auto && v.paused) play()
     }
     const onTime = () => {
-      if (v.currentTime < start - 0.5) v.currentTime = start
+      // Un début au-delà de la fin de la vidéo ne se rattrape pas : on n'y saute pas sans fin.
+      if (v.currentTime < start - 0.5 && !(v.duration && start >= v.duration)) v.currentTime = start
       if (v.currentTime >= end - 0.05) {
-        if (modeRef.current === 'loop') v.currentTime = start
+        if (loops()) v.currentTime = start
         else {
           v.pause()
           setPlaying(false)
@@ -209,21 +259,51 @@ export function VideoSegment({
       }
       setT(v.currentTime)
     }
+    // L'extrait finit avec la vidéo : arrivée au bout, elle s'arrête d'elle-même ; la boucle la relance.
+    const onEnded = () => {
+      if (loops()) {
+        v.currentTime = start
+        play()
+      } else {
+        setPlaying(false)
+        setEnded(true)
+      }
+    }
     const onPause = () => setPlaying(false)
     const onPlay = () => setPlaying(true)
     v.addEventListener('loadedmetadata', onMeta)
     v.addEventListener('timeupdate', onTime)
+    v.addEventListener('ended', onEnded)
     v.addEventListener('pause', onPause)
     v.addEventListener('play', onPlay)
     if (v.readyState >= 1) onMeta()
-    else if (auto) play()
+    else if (auto && v.getAttribute('src')) play()
     return () => {
       v.removeEventListener('loadedmetadata', onMeta)
       v.removeEventListener('timeupdate', onTime)
+      v.removeEventListener('ended', onEnded)
       v.removeEventListener('pause', onPause)
       v.removeEventListener('play', onPlay)
     }
-  }, [url, start, end, auto])
+  }, [url, start, end, auto, smooth])
+
+  // Dans une liste, la vidéo qui sort de l'écran se met en pause.
+  useEffect(() => {
+    const v = ref.current
+    if (lazyOn && !visible && v && !v.paused) v.pause()
+  }, [lazyOn, visible])
+
+  // Lecture fluide : une vidéo à elle qui quitte l'écran arrête de télécharger (stopVideo, videoPool.ts),
+  // aussi celle que remplace un lecteur gardé quand les toggles arrivent après elle.
+  const smoothRef = useRef(!!smooth)
+  smoothRef.current = !!smooth
+  useEffect(() => {
+    const v = ref.current
+    if (pooled || !v) return
+    return () => {
+      if (smoothRef.current) stopWhenGone(v)
+    }
+  }, [pooled])
 
   const toggle = () => {
     const v = ref.current
@@ -267,8 +347,8 @@ export function VideoSegment({
   const btn = big ? 'h-14 w-14' : 'h-11 w-11'
 
   return (
-    <div className={cn('group relative h-full w-full overflow-hidden bg-black', className)}>
-      {pooled ? <div ref={host} className="h-full w-full" /> : <video ref={ref} src={src} poster={poster} muted={muted} playsInline preload={auto ? 'auto' : 'metadata'} className="h-full w-full object-contain" onClick={toggle} />}
+    <div ref={box} className={cn('group relative h-full w-full overflow-hidden bg-black', className)}>
+      {pooled ? <div ref={host} className="h-full w-full" /> : <video ref={ref} src={near ? src : undefined} poster={poster} muted={muted} playsInline preload={auto ? 'auto' : 'metadata'} className="h-full w-full object-contain" onClick={toggle} />}
       {!playing && (
         <button type="button" onClick={toggle} aria-label={ended ? labels.replayClip : labels.playClip} className="absolute inset-0 m-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-md">
           {ended ? <RotateCcw className="h-9 w-9" /> : <Play className="ml-1 h-10 w-10 fill-current" />}
@@ -357,13 +437,13 @@ export function DocumentPage({ media, className }: { media: Extract<StepMedia, {
   )
 }
 
-export function MediaView({ media, className, big, autoPlay, videoMode, modeControl, bare }: { media: StepMedia; className?: string; big?: boolean; autoPlay?: boolean; videoMode?: VideoMode; modeControl?: boolean; bare?: boolean }) {
+export function MediaView({ media, className, big, autoPlay, videoMode, modeControl, bare, lazy }: { media: StepMedia; className?: string; big?: boolean; autoPlay?: boolean; videoMode?: VideoMode; modeControl?: boolean; bare?: boolean; lazy?: boolean }) {
   const { reel } = useMediaPlayback()
   if (media.kind === 'image') return <AnnotatedImage src={media.url} annotations={media.annotations} alt={media.alt} className={className} />
   if (media.kind === 'video') {
     // Au lecteur d'instruction : l'extrait dans la vidéo des étapes, s'il est à jour (reel.ts).
     const p = playable(media, reel)
-    return <VideoSegment url={p.url} start={p.start} end={p.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} mode={videoMode} modeControl={modeControl} bare={bare} />
+    return <VideoSegment url={p.url} start={p.start} end={p.end} poster={media.posterUrl} className={className} big={big} autoPlay={autoPlay} mode={videoMode} modeControl={modeControl} bare={bare} lazy={lazy} />
   }
   if (media.kind === 'html') return <HtmlMedia html={media.html} title={media.title} className={className} />
   return <DocumentPage media={media} className={className} />

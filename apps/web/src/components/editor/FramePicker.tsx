@@ -9,6 +9,7 @@ import { errorText } from '@/components/ui/States'
 import { ApiError } from '@/lib/gateway/client'
 import { locale, useMessages } from '@/lib/i18n'
 import { useToast } from '@/components/ui/Toast'
+import { stopWhenGone, useMediaPlayback } from '@/lib/media/videoPool'
 
 /**
  * Choisir l'image à figer dans une vidéo : on glisse jusqu'au bon instant (affiné au dixième de
@@ -41,6 +42,13 @@ export function FramePicker({
   const [busy, setBusy] = useState(false)
   // Aperçu dans la page ; s'il ne charge pas (format non lu, réseau lent), le serveur tire l'image.
   const [preview, setPreview] = useState<'loading' | 'ready' | 'failed'>('loading')
+  // Lecture fluide : la fenêtre fermée, sa vidéo arrête de télécharger (elle chargeait toute la vidéo).
+  const { smooth } = useMediaPlayback()
+  useEffect(() => {
+    const v = video.current
+    if (!smooth || !v || !open) return
+    return () => stopWhenGone(v)
+  }, [smooth, open])
 
   useEffect(() => {
     if (!open) return

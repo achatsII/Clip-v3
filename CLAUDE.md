@@ -98,10 +98,16 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`src/lib/model/checkpoints.ts`) : au plus un par 10 minutes de modification, avant l'assistant, une
   régénération ou un retour, sans doublon ni copie de la version publiée, 20 par instruction. Après
   chaque enregistrement, le cache de l'instruction suit (`cacheDraft`).
-- **Vidéos au poste** (toggle `stepReel`, allumé ; les vidéos de l'éditeur gardent chacune leur lecteur) : un seul lecteur gardé d'une étape à l'autre, la vidéo ne
-  se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la publication
-  sans jamais la retenir (`src/lib/media/reel.ts`). En novembre 2026, la route de montage répond 500
-  en QA : le poste lit alors la vidéo d'origine.
+- **Vidéos au poste** (toggle `stepReel`, allumé) : un seul lecteur gardé d'une étape à l'autre, la
+  vidéo ne se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la
+  publication sans jamais la retenir (`src/lib/media/reel.ts`) ; montage raté, le poste lit la vidéo
+  d'origine (la route a répondu 500 en QA le 12 novembre 2026, puis monté en 1080p au lieu de 720p).
+- **Lecture fluide** (toggle `smoothVideos` ; « La lecture fluide des vidéos », `docs/architecture.md`) : une vidéo qui quitte l'écran
+  arrête de télécharger (`stopVideo`) : détachée, elle continuait, et d'étape en étape ces
+  téléchargements bloquaient la vidéo affichée, même sur un PC puissant. L'éditeur garde lui aussi un
+  lecteur par vidéo (jamais la vidéo des étapes) ; chaque étape montre son extrait depuis le début ;
+  « Tout voir » ne charge et ne joue que les vidéos à l'écran (`lazy`). Un nouvel élément vidéo passe
+  par `VideoSegment` ou appelle `stopWhenGone` à son démontage.
 - **Capturer** (« Nouvelle instruction », `CaptureBoard`) : d'un seul écran au téléphone, qui prend tout
   l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
   ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher. Les sources

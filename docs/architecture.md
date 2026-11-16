@@ -939,15 +939,46 @@ laissait des bandes noires, et le texte se lisait en défilant. Maintenant (`src
   publication : les extraits inchangés gardent leur place (`carryClips`) ; si un extrait a changé, la
   vidéo se monte après, en arrière-plan, et le document public la reçoit s'il en est encore à cette
   version (`attachReel`). D'ici là, ou si le montage échoue, le poste lit la vidéo d'origine ; après un
-  échec, on ne réessaie pas avant 30 minutes. **Novembre 2026 : la route répond 500 en QA, même avec
-  l'exemple de sa propre spec** ; rien ne se monte tant qu'elle n'est pas réparée.
-- **Une vidéo qui quitte l'écran arrête de télécharger** (ailleurs qu'au lecteur) : détachée, elle
-  continuerait jusqu'à ce que le navigateur la jette.
+  échec, on ne réessaie pas avant 30 minutes. La route répondait 500 en QA le 12 novembre 2026 ; les
+  13 et 14, elle a monté la vidéo des étapes de deux instructions, mais en 1080p alors qu'on lui
+  demande 720p (plus lourde que la source 720p, une seule image clé sur 5 s).
 - **Économie de données ou 2G** (`navigator.connection`, absent sur iOS) : rien ne se prépare d'avance,
   et une vidéo attend un toucher si la personne n'a pas choisi de mode.
 - Mesuré sur un lien de 3 Mbit/s, trois étapes de 6 s tirées d'une vidéo de 2 min : 8,8 Mo et 0,9 à
   1,2 s d'attente par étape avant ; 3,5 Mo (les seules secondes utiles) et 50 ms aux étapes 2 et 3
   avec la vidéo des étapes.
+
+### La lecture fluide des vidéos, partout (toggle `smoothVideos`, repli éteint)
+
+Un extrait « restait bloqué », même sur un PC puissant : ce n'était pas le processeur, c'était le
+réseau, pris par des vidéos qu'on ne voyait plus. Un élément vidéo retiré de la page continue de
+télécharger une dizaine de secondes d'avance (2 à 6 Mo) jusqu'à ce que le navigateur le jette ; dans
+l'éditeur, chaque étape ouvrait un lecteur neuf (qui relisait aussi l'index de la vidéo, à la fin du
+fichier pour les vidéos d'iPhone) et les anciens téléchargeaient encore.
+
+- **Une vidéo qui quitte l'écran arrête de télécharger** (`stopVideo`, `stopWhenGone`,
+  `src/lib/media/videoPool.ts`) : tout `VideoSegment` qui a son propre lecteur, le choix de l'image
+  (`FramePicker`) et celui de l'extrait (`VideoTrimmer`). Celle que React démonte puis remonte (mode
+  strict) n'est pas touchée.
+- **L'éditeur garde un lecteur par vidéo** d'une étape à l'autre, dans ses deux vues, comme au poste
+  (`MediaPlaybackProvider` dans `Editor.tsx`, sans `warm` et jamais la vidéo des étapes : l'éditeur
+  montre la vidéo d'origine).
+- **Chaque étape montre son extrait depuis le début** : un lecteur repris d'une autre étape (ou dont
+  l'extrait change) y saute, même si l'endroit où il était tombe dans le nouvel extrait (`data-seg`) ;
+  changer de mode de lecture ne le déplace pas.
+- **« Tout voir »** (`StepMediaArea lazy`) : une vidéo ne se charge qu'en approchant de l'écran (400 px
+  d'avance) et ne joue que visible à moitié ; elle se met en pause en sortant. Avant, toutes les vidéos
+  de l'instruction chargeaient et jouaient à la fois.
+- Toujours, toggle ou pas : un extrait qui finit avec la vidéo boucle quand même (arrivé au bout, le
+  navigateur s'arrête de lui-même : `ended`), et un extrait sans durée ou qui commence après la fin de
+  la vidéo ne la fait plus sauter sans fin.
+- Mesuré dans Chromium avec les vraies vidéos de QA, même build, toggle coupé puis allumé : dans
+  l'éditeur à 3 Mbit/s (vidéo d'iPhone 720p à 2,5 Mbit/s, sept étapes), le démarrage passait de 1,6 s
+  à 3,9 s d'étape en étape, puis les étapes 6 et 7 ne démarraient plus du tout ; avec le toggle, un
+  seul lecteur, chaque étape démarre (1,2 à 2,7 s, la vidéo prend presque tout le lien). À 8 Mbit/s,
+  0,2 s par étape au lieu de 1 à 2,6 s avec des arrêts. « Tout voir » (dix vidéos, 8 Mbit/s) : 18
+  requêtes, huit téléchargements à la fois et la moitié des vidéos prêtes après 12 s ; avec le toggle,
+  deux requêtes, et seule la vidéo à l'écran joue.
 
 ## 5. Compatibilité et pilotage
 

@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -81,6 +81,11 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // L'accord pour l'IA se donne à la connexion : une ligne sous le bouton, plus de fenêtre au premier
   // usage. Il se retire et se redonne dans Réglages › Données. Éteint : la fenêtre d'avant (`aiConsent`).
   aiConsentAtSignIn: true,
+  // La lecture fluide des vidéos : une vidéo qui quitte l'écran arrête de télécharger (avant, les
+  // vidéos des étapes déjà vues continuaient en arrière-plan et bloquaient l'étape affichée), l'éditeur
+  // garde un lecteur par vidéo d'une étape à l'autre comme au poste, chaque étape montre son extrait
+  // depuis le début, et « Tout voir » ne charge et ne joue que les vidéos à l'écran.
+  smoothVideos: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -122,4 +127,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   editorSwipe: false,
   splashHandoff: false,
   aiConsentAtSignIn: false,
+  smoothVideos: false,
 }

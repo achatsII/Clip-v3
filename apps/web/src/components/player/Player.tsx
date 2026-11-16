@@ -229,10 +229,13 @@ export function Player(props: PlayerProps) {
   // Les vidéos : un lecteur gardé d'une étape à l'autre, et la vidéo des étapes (toggle `stepReel`).
   // L'étape suivante se prépare pendant qu'on lit celle-ci, sauf sur une connexion lente.
   const reel = useToggle('stepReel')
+  // La lecture fluide (toggle `smoothVideos`) : une vidéo qui quitte l'écran arrête de télécharger,
+  // chaque étape montre son extrait depuis le début, et « Tout voir » ne joue que ce qu'on voit.
+  const smooth = useToggle('smoothVideos')
   const pool = useMemo(() => new VideoPool(3), [])
   useEffect(() => () => pool.dispose(), [pool])
   // Le toggle coupe aussi les lecteurs gardés : chaque étape reprend alors son propre lecteur.
-  const playback = useMemo(() => ({ pool: reel ? pool : null, reel }), [pool, reel])
+  const playback = useMemo(() => ({ pool: reel ? pool : null, reel, smooth }), [pool, reel, smooth])
   useEffect(() => {
     // Toggle coupé : aucun lecteur gardé, donc rien à préparer (il ne servirait à personne).
     if (!reel || slowConnection()) return
@@ -930,7 +933,8 @@ function DocumentView({ content, t, energyById, sections, records }: { content: 
         <article id={`doc-step-${i}`} className="glass-panel overflow-hidden rounded-[32px] p-0">
           {s.media[0] && (
             <div className={cn('bg-slate-900', layoutOf(s) === 'focus' ? 'aspect-video' : 'aspect-[16/7]')}>
-              <StepMediaArea step={s} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
+              {/* Toutes les étapes sur une page : seules les vidéos à l'écran se chargent et jouent. */}
+              <StepMediaArea step={s} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} lazy />
             </div>
           )}
           <div className="p-5 sm:p-7">

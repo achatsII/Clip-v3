@@ -21,8 +21,10 @@ export interface MediaAreaLabels {
  * - à faire / à éviter : deux médias côte à côte, bordés de vert et de rouge ;
  * - grille : tous les médias, deux par rangée.
  * Chaque média s'agrandit en plein écran (pincer, double-toucher).
+ * `lazy` : l'étape est une parmi d'autres sur la page (« Tout voir ») ; ses vidéos ne se chargent et
+ * ne jouent qu'à l'écran (lecture fluide, `VideoSegment`).
  */
-export function StepMediaArea({ step, labels }: { step: Step; labels: MediaAreaLabels }) {
+export function StepMediaArea({ step, labels, lazy }: { step: Step; labels: MediaAreaLabels; lazy?: boolean }) {
   const [current, setCurrent] = useState(0)
   const [zoomed, setZoomed] = useState<number | null>(null)
   const videoMode = useVideoMode()
@@ -32,11 +34,11 @@ export function StepMediaArea({ step, labels }: { step: Step; labels: MediaAreaL
   return (
     <>
       {layout === 'focus' ? (
-        <FocusMedia step={step} current={Math.min(current, step.media.length - 1)} onPick={setCurrent} onZoom={setZoomed} labels={labels} videoMode={videoMode} />
+        <FocusMedia step={step} current={Math.min(current, step.media.length - 1)} onPick={setCurrent} onZoom={setZoomed} labels={labels} videoMode={videoMode} lazy={lazy} />
       ) : (
         <div className={cn('grid h-full grid-cols-2 gap-1 bg-slate-950', layout === 'grid' && step.media.length > 2 ? 'auto-rows-[calc(50%-2px)] overflow-y-auto' : 'grid-rows-1')}>
           {(layout === 'compare' ? step.media.slice(0, 2) : step.media).map((m, i) => (
-            <MediaTile key={i} media={m} labels={labels} onZoom={() => setZoomed(i)} videoMode={videoMode} />
+            <MediaTile key={i} media={m} labels={labels} onZoom={() => setZoomed(i)} videoMode={videoMode} lazy={lazy} />
           ))}
         </div>
       )}
@@ -47,11 +49,11 @@ export function StepMediaArea({ step, labels }: { step: Step; labels: MediaAreaL
   )
 }
 
-function FocusMedia({ step, current, onPick, onZoom, labels, videoMode }: { step: Step; current: number; onPick: (i: number) => void; onZoom: (i: number) => void; labels: MediaAreaLabels; videoMode: ReturnType<typeof useVideoMode> }) {
+function FocusMedia({ step, current, onPick, onZoom, labels, videoMode, lazy }: { step: Step; current: number; onPick: (i: number) => void; onZoom: (i: number) => void; labels: MediaAreaLabels; videoMode: ReturnType<typeof useVideoMode>; lazy?: boolean }) {
   const media = step.media[current] ?? step.media[0]
   return (
     <div className={cn('relative h-full w-full', media.verdict && VERDICT_RING[media.verdict])}>
-      <MediaView key={current} media={media} big videoMode={videoMode} modeControl />
+      <MediaView key={current} media={media} big videoMode={videoMode} modeControl lazy={lazy} />
       {step.media.length > 1 && (
         <div className="absolute top-3 left-3 flex gap-1.5">
           {step.media.map((m, j) => (
@@ -69,10 +71,10 @@ function FocusMedia({ step, current, onPick, onZoom, labels, videoMode }: { step
   )
 }
 
-function MediaTile({ media, labels, onZoom, videoMode }: { media: StepMedia; labels: MediaAreaLabels; onZoom: () => void; videoMode: ReturnType<typeof useVideoMode> }) {
+function MediaTile({ media, labels, onZoom, videoMode, lazy }: { media: StepMedia; labels: MediaAreaLabels; onZoom: () => void; videoMode: ReturnType<typeof useVideoMode>; lazy?: boolean }) {
   return (
     <div className={cn('relative min-h-0 overflow-hidden bg-slate-900', media.verdict && VERDICT_RING[media.verdict])}>
-      <MediaView media={media} videoMode={videoMode} bare />
+      <MediaView media={media} videoMode={videoMode} bare lazy={lazy} />
       <MediaBadges media={media} labels={labels} />
       <button type="button" onClick={onZoom} aria-label={labels.zoom} title={labels.zoom} className="btn-press absolute top-2 right-2 flex h-10 w-10 items-center justify-center rounded-xl bg-black/50 text-white ring-1 ring-white/20">
         <Maximize2 className="h-4 w-4" />
