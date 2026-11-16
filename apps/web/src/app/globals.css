@@ -4,18 +4,18 @@
 
 /* ───────────────────────── Tokens (ux-design-ii 5.0) ───────────────────────── */
 :root {
-  /* La couleur de CLIP par défaut : le violet (2026-11-16 ; mêmes valeurs que BRAND, src/lib/brand/colors.ts).
+  /* La couleur de CLIP par défaut : l'indigo (2026-11-16 ; mêmes valeurs que BRAND, src/lib/brand/colors.ts).
      Le thème par défaut garde son identifiant historique `ocean` ; le bleu II d'avant est le thème `bleu`. */
-  --primary: #7c3aed;
-  --primary-strong: #6d28d9;
+  --primary: #5b4cf0;
+  --primary-strong: #4338ca;
   /* La couleur de l'usine pose son ton pâle dans --brand-soft (theme.ts), jamais dans --primary-soft :
      un style posé sur la racine battrait le mode sombre plus bas, et le fond resterait pâle. */
-  --primary-soft: var(--brand-soft, #f1eafe);
+  --primary-soft: var(--brand-soft, #eeedfe);
   /* Le texte teinté en mode sombre (dark:text-[var(--primary-light)]) : il suit le thème. */
-  --primary-light: #c4b5fd;
-  --primary-rgb: 124, 58, 237;
-  --gradient-primary: linear-gradient(135deg, #a36cff 0%, #7c3aed 100%);
-  --shadow-primary: 0 10px 20px rgba(124, 58, 237, 0.3);
+  --primary-light: #c7d2fe;
+  --primary-rgb: 91, 76, 240;
+  --gradient-primary: linear-gradient(135deg, #8c7cff 0%, #4f46e5 100%);
+  --shadow-primary: 0 10px 20px rgba(91, 76, 240, 0.3);
 
   --gradient-accent: linear-gradient(135deg, #9b2cfa 0%, #2c62fa 100%);
   --shadow-accent: 0 10px 20px rgba(155, 44, 250, 0.3);
@@ -24,9 +24,11 @@
   --danger: #ff2b5e;
   --warning: #ffc800;
 
-  --orb-1: rgba(139, 92, 246, 0.28);
-  --orb-2: rgba(217, 70, 239, 0.18);
-  --orb-3: rgba(99, 102, 241, 0.2);
+  /* Le fond reste calme : surtout du blanc, un voile d'indigo et de bleu froid, jamais de rose.
+     Un dégradé plus soutenu charge trop un grand écran (2026-11-16). */
+  --orb-1: rgba(91, 76, 240, 0.1);
+  --orb-2: rgba(56, 189, 248, 0.09);
+  --orb-3: rgba(148, 163, 184, 0.12);
 
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -41,9 +43,9 @@
   color-scheme: dark;
 }
 
-/* En sombre, le violet par défaut s'éclaircit : en texte sur le fond sombre, il n'avait que 3,4:1. */
+/* En sombre, l'indigo par défaut s'éclaircit : en texte sur le fond sombre, il n'avait que 3,3:1. */
 .dark[data-preset='ocean'] {
-  --primary: #9b6bff;
+  --primary: #8b80ff;
 }
 /* « Océan » : le bleu II, couleur par défaut jusqu'au 2026-11-16. */
 [data-preset='bleu'] {

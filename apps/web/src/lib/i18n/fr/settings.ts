@@ -233,7 +233,7 @@ export const settings = {
     dark: 'Sombre',
     system: 'Système',
     color: 'Couleur de l’interface',
-    brandColorNote: 'Avec « Violet », la couleur de votre usine remplace le violet.',
+    brandColorNote: 'Avec « Indigo », la couleur de votre usine remplace l’indigo.',
     mobileNote: 'Sur le plancher, l’app mobile CLIP filme en 720p et réduit les photos : des médias légers, envoyés même si le réseau coupe un instant.',
   },
   /** L'onglet Données : export et connexion. */

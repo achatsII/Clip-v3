@@ -2,8 +2,8 @@
  * Thème de l'utilisateur (ux-design-ii 5.16) : clé `ui_theme` = { mode, preset }, préservée à la
  * déconnexion. La couleur de l'usine (réglages) surcharge la primaire du thème par défaut.
  *
- * Le thème par défaut garde son identifiant historique `ocean`, mais il porte le violet de CLIP depuis
- * le 2026-11-16 : les préférences déjà enregistrées passent au violet sans migration. Le bleu II d'avant
+ * Le thème par défaut garde son identifiant historique `ocean`, mais il porte l'indigo de CLIP depuis
+ * le 2026-11-16 : les préférences déjà enregistrées passent à l'indigo sans migration. Le bleu II d'avant
  * est le thème `bleu`, nommé « Océan ».
  */
 import { brandColorOf } from './brand/colors'
@@ -20,7 +20,7 @@ export interface UiTheme {
  * mise en page racine, rendue par le serveur, qui ne charge pas les langues.
  */
 export const THEME_PRESETS: Array<{ value: ThemePreset; swatch: string }> = [
-  { value: 'ocean', swatch: 'linear-gradient(135deg,#A36CFF,#7C3AED)' },
+  { value: 'ocean', swatch: 'linear-gradient(135deg,#8C7CFF,#4F46E5)' },
   { value: 'bleu', swatch: 'linear-gradient(135deg,#00C6FF,#0078FF)' },
   { value: 'nature', swatch: 'linear-gradient(135deg,#3ee0a1,#10a96d)' },
   { value: 'crepuscule', swatch: 'linear-gradient(135deg,#ffb000,#ff6b00)' },
@@ -72,7 +72,7 @@ function shade(rgb: [number, number, number], f: number): string {
  * Applique la couleur de marque de l'usine aux tokens primaires (seulement avec le thème par défaut).
  * Son ton pâle va dans `--brand-soft`, que `--primary-soft` reprend en mode clair seulement : posé
  * directement sur la racine, il battrait le mode sombre et laisserait un fond pâle sous un texte blanc.
- * Une couleur par défaut enregistrée (l'ancien bleu, le violet) ne compte pas : `brandColorOf`.
+ * Une couleur par défaut enregistrée (l'ancien bleu, le violet d'une heure, l'indigo) ne compte pas : `brandColorOf`.
  */
 export function applyBrandColor(stored: string | null | undefined) {
   const root = document.documentElement

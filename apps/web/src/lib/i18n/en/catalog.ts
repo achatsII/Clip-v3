@@ -57,5 +57,5 @@ export const catalog: typeof Fr = {
     reader: { label: 'Reader', summary: 'Views published instructions and flags what isn’t clear.' },
   },
   status: { draft: 'Draft', review: 'Awaiting approval', published: 'Published', archived: 'Archived' },
-  themes: { ocean: 'Violet', bleu: 'Ocean', nature: 'Nature', crepuscule: 'Dusk', royal: 'Royal', monochrome: 'Monochrome' },
+  themes: { ocean: 'Indigo', bleu: 'Ocean', nature: 'Nature', crepuscule: 'Dusk', royal: 'Royal', monochrome: 'Monochrome' },
 }

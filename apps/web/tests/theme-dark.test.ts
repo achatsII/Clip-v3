@@ -44,8 +44,8 @@ describe('la couleur de l’usine', () => {
 })
 
 describe('la feuille de style', () => {
-  it('en clair, --primary-soft reprend le ton de l’usine, sinon le violet pâle', () => {
-    expect(block(':root')).toContain('--primary-soft: var(--brand-soft, #f1eafe);')
+  it('en clair, --primary-soft reprend le ton de l’usine, sinon l’indigo pâle', () => {
+    expect(block(':root')).toContain('--primary-soft: var(--brand-soft, #eeedfe);')
   })
 
   it('en sombre, --primary-soft devient une teinte translucide de la primaire du moment', () => {

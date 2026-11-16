@@ -158,7 +158,7 @@ html.site-leaving .site-leaving-mark {
   mix-blend-mode: soft-light;
 }
 
-/* ───────── Le halo derrière le héros ───────── */
+/* ───────── Le halo derrière le héros : un voile, pas un dégradé qui charge l'écran ───────── */
 .site-halo {
   position: absolute;
   left: 50%;
@@ -167,12 +167,12 @@ html.site-leaving .site-leaving-mark {
   aspect-ratio: 16 / 9;
   translate: -50% 0;
   border-radius: 9999px;
-  background: radial-gradient(closest-side, rgba(var(--primary-rgb), 0.28), rgba(var(--primary-rgb), 0) 70%);
+  background: radial-gradient(closest-side, rgba(var(--primary-rgb), 0.12), rgba(var(--primary-rgb), 0) 70%);
   filter: blur(20px);
   pointer-events: none;
 }
 .dark .site-halo {
-  background: radial-gradient(closest-side, rgba(var(--primary-rgb), 0.22), rgba(var(--primary-rgb), 0) 70%);
+  background: radial-gradient(closest-side, rgba(var(--primary-rgb), 0.16), rgba(var(--primary-rgb), 0) 70%);
 }
 
 /* ───────── L'onde de la lecture à voix haute (démo du poste) ───────── */

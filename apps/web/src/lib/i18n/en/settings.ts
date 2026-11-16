@@ -220,7 +220,7 @@ export const settings: typeof Fr = {
     dark: 'Dark',
     system: 'System',
     color: 'Interface color',
-    brandColorNote: 'With “Violet”, your plant’s color replaces the violet.',
+    brandColorNote: 'With “Indigo”, your plant’s color replaces the indigo.',
     mobileNote: 'On the floor, the CLIP mobile app films in 720p and shrinks photos: light media, sent even if the network drops for a moment.',
   },
   data: {

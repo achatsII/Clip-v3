@@ -42,7 +42,8 @@ export async function siteOgImage(lang: SiteLang, page: PageKey): Promise<ImageR
         position: 'relative',
         backgroundColor: '#f8fafc',
         backgroundImage:
-          'radial-gradient(circle at 12% 8%, rgba(59,130,246,0.30) 0%, rgba(59,130,246,0) 45%), radial-gradient(circle at 92% 88%, rgba(6,182,212,0.30) 0%, rgba(6,182,212,0) 50%), radial-gradient(circle at 70% 20%, rgba(155,44,250,0.14) 0%, rgba(155,44,250,0) 40%)',
+          // Le même fond calme que l'app : un voile de la couleur de CLIP et de bleu froid.
+          `radial-gradient(circle at 12% 8%, rgba(${BRAND.rgb}, 0.16) 0%, rgba(${BRAND.rgb}, 0) 45%), radial-gradient(circle at 92% 88%, rgba(56, 189, 248, 0.14) 0%, rgba(56, 189, 248, 0) 50%)`,
         fontFamily: 'Inter',
         color: '#0f172a',
       }}

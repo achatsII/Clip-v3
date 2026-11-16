@@ -1,14 +1,14 @@
 /**
  * La marque de CLIP depuis le 2026-11-16 : le logo 6 (« La pile d'extraits »), pris dans une banque de
- * 10 gardée pour pouvoir changer plus tard, et le violet comme couleur par défaut. Le bleu d'avant
- * reste au choix dans Apparence (thème « Océan »).
+ * 10 gardée pour pouvoir changer plus tard, et l'indigo comme couleur par défaut (après une heure de
+ * violet). Le bleu d'avant reste au choix dans Apparence (thème « Océan »), et le fond reste calme.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { LogoMark } from '@/components/Logo'
-import { BRAND, brandColorOf, LEGACY_DEFAULT_COLOR } from '@/lib/brand/colors'
+import { BRAND, brandColorOf, FORMER_DEFAULT_COLORS, LEGACY_DEFAULT_COLOR } from '@/lib/brand/colors'
 import { BRAND_MARK, brandMark, iconSvg, MARKS, markOf } from '@/lib/brand/marks'
 import { messagesIn } from '@/lib/i18n'
 import { applyBrandColor, THEME_PRESETS } from '@/lib/theme'
@@ -66,7 +66,7 @@ describe('la banque des logos', () => {
   })
 })
 
-describe('le violet par défaut', () => {
+describe('l’indigo par défaut', () => {
   it('la feuille de style et le code ont les mêmes valeurs', () => {
     const root = block(':root')
     expect(root).toContain(`--primary: ${BRAND.primary.toLowerCase()};`)
@@ -77,11 +77,11 @@ describe('le violet par défaut', () => {
     expect(root).toContain(`--gradient-primary: linear-gradient(135deg, ${BRAND.from.toLowerCase()} 0%, ${BRAND.to.toLowerCase()} 100%);`)
   })
 
-  it('en sombre, le violet s’éclaircit pour se lire en texte', () => {
+  it('en sombre, l’indigo s’éclaircit pour se lire en texte', () => {
     expect(block(".dark[data-preset='ocean']")).toContain(`--primary: ${BRAND.darkPrimary.toLowerCase()};`)
   })
 
-  it('le bleu d’avant reste au choix : le thème « Océan », juste après le violet', () => {
+  it('le bleu d’avant reste au choix : le thème « Océan », juste après l’indigo', () => {
     expect(THEME_PRESETS.slice(0, 2).map((p) => p.value)).toEqual(['ocean', 'bleu'])
     expect(block("[data-preset='bleu']")).toContain('--primary: #0078ff;')
     expect(block("[data-preset='bleu']")).toContain('--gradient-primary: linear-gradient(135deg, #00c6ff 0%, #0078ff 100%);')
@@ -90,25 +90,52 @@ describe('le violet par défaut', () => {
       for (const p of THEME_PRESETS) expect(themes[p.value], `${lang} ${p.value}`).toBeTruthy()
     }
     expect(messagesIn('fr').catalog.themes.bleu).toBe('Océan')
+    expect(messagesIn('fr').catalog.themes.ocean).toBe('Indigo')
+  })
+
+  it('le fond reste calme : des voiles légers, froids, jamais de rose', () => {
+    const hue = (r: number, g: number, b: number) => {
+      const [x, y, z] = [r / 255, g / 255, b / 255]
+      const max = Math.max(x, y, z)
+      const d = max - Math.min(x, y, z)
+      if (!d) return 0
+      const h = max === x ? ((y - z) / d) % 6 : max === y ? (z - x) / d + 2 : (x - y) / d + 4
+      return (h * 60 + 360) % 360
+    }
+    const orbs = [...block(':root').matchAll(/--orb-\d: rgba\((\d+), (\d+), (\d+), ([\d.]+)\);/g)].map((m) => m.slice(1).map(Number))
+    expect(orbs).toHaveLength(3)
+    for (const [r, g, b, a] of orbs) {
+      expect(a, `rgba(${r}, ${g}, ${b}, ${a})`).toBeLessThanOrEqual(0.12)
+      // Du bleu ciel à l'indigo ; le violet et le rose (au-delà de 250°) chargent un grand écran.
+      expect(hue(r, g, b), `rgba(${r}, ${g}, ${b})`).toBeGreaterThanOrEqual(190)
+      expect(hue(r, g, b), `rgba(${r}, ${g}, ${b})`).toBeLessThanOrEqual(250)
+    }
+    const halo = read('src/app/(site)/site.css')
+    const at = halo.indexOf('.site-halo {')
+    expect(Number(/rgba\(var\(--primary-rgb\), ([\d.]+)\)/.exec(halo.slice(at))?.[1])).toBeLessThanOrEqual(0.14)
   })
 
   it('chaque thème a sa teinte de texte pour le mode sombre', () => {
     for (const p of THEME_PRESETS.filter((x) => x.value !== 'ocean')) expect(block(`[data-preset='${p.value}']`), p.value).toContain('--primary-light:')
   })
 
-  it('la coquille mobile a le même violet', () => {
+  it('la coquille mobile a le même indigo', () => {
     const theme = read('../mobile/src/ui/theme.ts')
     expect(theme).toContain(`primary: '${BRAND.primary}'`)
     expect(theme).toContain(`gradientPrimary: ['${BRAND.from}', '${BRAND.to}']`)
-    expect(read('../mobile/app.json')).not.toContain(LEGACY_DEFAULT_COLOR)
+    const app = read('../mobile/app.json')
+    for (const old of FORMER_DEFAULT_COLORS) expect(app).not.toContain(old)
+    expect(read('public/manifest.webmanifest')).toContain(`"theme_color": "${BRAND.primary}"`)
   })
 })
 
 describe('la couleur de l’usine', () => {
-  it('l’ancien bleu par défaut enregistré tel quel ne compte pas : l’usine suit le violet', () => {
+  it('une couleur par défaut enregistrée telle quelle ne compte pas : l’usine suit l’indigo', () => {
     expect(brandColorOf(LEGACY_DEFAULT_COLOR)).toBeNull()
     expect(brandColorOf('#0078ff')).toBeNull()
     expect(brandColorOf(BRAND.primary)).toBeNull()
+    // Le violet n'a été la couleur par défaut qu'une heure, mais « Appliquer » a pu l'enregistrer.
+    expect(brandColorOf('#7c3aed')).toBeNull()
     expect(brandColorOf(null)).toBeNull()
     expect(brandColorOf('#E30613')).toBe('#E30613')
   })

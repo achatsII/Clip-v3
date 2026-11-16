@@ -6,7 +6,7 @@ const cn = (...classes: Array<string | false | null | undefined>) => classes.fil
 
 /**
  * Le symbole de CLIP (`BRAND_MARK`, banque de `src/lib/brand/marks.ts`), en blanc sur le dégradé de la
- * couleur du moment : le violet par défaut, le thème choisi dans Apparence, ou la couleur de l'usine.
+ * couleur du moment : l'indigo par défaut, le thème choisi dans Apparence, ou la couleur de l'usine.
  * Sans taille donnée, 40 px ; une taille donnée remplace celle-là (`cn` ne fusionne pas les classes).
  */
 export function LogoMark({ className }: { className?: string }) {
