@@ -50,7 +50,8 @@ describe('une réponse qui survit à l’arrière-plan', () => {
 
   it('la demande part au serveur ; l’app relit le travail jusqu’à sa fin, débite son coût une fois et le ferme', async () => {
     const { ai, data } = fake([job({}), job({}), job({ status: 'completed', stage: 'done', result: { json: { reply: 'Fait', operations: [] }, model: 'gemini', billing: { costs: { cad: 0.004 } } } as ServerJob['result'] })])
-    const res = await durableAsk<{ reply: string }>({ ai, data } as never, 'edit_agent', body, { instructionId: 'i1', pollMs: 1 })
+    // L'horloge du travail : celle des états rendus (sans elle, la date du test vieillit et le travail paraît muet).
+    const res = await durableAsk<{ reply: string }>({ ai, data } as never, 'edit_agent', body, { instructionId: 'i1', pollMs: 1, now: () => T0 })
     expect(ai.startJob).toHaveBeenCalledWith({ operation: 'edit_agent', instructionId: 'i1', ask: body })
     expect(ai.ask).not.toHaveBeenCalled()
     expect(res).toMatchObject({ json: { reply: 'Fait' }, model: 'gemini', charged: 3 })
@@ -94,7 +95,7 @@ describe('une réponse qui survit à l’arrière-plan', () => {
     const { ai, data } = fake([job({}), job({ status: 'completed', stage: 'done', result: { json: { reply: 'Trop tard' }, model: 'm', billing: { costs: { cad: 0.003 } } } as ServerJob['result'] })])
     const stop = new AbortController()
     stop.abort()
-    await expect(durableAsk({ ai, data } as never, 'edit_agent', body, { instructionId: 'i1', signal: stop.signal, pollMs: 1 })).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(durableAsk({ ai, data } as never, 'edit_agent', body, { instructionId: 'i1', signal: stop.signal, pollMs: 1, now: () => T0 })).rejects.toMatchObject({ name: 'AbortError' })
     await vi.waitFor(() => expect(ai.chargeCost).toHaveBeenCalledWith('edit_agent', 0.003, jobDebitKey('edit_agent', 'job1'), { model: 'm', ok: true }), { timeout: 12_000 })
   }, 15_000)
 })
