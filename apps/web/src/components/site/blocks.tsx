@@ -7,7 +7,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { content } from '@/lib/site/content'
-import { crumbsFor } from '@/lib/site/crumbs'
+import { crumbsFor, type Crumb } from '@/lib/site/crumbs'
 import { fmt, type SiteLang } from '@/lib/site/lang'
 import { LOOPS, PHOTOS, type LoopKey } from '@/lib/site/media'
 import { primaryCta, type PageKey } from '@/lib/site/routes'
@@ -19,9 +19,9 @@ export function JsonLd({ json }: { json: string }) {
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json }} />
 }
 
-export function Breadcrumbs({ lang, page }: { lang: SiteLang; page: PageKey }) {
+export function Breadcrumbs({ lang, page, crumbs: given }: { lang: SiteLang; page?: PageKey; crumbs?: Crumb[] }) {
   const t = content(lang)
-  const crumbs = crumbsFor(lang, page)
+  const crumbs = given ?? crumbsFor(lang, page ?? 'home')
   return (
     <nav aria-label={t.a11y.breadcrumb} className="text-sm font-bold text-slate-500 dark:text-slate-400">
       <ol className="flex flex-wrap items-center gap-1">

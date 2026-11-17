@@ -16,6 +16,9 @@ export function languageAlternates(page: PageKey): Record<string, string> {
   return { ...Object.fromEntries(SITE_LANGS.map((l) => [HREFLANG[l], ROUTES[page][l]])), 'x-default': ROUTES[page][PRODUCT.defaultLang] }
 }
 
+/** L'image de partage d'une page à son adresse stable (`src/app/og/[name]/route.tsx`). */
+export const shareImage = (page: PageKey): string => `/og/${page}.png`
+
 export function pageMetadata(page: PageKey, lang: SiteLang): Metadata {
   const t = content(lang)
   const { title, description } = t.meta[page]
@@ -32,10 +35,11 @@ export function pageMetadata(page: PageKey, lang: SiteLang): Metadata {
       url: path,
       title,
       description,
-      // Hors du français et de l'anglais : l'image de la page anglaise (le texte des images n'est pas traduit).
-      ...(lang === 'fr' || lang === 'en' ? {} : { images: [`${ROUTES[page].en}/opengraph-image`.replace('/en/opengraph-image', '/en/opengraph-image')] }),
+      // Hors du français et de l'anglais : l'image de la page en anglais, à son adresse stable (`/og/<page>.png` :
+      // celles des fichiers `opengraph-image` portent un suffixe, et une adresse écrite à la main répondait 404).
+      ...(lang === 'fr' || lang === 'en' ? {} : { images: [shareImage(page)] }),
     },
-    twitter: { card: 'summary_large_image', title, description, ...(lang === 'fr' || lang === 'en' ? {} : { images: [`${ROUTES[page].en}/twitter-image`] }) },
+    twitter: { card: 'summary_large_image', title, description, ...(lang === 'fr' || lang === 'en' ? {} : { images: [shareImage(page)] }) },
     robots: SITE_INDEXED ? { index: true, follow: true } : { index: false, follow: false },
   }
 }

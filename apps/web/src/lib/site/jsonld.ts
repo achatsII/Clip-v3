@@ -10,7 +10,7 @@ import { PRODUCT } from '@/lib/brand/product'
 import { HREFLANG, SITE_LANGS, type SiteLang } from './lang'
 import { FILM, II_LOGO } from './media'
 import { siteCatalog } from './pricing'
-import { crumbsFor } from './crumbs'
+import { crumbsFor, type Crumb } from './crumbs'
 import { absoluteUrl, pathOf, SITE_URL, type PageKey } from './routes'
 
 type Node = Record<string, unknown>
@@ -119,9 +119,31 @@ export function faqLd(items: Array<{ q: string; a: string }>): Node {
 
 /** Le fil d'Ariane d'une page : l'accueil, puis la page (le même qu'à l'écran, `crumbsFor`). */
 export function breadcrumbLd(lang: SiteLang, page: PageKey): Node {
+  return crumbListLd(crumbsFor(lang, page))
+}
+
+/** Un fil d'Ariane donné (les guides : l'accueil, les guides, le guide). */
+export function crumbListLd(crumbs: Crumb[]): Node {
   return {
     '@type': 'BreadcrumbList',
-    itemListElement: crumbsFor(lang, page).map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, item: absoluteUrl(c.path) })),
+    itemListElement: crumbs.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.name, item: absoluteUrl(c.path) })),
+  }
+}
+
+/** Un guide : un article de la marque, daté (la page porte aussi `organizationLd`, que son auteur désigne). */
+export function articleLd(lang: SiteLang, a: { path: string; headline: string; description: string; published: string; modified: string; image: string }): Node {
+  return {
+    '@type': 'Article',
+    '@id': `${absoluteUrl(a.path)}#article`,
+    headline: a.headline,
+    description: a.description,
+    inLanguage: HREFLANG[lang],
+    datePublished: a.published,
+    dateModified: a.modified,
+    author: { '@id': ORG_ID },
+    publisher: { '@id': ORG_ID },
+    mainEntityOfPage: absoluteUrl(a.path),
+    image: absoluteUrl(a.image),
   }
 }
 

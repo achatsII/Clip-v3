@@ -9,6 +9,7 @@ import type { ReactNode } from 'react'
 import { content, listOf } from '@/lib/site/content'
 import { PRODUCT } from '@/lib/brand/product'
 import { fmt, HREFLANG, SITE_LANG_NAMES, type SiteLang } from '@/lib/site/lang'
+import { approvedGuides, guidesIn, guidesIndexPath } from '@/lib/site/guides'
 import { II_LOGO } from '@/lib/site/media'
 import { GA_ID, HUBSPOT_ID, LOGIN_PATH, primaryCta, ROUTES, SOLUTIONS, type SolutionKey } from '@/lib/site/routes'
 import { LangMenu, NavLink, PopoverCloser, SiteAnalytics, SiteLanguage } from './client'
@@ -172,6 +173,8 @@ export function SiteHeader({ lang }: { lang: SiteLang }) {
 
 export function SiteFooter({ lang }: { lang: SiteLang }) {
   const t = content(lang)
+  // Les guides : seulement quand une personne en a approuvé, et dans une langue qui les a.
+  const guides = approvedGuides().length > 0 ? guidesIn(lang) : null
   const year = new Date().getFullYear()
   const link = 'inline-flex min-h-11 items-center text-[15px] font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
   const cta = primaryCta(lang)
@@ -241,6 +244,13 @@ export function SiteFooter({ lang }: { lang: SiteLang }) {
                   </Link>
                 </li>
               ))}
+              {guides && (
+                <li>
+                  <Link href={guidesIndexPath(lang)} className={link}>
+                    {guides.ui.guides}
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
           <div>

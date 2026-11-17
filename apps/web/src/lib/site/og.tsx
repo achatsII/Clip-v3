@@ -30,10 +30,14 @@ export const ogAlt = (lang: SiteLang, page: PageKey) => `${content(lang).og.alt}
 // Le logo de la marque de la build (banque `src/lib/brand/marks.ts`), dans la couleur par défaut.
 const MARK = `data:image/svg+xml;base64,${Buffer.from(iconSvg({ from: BRAND.from, to: BRAND.to, shape: 'rounded', id: PRODUCT.mark })).toString('base64')}`
 
-export async function siteOgImage(lang: SiteLang, page: PageKey): Promise<ImageResponse> {
+export function siteOgImage(lang: SiteLang, page: PageKey): Promise<ImageResponse> {
+  return ogImageWithTitle(lang, content(lang).og[page])
+}
+
+/** L'image d'une page qui n'est pas dans `og` (un guide) : son titre, sur la même carte. */
+export async function ogImageWithTitle(lang: SiteLang, title: string): Promise<ImageResponse> {
   const t = content(lang)
   const [[black, bold], picture] = await Promise.all([loadFonts(), loadPhoto()])
-  const title = t.og[page]
   return new ImageResponse(
     <div
       style={{

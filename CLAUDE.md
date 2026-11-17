@@ -383,7 +383,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   l'anglais). Le lecteur du poste a un fichier par langue (`src/components/player/i18n/`, `usePlayerStrings`) ;
   le site, un dictionnaire par langue (`src/lib/site/content/<langue>.ts`) et ses pages sous `/<langue>` (slugs
   anglais, `(site)/(intl)/[lang]`) ; la coquille mobile, ses écrans natifs et les textes des permissions d'iOS
-  (`apps/mobile/src/i18n/<langue>.ts`, `apps/mobile/locales/<langue>.json`). Un texte qui change en français se reporte dans les dix-sept autres
+  (`apps/mobile/src/i18n/<langue>.ts`, `apps/mobile/locales/<langue>.json`). Les guides du site
+  (`src/lib/site/guides/`, pages `/guides`) ne se montrent qu'une fois approuvés par une personne
+  (`GUIDES_APPROVED` : avant, `noindex`, hors du plan du site et des liens). Un texte qui change en français se reporte dans les dix-sept autres
   langues (une passe de traduction, les clés changées données par une comparaison des fichiers). Design system « verre » de
   `src/app/globals.css` (tokens, `glass-*`), une seule action principale par écran, trois états pour
   toute donnée asynchrone, cibles d'au moins 44 px, mode sombre (le gris `slate-500` y passe à
