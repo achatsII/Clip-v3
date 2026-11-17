@@ -11,7 +11,7 @@ import { PRODUCT } from '@/lib/brand/product'
 import { fmt, HREFLANG, SITE_LANG_NAMES, type SiteLang } from '@/lib/site/lang'
 import { approvedGuides, guidesIn, guidesIndexPath } from '@/lib/site/guides'
 import { II_LOGO } from '@/lib/site/media'
-import { GA_ID, HUBSPOT_ID, LOGIN_PATH, primaryCta, ROUTES, SOLUTIONS, type SolutionKey } from '@/lib/site/routes'
+import { GA_ID, HUBSPOT_ID, loginPath, primaryCta, ROUTES, SOLUTIONS, type SolutionKey } from '@/lib/site/routes'
 import { LangMenu, NavLink, PopoverCloser, SiteAnalytics, SiteLanguage } from './client'
 import { ConsentBanner, CookieSettingsButton } from './Consent'
 import { Container, cx, PrimaryCta, SiteIcon, Wordmark } from './ui'
@@ -102,7 +102,7 @@ export function SiteHeader({ lang }: { lang: SiteLang }) {
             {lang.toUpperCase()}
           </LangMenu>
           <a
-            href={LOGIN_PATH}
+            href={loginPath(lang)}
             className="hidden h-11 items-center rounded-full px-4 text-[15px] font-bold text-slate-700 hover:bg-slate-900/5 md:inline-flex dark:text-slate-200 dark:hover:bg-white/10"
           >
             {t.nav.login}
@@ -156,7 +156,7 @@ export function SiteHeader({ lang }: { lang: SiteLang }) {
           </nav>
           <div className="mt-auto grid gap-2 pt-8">
             <PrimaryCta cta={cta} labels={t.cta} size="lg" />
-            <a href={LOGIN_PATH} className="btn-press glass-card inline-flex h-14 items-center justify-center rounded-full text-base font-black text-slate-900 dark:text-white">
+            <a href={loginPath(lang)} className="btn-press glass-card inline-flex h-14 items-center justify-center rounded-full text-base font-black text-slate-900 dark:text-white">
               {t.nav.login}
             </a>
 <LangMenu lang={lang} id="site-langs-sheet" label={t.footer.language} className="btn-press inline-flex h-12 items-center justify-center gap-2 text-sm font-black text-slate-600 dark:text-slate-300">
@@ -228,7 +228,7 @@ export function SiteFooter({ lang }: { lang: SiteLang }) {
                 </li>
               )}
               <li>
-                <a href={LOGIN_PATH} className={link}>
+                <a href={loginPath(lang)} className={link}>
                   {t.nav.login}
                 </a>
               </li>

@@ -101,16 +101,23 @@ export const APP_PATHS = [
 
 /* ───────────────────────── Les liens vers l'app ───────────────────────── */
 
-/** Se connecter : l'app, hors du site (chargement complet, la langue de l'outil s'y applique). */
+/** Se connecter : l'app, hors du site (chargement complet). */
 export const LOGIN_PATH = '/connexion'
 
-/** Créer un compte (libre-service), avec le forfait choisi sur la page des tarifs. */
-export function signupPath(plan?: { code: string; interval: PlanInterval }): string {
+/**
+ * Se connecter depuis une page du site : l'app s'ouvre dans la langue de cette page (`?lang=`), pas
+ * dans la dernière langue de l'appareil (la connexion l'applique, `src/app/connexion/page.tsx`).
+ */
+export const loginPath = (lang: SiteLang): string => `${LOGIN_PATH}?lang=${lang}`
+
+/** Créer un compte (libre-service), avec le forfait choisi sur la page des tarifs, dans la langue de la page. */
+export function signupPath(plan?: { code: string; interval: PlanInterval }, lang?: SiteLang): string {
   const q = new URLSearchParams({ inscription: '1' })
   if (plan) {
     q.set('plan', plan.code)
     q.set('interval', plan.interval)
   }
+  if (lang) q.set('lang', lang)
   return `${LOGIN_PATH}?${q.toString()}`
 }
 
@@ -123,11 +130,11 @@ export interface SiteCta {
 }
 
 export function primaryCta(lang: SiteLang): SiteCta {
-  return SELF_SERVICE ? { href: signupPath(), app: true, kind: 'trial' } : { href: pathOf('book', lang), app: false, kind: 'book' }
+  return SELF_SERVICE ? { href: signupPath(undefined, lang), app: true, kind: 'trial' } : { href: pathOf('book', lang), app: false, kind: 'book' }
 }
 
 /** Le bouton d'un forfait : l'inscription avec le forfait (libre-service), sinon une démo. */
 export function planCta(lang: SiteLang, plan: { code: string; paid: boolean; interval: PlanInterval } | null): SiteCta {
   if (!SELF_SERVICE || !plan) return { href: pathOf('book', lang), app: false, kind: 'book' }
-  return { href: plan.paid ? signupPath({ code: plan.code, interval: plan.interval }) : signupPath(), app: true, kind: 'trial' }
+  return { href: plan.paid ? signupPath({ code: plan.code, interval: plan.interval }, lang) : signupPath(undefined, lang), app: true, kind: 'trial' }
 }

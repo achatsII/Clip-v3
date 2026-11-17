@@ -25,6 +25,8 @@ const LOADER_ID = 'hs-script-loader'
 declare global {
   interface Window {
     _hsq?: unknown[][]
+    /** Les réglages du chat HubSpot, lus par son script au chargement. */
+    hsConversationsSettings?: { loadImmediately?: boolean }
     dataLayer?: unknown[]
     gtag?: (...args: unknown[]) => void
   }
@@ -52,9 +54,14 @@ export function saveConsent(choice: ConsentChoice): void {
   }
 }
 
-/** Ajoute le script de suivi HubSpot (une fois). Sans identifiant, rien. */
+/**
+ * Ajoute le script de suivi HubSpot (une fois). Sans identifiant, rien. Le suivi seulement : le chat du
+ * portail HubSpot (celui du site de l'entreprise, sans rapport avec Clip) ne se charge pas
+ * (`hsConversationsSettings.loadImmediately`, novembre 2026).
+ */
 export function loadHubSpot(hubId: string): void {
   if (typeof document === 'undefined' || !hubId || document.getElementById(LOADER_ID)) return
+  window.hsConversationsSettings = { ...window.hsConversationsSettings, loadImmediately: false }
   window._hsq = window._hsq || []
   const script = document.createElement('script')
   script.id = LOADER_ID

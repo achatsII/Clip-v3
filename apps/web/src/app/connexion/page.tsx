@@ -13,6 +13,7 @@ import { parsePlanIntent, savePlanIntent, subscriptionPathFor } from '@/lib/bill
 import { BILLING_V2, SELF_SERVICE } from '@/lib/config'
 import { LanguageSelect } from '@/components/ui/LanguageSelect'
 import { setLang, useLang, useMessages } from '@/lib/i18n'
+import { isLang } from '@/lib/i18n/core'
 import { PRIVACY_URL } from '@/lib/billing/store'
 import { useToggle } from '@/lib/toggles'
 
@@ -31,6 +32,12 @@ export default function ConnexionPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+
+  // Venu du site : la langue de la page qu'on quittait (`?lang=nl`), pas la dernière de cet appareil.
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).get('lang')
+    if (isLang(asked)) setLang(asked)
+  }, [])
 
   useEffect(() => {
     if (!hasSession()) return
