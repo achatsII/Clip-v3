@@ -65,26 +65,50 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   ouvert ») le dit et le ferme d'un toucher ; le choix est retenu sur l'appareil. Tout ce qui est dit forme
   un seul « Commentaire des photos », sans couper une phrase au déclic, et chaque photo garde l'instant où
   elle a été prise : l'IA associe à chaque photo ce qui a été dit autour d'elle.
+- À l'ordinateur, « Écran » enregistre un logiciel (un ERP, un MES, une interface de machine), sans rien
+  installer : on choisit la fenêtre ou tout l'écran, on fait la tâche comme d'habitude, la voix en option
+  dit le pourquoi, et « Terminer » (ou « Arrêter le partage » du navigateur) le garde. CLIP prend une image
+  nette juste avant chaque clic, même rapide, le pointeur sur ce qu'on touche ; l'IA en fait une étape par
+  action (« Cliquer sur Enregistrer », « Saisir le numéro de lot dans Lot »), l'image nette en média et
+  l'élément à toucher entouré, sans recopier un mot de passe ni une donnée personnelle visible. Dix minutes
+  au plus. Pas au téléphone ni à la tablette : le navigateur ne partage pas leur écran. L'assistant de
+  l'éditeur l'accepte aussi, pour ajouter quelques étapes d'un logiciel à une instruction.
 - On peut glisser des fichiers : vidéos d'une autre caméra, photos, anciennes instructions en PDF ou Word.
   « Médias déjà pris » reprend les médias des instructions précédentes, sans rien téléverser de nouveau.
 - Des médias légers : l'app mobile filme en 720p (environ 19 Mo la minute) et ramène les photos à 1920 px ;
   une vidéo trop lourde est réduite automatiquement. L'envoi continue si le réseau coupe un instant. Au
   navigateur, la caméra et le micro de l'appareil servent aussi.
-- Au plus 30 minutes de vidéo pour une instruction : au-delà, l'app demande de la séparer en plusieurs.
+- En une fois, l'IA lit jusqu'à 30 minutes de vidéo, 45 minutes de notes vocales, 80 photos et 60 pages de
+  documents, en autant de fichiers qu'il faut (dix vidéos de trois minutes passent). Près de la limite, l'app le
+  dit ; au-delà, elle nomme ce qui dépasse et demande de séparer l'instruction en plusieurs.
 - Options : le format (« Automatique », « Étape par étape » pour une instruction de travail, « Énergies et
-  isolement » pour une fiche de cadenassage) et « Annoter les images automatiquement » (l'IA encercle ce qu'il
-  faut regarder sur chaque photo ou image figée qui en a besoin, jamais sur un extrait vidéo).
+  isolement » pour une fiche de cadenassage), « Annoter les images automatiquement » (l'IA encercle ce qu'il
+  faut regarder sur chaque photo ou image figée qui en a besoin, jamais sur un extrait vidéo) et « Proposer des
+  relevés » (là où une étape demande de lire une valeur, de vérifier un point ou de noter un numéro de lot).
 
 ## 2. Générer l'instruction avec l'IA
 - Un seul bouton, « Générer l'instruction » : l'IA regarde et écoute les médias et rédige les étapes,
   d'habitude en moins de 2 minutes.
+- Chaque action devient une étape, même courte (enlever un bouchon, appuyer sur un bouton), et son extrait
+  vidéo montre ce geste-là, sans déborder sur le suivant.
 - Une action par étape, le moins de texte possible (un titre de quelques mots, une ou deux phrases), 0 à 2
   points clés, une mise en garde à l'étape où le risque se présente (« Danger », « Attention », « Bon à
-  savoir »), les équipements de protection (EPI), les outils et le matériel.
+  savoir »), les équipements de protection (EPI), les outils et le matériel, chacun avec son image (une
+  clé, un tournevis, un chiffon).
 - Chaque étape reçoit son média : l'extrait de la vidéo d'origine à la seconde près (joué en boucle au
-  poste, pas un GIF), une photo, une image figée tirée de la vidéo, ou une page d'un PDF.
+  poste ; l'auteur peut en faire un GIF), une photo, une image figée tirée de la vidéo, ou une figure d'un PDF : la photo ou
+  le dessin de la page qui illustre l'étape, recadré (la page entière reste à un geste dans l'éditeur).
 - L'IA classe l'instruction (production, maintenance, qualité, santé et sécurité, nettoyage, changement de
   format, démarrage et arrêt) et devine son poste, rapproché des postes existants.
+- Chaque usine se donne ses propres façons de classer (Réglages › Classement) : des familles d'étiquettes,
+  une liste de valeurs (Département : Découpe, Assemblage…) ou une valeur libre (Produit : 12345 ; Bon de
+  travail). L'IA classe chaque nouvelle instruction selon elles, d'après les sources, ce que la personne a
+  dit et le nom des fichiers, sans inventer de valeur ; on vérifie d'un coup d'œil, on retire ce qui ne va
+  pas, ou on demande « Proposer avec l'IA » pour une instruction déjà écrite. La bibliothèque se filtre par
+  famille, et la recherche trouve un numéro de produit ou de bon de travail.
+- Le nom des instructions : l'usine choisit jusqu'à trois familles qui passent devant le titre, dans
+  l'ordre voulu (« Découpe – Presse P-12 – Changer le filtre »). La bibliothèque, le poste et le PDF
+  montrent le même nom ; quand le classement change, le nom suit.
 - Ce que les sources ne tranchent pas devient au plus quatre questions (la pastille « à vérifier »), avec des
   réponses proposées ; les réponses corrigent l'instruction.
 - Le standard de rédaction de l'usine guide chaque génération (Réglages › Standard de rédaction : ce par quoi
@@ -92,7 +116,20 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   mots au plus par étape, ton, règles, vocabulaire de l'usine ; « Décrire à l'IA » le rédige à partir d'une
   description). Les EPI et les mises en garde s'affichent avant la première étape, même sans étape de
   sécurité. Sous une instruction générée, « Le résultat vous convient ? » : ce qui manque guide les
-  générations suivantes (« Ce que l'IA a appris de vos avis »).
+  générations suivantes (« Ce que l'IA a appris de vos avis ») : pour toute l'usine quand c'est
+  l'administrateur qui le dit, pour la personne seulement sinon.
+- L'IA apprend des corrections : à la première publication d'une instruction générée, CLIP compare la
+  version de l'IA à la version publiée (textes raccourcis, points clés retirés, mises en garde ajoutées,
+  étapes découpées, un mot remplacé par celui de l'usine). Quand une même habitude revient dans au moins
+  trois instructions, une carte le dit après la publication (« Vous raccourcissez les textes de l'IA,
+  4 instructions sur 5 ») et propose la règle : « Oui, pour moi », « Pour toute l'usine » (administrateur),
+  ou « Non merci », qui ne revient pas. « Prendre comme modèle » (menu « … » de l'éditeur) : on dit d'un
+  toucher ce qui rend une instruction bonne (textes courts, une action par étape, bons points clés…),
+  l'IA en tire des règles de style, et l'instruction devient un exemple que les générations imitent
+  (le style, jamais le contenu). Chacun a « Mes préférences de rédaction » (Réglages › Standard de
+  rédaction), versionnées avec retour en arrière, que l'IA suit pour ses instructions après le standard de
+  l'usine ; l'administrateur voit aussi ce que les corrections de toute l'équipe proposent, et « Analyser
+  avec l'IA » lit les dernières corrections pour proposer des règles.
 - La génération tourne dans l'appareil qui la lance et se voit sur les autres (« En création ») ; au
   navigateur, on peut quitter l'écran tant que l'onglet reste ouvert. Si l'appareil s'éteint, la création est
   « interrompue » et se relance d'un geste ; les médias sont gardés.
@@ -116,14 +153,43 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   (réécrire, ajouter une étape, « encercle le bouton vert sur la photo de l'étape 3 », dessiner un schéma,
   montrer à faire / à éviter), écrit ou dicté. Il modifie l'instruction sous les yeux de la personne, et tout
   son passage s'annule d'un geste ; au besoin, il revoit les vidéos et les notes d'origine.
+- Dans la conversation de l'assistant, le trombone joint une photo, une vidéo, une note vocale, un document
+  ou un PowerPoint : l'assistant les reçoit avec la demande (« mets cette photo à l'étape 4 », « ajoute les
+  étapes de cette vidéo »), et ils rejoignent les médias d'origine de l'instruction.
+- « Médias d'origine » : ce qui a servi à rédiger l'instruction, à revoir à tout moment — les vidéos en entier,
+  avec le son, les photos en grand, les notes vocales à réécouter avec leur transcription, les notes écrites
+  et les documents. Chaque média dit à quelles étapes il sert ; « Voir l'original », sous le média d'une
+  étape, ouvre la vidéo d'origine au moment de l'extrait. Une photo prise en parlant fait réentendre ce qui a
+  été dit à cet instant. Dans l'éditeur, un média se met à l'étape ouverte d'un toucher, et on en ajoute
+  d'autres. Qui rédige les revoit aussi en lecture ; l'opérateur au poste, non : il voit l'extrait choisi.
 - « Direct » : parler à l'assistant d'édition à voix haute, en direct (forfait Usine).
+- Au téléphone, on peut quitter l'app pendant que l'assistant prépare sa réponse ou que l'IA génère une
+  instruction : le travail continue au serveur, et la réponse attend au retour.
 - « Annoter l'image » : crayon, surligneur, flèche, ligne, distance (une cote : « 12 mm »), cercle, cadre,
   texte, numéro, icônes (danger, gants, cadenas, sens horaire…) et flou (cacher un visage, un nom, un écran).
   « Annoter par IA » place les flèches et les cercles sur ce qu'il faut voir.
+- « GIF » sur un média vidéo (à côté de « Vidéo » et « Image ») : on choisit le début et la fin dans la
+  vidéo (15 secondes au plus), puis on décide : « À la place de la vidéo » (l'étape montre le GIF ;
+  « Vidéo » y revient d'un geste), « En plus de la vidéo », ou « Seulement le partager » (télécharger,
+  partager, copier le lien) pour un courriel, Teams ou une présentation. Un GIF joue tout seul, partout ;
+  une vidéo reste plus nette et plus légère, avec le son et la pause.
 - Sous le média, les outils de l'IA à découvert : « Illustrer l'étape », une illustration tirée du texte de
   l'étape, même quand elle n'a encore aucune image (« Illustrer cette image » part de la photo affichée), et
   « Schéma de l'étape » (vue de face, de dessus, en coupe ou en 3D, avec très peu de mots).
 - Jusqu'à six médias par étape, disposés « Un à la fois », « À faire / À éviter » côte à côte, ou en « Grille ».
+  Leur ordre se change d'un toucher (« Mettre ce média avant », « après ») : le premier est celui qu'on voit
+  d'abord au poste.
+- Les variantes : une seule instruction pour des tâches presque pareilles (« Pompe A », « Pompe B », deux
+  modèles d'une machine) ; chaque étape dit à quelle variante elle s'applique, ou à toutes. Au poste, la
+  personne touche sa variante au départ et ne voit que ses étapes ; on rédige, traduit, approuve et publie
+  une seule fois. L'IA les propose quand les vidéos ou l'ancien document décrivent plusieurs modèles.
+- La version courte pour les habitués, seulement si l'auteur l'offre : au poste, « L'essentiel » ne garde
+  que les étapes marquées d'une étoile ; « Tout en détail » (le choix par défaut) les montre toutes, pour
+  les nouveaux. Une étape avec un relevé ou une mise en garde reste toujours dans la version courte.
+  Plusieurs médias à une étape se voient d'un coup d'œil : leurs vignettes, « 2 / 3 » et de grandes flèches
+  sur le média, et leur nombre sur l'étape dans la liste des étapes.
+- Les outils et le matériel en images : un grand emoji par outil, puis son nom ; un toucher en change
+  l'image. Le PDF les montre aussi.
 - Annuler et rétablir (Ctrl+Z) ; l'historique (versions publiées et points de retour du brouillon) pour
   revenir en arrière ; l'édition en direct entre appareils (ce qui change sur le téléphone s'affiche sur
   l'ordinateur) ; les sections d'une longue instruction (« Démontage », « Remontage »).
@@ -147,9 +213,14 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Après une modification importante, on retraduit (« Mettre à jour la traduction »).
 
 ## 5. Moderniser les anciennes procédures (import en lot)
-- « Importer vos anciennes instructions » : on dépose des PDF et des documents Word (.docx, .doc, .odt),
-  même par dizaines ; chacun devient un brouillon structuré, prêt à relire (« Brouillon créé »). L'onglet reste
-  ouvert pendant l'analyse ; « Reprendre l'analyse » relance ce qui reste. Forfait Usine.
+- « Importer vos anciennes instructions » : on dépose des PDF, des documents Word (.docx, .doc, .odt) et des
+  PowerPoint (.pptx), même par dizaines ; chacun devient un brouillon structuré, prêt à relire (« Brouillon
+  créé »). L'onglet reste ouvert pendant l'analyse ; « Reprendre l'analyse » relance ce qui reste. Forfait Usine.
+- Les photos et les dessins du document deviennent les médias des étapes, recadrés : chaque étape montre
+  sa figure, pas la page entière.
+- Un PowerPoint (.pptx) se dépose tel quel : CLIP lit le texte de chaque diapositive (titres, textes,
+  tableaux, notes du présentateur) et en reprend les images, qui deviennent les médias des étapes. Un ancien
+  .ppt ou un Keynote s'enregistre d'abord en .pptx ou en PDF.
 - Un seul document se dépose aussi dans une nouvelle instruction, avec des vidéos et des photos.
 
 ## 6. Approuver et publier
@@ -172,10 +243,21 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   l'opérateur ouvre ses instructions, sans compte. Au choix : « Ce poste d'abord » (les autres instructions
   restent à un geste) ou « Seulement ce poste ». Une instruction se partage aussi par un lien direct et son
   code QR, qui montrent toujours la version publiée, jamais le brouillon.
+- Une instruction mise à jour le dit au poste : « Mise à jour le … » et ce qui a changé (les étapes
+  nouvelles ou modifiées sont marquées, et chacune s'ouvre d'un toucher), « Mis à jour » sur sa carte, et la
+  version précédente à revoir en lecture, pour comparer. La tablette retient ce qu'elle a déjà vu.
+- Un poste reçoit ses instructions à la main, ou par règle (la page du poste, « Instructions par règle ») :
+  par exemple Département : Découpe et Type : Nettoyage ou Maintenance. Une instruction classée ainsi y
+  va d'elle-même, les nouvelles aussi ; la page montre, avant d'enregistrer, combien d'instructions y
+  répondent et lesquelles.
 - Le lecteur pas à pas : une étape à la fois, un grand média, de gros boutons (« Suivant », « Précédent »),
-  les EPI, les outils et les mises en garde « Avant de commencer », l'extrait vidéo en boucle, une fois ou au
-  toucher, le zoom sur les images, « Tout voir » pour toute l'instruction d'un coup, « Toutes les étapes »
-  (le sommaire, par section).
+  les EPI, les outils en images (un grand emoji par outil) et les mises en garde « Avant de commencer »,
+  l'extrait vidéo en boucle, une fois ou au toucher, le zoom sur les images, « Tout voir » pour toute
+  l'instruction d'un coup, « Toutes les étapes » (le sommaire, par section).
+- Une étape qui a plusieurs médias le montre : leurs vignettes en haut, « 2 / 3 », et de grandes flèches de
+  chaque côté ; la flèche « suivant » attire l'œil tant qu'on n'a pas regardé les autres.
+- Le son d'une vidéo, activé une fois, reste activé pour les étapes suivantes et à la prochaine ouverture,
+  sur cet appareil ; coupé, il le reste aussi.
 - Au téléphone, le média prend ses vraies proportions et laisse au texte la place de se lire sans
   défiler : une photo cède un peu de place, jamais sous un peu plus du tiers de l'écran, et une vidéo garde
   toute sa largeur. Tourné à l'horizontale, l'image et le texte vont côte à côte. « Tout voir » s'ouvre
@@ -184,7 +266,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - « Pas clair ? » : l'opérateur signale en deux touchers ce qui ne va pas (« Pas clair », « Erreur »,
   « Danger », « Idée », « Merci »), avec un commentaire, son prénom et une photo s'il le veut. Le retour
   arrive à la page Retours, où la personne responsable corrige l'étape d'un geste ; l'opérateur verra la
-  nouvelle version. Si l'usine active les avertissements, un danger signalé avertit les personnes choisies.
+  nouvelle version. Dans l'éditeur, la photo de l'opérateur se voit sous l'étape, et « Mettre cette photo à
+  l'étape » en fait un média de l'étape. Si l'usine active les avertissements, un danger signalé avertit les personnes choisies.
 - « Assistant vocal » et « Poser une question » : au poste qui l'a demandé (« Assistant vocal au poste »),
   l'opérateur navigue et pose ses questions à voix haute ou à l'écrit, et la réponse vient de l'instruction
   (forfait Usine).
@@ -217,6 +300,11 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Module Académie (en option) : qualifier chaque personne poste par poste (« Valider sur le terrain »,
   « Qualifié » ou « Peut former »), la revalidation tous les 6, 12 ou 24 mois, la couverture par quart, le
   registre en CSV et l'attestation à imprimer. Ce n'est pas un système de cours.
+- Dans l'Académie, « Former quelqu'un » : un poste, des personnes, une date. « À faire » suit chacun jusqu'à sa
+  validation, le plus pressé d'abord (« En retard », « Prêt à valider ») ; une formation en retard s'affiche
+  dans « À voir ». Les postes habituels d'une personne comptent sans rien faire. « Parcours » montre chaque
+  poste, ses instructions et leurs questions, avec « Préparer les questions » ; un guide en trois gestes
+  explique le tout.
 
 ## 10. Relevés, registre, retours et rapports
 - Relevés : une étape peut demander une mesure (unité et limites), un oui ou non, un choix, un texte (numéro de
@@ -230,7 +318,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Retours : ce que le plancher signale, « À traiter » et « Traités » ; « Corriger » ouvre l'étape.
 - Rapports : des modèles prêts (revue de la semaine, temps par instruction, qui a fait quoi, par poste et
   secteur, écarts et relevés, avant / après une révision, formation et qualification, retours des opérateurs,
-  santé de la bibliothèque), sur 7, 30 ou 90 jours comparés à la période d'avant, par lieu et par quart. Le
+  santé de la bibliothèque, crédits d'IA : où ils vont — par usage, par personne, par jour, et ce que coûte
+  une génération typique), sur 7, 30 ou 90 jours comparés à la période d'avant, par lieu et par quart. Le
   logiciel calcule chaque chiffre ; l'IA les commente et répond aux questions sur le rapport. Les personnes y
   vont par ordre alphabétique : un registre, jamais un palmarès.
 - Statistiques : consultations (tablettes, liens, app), réalisations, retours, les instructions les plus
@@ -253,6 +342,11 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Chaque instruction s'exporte en PDF et en JSON, à tous les forfaits ; « Exporter tout (JSON) » réunit toutes
   les instructions et leurs versions dans un seul fichier (forfait Usine).
 - Le PDF suit la langue de l'instruction ; il porte sa version et rappelle qu'une copie imprimée peut être périmée.
+- « Mise en page » à côté de l'aperçu : les étapes en grand, un tableau (une ligne par étape, l'image à côté) ou
+  une seule page à afficher au poste, en portrait ou en paysage. Avec le logo et les couleurs de l'usine : ce que
+  montre l'en-tête, le pied de page de l'usine, le numéro, la version et la page en bas de chaque page, la
+  couleur, et une mise en page reprise d'une de ses instructions actuelles par l'IA. L'usine l'enregistre une
+  fois pour toutes ses instructions.
 
 ## Intégrations
 - Le scan de l'app mobile lit les codes QR et les codes-barres (Code 128, Code 39, EAN, UPC, DataMatrix) :

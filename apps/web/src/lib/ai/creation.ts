@@ -51,6 +51,7 @@ export function stageLabel(stage: string): string | undefined {
  * appareil : « 2/5 » (la source qu'on prépare, sur le total) ou les vignettes des extraits.
  */
 export const DETAIL_THUMBNAILS = 'thumbnails'
+export const DETAIL_FIGURES = 'figures'
 export const sourceDetail = (index: number, total: number) => `${index}/${total}`
 
 /** Ce que dit le détail d'une étape ; un détail déjà écrit en mots (version antérieure) passe tel quel. */
@@ -60,6 +61,7 @@ export function detailLabel(detail?: string | null): string | undefined {
   const source = /^(\d+)\/(\d+)$/.exec(detail)
   if (source) return t.sourceOf(Number(source[1]), Number(source[2]))
   if (detail === DETAIL_THUMBNAILS) return t.thumbnails
+  if (detail === DETAIL_FIGURES) return t.figures
   return detail
 }
 

@@ -12,7 +12,7 @@ import { T } from '../model/repo'
 import { countInstructions, countPublished, trainingCatalog } from '../model/search'
 import { listTrainings } from '../model/training'
 import type { Execution, Feedback, Published, UsageEvent } from '../model/types'
-import type { CardInfo, LibraryFacts, TrainingFacts } from './catalog'
+import type { AiUse, CardInfo, LibraryFacts, TrainingFacts } from './catalog'
 
 /** Ce qu'une requête Data rend au plus : la Gateway refuse un `limit` au-delà de 10 000 (400). */
 export const DATA_PAGE = 10_000
@@ -42,6 +42,27 @@ export async function loadEvents(data: DataApi, since: string, kinds: EventKind[
     if (docs.length < DATA_PAGE) return { events, capped: false }
   }
   return { events, capped: true }
+}
+
+/**
+ * Les réponses de l'IA des deux périodes (`clip_event`, `type: 'ai'`), par pages de 10 000 : l'usage,
+ * les crédits débités, qui, quand. Rien d'autre.
+ */
+export async function loadAiUse(data: DataApi, since: string): Promise<{ uses: AiUse[]; capped: boolean }> {
+  const filter = { $and: [{ 'json_data.at': { $gte: since } }, { 'json_data.type': 'ai' }] }
+  const projection: Record<string, 0 | 1> = { 'json_data.operation': 1, 'json_data.credits': 1, 'json_data.userId': 1, 'json_data.at': 1 }
+  const seen = new Set<string>()
+  const uses: AiUse[] = []
+  for (let skip = 0; skip < EVENTS_CAP; skip += DATA_PAGE) {
+    const docs = await data.filter<UsageEvent>(T.event, { filter, projection, sort: { _id: -1 }, limit: DATA_PAGE, skip })
+    for (const d of docs) {
+      if (seen.has(d._id)) continue
+      seen.add(d._id)
+      uses.push({ operation: d.json_data.operation ?? null, credits: typeof d.json_data.credits === 'number' ? d.json_data.credits : null, userId: d.json_data.userId ?? null, at: d.json_data.at })
+    }
+    if (docs.length < DATA_PAGE) return { uses, capped: false }
+  }
+  return { uses, capped: true }
 }
 
 export async function loadExecutions(data: DataApi, since: string): Promise<Execution[]> {

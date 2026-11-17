@@ -1,5 +1,8 @@
 'use client'
 
+import { ToolTiles } from '@/components/ToolTiles'
+import { displayName } from '@/lib/model/nomenclature'
+import { hasVariants, stepsFor } from '@/lib/model/variants'
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,8 +18,11 @@ import {
   Lock,
   MessageCircleQuestion,
   Mic,
+  PenLine,
   RotateCcw,
   Send,
+  Sparkles,
+  History as HistoryIcon,
   ShieldAlert,
   ThumbsDown,
   ThumbsUp,
@@ -24,6 +30,8 @@ import {
   Volume2,
   Wrench,
   X,
+  Images,
+  Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { EnergyIcon, PpeIcon } from '@/components/icons'
@@ -61,6 +69,7 @@ import { fitMediaHeight } from '@/lib/media/fit'
 import { probeImage, ratioKeys, useMediaRatio } from '@/lib/media/ratio'
 import { playable } from '@/lib/media/reel'
 import { MediaPlaybackProvider, slowConnection, VideoPool } from '@/lib/media/videoPool'
+import { isFreshUpdate, markSeen, seenVersion, type PreviousVersion, type PublishedChanges } from '@/lib/model/updates'
 import { useToggle } from '@/lib/toggles'
 import { useMediaQuery, useWide } from '@/lib/ui/screen'
 import { useStepSwipe } from '@/lib/ui/swipe'
@@ -122,6 +131,17 @@ export interface PlayerProps {
    * d'une personne de l'équipe (« Qui êtes-vous ? ») ; l'aperçu fait un essai sans rien écrire.
    */
   canTrain?: boolean
+  /**
+   * La version publiée et ce qui a changé depuis celle d'avant (toggle `operatorUpdates`) : au poste,
+   * « Mise à jour le … », les étapes marquées, et la version précédente à revoir en lecture.
+   */
+  update?: { publishedAt: string | null; changes?: PublishedChanges | null; previous?: PreviousVersion | null } | null
+  /** Dans l'app, pour qui rédige : « Modifier » ouvre l'éditeur (on sait toujours si on lit ou si on modifie). */
+  onEdit?: () => void
+  /** Dans l'app, pour qui rédige : revoir les médias d'origine (toggle `sourceLibrary`). Jamais au poste. */
+  onSources?: () => void
+  /** Le début du nom tiré des familles (« Découpe – Presse P-12 », toggle `nameTemplate`), devant le titre. */
+  namePrefix?: string | null
 }
 
 function deviceId(): string {
@@ -138,7 +158,7 @@ function deviceId(): string {
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false, update, onEdit, onSources } = props
   const who = { operatorId: operator?.id ?? null, operatorName: operator?.name ?? null }
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
@@ -149,7 +169,24 @@ export function Player(props: PlayerProps) {
       return props.content.language
     }
   })
-  const content = useMemo(() => localized(props.content, lang), [props.content, lang])
+  // Le nom tiré des familles devant le titre (toggle `nameTemplate`), dans toutes les langues.
+  const full = useMemo(() => {
+    const c = localized(props.content, lang)
+    return props.namePrefix ? { ...c, title: displayName(c.title, props.namePrefix) } : c
+  }, [props.content, props.namePrefix, lang])
+  // Les variantes (toggle `variants`) et la version courte (toggle `quickMode`) : les étapes à suivre.
+  const variantsOn = useToggle('variants') && hasVariants(full)
+  const quickOn = useToggle('quickMode') && !!full.quick
+  const [variant, setVariant] = useState<string | null>(null)
+  const [quick, setQuick] = useState(false)
+  const scope = useMemo(() => ({ variant: variantsOn ? variant : null, quick: quickOn && quick }), [variantsOn, variant, quickOn, quick])
+  const content = useMemo(() => {
+    const steps = stepsFor(full, scope)
+    return steps.length === full.steps.length ? full : { ...full, steps }
+  }, [full, scope])
+  const variantName = scope.variant ? (full.variants?.find((v) => v.id === scope.variant)?.name ?? null) : null
+  // Une variante touchée au départ : on commence dès que ses étapes sont là.
+  const [startPending, setStartPending] = useState(false)
   const t = strings(lang)
   const exitText = typeof exitLabel === 'function' ? exitLabel(t) : exitLabel
   const total = content.steps.length
@@ -226,13 +263,34 @@ export function Player(props: PlayerProps) {
 
   const step: Step | undefined = index >= 0 && index < total ? content.steps[index] : undefined
 
+  // Une instruction mise à jour depuis la dernière fois sur cet appareil (toggle `operatorUpdates`) :
+  // décidé à l'ouverture, puis l'appareil retient qu'il a vu cette version.
+  const updatesOn = useToggle('operatorUpdates')
+  const [seenAtOpen] = useState(() => (typeof window === 'undefined' ? null : seenVersion(instructionId)))
+  const fresh = updatesOn && !!update?.changes && !preview && isFreshUpdate({ version, publishedAt: update.publishedAt }, seenAtOpen)
+  const changes = fresh ? update!.changes! : null
+  useEffect(() => {
+    if (updatesOn && !preview && version) markSeen(instructionId, version)
+  }, [updatesOn, preview, version, instructionId])
+  const [oldOpen, setOldOpen] = useState(false)
+  const previous = updatesOn && update?.previous ? update.previous : null
+  const oldContent = useMemo(() => (previous ? localized(previous.content, lang) : null), [previous, lang])
+  const stepMark = (id: string) => (!changes ? null : changes.added.includes(id) ? 'added' : changes.modified.includes(id) ? 'modified' : null)
+
   // Les vidéos : un lecteur gardé d'une étape à l'autre, et la vidéo des étapes (toggle `stepReel`).
   // L'étape suivante se prépare pendant qu'on lit celle-ci, sauf sur une connexion lente.
   const reel = useToggle('stepReel')
+  // La lecture fluide (toggle `smoothVideos`) : une vidéo qui quitte l'écran arrête de télécharger,
+  // chaque étape montre son extrait depuis le début, et « Tout voir » ne joue que ce qu'on voit.
+  const smooth = useToggle('smoothVideos')
   const pool = useMemo(() => new VideoPool(3), [])
   useEffect(() => () => pool.dispose(), [pool])
   // Le toggle coupe aussi les lecteurs gardés : chaque étape reprend alors son propre lecteur.
-  const playback = useMemo(() => ({ pool: reel ? pool : null, reel }), [pool, reel])
+  // Le son activé sur une étape suit aux autres et se retient sur l'appareil (toggle `videoSound`).
+  const sound = useToggle('videoSound')
+  const playback = useMemo(() => ({ pool: reel ? pool : null, reel, smooth, sound }), [pool, reel, smooth, sound])
+  // Plusieurs médias à une étape : vignettes, « 2 / 3 » et grandes flèches (toggle `mediaNav`).
+  const mediaNav = useToggle('mediaNav')
   useEffect(() => {
     // Toggle coupé : aucun lecteur gardé, donc rien à préparer (il ne servirait à personne).
     if (!reel || slowConnection()) return
@@ -327,7 +385,9 @@ export function Player(props: PlayerProps) {
         haptic('success')
         if (recording) {
           // La trace, dans la langue d'origine de l'instruction : celle que lit le responsable.
-          const exec = buildExecution(props.content, answers, {
+          const exec = buildExecution({ ...props.content, steps: stepsFor(props.content, scope) }, answers, {
+            ...(scope.variant ? { variant: { id: scope.variant, name: variantName ?? '' } } : {}),
+            ...(scope.quick ? { quick: true } : {}),
             instructionId,
             version: version ?? null,
             stationId: stationId ?? null,
@@ -350,8 +410,13 @@ export function Player(props: PlayerProps) {
       }
       if (autoRead && clamped >= 0 && clamped < total) speakStep(content.steps[clamped])
     },
-    [total, index, recordsOn, answers, recording, recorder, notifyVia, lang, props.content, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator],
+    [total, index, recordsOn, answers, recording, recorder, notifyVia, lang, props.content, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator, scope, variantName],
   )
+  useEffect(() => {
+    if (!startPending) return
+    setStartPending(false)
+    go(0)
+  }, [startPending, go])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -410,20 +475,34 @@ export function Player(props: PlayerProps) {
             </button>
           )}
           {showBranding && branding?.logoUrl && <img src={branding.logoUrl} alt={branding.orgName} className="hidden h-9 max-w-28 object-contain sm:block" />}
+          {onEdit && (
+            <button type="button" onClick={onEdit} className="btn-press glass-card flex h-12 shrink-0 items-center gap-2 rounded-2xl px-3 text-sm font-black">
+              <PenLine className="h-5 w-5" /> <span className="hidden sm:inline">{t.edit}</span>
+            </button>
+          )}
+          {onSources && (
+            <button type="button" onClick={onSources} aria-label={t.sources} title={t.sources} className="btn-press flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-700 hover:bg-slate-900/5 dark:text-slate-200 dark:hover:bg-white/5">
+              <Images className="h-5 w-5" />
+            </button>
+          )}
           {sectionsOn && index >= 0 && index < total ? (
             // Le titre et « Étape 3 sur 12 » ouvrent le sommaire : toute la zone se touche.
             <button type="button" onClick={() => setSummaryOpen(true)} aria-label={t.openSummary} title={t.openSummary} className="btn-press min-w-0 flex-1 rounded-2xl px-1 py-1 text-left hover:bg-slate-900/5 dark:hover:bg-white/5">
               <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
-              <p className="label-caps flex items-center gap-1 text-slate-500 tabular-nums">
-                {t.stepOf(index + 1, total)} <ChevronDown className="h-3.5 w-3.5" />
+              <p className="label-caps flex items-center gap-1 truncate text-slate-500 tabular-nums">
+                {t.stepOf(index + 1, total)}
+                {variantName && <span className="truncate"> · {variantName}</span>}
+                {scope.quick && <span> · {t.quick.chip}</span>} <ChevronDown className="h-3.5 w-3.5 shrink-0" />
               </p>
             </button>
           ) : (
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
               {index >= 0 && index < total && (
-                <p className="label-caps text-slate-500 tabular-nums">
+                <p className="label-caps truncate text-slate-500 tabular-nums">
                   {t.stepOf(index + 1, total)}
+                  {variantName && <span> · {variantName}</span>}
+                  {scope.quick && <span> · {t.quick.chip}</span>}
                 </p>
               )}
             </div>
@@ -462,7 +541,28 @@ export function Player(props: PlayerProps) {
             <DocumentView content={content} t={t} energyById={energyById} sections={sectionsOn} records={recordsOn} />
           </div>
         ) : index === -1 ? (
-          <Intro content={content} t={t} onStart={() => go(0)} />
+          <Intro
+            content={content}
+            t={t}
+            onStart={() => go(0)}
+            variants={
+              variantsOn
+                ? {
+                    label: full.variantsLabel,
+                    options: (full.variants ?? []).map((v) => ({ id: v.id, name: v.name, count: stepsFor(full, { variant: v.id, quick: scope.quick }).length })),
+                    onPick: (id) => {
+                      setVariant(id)
+                      setStartPending(true)
+                    },
+                  }
+                : null
+            }
+            quick={quickOn ? { on: quick, onChange: setQuick, full: stepsFor(full, { variant: scope.variant, quick: false }).length, short: stepsFor(full, { variant: scope.variant, quick: true }).length } : null}
+            update={changes && update ? { changes, publishedAt: update.publishedAt, steps: content.steps } : null}
+            previous={previous ? previous.version : null}
+            onGoTo={(i) => go(i)}
+            onPrevious={() => setOldOpen(true)}
+          />
         ) : index >= total && quizOpen ? (
           <div dir={textDir(lang)} className="h-full">
             <QuizRunner
@@ -516,7 +616,7 @@ export function Player(props: PlayerProps) {
                 style={mediaBox !== null ? { height: mediaBox } : undefined}
                 className={cn('relative shrink-0 bg-slate-900 lg:h-auto lg:flex-[1.5]', layout === 'row' ? 'min-w-0 flex-[1.2]' : mediaBox !== null ? 'transition-[height] duration-300 ease-out' : 'h-[46dvh] sm:h-[52dvh]')}
               >
-                <StepMediaArea step={step} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
+                <StepMediaArea step={step} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid, previousMedia: t.previousMedia, nextMedia: t.nextMedia, mediaOf: t.mediaOf }} nav={mediaNav} />
               </div>
             )}
             <div
@@ -532,7 +632,15 @@ export function Player(props: PlayerProps) {
               <div className={cn('flex items-start', layout === 'legacy' ? 'gap-4' : 'gap-3')}>
                 {/* Au téléphone, le numéro est aussi dans l'en-tête : la pastille se fait plus petite et laisse la place au titre. */}
                 <span className={cn('bg-gradient-primary shadow-primary flex shrink-0 items-center justify-center font-black text-white tabular-nums', layout === 'legacy' ? 'h-16 w-16 rounded-3xl text-3xl' : 'h-12 w-12 rounded-2xl text-2xl sm:h-16 sm:w-16 sm:rounded-3xl sm:text-3xl')}>{index + 1}</span>
-                <h2 className={cn('leading-[1.05] font-black tracking-tighter text-slate-900 dark:text-white', layout === 'row' ? 'text-2xl' : 'pt-1 text-3xl sm:text-4xl')}>{step.title}</h2>
+                <div className="min-w-0">
+                  {/* Nouvelle ou modifiée depuis la version d'avant : l'opérateur le voit avant de lire. */}
+                  {stepMark(step.id) && (
+                    <span className={cn('mb-1 inline-flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-black tracking-wide uppercase', stepMark(step.id) === 'added' ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-900')}>
+                      <Sparkles className="h-3.5 w-3.5" /> {stepMark(step.id) === 'added' ? t.update.added : t.update.modified}
+                    </span>
+                  )}
+                  <h2 className={cn('leading-[1.05] font-black tracking-tighter text-slate-900 dark:text-white', layout === 'row' ? 'text-2xl' : 'pt-1 text-3xl sm:text-4xl')}>{step.title}</h2>
+                </div>
               </div>
               {step.energyPointId && energyById.get(step.energyPointId) && <EnergyChip point={energyById.get(step.energyPointId)!} />}
               {step.warning && (
@@ -725,7 +833,10 @@ export function Player(props: PlayerProps) {
   return (
     <DictationLanguage lang={lang}>
       <MediaPlaybackProvider value={playback}>
-        <MediaLabelsProvider value={t.media}>{player}</MediaLabelsProvider>
+        <MediaLabelsProvider value={t.media}>
+          {player}
+          {oldOpen && previous && oldContent && <PreviousView previous={previous} content={oldContent} t={t} sections={sectionsOn} onBack={() => setOldOpen(false)} />}
+        </MediaLabelsProvider>
       </MediaPlaybackProvider>
     </DictationLanguage>
   )
@@ -745,17 +856,50 @@ function EnergyChip({ point }: { point: { tag: string; type: keyof typeof ENERGY
   )
 }
 
-function Intro({ content, t, onStart }: { content: InstructionContent; t: ReturnType<typeof strings>; onStart: () => void }) {
+function Intro({
+  content,
+  t,
+  onStart,
+  update,
+  previous,
+  onGoTo,
+  onPrevious,
+  variants,
+  quick,
+}: {
+  content: InstructionContent
+  t: ReturnType<typeof strings>
+  onStart: () => void
+  /** Plusieurs variantes : une grande tuile par variante, qui la choisit et commence. */
+  variants?: { label?: string; options: Array<{ id: string; name: string; count: number }>; onPick: (id: string) => void } | null
+  /** La version courte offerte : « Tout en détail » ou « L'essentiel », d'un toucher. */
+  quick?: { on: boolean; onChange: (on: boolean) => void; full: number; short: number } | null
+  update?: { changes: PublishedChanges; publishedAt: string | null; steps: Step[] } | null
+  previous?: number | null
+  onGoTo?: (index: number) => void
+  onPrevious?: () => void
+}) {
+  // Les outils en images (toggle `toolImages`) : une tuile par outil, son emoji puis son nom.
+  const toolImages = useToggle('toolImages')
   return (
     <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-5 sm:p-10">
+      {update && <UpdateBanner {...update} t={t} previous={previous} onGoTo={onGoTo} onPrevious={onPrevious} />}
+      {!update && previous && onPrevious && (
+        <button type="button" onClick={onPrevious} className="btn-press glass-card inline-flex h-11 w-fit items-center gap-2 rounded-2xl px-4 text-sm font-black">
+          <HistoryIcon className="h-4 w-4" /> {t.update.previous(previous)}
+        </button>
+      )}
       <div>
         <p className="label-caps text-slate-500">{t.before}</p>
         <h1 className="mt-2 text-4xl leading-[0.95] font-black tracking-tighter sm:text-6xl">{content.title}</h1>
         {content.summary && <p className="mt-3 text-xl font-bold text-slate-600 dark:text-slate-300">{content.summary}</p>}
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className="glass-card inline-flex h-11 items-center gap-2 rounded-2xl px-4 font-black">
-            <Layers className="h-5 w-5 text-[var(--primary)]" /> {t.stepCount(content.steps.length)}
-          </span>
+          {/* Avec des variantes, chaque tuile dit son nombre d'étapes. */}
+          {!variants && (
+            <span className="glass-card inline-flex h-11 items-center gap-2 rounded-2xl px-4 font-black">
+              <Layers className="h-5 w-5 text-[var(--primary)]" /> {t.stepCount(content.steps.length)}
+            </span>
+          )}
           {!!content.durationMin && (
             <span className="glass-card inline-flex h-11 items-center gap-2 rounded-2xl px-4 font-black">
               <Clock className="h-5 w-5 text-[var(--primary)]" /> {formatDuration(content.durationMin * 60)}
@@ -826,20 +970,61 @@ function Intro({ content, t, onStart }: { content: InstructionContent; t: Return
       {!!content.tools.length && (
         <section>
           <p className="label-caps mb-3 text-slate-500">{t.tools}</p>
-          <div className="flex flex-wrap gap-2">
-            {content.tools.filter(Boolean).map((x) => (
-              <span key={x} className="glass-card inline-flex h-12 items-center gap-2 rounded-2xl px-4 font-black">
-                <Wrench className="h-4 w-4 text-slate-400" /> {x}
-              </span>
-            ))}
-          </div>
+          {toolImages ? (
+            // Chaque outil en image : son emoji, puis son nom (tools.ts).
+            <ToolTiles tools={content.tools.filter(Boolean)} />
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {content.tools.filter(Boolean).map((x) => (
+                <span key={x} className="glass-card inline-flex h-12 items-center gap-2 rounded-2xl px-4 font-black">
+                  <Wrench className="h-4 w-4 text-slate-400" /> {x}
+                </span>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
-      <div className="pb-safe sticky bottom-0 mt-auto pt-4 pb-4">
-        <button type="button" onClick={onStart} className="btn-press bg-gradient-primary shadow-primary flex h-20 w-full items-center justify-center gap-3 rounded-full text-2xl font-black tracking-wide text-white">
-          {t.start} <ArrowRight className="h-8 w-8" />
-        </button>
+      <div className="pb-safe sticky bottom-0 mt-auto space-y-3 pt-4 pb-4">
+        {quick && (
+          <div className="glass-card rounded-[28px] p-2">
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t.quick.hint}>
+              {([false, true] as const).map((short) => (
+                <button
+                  key={String(short)}
+                  type="button"
+                  role="radio"
+                  aria-checked={quick.on === short}
+                  onClick={() => quick.onChange(short)}
+                  className={cn('btn-press flex min-h-14 items-center justify-center gap-2 rounded-[22px] px-3 text-base font-black', quick.on === short ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-600 dark:text-slate-300')}
+                >
+                  {/* Avec des variantes, chaque tuile dit son nombre d'étapes : pas de total ici. */}
+                  {short ? <Zap className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />} {short ? t.quick.short(variants ? undefined : quick.short) : t.quick.full(variants ? undefined : quick.full)}
+                </button>
+              ))}
+            </div>
+            <p className="px-3 pt-2 pb-1 text-center text-xs font-bold text-slate-500 dark:text-slate-400">{t.quick.hint}</p>
+          </div>
+        )}
+        {variants ? (
+          <div>
+            <p className="label-caps mb-2 text-center text-slate-500 dark:text-slate-400">{t.variants.question(variants.label)}</p>
+            <div className={cn('grid gap-3', variants.options.length > 2 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2')}>
+              {variants.options.map((v) => (
+                <button key={v.id} type="button" onClick={() => variants.onPick(v.id)} className="btn-press bg-gradient-primary shadow-primary flex min-h-24 flex-col items-center justify-center gap-1 rounded-[28px] px-4 py-3 text-center text-white">
+                  <span className="text-2xl leading-tight font-black tracking-tight">{v.name}</span>
+                  <span className="flex items-center gap-1 text-sm font-bold text-white/85">
+                    {t.variants.steps(v.count)} <ArrowRight className="h-4 w-4" />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={onStart} className="btn-press bg-gradient-primary shadow-primary flex h-20 w-full items-center justify-center gap-3 rounded-full text-2xl font-black tracking-wide text-white">
+            {t.start} <ArrowRight className="h-8 w-8" />
+          </button>
+        )}
       </div>
     </div>
   )
@@ -920,7 +1105,81 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
   )
 }
 
+/**
+ * « Mise à jour le … » : ce qui a changé depuis la version d'avant, en une ligne ; d'un toucher, la
+ * liste des étapes nouvelles et modifiées (chacune ouvre son étape), les retirées, et la version
+ * précédente à revoir.
+ */
+export function UpdateBanner({ changes, publishedAt, steps, t, previous, onGoTo, onPrevious }: { changes: PublishedChanges; publishedAt: string | null; steps: Step[]; t: ReturnType<typeof strings>; previous?: number | null; onGoTo?: (index: number) => void; onPrevious?: () => void }) {
+  const [open, setOpen] = useState(false)
+  const touched = steps.map((s, i) => ({ s, i })).filter(({ s }) => changes.added.includes(s.id) || changes.modified.includes(s.id))
+  return (
+    <section className="rounded-[28px] bg-gradient-to-br from-amber-300 to-amber-400 p-5 text-slate-900 shadow-[0_15px_35px_rgba(245,158,11,0.3)]">
+      <p className="label-caps flex items-center gap-2 opacity-80">
+        <Sparkles className="h-4 w-4" /> {publishedAt ? t.update.title(t.update.date(publishedAt)) : t.update.badge}
+      </p>
+      <p className="mt-1 text-xl leading-snug font-black">{t.update.summary({ added: changes.added.length, modified: changes.modified.length, removed: changes.removed.length, ppe: changes.ppe, safety: changes.safety, lockout: changes.lockout })}</p>
+      {changes.note && (
+        <p className="mt-1 text-base font-bold">
+          {t.update.why} {changes.note}
+        </p>
+      )}
+      {open && (
+        <div className="mt-3 space-y-2">
+          {touched.map(({ s, i }) => (
+            <button key={s.id} type="button" onClick={() => onGoTo?.(i)} className="btn-press flex min-h-12 w-full items-center gap-2 rounded-2xl bg-white/70 px-4 text-left font-black">
+              <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', changes.added.includes(s.id) ? 'bg-emerald-500' : 'bg-amber-600')} />
+              <span className="min-w-0 flex-1 truncate">{t.update.goTo(i + 1, s.title)}</span>
+              <span className="shrink-0 text-xs font-black uppercase opacity-70">{changes.added.includes(s.id) ? t.update.added : t.update.modified}</span>
+            </button>
+          ))}
+          {!!changes.removed.length && (
+            <p className="px-1 text-sm font-bold">
+              {t.update.removedTitle} {changes.removed.join(' · ')}
+            </p>
+          )}
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {(touched.length > 0 || changes.removed.length > 0) && (
+          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="btn-press inline-flex h-11 items-center gap-2 rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">
+            {open ? t.update.hide : t.update.see}
+          </button>
+        )}
+        {previous && onPrevious && (
+          <button type="button" onClick={onPrevious} className="btn-press inline-flex h-11 items-center gap-2 rounded-2xl bg-white/70 px-4 text-sm font-black">
+            <HistoryIcon className="h-4 w-4" /> {t.update.previous(previous)}
+          </button>
+        )}
+      </div>
+    </section>
+  )
+}
+
+/** La version précédente, en lecture : toute l'instruction d'un coup, un bandeau qui dit laquelle, et le retour. */
+function PreviousView({ previous, content, t, sections, onBack }: { previous: PreviousVersion; content: InstructionContent; t: ReturnType<typeof strings>; sections: boolean; onBack: () => void }) {
+  const energyById = new Map((content.lockout?.energyPoints ?? []).map((e) => [e.id, e]))
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col bg-slate-100 dark:bg-slate-950" role="dialog" aria-modal="true" aria-label={t.update.previousTitle(previous.version, previous.publishedAt ? t.update.date(previous.publishedAt) : null)}>
+      <div className="flex shrink-0 flex-wrap items-center gap-3 bg-slate-900 px-4 py-3 text-white sm:px-6">
+        <HistoryIcon className="h-5 w-5 shrink-0" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-black">{t.update.previousTitle(previous.version, previous.publishedAt ? t.update.date(previous.publishedAt) : null)}</span>
+          <span className="block text-sm font-bold text-white/70">{t.update.previousHint}</span>
+        </span>
+        <button type="button" onClick={onBack} className="btn-press bg-gradient-primary inline-flex h-12 items-center gap-2 rounded-2xl px-4 text-sm font-black text-white">
+          <ArrowLeft className="h-5 w-5" /> {t.update.back}
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <DocumentView content={content} t={t} energyById={energyById} sections={sections} records={false} />
+      </div>
+    </div>
+  )
+}
+
 function DocumentView({ content, t, energyById, sections, records }: { content: InstructionContent; t: ReturnType<typeof strings>; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }>; sections: boolean; records: boolean }) {
+  const mediaNav = useToggle('mediaNav')
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-5 sm:p-8">
       <Intro content={content} t={t} onStart={() => document.getElementById('doc-step-0')?.scrollIntoView({ behavior: 'smooth' })} />
@@ -930,7 +1189,8 @@ function DocumentView({ content, t, energyById, sections, records }: { content: 
         <article id={`doc-step-${i}`} className="glass-panel overflow-hidden rounded-[32px] p-0">
           {s.media[0] && (
             <div className={cn('bg-slate-900', layoutOf(s) === 'focus' ? 'aspect-video' : 'aspect-[16/7]')}>
-              <StepMediaArea step={s} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
+              {/* Toutes les étapes sur une page : seules les vidéos à l'écran se chargent et jouent. */}
+              <StepMediaArea step={s} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid, previousMedia: t.previousMedia, nextMedia: t.nextMedia, mediaOf: t.mediaOf }} lazy nav={mediaNav} />
             </div>
           )}
           <div className="p-5 sm:p-7">

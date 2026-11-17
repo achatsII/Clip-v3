@@ -10,7 +10,7 @@ import { buildPrintHtml } from '@/lib/pdf/printHtml'
 
 afterEach(cleanup)
 
-const labels = { zoom: 'Agrandir', doIt: 'À faire', avoid: 'À éviter' }
+const labels = { zoom: 'Agrandir', doIt: 'À faire', avoid: 'À éviter', previousMedia: 'Média précédent', nextMedia: 'Média suivant', mediaOf: (i: number, n: number) => `${i} / ${n}` }
 const good = { kind: 'image' as const, url: 'https://x/bon.jpg', verdict: 'do' as const, caption: 'Gants bien ajustés' }
 const bad = { kind: 'image' as const, url: 'https://x/pasbon.jpg', verdict: 'dont' as const }
 const visual = { kind: 'html' as const, url: '', html: '<!doctype html><svg></svg><script>parent.localStorage</script>', title: 'Vue du panneau' }

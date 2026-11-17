@@ -6,10 +6,13 @@ import type { AiApi, AiOperation, AskBody, AskFile } from '../gateway/ai'
 import { ApiError } from '../gateway/client'
 import { contentLanguage, messages } from '../i18n'
 import type { FilesApi } from '../gateway/files'
+import { figureKey, figureMedia, figureRect, type FigureBox } from '../media/figures'
+import { cropImage } from '../media/image'
 import type { InstructionContent, OrgSettings, Source, StepMedia } from '../model/types'
 import { sourceDetail } from './creation'
+import { locateFigures } from './figures'
 import { AiInstruction, normalizeInstruction, type MarkHint } from './normalize'
-import { generationPrompt, generationSystem, importSystem, SourceLine } from './prompts'
+import { generationPrompt, generationSystem, importSystem, SourceLine, type WritingContext } from './prompts'
 import { instructionSchema } from './schemas'
 
 export const GEMINI_MAX_BYTES = 100 * 1024 * 1024
@@ -36,13 +39,39 @@ export function measureSources(sources: Source[]) {
   return { videoSec, audioSec, photos, pages, notes }
 }
 
+/**
+ * Ce que l'IA lit en une fois pour une instruction, en autant de fichiers qu'il faut (dix vidéos de
+ * trois minutes passent) : au-delà, on la sépare en plusieurs. Une vidéo trop lourde pour l'IA est
+ * réduite toute seule (`prepareForAi`) : la taille d'un fichier ne bloque pas.
+ */
+export const GENERATION_LIMITS = { videoSec: 1800, audioSec: 2700, photos: 80, pages: 60 } as const
+export type LimitKind = keyof typeof GENERATION_LIMITS
+/** La limite la plus proche se montre dès 80 %, avant qu'elle bloque. */
+export const NEAR_LIMIT = 0.8
+
+export interface LimitUse {
+  kind: LimitKind
+  used: number
+  max: number
+  ratio: number
+}
+
+/** Où en est chaque limite utilisée, de la plus proche à la plus loin. */
+export function limitUse(sources: Source[]): LimitUse[] {
+  const m = measureSources(sources)
+  return (Object.keys(GENERATION_LIMITS) as LimitKind[])
+    .map((kind) => ({ kind, used: m[kind], max: GENERATION_LIMITS[kind], ratio: m[kind] / GENERATION_LIMITS[kind] }))
+    .filter((u) => u.used > 0)
+    .sort((a, b) => b.ratio - a.ratio)
+}
+
 /** Choisit l'opération selon la taille réelle des sources (une opération par taille de lot). */
 export function generationTier(sources: Source[]): Tier {
   const m = measureSources(sources)
   const t = messages().capture.tiers
   if (m.videoSec <= 180 && m.audioSec <= 300 && m.photos <= 15 && m.pages <= 10) return { op: 'generate_s', label: t.short, tooBig: false }
   if (m.videoSec <= 600 && m.audioSec <= 900 && m.photos <= 40 && m.pages <= 30) return { op: 'generate_m', label: t.medium, tooBig: false }
-  const tooBig = m.videoSec > 1800 || m.photos > 80 || m.pages > 60 || m.audioSec > 2700
+  const tooBig = (Object.keys(GENERATION_LIMITS) as LimitKind[]).some((k) => m[k] > GENERATION_LIMITS[k])
   return { op: 'generate_l', label: t.long, tooBig }
 }
 
@@ -126,7 +155,9 @@ export async function prepareForAi(
       lines.push({
         id,
         line:
-          s.kind === 'video'
+          s.kind === 'video' && s.screen
+            ? `${id} — enregistrement de l’écran d’un logiciel, ${fmtDuration(s.durationSec)} (fichier joint n° ${askFiles.length}) : on y voit le pointeur et chaque clic ; la voix, s’il y en a une, dit ce que la personne fait et pourquoi.`
+            : s.kind === 'video'
             ? `${id} — vidéo, ${fmtDuration(s.durationSec)}, « ${s.name ?? 'vidéo'} » (fichier joint n° ${askFiles.length})`
             : series
               ? `${id} — commentaire dit à voix haute pendant la prise des photos ${series.map((p) => idOf.get(p.id)).join(', ')}, ${fmtDuration(s.durationSec)} (fichier joint n° ${askFiles.length})${s.text ? ` ; transcription : « ${s.text} »` : ''}. Chaque photo porte l’instant de sa prise dans ce commentaire : ce qui est dit juste avant et juste après cet instant décrit cette photo.`
@@ -137,7 +168,15 @@ export async function prepareForAi(
     } else if (s.kind === 'photo' && s.url) {
       askFiles.push({ url: s.url, filename: s.name ?? `${id}.jpg`, mimeType: s.mimeType || 'image/jpeg', sizeBytes: s.sizeBytes })
       const said = s.voice && narrated.has(s.voice.sourceId) ? `, prise à ${clockOf(s.voice.at)} du commentaire ${idOf.get(s.voice.sourceId)}` : ''
-      lines.push({ id, line: `${id} — photo « ${s.name ?? 'photo'} » (fichier joint n° ${askFiles.length})${said}${s.text ? ` — légende : « ${s.text} »` : ''}` })
+      // Une image nette d'un enregistrement de l'écran : l'instant, dans la vidéo donnée avec elle.
+      const shotOf = s.shot ? idOf.get(s.shot.sourceId) : undefined
+      lines.push({
+        id,
+        line:
+          s.shot && shotOf
+            ? `${id} — image nette de l’écran, à ${clockOf(s.shot.at)} de ${shotOf}, juste avant une action : le pointeur y est sur ce qu’on va toucher (fichier joint n° ${askFiles.length})`
+            : `${id} — photo « ${s.name ?? 'photo'} » (fichier joint n° ${askFiles.length})${said}${s.text ? ` — légende : « ${s.text} »` : ''}`,
+      })
     } else if (s.kind === 'document' && s.url) {
       askFiles.push({ url: s.url, filename: s.name ?? `${id}.pdf`, mimeType: 'application/pdf', sizeBytes: s.sizeBytes })
       lines.push({ id, line: `${id} — document PDF « ${s.originalName ?? s.name ?? 'document'} »${s.pageCount ? `, ${s.pageCount} pages` : ''} (fichier joint n° ${askFiles.length})` })
@@ -152,7 +191,7 @@ export async function prepareForAi(
 export interface GenerateInput {
   ai: AiApi
   files: FilesApi
-  org: Pick<OrgSettings, 'standard' | 'learnings'>
+  org: WritingContext & Pick<OrgSettings, 'nomenclature'>
   sources: Source[]
   intent?: string
   title?: string
@@ -160,6 +199,8 @@ export interface GenerateInput {
   forceKind?: 'procedure' | 'lockout'
   /** La langue d'écriture : celle de l'instruction qu'on régénère, sinon celle de l'outil de l'auteur. */
   language?: string
+  /** Proposer des relevés (`proposeChecks`) ; non : aucun. Oui par défaut. */
+  checks?: boolean
   onStage?: (stage: Stage, detail?: string) => void
   signal?: AbortSignal
 }
@@ -175,6 +216,8 @@ export interface GenerateOutput {
   choices: Record<string, string[]>
   model: string | null
   operation: AiOperation
+  /** Le classement proposé par l'IA, tel quel (`labelsFromAi` le ramène aux familles de l'usine). */
+  aiLabels: unknown
 }
 
 /** La génération prête à partir : la même requête, qu'elle tourne sur l'appareil ou au serveur. */
@@ -199,7 +242,12 @@ export async function prepareGeneration(input: Omit<GenerateInput, 'ai' | 'signa
   const usable = input.sources.filter((s) => s.url || s.text)
   if (!usable.length) throw new ApiError(t.noSources, 400)
   const tier = generationTier(usable)
-  if (tier.tooBig) throw new ApiError(t.tooBig, 400)
+  if (tier.tooBig) {
+    // Laquelle des limites : une régénération depuis l'éditeur le dit aussi précisément que la capture.
+    const over = limitUse(usable)[0]
+    const board = messages().capture.board
+    throw new ApiError(over && over.ratio > 1 ? board.overLimit(board.limit[over.kind](over.used, over.max)) : t.tooBig, 400)
+  }
 
   input.onStage?.('prepare')
   // Le détail s'écrit sans mots (« 2/5 ») : chaque appareil le lit dans sa langue.
@@ -217,7 +265,7 @@ export async function prepareGeneration(input: Omit<GenerateInput, 'ai' | 'signa
       effort: 'low',
       mediaResolution: m.videoSec > 300 ? 'low' : 'medium',
       maxOutputTokens: 24000,
-      system_instruction: generationSystem(input.org, { language, forceKind: input.forceKind }),
+      system_instruction: generationSystem(input.org, { language, forceKind: input.forceKind, checks: input.checks !== false, screen: prepared.sources.some((s) => s.screen) }),
       prompt: generationPrompt({ intent: input.intent, title: input.title, stations: input.stationNames, sources: prepared.lines }),
       files: prepared.askFiles,
       json_schema: instructionSchema,
@@ -229,10 +277,12 @@ export async function prepareGeneration(input: Omit<GenerateInput, 'ai' | 'signa
  * Ce que l'IA a rendu, mis en forme ; le même traitement que la réponse vienne de l'appareil ou du
  * serveur. Les sources gardent leur ordre : S1 = la première source envoyée.
  */
-export function finishGeneration(json: AiInstruction | null | undefined, sources: Source[], language: string) {
+export function finishGeneration(json: AiInstruction | null | undefined, sources: Source[], language: string, opts: { checks?: boolean } = {}) {
   if (!json) throw new ApiError(messages().capture.generate.noInstruction, 502)
   const out = normalizeInstruction(json, sources, language)
   if (!out.content.steps.length) throw new ApiError(messages().capture.generate.noSteps, 422)
+  // Pas de relevés demandés : ceux que l'IA aurait proposés quand même ne restent pas.
+  if (opts.checks === false) out.content = { ...out.content, steps: out.content.steps.map(({ checks: _c, ...step }) => step) }
   return out
 }
 
@@ -243,8 +293,8 @@ export async function generateInstruction(input: GenerateInput): Promise<Generat
   if (!result.json) throw new ApiError(messages().capture.generate.noInstruction, 502)
 
   input.onStage?.('finish')
-  const { content, stationGuess, questions, choices, marks } = finishGeneration(result.json, p.sources, p.language)
-  return { content, marks, sources: p.allSources, stationGuess, questions, choices, model: result.model, operation: p.operation }
+  const { content, stationGuess, questions, choices, marks, aiLabels } = finishGeneration(result.json, p.sources, p.language, { checks: input.checks })
+  return { content, marks, sources: p.allSources, stationGuess, questions, choices, model: result.model, operation: p.operation, aiLabels }
 }
 
 function mergeSources(all: Source[], updated: Source[]): Source[] {
@@ -254,10 +304,13 @@ function mergeSources(all: Source[], updated: Source[]): Source[] {
 
 /**
  * La requête d'un import (une ancienne instruction en PDF) : la même pour l'appareil et le serveur
- * (Job_start, branche clip-v3). Le document est S1.
+ * (Job_start, branche clip-v3). Le document est S1. Une présentation PowerPoint lue dans l'app
+ * (`sources` : sa note, puis ses images) part avec son texte dans la demande et ses images jointes.
  */
-export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learnings'>; source: Source; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {
+export function importAsk(input: { org: WritingContext & Pick<OrgSettings, 'nomenclature'>; source: Source; sources?: Source[]; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {
   const language = input.language ?? contentLanguage()
+  // Une présentation lue dans l'app commence par sa note (même sans image).
+  if (input.sources?.[0]?.kind === 'note') return slidesImportAsk(input.org, input.sources, input.stationNames, language)
   const pages = input.source.pageCount ?? 5
   const operation: AiOperation = pages > 12 ? 'import_l' : 'import_s'
   return {
@@ -280,28 +333,76 @@ export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learning
   }
 }
 
-/** Import d'une ancienne instruction (PDF) : même résultat qu'une génération. */
+/**
+ * L'import d'une présentation lue dans l'app : S1 est sa note (le texte de chaque diapositive, dans la
+ * demande), les suivantes ses images (jointes). Sa taille se compte en diapositives, comme les pages.
+ */
+function slidesImportAsk(org: WritingContext & Pick<OrgSettings, 'nomenclature'>, sources: Source[], stationNames: string[], language: string): { operation: AiOperation; language: string; ask: AskBody } {
+  const [note, ...images] = sources
+  const photos = images.filter((s) => s.kind === 'photo' && s.url)
+  const slides = note.pageCount ?? 5
+  const lines = [
+    { id: 'S1', line: `S1 — texte de la présentation « ${note.originalName ?? note.name ?? 'presentation.pptx'} » :\n${note.text ?? ''}` },
+    ...images.map((s, i) => ({ id: `S${i + 2}`, line: `S${i + 2} — image « ${s.name ?? ''} »${photos.includes(s) ? ` (fichier joint n° ${photos.indexOf(s) + 1})` : ''}` })),
+  ]
+  return {
+    operation: slides > 12 || photos.length > 20 ? 'import_l' : 'import_s',
+    language,
+    ask: {
+      provider: 'google',
+      level: 'mid',
+      thinking: 'enabled',
+      effort: 'low',
+      maxOutputTokens: 24000,
+      system_instruction: importSystem(org, language, 'slides'),
+      prompt: generationPrompt({ stations: stationNames, sources: lines }),
+      files: photos.map((s) => ({ url: s.url!, filename: s.name ?? 'image.jpg', mimeType: s.mimeType ?? 'image/jpeg', sizeBytes: s.sizeBytes })),
+      json_schema: instructionSchema,
+    },
+  }
+}
+
+/** Import d'une ancienne instruction (PDF, ou présentation lue dans l'app) : même résultat qu'une génération. */
 export async function importDocument(input: {
   ai: AiApi
-  org: Pick<OrgSettings, 'standard' | 'learnings'>
+  org: WritingContext & Pick<OrgSettings, 'nomenclature'>
   source: Source
+  /** Une présentation lue dans l'app : sa note, puis ses images (S1, S2…). */
+  sources?: Source[]
   stationNames: string[]
-}): Promise<{ content: InstructionContent; stationGuess: string | null; questions: string[]; choices: Record<string, string[]>; model: string | null; operation: AiOperation }> {
+}): Promise<{ content: InstructionContent; stationGuess: string | null; questions: string[]; choices: Record<string, string[]>; model: string | null; operation: AiOperation; aiLabels: unknown }> {
   const { operation, language, ask } = importAsk(input)
   const result = await input.ai.ask<AiInstruction>(operation, ask, { scope: 'import', timeoutMs: 300_000 })
   if (!result.json) throw new ApiError(messages().capture.generate.unreadableDocument, 502)
-  const n = normalizeInstruction(result.json, [input.source], language)
+  const n = normalizeInstruction(result.json, input.sources?.length ? input.sources : [input.source], language)
   return { ...n, model: result.model, operation }
 }
 
+/** Les figures des documents (toggle `documentFigures`) : l'IA qui les trouve, et le recadrage. */
+export interface FigureOptions {
+  ai: AiApi
+  /** Rend la figure recadrée en JPEG, ou null ; par défaut dans le navigateur (`cropImage`). */
+  crop?: (png: Blob, box: FigureBox) => Promise<Blob | null>
+  /** Le recadrage commence (il peut prendre quelques secondes par page). */
+  onStart?: () => void
+}
+
+/** Une page qui a des figures à recadrer se rend plus fine : la figure garde ses détails. */
+const FIGURE_DPI = 200
+/** Les pages se traitent trois à la fois. */
+const PAGES_AT_ONCE = 3
+
+const cropFigure = (png: Blob, box: FigureBox) => cropImage(png, (w, h) => figureRect(box, w, h))
+
 /**
- * Vignettes des extraits vidéo (une capture par extrait) et images des pages de documents.
- * Ne bloque jamais : un média sans vignette reste utilisable.
+ * Vignettes des extraits vidéo (une capture par extrait) et images des pages de documents ; avec
+ * `figures`, la figure d'une page qu'une étape demande se recadre et devient son image.
+ * Ne bloque jamais : un média sans vignette reste utilisable, une figure introuvable laisse la page.
  */
-export async function enrichMedia(content: InstructionContent, files: FilesApi, uploadPng: (png: Blob, name: string) => Promise<string>): Promise<InstructionContent> {
+export async function enrichMedia(content: InstructionContent, files: FilesApi, uploadPng: (png: Blob, name: string) => Promise<string>, opts: { figures?: FigureOptions | null } = {}): Promise<InstructionContent> {
   const next: InstructionContent = { ...content, steps: content.steps.map((s) => ({ ...s, media: s.media.map((m) => ({ ...m })) as StepMedia[] })) }
   const byVideo = new Map<string, Array<{ stepIndex: number; mediaIndex: number; at: number }>>()
-  const docs: Array<{ stepIndex: number; mediaIndex: number; url: string; page: number }> = []
+  const docs: Array<{ stepIndex: number; mediaIndex: number; url: string; page: number; figure?: string }> = []
   next.steps.forEach((s, si) =>
     s.media.forEach((m, mi) => {
       if (m.kind === 'video' && !m.posterUrl) {
@@ -314,7 +415,7 @@ export async function enrichMedia(content: InstructionContent, files: FilesApi, 
         list.push({ stepIndex: si, mediaIndex: mi, at: m.frame.at })
         byVideo.set(m.frame.videoUrl, list)
       } else if (m.kind === 'document' && !m.pageImageUrl && /ii-file\.tor1\.digitaloceanspaces\.com/.test(m.url)) {
-        docs.push({ stepIndex: si, mediaIndex: mi, url: m.url, page: m.page ?? 1 })
+        docs.push({ stepIndex: si, mediaIndex: mi, url: m.url, page: m.page ?? 1, ...(m.figure ? { figure: m.figure } : {}) })
       }
     }),
   )
@@ -338,21 +439,61 @@ export async function enrichMedia(content: InstructionContent, files: FilesApi, 
   next.steps.forEach((s) => {
     s.media = s.media.map((m) => (m.kind === 'image' && m.frame && !m.url ? { kind: 'video', url: m.frame.videoUrl, sourceId: m.sourceId, start: m.frame.start, end: m.frame.end } : m))
   })
-  const pageCache = new Map<string, string>()
-  for (const d of docs) {
-    const key = `${d.url}#${d.page}`
-    try {
-      let url = pageCache.get(key)
-      if (!url) {
-        const { png } = await files.pdfPageImage(d.url, d.page)
-        url = await uploadPng(png, `page-${d.page}.png`)
-        pageCache.set(key, url)
+  // Chaque page citée se rend une fois ; ses figures demandées se trouvent en une seule question.
+  const pages = new Map<string, typeof docs>()
+  for (const d of docs) pages.set(`${d.url}#${d.page}`, [...(pages.get(`${d.url}#${d.page}`) ?? []), d])
+  const figures = opts.figures ?? null
+  if (figures && docs.some((d) => d.figure)) figures.onStart?.()
+  const entries = [...pages.entries()]
+  for (let i = 0; i < entries.length; i += PAGES_AT_ONCE) {
+    await Promise.all(entries.slice(i, i + PAGES_AT_ONCE).map(([key, list]) => enrichPage(next, key, list, files, uploadPng, figures)))
+  }
+  // Ce que l'IA voulait prendre n'a plus à voyager avec l'instruction.
+  for (const s of next.steps) for (const m of s.media) if (m.kind === 'document' && 'figure' in m) delete m.figure
+  return next
+}
+
+async function enrichPage(
+  next: InstructionContent,
+  key: string,
+  list: Array<{ stepIndex: number; mediaIndex: number; url: string; page: number; figure?: string }>,
+  files: FilesApi,
+  uploadPng: (png: Blob, name: string) => Promise<string>,
+  figures: FigureOptions | null,
+): Promise<void> {
+  const { url, page } = list[0]
+  // Les figures demandées sur cette page, une fois chacune (deux étapes peuvent montrer la même) :
+  // la première façon de la nommer est celle qu'on garde.
+  const byKey = new Map<string, string>()
+  if (figures) for (const d of list) if (d.figure && !byKey.has(figureKey(d.figure))) byKey.set(figureKey(d.figure), d.figure)
+  const wanted = [...byKey.entries()]
+  let png: Blob | null = null
+  let pageUrl: string | undefined
+  try {
+    png = (await files.pdfPageImage(url, page, wanted.length ? FIGURE_DPI : undefined)).png
+    pageUrl = await uploadPng(png, `page-${page}.png`)
+  } catch {
+    /* l'aperçu de page est facultatif */
+  }
+  const crops = new Map<string, string>()
+  if (figures && wanted.length && png && pageUrl) {
+    const boxes = await locateFigures(figures.ai, pageUrl, wanted.map(([, f]) => f), key).catch(() => [] as Array<FigureBox | null>)
+    for (let j = 0; j < wanted.length; j++) {
+      const box = boxes[j]
+      if (!box) continue
+      try {
+        const blob = await (figures.crop ?? cropFigure)(png, box)
+        if (blob) crops.set(wanted[j][0], (await files.upload(blob, `figure-${page}-${j + 1}.jpg`, 'figures')).url)
+      } catch {
+        /* cette figure-là garde la page entière */
       }
-      const media = next.steps[d.stepIndex].media[d.mediaIndex]
-      if (media.kind === 'document') media.pageImageUrl = url
-    } catch {
-      /* l'aperçu de page est facultatif */
     }
   }
-  return next
+  for (const d of list) {
+    const media = next.steps[d.stepIndex].media[d.mediaIndex]
+    if (media.kind !== 'document') continue
+    const crop = d.figure ? crops.get(figureKey(d.figure)) : undefined
+    if (crop) next.steps[d.stepIndex].media[d.mediaIndex] = figureMedia(media, crop, pageUrl, d.figure!)
+    else if (pageUrl) media.pageImageUrl = pageUrl
+  }
 }

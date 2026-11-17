@@ -20,6 +20,8 @@ export type FeatureKey =
   | 'brand_kit'
   | 'full_export'
   | 'shared_blocks'
+  | 'screen_capture'
+  | 'ai_learning'
   | 'academy'
   | 'records_plus'
 
@@ -49,6 +51,8 @@ export const FEATURE_LABELS: Record<FeatureKey, FeatureLabel> = {
   brand_kit: { fr: 'Logo et couleurs de l’usine, PDF sans mention CLIP', en: 'Plant logo and colors, PDFs without CLIP branding' },
   full_export: { fr: 'Export complet de toutes les instructions', en: 'Full export of all instructions' },
   shared_blocks: { fr: 'Blocs communs : des étapes rédigées une fois, à jour partout', en: 'Shared blocks: steps written once, up to date everywhere' },
+  screen_capture: { fr: 'Enregistrer l’écran d’un logiciel : une étape par clic', en: 'Record a software screen: one step per click' },
+  ai_learning: { fr: 'L’IA apprend des corrections de toute l’équipe', en: 'The AI learns from the whole team’s edits' },
   academy: { fr: 'Académie', en: 'Academy' },
   records_plus: { fr: 'Relevés avancés', en: 'Advanced records' },
 }
@@ -78,6 +82,8 @@ export const FEATURE_ORDER: FeatureKey[] = [
   'voice_assistant',
   'brand_kit',
   'shared_blocks',
+  'screen_capture',
+  'ai_learning',
   'full_export',
   'academy',
   'records_plus',

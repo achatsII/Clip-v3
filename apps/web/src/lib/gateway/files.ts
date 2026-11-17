@@ -101,6 +101,19 @@ export interface PresignedTarget {
   contentType: string
 }
 
+/** Un GIF partagé reste court : au-delà, il devient trop lourd pour un courriel. */
+export const GIF_MAX_SEC = 15
+
+/** Un instant pour la route des captures : « 00:01:05.5 » (ou à la seconde, si elle refuse les dixièmes). */
+function hms(s: number, tenths: boolean): string {
+  const t = Math.max(0, tenths ? Math.round(s * 10) / 10 : Math.round(s))
+  const h = Math.floor(t / 3600)
+  const m = Math.floor((t % 3600) / 60)
+  const sec = t - h * 3600 - m * 60
+  const secText = tenths && !Number.isInteger(sec) ? sec.toFixed(1).padStart(4, '0') : String(Math.round(sec)).padStart(2, '0')
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${secText}`
+}
+
 export function filesApi(client: GatewayClient) {
   async function presign(fileName: string, contentType: string, folder: string): Promise<PresignedTarget> {
     const res = await client.call<{ url?: string; publicUrl?: string; filePath?: string }>(
@@ -223,14 +236,6 @@ export function filesApi(client: GatewayClient) {
     /** Captures d'images d'une vidéo à des instants donnés (secondes). */
     async screenshots(videoUrl: string, shots: Array<{ name: string; atSec: number }>): Promise<Record<string, string>> {
       if (!shots.length) return {}
-      const hms = (s: number, tenths: boolean) => {
-        const t = Math.max(0, tenths ? Math.round(s * 10) / 10 : Math.round(s))
-        const h = Math.floor(t / 3600)
-        const m = Math.floor((t % 3600) / 60)
-        const sec = t - h * 3600 - m * 60
-        const secText = tenths && !Number.isInteger(sec) ? sec.toFixed(1).padStart(4, '0') : String(Math.round(sec)).padStart(2, '0')
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${secText}`
-      }
       const call = (tenths: boolean) =>
         client.call<{ results?: Array<{ name?: string; url?: string; uploadSuccess?: boolean }> }>('/api/v1/files/gifs/generate', {
           method: 'POST',
@@ -249,6 +254,33 @@ export function filesApi(client: GatewayClient) {
       const out: Record<string, string> = {}
       for (const r of res.results ?? []) if (r.name && r.url) out[r.name] = r.url
       return out
+    },
+
+    /**
+     * Le GIF d'un extrait (toggle `clipGif`), pour sortir une étape de CLIP : un courriel, Teams,
+     * une présentation. En 480p, 10 images par seconde, au plus `GIF_MAX_SEC` secondes : au-delà,
+     * un GIF devient trop lourd pour être partagé (la même route que les captures, type `gif`).
+     */
+    async gif(videoUrl: string, start: number, end: number): Promise<{ url: string; sizeBytes: number | null; seconds: number }> {
+      const from = Math.max(0, start)
+      const to = Math.max(from + 0.5, Math.min(end, from + GIF_MAX_SEC))
+      const call = (tenths: boolean) =>
+        client.call<{ results?: Array<{ url?: string; fileSize?: number; uploadSuccess?: boolean }> }>('/api/v1/files/gifs/generate', {
+          method: 'POST',
+          body: {
+            videoUrl,
+            timestamps: [{ start: hms(from, tenths), end: hms(to, tenths), type: 'gif', name: 'clip' }],
+            options: { uploadPath: folderPath('gifs'), resolution: '480p', fps: 10 },
+          },
+          timeoutMs: 5 * 60_000,
+        })
+      const res = await call(true).catch((e) => {
+        if (e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 401) return call(false)
+        throw e
+      })
+      const r = (res.results ?? []).find((x) => x.url && x.uploadSuccess !== false)
+      if (!r?.url) throw new ApiError(messages().editor.gif.failed, 502, res)
+      return { url: r.url, sizeBytes: typeof r.fileSize === 'number' ? r.fileSize : null, seconds: Math.round((to - from) * 10) / 10 }
     },
 
     /** Word (DOCX, DOC, ODT) → PDF. La réponse est le PDF lui-même. */

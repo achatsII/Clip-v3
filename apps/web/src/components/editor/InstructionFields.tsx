@@ -1,6 +1,7 @@
 'use client'
 
-import { FileText, MapPin, Tags } from 'lucide-react'
+import { FileText, FolderTree, MapPin, Tags, Split } from 'lucide-react'
+import { useVariantsCard, VariantsCard } from './VariantsCard'
 import { Input, Label, Textarea } from '@/components/ui/Field'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
@@ -8,6 +9,7 @@ import type { InstructionContent, Station } from '@/lib/model/types'
 import { FormCard } from './FormParts'
 import { LockoutEditor } from './LockoutEditor'
 import { MetaCard, StationPicker } from './MetaCard'
+import { ClassificationCard, type ClassificationProps } from './ClassificationCard'
 
 export interface InstructionFieldsProps {
   content: InstructionContent
@@ -19,6 +21,8 @@ export interface InstructionFieldsProps {
   stations: Doc<Station>[]
   onStations: (ids: string[]) => void
   onCreateStation?: (name: string) => Promise<string | null>
+  /** Le classement de l'usine (toggle `nomenclature`) ; absent sans le toggle. */
+  classification?: ClassificationProps | null
 }
 
 /**
@@ -26,8 +30,9 @@ export interface InstructionFieldsProps {
  * outils, mises en garde, étiquettes) et cadenassage. `dialog` : d'un bloc, dans la fenêtre des
  * infos (vue « Comme au poste ») ; `cards` : une carte par sujet, dans la fiche.
  */
-export function InstructionFields({ layout, content, onChange, readOnly, block, stationIds, stations, onStations, onCreateStation }: InstructionFieldsProps & { layout: 'dialog' | 'cards' }) {
+export function InstructionFields({ layout, content, onChange, readOnly, block, stationIds, stations, onStations, onCreateStation, classification }: InstructionFieldsProps & { layout: 'dialog' | 'cards' }) {
   const t = useMessages()
+  const variantsCard = useVariantsCard()
   const tp = t.editor.page
   const tf = t.editor.form
   const head = (
@@ -48,13 +53,26 @@ export function InstructionFields({ layout, content, onChange, readOnly, block, 
     return (
       <div className="space-y-5">
         {head}
+        {classification && (
+          <section>
+            <p className="label-caps mb-3 text-slate-500">{t.nomenclature.card.title}</p>
+            <ClassificationCard {...classification} />
+          </section>
+        )}
         <MetaCard embedded noStations={block} content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={onChange} onStations={onStations} onCreateStation={onCreateStation} />
+        {variantsCard && !block && (
+          <section>
+            <p className="label-caps mb-3 text-slate-500">{t.editor.variants.card}</p>
+            <VariantsCard content={content} onChange={onChange} readOnly={readOnly} />
+          </section>
+        )}
         {lockout}
       </div>
     )
   }
+  // Au bureau large, les cartes vont sur deux colonnes (chacune entière), pour ne pas tout empiler.
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 xl:columns-2 xl:gap-4 xl:space-y-0 xl:[&>*]:mb-4 xl:[&>*]:break-inside-avoid">
       <FormCard icon={<FileText className="h-4 w-4" />} title={block ? t.blocks.infoTitle : tf.instruction}>
         <div className="space-y-4">{head}</div>
       </FormCard>
@@ -63,9 +81,20 @@ export function InstructionFields({ layout, content, onChange, readOnly, block, 
           <StationPicker stationIds={stationIds} stations={stations} readOnly={readOnly} onStations={onStations} onCreateStation={onCreateStation} />
         </FormCard>
       )}
+      {classification && (
+        <FormCard icon={<FolderTree className="h-4 w-4" />} title={t.nomenclature.card.title}>
+          <ClassificationCard {...classification} />
+        </FormCard>
+      )}
       <FormCard icon={<Tags className="h-4 w-4" />} title={tf.details}>
         <MetaCard embedded noStations content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={onChange} onStations={onStations} onCreateStation={onCreateStation} />
       </FormCard>
+      {/* Les variantes et la version courte (toggles `variants`, `quickMode`). */}
+      {variantsCard && !block && (
+        <FormCard icon={<Split className="h-4 w-4" />} title={t.editor.variants.card}>
+          <VariantsCard content={content} onChange={onChange} readOnly={readOnly} />
+        </FormCard>
+      )}
       {lockout}
     </div>
   )

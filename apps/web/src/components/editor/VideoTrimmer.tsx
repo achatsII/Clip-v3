@@ -4,6 +4,7 @@ import { Flag, Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useMessages } from '@/lib/i18n'
+import { stopWhenGone, useMediaPlayback } from '@/lib/media/videoPool'
 import { formatClock } from '@/lib/util/cn'
 
 /** Choisir le début et la fin d'un extrait : on lit la vidéo et on touche « Début ici », « Fin ici ». */
@@ -13,6 +14,13 @@ export function VideoTrimmer({ url, start, end, duration, onChange }: { url: str
   const [at, setAt] = useState(start)
   const [dur, setDur] = useState(duration ?? Math.max(end, 10))
   const [playing, setPlaying] = useState(false)
+  // Lecture fluide : choisi ou abandonné, l'extrait quitte l'écran et sa vidéo arrête de télécharger.
+  const { smooth } = useMediaPlayback()
+  useEffect(() => {
+    const v = ref.current
+    if (!smooth || !v) return
+    return () => stopWhenGone(v)
+  }, [smooth])
 
   useEffect(() => {
     const v = ref.current

@@ -11,6 +11,8 @@ import { formatDate, formatDuration } from '../util/cn'
 import {
   changeOf,
   completionsOf,
+  dayKey,
+  daysOf,
   deviationRate,
   durationsOf,
   executionsOf,
@@ -99,6 +101,14 @@ export interface LibraryFacts {
   renew: number
 }
 
+/** Une réponse de l'IA (`clip_event`, `type: 'ai'`) : l'usage, les crédits débités, qui, quand. */
+export interface AiUse {
+  operation: string | null
+  credits: number | null
+  userId: string | null
+  at: string
+}
+
 export interface ReportContext {
   period: Period
   previous: Period
@@ -111,12 +121,16 @@ export interface ReportContext {
   stations: Map<string, { name: string; area: string | null }>
   training?: TrainingFacts | null
   library?: LibraryFacts | null
+  /** Les réponses de l'IA des deux périodes (rapport « Crédits d'IA »). */
+  ai?: AiUse[] | null
+  /** Les noms des membres, par identifiant (qui a utilisé l'IA). */
+  people?: Map<string, string>
 }
 
-export type ReportKey = 'semaine' | 'temps' | 'personnes' | 'postes' | 'ecarts' | 'revision' | 'formation' | 'retours' | 'bibliotheque'
+export type ReportKey = 'semaine' | 'temps' | 'personnes' | 'postes' | 'ecarts' | 'revision' | 'formation' | 'retours' | 'bibliotheque' | 'ia'
 export type Family = 'floor' | 'quality' | 'training' | 'library' | 'direction'
 /** Ce qu'un rapport lit ; `views` : aussi les ouvertures (les instructions faites viennent avec `events`). */
-export type Need = 'events' | 'views' | 'executions' | 'feedback' | 'training' | 'library'
+export type Need = 'events' | 'views' | 'executions' | 'feedback' | 'training' | 'library' | 'ai'
 
 export interface ReportDef {
   key: ReportKey
@@ -756,6 +770,90 @@ function library(c: ReportContext): Block[] {
   ]
 }
 
+/* ───────────────────────── Les crédits d'IA ───────────────────────── */
+
+export type AiGroup = 'generate' | 'assistant' | 'translate' | 'images' | 'training' | 'reports' | 'other'
+
+/** L'usage d'une réponse de l'IA, comme l'usine le comprend : une génération, l'assistant, une traduction… */
+export function aiGroupOf(operation: string | null | undefined): AiGroup {
+  const o = operation ?? ''
+  if (/^(generate|import)_/.test(o)) return 'generate'
+  if (o === 'edit_agent' || o === 'standard_agent' || o === 'step_assist' || o === 'ask_question' || o.startsWith('look_')) return 'assistant'
+  if (o.startsWith('translate')) return 'translate'
+  if (o === 'annotate' || o === 'illustrate' || o === 'visual' || o === 'figures') return 'images'
+  if (o === 'quiz') return 'training'
+  if (o.startsWith('report_')) return 'reports'
+  return 'other'
+}
+
+/**
+ * Les crédits d'IA : où ils vont (usage, personne, jour), et combien coûte une génération typique.
+ * Ce que l'app a reçu de chaque réponse ; le solde exact se lit dans Abonnement.
+ */
+function aiCredits(c: ReportContext): Block[] {
+  const w = t().list.ia
+  const all = c.ai ?? []
+  const cur = all.filter((u) => inPeriod(u.at, c.period))
+  const prev = all.filter((u) => inPeriod(u.at, c.previous))
+  const credits = (list: AiUse[]) => list.reduce((n, u) => n + Math.max(0, u.credits ?? 0), 0)
+  const gens = cur.filter((u) => aiGroupOf(u.operation) === 'generate' && (u.credits ?? 0) > 0)
+  const perGen = gens.length >= MIN_GENERATIONS ? median(gens.map((u) => u.credits ?? 0)) : null
+  const prevGens = prev.filter((u) => aiGroupOf(u.operation) === 'generate' && (u.credits ?? 0) > 0)
+  const prevPerGen = prevGens.length >= MIN_GENERATIONS ? median(prevGens.map((u) => u.credits ?? 0)) : null
+  const total = credits(cur)
+  const byGroup = groupBy(cur, (u) => aiGroupOf(u.operation))
+  const groups = [...byGroup.entries()].map(([g, list]) => ({ g: g as AiGroup, list, credits: credits(list) })).sort((a, b) => b.credits - a.credits)
+  const byPerson = groupBy(cur, (u) => u.userId ?? null)
+  const name = (id: string) => c.people?.get(id) ?? t().none
+  const days = new Map<string, number>()
+  for (const u of cur) days.set(dayKey(Date.parse(u.at)), (days.get(dayKey(Date.parse(u.at))) ?? 0) + Math.max(0, u.credits ?? 0))
+  return [
+    {
+      kind: 'kpis',
+      id: 'k',
+      items: [
+        countKpi('credits', w.kpiCredits, total, credits(prev), 'neutral'),
+        countKpi('responses', w.kpiResponses, cur.length, prev.length, 'neutral'),
+        countKpi('generations', w.kpiGenerations, gens.length, prevGens.length, 'good'),
+        { id: 'perGeneration', label: w.kpiPerGeneration, value: perGen === null ? t().none : num(Math.round(perGen)), raw: perGen, previous: prevPerGen === null ? null : num(Math.round(prevPerGen)), delta: null, hint: perGen === null ? w.fewGenerations : undefined },
+      ],
+    },
+    { kind: 'bars', id: 'days', title: w.perDay, days: daysOf(c.period).map((date) => ({ date, value: days.get(date) ?? 0 })), unit: w.unit },
+    {
+      kind: 'table',
+      id: 'uses',
+      title: w.byUse,
+      hint: w.byUseHint,
+      columns: [
+        { key: 'use', label: w.colUse },
+        { key: 'responses', label: w.colResponses, numeric: true },
+        { key: 'credits', label: w.colCredits, numeric: true },
+        { key: 'share', label: w.colShare, numeric: true },
+      ],
+      rows: groups.map(({ g, list, credits: n }) => ({ id: g, cells: { use: textCell(w.groups[g]), responses: numCell(list.length), credits: numCell(n), share: rateCell(ratio(n, total)) } })),
+    },
+    {
+      kind: 'table',
+      id: 'people',
+      title: w.byPerson,
+      hint: w.byPersonHint,
+      columns: [
+        { key: 'person', label: t().col.person },
+        { key: 'responses', label: w.colResponses, numeric: true },
+        { key: 'credits', label: w.colCredits, numeric: true },
+      ],
+      // Par ordre alphabétique : un registre, jamais un palmarès.
+      rows: [...byPerson.entries()]
+        .map(([id, list]) => ({ id, label: name(id), list }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map(({ id, label, list }) => ({ id, cells: { person: textCell(label), responses: numCell(list.length), credits: numCell(credits(list)) } })),
+    },
+  ]
+}
+
+/** En dessous, « une génération typique » ne veut rien dire. */
+const MIN_GENERATIONS = 3
+
 /** Le répertoire : l'ordre est celui de la page. */
 export const REPORTS: readonly ReportDef[] = [
   { key: 'semaine', family: 'floor', defaultDays: 7, needs: ['events', 'executions', 'feedback', 'training'], free: true, forRoles: ['admin', 'approver'], build: weekly },
@@ -767,6 +865,8 @@ export const REPORTS: readonly ReportDef[] = [
   { key: 'formation', family: 'training', defaultDays: 30, needs: ['events', 'training'], forRoles: ['admin', 'approver'], build: training },
   { key: 'retours', family: 'library', defaultDays: 30, needs: ['feedback'], forRoles: ['author'], byShift: false, build: operatorFeedback },
   { key: 'bibliotheque', family: 'library', defaultDays: 30, needs: ['events', 'views', 'library'], forRoles: ['author', 'admin'], byShift: false, build: library },
+  // Les crédits d'IA : où ils vont. Pour qui paie (l'administrateur, la direction) ; ni lieu ni quart.
+  { key: 'ia', family: 'direction', defaultDays: 30, needs: ['ai'], forRoles: ['admin'], byShift: false, build: aiCredits },
 ]
 
 export const reportOf = (key: string | null | undefined): ReportDef | null => REPORTS.find((r) => r.key === key) ?? null

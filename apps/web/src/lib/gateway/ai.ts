@@ -39,8 +39,16 @@ export const AI_OPERATIONS = [
   'look_m',
   'look_l',
   'quiz',
+  // Le classement proposé à la demande, selon les familles de l'usine (toggle `nomenclature`).
+  'classify',
+  // La boîte des figures d'une page de document, recadrées pour les étapes (toggle `documentFigures`).
+  'figures',
+  // Le gabarit du PDF repris d'un exemple de l'usine (toggle `printTemplates`).
+  'print_template',
   'report_summary',
   'report_question',
+  // Des règles de rédaction tirées d'une instruction modèle ou des corrections de l'équipe (toggle `learnFromEdits`).
+  'learn_rules',
 ] as const
 export type AiOperation = (typeof AI_OPERATIONS)[number]
 

@@ -7,7 +7,8 @@ import { nativeEnv } from '../bridge/native'
 import type { DataApi } from '../gateway/data'
 import type { FilesApi } from '../gateway/files'
 import { messages } from '../i18n'
-import { ingestFile, ingestNative, kindOfFile, type IngestStage, type SourcePreset } from '../media/ingest'
+import { ingestFile, ingestNative, ingestScreen, ingestSlides, isSlides, kindOfFile, type IngestStage, type ScreenCapture, type ScreenProgress, type SourcePreset } from '../media/ingest'
+import { canReadSlides, isPptx } from '../media/slides'
 import { uid } from '../model/repo'
 import { createInstruction, saveSources, type Actor } from '../model/service'
 import type { Source, SourceKind } from '../model/types'
@@ -31,7 +32,8 @@ export interface CaptureSnapshot {
 }
 
 type Deps = { data: DataApi; files: FilesApi; actor: Actor }
-type IngestJob = (onProgress: (stage: IngestStage, ratio?: number) => void) => Promise<Source>
+/** Un envoi : une source, ou plusieurs (une présentation donne sa note et ses images). */
+type IngestJob = (onProgress: (stage: IngestStage, ratio?: number) => void) => Promise<Source | Source[]>
 
 export class CaptureSession {
   private listeners = new Set<() => void>()
@@ -111,9 +113,8 @@ export class CaptureSession {
   private rankOf = new Map<string, number>()
   private pendingRank = new Map<string, number>()
 
-  private placed(source: Source, rank: number): Source[] {
+  private placed(source: Source, rank: number, list = this.snap.sources): Source[] {
     this.rankOf.set(source.id, rank)
-    const list = this.snap.sources
     const at = list.findIndex((x) => (this.rankOf.get(x.id) ?? -1) > rank)
     return at === -1 ? [...list, source] : [...list.slice(0, at), source, ...list.slice(at)]
   }
@@ -131,13 +132,17 @@ export class CaptureSession {
     if (!job || !pending) return
     try {
       await this.ensureDoc()
-      const source = await job((stage, ratio) => this.updatePending(tempId, { stage, progress: ratio }))
-      if (pending.previewUrl && source.kind === 'photo' && !source.thumbnailUrl) source.thumbnailUrl = source.url
+      const out = await job((stage, ratio) => this.updatePending(tempId, { stage, progress: ratio }))
+      const list = Array.isArray(out) ? out : [out]
+      for (const source of list) if (pending.previewUrl && source.kind === 'photo' && !source.thumbnailUrl) source.thumbnailUrl = source.url
       this.jobs.delete(tempId)
-      this.set({
-        sources: this.placed(source, this.pendingRank.get(tempId) ?? this.nextRank++),
-        pending: this.snap.pending.filter((p) => p.tempId !== tempId),
+      // Plusieurs sources d'un même envoi restent ensemble, dans leur ordre, au rang de l'envoi.
+      const rank = this.pendingRank.get(tempId) ?? this.nextRank++
+      let sources = this.snap.sources
+      list.forEach((source, i) => {
+        sources = this.placed(source, rank + i / 1000, sources)
       })
+      this.set({ sources, pending: this.snap.pending.filter((p) => p.tempId !== tempId) })
       await this.persist()
       if (pending.previewUrl) setTimeout(() => URL.revokeObjectURL(pending.previewUrl!), 30_000)
     } catch (e) {
@@ -157,9 +162,17 @@ export class CaptureSession {
     return this.execute(tempId)
   }
 
-  addFiles(list: File[]) {
+  /** `slides` (toggle `slidesImport`) : un PowerPoint se lit dans l'app, sa note et ses images deviennent des sources. */
+  addFiles(list: File[], opts: { slides?: boolean } = {}) {
+    const slides = !!opts.slides && canReadSlides()
     for (const file of list) {
+      if (slides && isPptx(file)) {
+        void this.run({ tempId: uid('tmp_'), kind: 'document', name: file.name, stage: 'prepare' }, (p) => ingestSlides(file, this.deps.files, p))
+        continue
+      }
       const kind = kindOfFile(file)
+      // Une présentation qui ne se lit pas : sa carte dit quoi faire (rien à relancer).
+      if (!kind && isSlides(file)) this.set({ pending: [...this.snap.pending, { tempId: uid('tmp_'), kind: 'document', name: file.name, stage: 'error', error: slides ? messages().capture.upload.oldSlides : messages().capture.upload.slides }] })
       if (!kind) continue
       const previewUrl = kind === 'photo' || kind === 'video' ? URL.createObjectURL(file) : undefined
       void this.run({ tempId: uid('tmp_'), kind, name: file.name, previewUrl, stage: 'prepare' }, (p) => ingestFile(file, this.deps.files, p))
@@ -179,6 +192,16 @@ export class CaptureSession {
       void this.run({ tempId: uid('tmp_'), kind: 'photo', name: file.name, previewUrl: URL.createObjectURL(file), stage: 'prepare' }, (p) => ingestFile(file, this.deps.files, p, 'web', preset))
     })
     void this.run({ tempId: uid('tmp_'), kind: 'audio', name: voice.audio.name, stage: 'prepare' }, (p) => ingestFile(voice.audio, this.deps.files, p, 'web', { id: voiceId }))
+  }
+
+  /**
+   * Un enregistrement de l'écran (toggle `screenCapture`) : un seul envoi, une seule carte — la vidéo
+   * puis ses images nettes. « Réessayer » reprend où il s'était arrêté.
+   */
+  addScreen(capture: ScreenCapture, previewUrl?: string) {
+    const videoId = uid('src_')
+    const done: ScreenProgress = { shots: [] }
+    void this.run({ tempId: uid('tmp_'), kind: 'video', name: capture.video.name.replace(/\.[a-z0-9]+$/i, ''), previewUrl, stage: 'prepare' }, (p) => ingestScreen(capture, this.deps.files, p, videoId, done))
   }
 
   addNative(items: CapturedMedia[]) {
@@ -226,10 +249,12 @@ export class CaptureSession {
   }
 
   async remove(id: string) {
-    const victim = this.snap.sources.find((s) => s.id === id)
-    this.set({ sources: this.snap.sources.filter((s) => s.id !== id) })
+    // Un enregistrement de l'écran s'en va avec ses images nettes.
+    const victims = this.snap.sources.filter((s) => s.id === id || s.shot?.sourceId === id)
+    this.set({ sources: this.snap.sources.filter((s) => !victims.includes(s)) })
     await this.persist()
-    if (victim?.path) void this.deps.files.remove([victim.path])
+    const paths = victims.flatMap((v) => (v.path ? [v.path] : []))
+    if (paths.length) void this.deps.files.remove(paths)
   }
 
   /**

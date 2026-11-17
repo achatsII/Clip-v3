@@ -9,9 +9,12 @@ export const importer = {
   drop: {
     title: 'Glissez vos fichiers ici, ou touchez pour les choisir',
     formats: 'PDF, Word (.docx, .doc, .odt)',
+    formatsSlides: 'PDF, Word (.docx, .doc, .odt) ou PowerPoint (.pptx)',
   },
   onlyDocuments: 'Seuls les PDF et les documents Word sont importés ici',
   onlyDocumentsText: 'Les vidéos et photos se déposent dans une nouvelle instruction.',
+  slides: 'Enregistrez vos PowerPoint en PDF',
+  slidesText: 'Dans PowerPoint : Fichier › Exporter › PDF. Déposez ensuite le PDF ici : ses images deviennent les médias des étapes.',
   /** Le lot en cours. */
   batch: {
     progress: (done: number, total: number) => `${done.toLocaleString('fr-CA')} sur ${total.toLocaleString('fr-CA')} terminé${done > 1 ? 's' : ''}`,

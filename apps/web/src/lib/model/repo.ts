@@ -38,6 +38,8 @@ export const T = {
   request: 'clip_request',
   /** L'Académie : les validations sur le terrain (le registre des qualifications). */
   qualification: 'clip_qualification',
+  /** L'Académie : qui doit être formé à quel poste, et pour quand (un journal, le plus récent fait foi). */
+  assignment: 'clip_assignment',
   /**
    * Une génération qui tourne au serveur (branche clip-v3 de Job_start, n8n) : son état et le
    * résultat de l'IA. n8n l'écrit avec les droits de la personne qui l'a lancée ; l'app la relit.
@@ -45,6 +47,10 @@ export const T = {
   serverJob: 'clip_job',
   /** Une photo prise sur un lien public (relevé, retour) : la Gateway refuse l'envoi de fichiers au rôle guest. */
   photo: 'clip_photo',
+  /** Les préférences de rédaction d'une personne (toggle `learnFromEdits`). */
+  writing: 'clip_writing',
+  /** Ce qu'une personne a corrigé à la version de l'IA, à la première publication. */
+  edit: 'clip_edit',
 } as const
 
 export const nowIso = () => new Date().toISOString()

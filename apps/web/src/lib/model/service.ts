@@ -11,6 +11,8 @@ import { coverOf, emptyContent, findPublished, nowIso, T } from './repo'
 import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Renewal, Signature, Source, Version } from './types'
 import { reuseSource } from './library'
 import { allocateNumbers, instructionSearchText, publishedCard } from './search'
+import { allStationIds, namePrefix } from './nomenclature'
+import { publishedChanges } from './updates'
 
 export interface Actor {
   id: string
@@ -66,8 +68,8 @@ export async function saveDraft(data: DataApi, id: string, instr: Instruction, d
     updatedAt: nowIso(),
     updatedBy: actor.id,
     updatedByName: actor.name,
-    // L'index de recherche suit le brouillon (la recherche se fait au serveur).
-    searchText: instructionSearchText({ number: instr.number, intent: instr.intent }, draft),
+    // L'index de recherche suit le brouillon (la recherche se fait au serveur), et le classement.
+    searchText: instructionSearchText({ number: instr.number, intent: instr.intent, labels: extra.labels ?? instr.labels }, draft),
     ...extra,
   }
   if (instr.status === 'published' || instr.publishedVersion) patch.dirty = true
@@ -108,11 +110,13 @@ export async function publishInstruction(
   // Le numéro de document se donne à la première publication, et reste ensuite (un bloc commun n'en a pas).
   const docNumber = instr.number || (instr.block ? null : (await allocateNumbers(data, 1).catch(() => []))[0]) || null
 
+  // Les postes de la version : choisis à la main, et ceux dont la règle prend son classement.
+  const stationIds = allStationIds(instr.stationIds, instr.ruleStationIds)
   const version: Version = {
     instructionId: doc._id,
     number,
     content,
-    stationIds: instr.stationIds,
+    stationIds,
     publishedBy: instr.review?.requestedBy ?? actor.id,
     publishedByName: instr.review?.requestedByName ?? actor.name,
     approvedBy: opts.approvedBy?.id ?? null,
@@ -128,12 +132,20 @@ export async function publishInstruction(
     instructionId: doc._id,
     version: number,
     content,
-    stationIds: instr.stationIds,
+    stationIds,
     branding: brandingOf(org),
     publishedAt,
     // La fiche et l'index : la liste d'un poste et sa recherche ne lisent pas le contenu.
     card: publishedCard(content, docNumber),
-    searchText: instructionSearchText({ number: docNumber }, content),
+    searchText: instructionSearchText({ number: docNumber, labels: instr.labels }, content),
+    // Le début du nom tiré des familles (modèle de nom de l'usine) : le poste ne lit pas les réglages.
+    namePrefix: namePrefix(instr.labels, org.nomenclature) || null,
+    ...(instr.labels ? { labels: instr.labels } : {}),
+    ...(instr.ruleStationIds?.length ? { ruleStationIds: instr.ruleStationIds } : {}),
+    // Pour l'opérateur : ce qui a changé depuis la version d'avant, et cette version, à revoir en lecture.
+    ...(previous && instr.publishedVersion
+      ? { changes: publishedChanges(previous, content, instr.publishedVersion, instr.review?.note ?? opts.note), previous: { version: instr.publishedVersion, publishedAt: instr.publishedAt ?? null, content: previous } }
+      : {}),
   }
   // Un bloc commun ne s'affiche à aucun poste : pas de version publique ; ses instructions le portent.
   let publishedId = instr.block ? null : instr.publishedId
@@ -159,7 +171,7 @@ export async function publishInstruction(
     publishedVersion: number,
     publishedId,
     publishedAt,
-    ...(docNumber && docNumber !== instr.number ? { number: docNumber, searchText: instructionSearchText({ number: docNumber, intent: instr.intent }, content) } : {}),
+    ...(docNumber && docNumber !== instr.number ? { number: docNumber, searchText: instructionSearchText({ number: docNumber, intent: instr.intent, labels: instr.labels }, content) } : {}),
     dirty: false,
     review: null,
     // Publier repousse la relecture périodique (toggle `renewal`).
@@ -221,7 +233,8 @@ export async function requestChanges(data: DataApi, doc: Doc<Instruction>, actor
 
 export async function updatePublishedStations(data: DataApi, doc: Doc<Instruction>, stationIds: string[]) {
   await data.patch(T.instruction, doc._id, { stationIds, updatedAt: nowIso() })
-  if (doc.json_data.publishedId) await data.patch(T.published, doc.json_data.publishedId, { stationIds }).catch(() => undefined)
+  // Au poste : ceux choisis à la main, et ceux dont la règle prend l'instruction (nomenclature).
+  if (doc.json_data.publishedId) await data.patch(T.published, doc.json_data.publishedId, { stationIds: allStationIds(stationIds, doc.json_data.ruleStationIds) }).catch(() => undefined)
 }
 
 export async function archiveInstruction(data: DataApi, doc: Doc<Instruction>) {

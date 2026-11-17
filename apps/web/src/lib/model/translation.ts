@@ -2,6 +2,7 @@
  * Une instruction dans la langue de l'opérateur : ses traductions (`content.translations`)
  * appliquées au contenu, médias compris. Fonctions pures, partagées par le lecteur et l'assistant.
  */
+import { keepToolEmojis } from './tools'
 import { hashText } from '../util/hash'
 import type { Check, EnergyPoint, InstructionContent, LockoutData, MediaTranslation, QuizQuestion, StepMedia, TranslatedContent } from './types'
 
@@ -70,8 +71,11 @@ export function localized(content: InstructionContent, lang: string): Instructio
     title: t.title || content.title,
     summary: t.summary || content.summary,
     safety: t.safety?.length ? t.safety : content.safety,
-    tools: t.tools?.length === content.tools.length ? t.tools : content.tools,
+    // L'image d'un outil reste la même dans toutes les langues (tools.ts).
+    tools: t.tools?.length === content.tools.length ? keepToolEmojis(content.tools, t.tools) : content.tools,
     equipment: t.equipment || content.equipment,
+    ...(content.variants ? { variants: content.variants.map((v) => ({ ...v, name: t.variants?.[v.id] || v.name })) } : {}),
+    ...(content.variantsLabel ? { variantsLabel: t.variantsLabel || content.variantsLabel } : {}),
     lockout: content.lockout ? localizeLockout(content.lockout, t.lockout) : content.lockout,
     steps: content.steps.map((s) => {
       const x = byId.get(s.id)

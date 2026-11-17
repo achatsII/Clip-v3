@@ -18,6 +18,7 @@ const mediaRef = {
     at: num("Vidéo, image fixe : l'instant à figer, en secondes (à la place d'un extrait)"),
     focusLabel: str("Image fixe ou photo : ce qu'un repère doit montrer, 1 à 4 mots (ex. « Bouton vert »), seulement si c'est bien visible et utile ; vide sinon"),
     page: num('Document : numéro de page, 1 = première page'),
+    figure: str("Document : la figure de la page qui illustre l'étape (photo, dessin, schéma), 2 à 8 mots qui la distinguent des autres figures de la page (« Photo de la vanne V-12 ») ; vide pour montrer la page entière"),
   },
   required: ['source'],
 }
@@ -53,6 +54,7 @@ const stepSchema = {
     energyTag: str('Fiche de cadenassage : repère du point d’isolement traité (E1, P1…) ; vide sinon'),
     section: str('La phase où se trouve l’étape, 1 à 3 mots (« Démontage ») ; les étapes d’une même phase se suivent et portent le même nom ; vide si l’instruction a 8 étapes ou moins'),
     checks: { type: 'array', items: checkSchema, description: 'Ce que l’opérateur doit relever à cette étape pour la trace : 0 à 2, le plus souvent aucun' },
+    variants: strList('Les variantes où s’applique cette étape, nommées comme dans variants ; vide si elle s’applique à toutes (le plus souvent)'),
   },
   required: ['title', 'text', 'keyPoints', 'warningLevel', 'warningText', 'media', 'section'],
 }
@@ -96,13 +98,27 @@ export const instructionSchema = {
     category: { type: 'string', enum: CATEGORY_KEYS },
     tags: strList('2 à 6 mots-clés de recherche, en minuscules'),
     station: str('Poste, machine ou équipement visé, tel que nommé ; vide si inconnu'),
+    labels: {
+      type: 'array',
+      description: "Le classement selon les familles de l'usine (CLASSEMENT DE L’USINE) ; vide si l'usine n'en a pas ou si rien ne le dit",
+      items: {
+        type: 'object',
+        properties: {
+          family: str('La famille, écrite comme dans la liste (« Département »)'),
+          values: strList('Ses valeurs pour cette instruction : dans une liste, seulement les siennes ; une valeur libre telle qu’écrite ou dite'),
+        },
+        required: ['family', 'values'],
+      },
+    },
     equipment: str('Équipement principal ; vide si inconnu'),
     frequency: str('Fréquence si dite (« une fois par mois ») ; vide sinon'),
     durationMin: num('Durée totale estimée en minutes ; 0 si inconnue'),
     ppe: { type: 'array', items: { type: 'string', enum: Object.keys(PPE) } },
-    tools: strList('Outils et matériel nécessaires'),
+    tools: strList('Outils et matériel nécessaires, chacun précédé de l’emoji qui le montre le mieux (🔧 clé, 🪛 tournevis, 🔨 marteau, 🗜️ pince, 📏 règle ou ruban, 🔦 lampe, 🧻 chiffon, 🧴 nettoyant, 🛢️ graisse ou huile, 🔩 vis ou boulon, ⚙️ pièce, 🔒 cadenas, 🧰 sinon) : « 🔧 Clé de 13 mm »'),
     safety: strList('Mises en garde générales, avant de commencer'),
     steps: { type: 'array', items: stepSchema },
+    variants: strList('Les variantes de la tâche, seulement si les sources décrivent la même tâche pour plusieurs modèles ou cas aux étapes presque pareilles (« Pompe A », « Pompe B ») ; vide sinon (le plus souvent)'),
+    variantsLabel: str('Ce qui distingue les variantes, en 1 à 3 mots (« Modèle de pompe ») ; vide sans variantes'),
     lockout: lockoutSchema,
     questions: {
       type: 'array',
@@ -169,6 +185,44 @@ export const imageTextSchema = {
     texts: { type: 'array', items: { type: 'object', properties: { from: str('Le texte tel qu’écrit sur l’image'), to: str('Sa traduction') }, required: ['from', 'to'] } },
   },
   required: ['texts'],
+}
+
+/** Le gabarit d'impression vu sur un exemple de l'usine. */
+export const printTemplateSchema = {
+  type: 'object',
+  properties: {
+    layout: { type: 'string', enum: ['cards', 'table', 'onePage'], description: 'cards : des cartes en grille, l’image au-dessus du texte ; table : une ligne par étape, l’image à côté du texte ; onePage : toute l’instruction sur une seule page dense' },
+    orientation: { type: 'string', enum: ['portrait', 'landscape'] },
+    number: { type: 'boolean', description: 'L’en-tête montre un numéro de document' },
+    version: { type: 'boolean', description: 'L’en-tête montre une version, une révision ou une date' },
+    approvedBy: { type: 'boolean', description: 'L’en-tête montre qui a approuvé ou vérifié' },
+    stations: { type: 'boolean', description: 'L’en-tête montre le poste, la machine ou la ligne' },
+    duration: { type: 'boolean', description: 'L’en-tête montre une durée ou une fréquence' },
+    qr: { type: 'boolean', description: 'La page montre un code QR' },
+    footer: str('Le texte fixe du pied de page, mot pour mot, sans numéro de page ni date ; vide s’il n’y en a pas'),
+    color: str('La couleur principale du document (bandeaux, titres) en hexadécimal #RRGGBB ; vide si elle n’est pas nette ou si c’est du noir'),
+  },
+  required: ['layout', 'orientation', 'number', 'version', 'approvedBy', 'stations', 'duration', 'qr', 'footer', 'color'],
+}
+
+/** Les figures d'une page de document : leur boîte, dans l'ordre de la demande. */
+export const figuresSchema = {
+  type: 'object',
+  properties: {
+    figures: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          n: num('Le numéro de la figure dans la demande : 1, 2…'),
+          found: { type: 'boolean', description: 'false si cette figure n’est pas sur la page' },
+          box: { type: 'array', items: { type: 'number' }, description: '[ymin, xmin, ymax, xmax] normalisés de 0 à 1000, autour de la figure entière' },
+        },
+        required: ['n', 'found', 'box'],
+      },
+    },
+  },
+  required: ['figures'],
 }
 
 export const annotationSchema = {

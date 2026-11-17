@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, Check, Loader2, Mic, RotateCcw, Trash2, WifiOff } from 'lucide-react'
+import { AlertCircle, Check, Images, Loader2, Mic, RotateCcw, Trash2, WifiOff } from 'lucide-react'
 import { useState } from 'react'
 import { SourceIcon } from '@/components/icons'
 import { Textarea } from '@/components/ui/Field'
@@ -35,8 +35,9 @@ function Thumb({ url, kind }: { url?: string; kind: Source['kind'] }) {
 /**
  * `narrated` : la note d'une série de photos prises en parlant, et combien de photos elle commente.
  * `voiceAt` : une photo de cette série, et son instant dans la note.
+ * `screenShots` : un enregistrement de l'écran, et combien d'images nettes il a gardées.
  */
-export function SourceCard({ source, onRemove, onEditText, narrated, voiceAt }: { source: Source; onRemove?: () => void; onEditText?: (text: string) => void; narrated?: number; voiceAt?: number }) {
+export function SourceCard({ source, onRemove, onEditText, narrated, voiceAt, screenShots }: { source: Source; onRemove?: () => void; onEditText?: (text: string) => void; narrated?: number; voiceAt?: number; screenShots?: number }) {
   const t = useMessages()
   const ts = t.capture.source
   const [editing, setEditing] = useState(false)
@@ -51,6 +52,11 @@ export function SourceCard({ source, onRemove, onEditText, narrated, voiceAt }: 
         <p className="truncate text-[15px] font-black text-slate-900 dark:text-white">{title}</p>
         <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-bold text-slate-500">
           <Check className="h-3.5 w-3.5 text-emerald-500" /> {meta}
+          {!!screenShots && (
+            <span className="inline-flex items-center gap-1 text-[var(--primary-strong)] dark:text-[var(--primary-light)]">
+              <Images className="h-3.5 w-3.5" aria-hidden /> {ts.screenShots(screenShots)}
+            </span>
+          )}
           {typeof voiceAt === 'number' && (
             <span className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-300" title={ts.voiceAt(formatClock(voiceAt))}>
               <Mic className="h-3.5 w-3.5" aria-hidden />

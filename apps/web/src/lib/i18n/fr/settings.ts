@@ -11,6 +11,7 @@ export const settings = {
     appearance: 'Apparence',
     data: 'Données',
     alerts: 'Avertissements',
+    nomenclature: 'Classement',
   },
   /** L'onglet Usine : nom, logo et couleur. */
   plant: {

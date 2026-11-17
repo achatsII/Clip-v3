@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { usePublishedCount, useStations } from '@/hooks/queries'
 import { nativeEnv } from '@/lib/bridge/native'
 import { amountOf } from '@/lib/billing/advice'
+import { formatDate } from '@/lib/util/cn'
 import { candidates, pickOffer, snooze, type Offer } from '@/lib/billing/advisor'
 import { readAdvisor, writeAdvisor, type AdvisorStored } from '@/lib/billing/advisorStore'
 import { addonFor, FEATURE_LABELS, featureLabel, MODULES, type LimitFeature, type ModuleKey } from '@/lib/billing/catalog'
@@ -109,6 +110,11 @@ function describe(offer: Offer, plans: PublicPlan[], t: Messages): { title: stri
   if (offer.kind === 'module') {
     const text = offer.module === 'academy' ? a.academy(offer.evidence, trial(offer.addon)) : a.records(offer.evidence, trial(offer.addon))
     return { title: offer.module === 'academy' ? a.academyTitle : a.recordsTitle, text, icon: MODULE_ICONS[offer.module] }
+  }
+  if (offer.kind === 'credits') {
+    const p = plan(offer.plan)
+    const line = p ? `${p.name} : ${t.billing.plans.perMonth(t.billing.credits(amountOf(p, 'ai_credits')))}` : ''
+    return { title: a.forecastTitle, text: a.forecast(formatDate(offer.runsOutAt), offer.daysShort, line), icon: <Coins className="h-6 w-6" /> }
   }
   if (offer.feature === 'ai_credits') {
     const p = plan(offer.plan)

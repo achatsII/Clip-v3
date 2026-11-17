@@ -1,7 +1,7 @@
 'use client'
 
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { Loader2, Lock, Maximize, Search, UserRound, X } from 'lucide-react'
+import { Loader2, Lock, Maximize, Search, Sparkles, UserRound, X } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { CategoryIcon } from '@/components/icons'
@@ -22,6 +22,8 @@ import { useMessages } from '@/lib/i18n'
 import { CATEGORIES } from '@/lib/model/catalog'
 import { logUsage, T } from '@/lib/model/repo'
 import { cardOf, searchPublished, stationCards } from '@/lib/model/search'
+import { usePublishedName, usePublishedPrefix } from '@/lib/ui/naming'
+import { isFreshUpdate, seenVersion } from '@/lib/model/updates'
 import type { Published, Station } from '@/lib/model/types'
 import { cn, normalizeText } from '@/lib/util/cn'
 import { useSettledValue } from '@/lib/util/settled'
@@ -49,6 +51,7 @@ function Kiosk() {
 }
 
 function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onDead: () => void }) {
+  const prefixOf = usePublishedPrefix()
   const { publicLinks } = useMessages()
   const t = publicLinks.kiosk
   const client = useMemo(() => guestClient(uuid, link, onDead), [uuid, link, onDead])
@@ -145,6 +148,7 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
     return (
       <Player
         content={open.json_data.content}
+        namePrefix={prefixOf(open.json_data.namePrefix)}
         instructionId={open.json_data.instructionId}
         publishedId={open._id}
         version={open.json_data.version}
@@ -161,6 +165,7 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
         canRecord={canRecord}
         canTrain={canTrain}
         notifyLink={uuid}
+        update={{ publishedAt: open.json_data.publishedAt, changes: open.json_data.changes, previous: open.json_data.previous }}
       />
     )
   }
@@ -170,7 +175,7 @@ function KioskInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; onD
   // Deux lettres et plus : la recherche se fait au serveur, dans tout le contenu (et dans la portée du lien).
   const searching = searched.length > 1
   const q = normalizeText(query.trim())
-  const mineFiltered = (mine.data ?? []).filter((p) => !q || normalizeText(`${cardOf(p).title} ${cardOf(p).number ?? ''}`).includes(q))
+  const mineFiltered = (mine.data ?? []).filter((p) => !q || normalizeText(`${p.json_data.namePrefix ?? ''} ${cardOf(p).title} ${cardOf(p).number ?? ''}`).includes(q))
   const mineIds = new Set((mine.data ?? []).map((p) => p._id))
   const others = serverDocs.filter((p) => !mineIds.has(p._id))
 
@@ -265,6 +270,10 @@ function MoreButton({ label, busy, onClick }: { label: string; busy: boolean; on
 
 function Grid({ items, onOpen, opening, big }: { items: Doc<Published>[]; onOpen: (p: Doc<Published>) => void; opening: string | null; big?: boolean }) {
   const t = useMessages().publicLinks.kiosk
+  // « Mis à jour » : une nouvelle version que cette tablette n'a pas encore ouverte (toggle `operatorUpdates`).
+  const updatesOn = usePublicConfig().data?.toggles.operatorUpdates ?? FALLBACK_TOGGLES.operatorUpdates
+  // Le nom tiré des familles, gardé dans la version publiée (toggle `nameTemplate`).
+  const nameOf = usePublishedName()
   return (
     <div className={cn('grid gap-4', big ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4')}>
       {items.map((p) => {
@@ -278,14 +287,20 @@ function Grid({ items, onOpen, opening, big }: { items: Doc<Published>[]; onOpen
               <span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/15 px-2.5 py-1.5 text-[10px] font-black tracking-widest uppercase backdrop-blur-md">
                 <CategoryIcon category={c.category} className="h-3.5 w-3.5" /> {CATEGORIES[c.category]?.short}
               </span>
-              {c.number && <span className="absolute top-3 right-3 rounded-xl bg-black/35 px-2.5 py-1.5 text-[11px] font-black tabular-nums">{c.number}</span>}
+              {updatesOn && p.json_data.changes && isFreshUpdate(p.json_data, seenVersion(p.json_data.instructionId)) ? (
+                <span className="absolute top-3 right-3 flex items-center gap-1 rounded-xl bg-amber-400 px-2.5 py-1.5 text-[11px] font-black tracking-wide text-slate-900 uppercase shadow-lg">
+                  <Sparkles className="h-3.5 w-3.5" /> {t.updated}
+                </span>
+              ) : (
+                c.number && <span className="absolute top-3 right-3 rounded-xl bg-black/35 px-2.5 py-1.5 text-[11px] font-black tabular-nums">{c.number}</span>
+              )}
               {opening === p._id && (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/30">
                   <Loader2 className="h-10 w-10 animate-spin" />
                 </span>
               )}
               <span className="absolute inset-x-4 bottom-3">
-                <span className={cn('block leading-tight font-black tracking-tight', big ? 'text-2xl' : 'text-lg')}>{c.title}</span>
+                <span className={cn('block leading-tight font-black tracking-tight', big ? 'text-2xl' : 'text-lg')}>{nameOf(c.title, p.json_data.namePrefix)}</span>
                 {meta && <span className="text-sm font-bold text-white/80">{meta}</span>}
               </span>
             </span>

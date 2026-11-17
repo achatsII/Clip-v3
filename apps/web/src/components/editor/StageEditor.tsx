@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, MoreHorizontal, Plus, Radio, Sparkles, TriangleAlert, X } from 'lucide-react'
+import { Blocks, Check, ChevronDown, ChevronLeft, ChevronRight, ImagePlus, MoreHorizontal, Plus, Radio, Sparkles, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { mediaThumb } from '@/components/media/MediaView'
 import { StepMediaArea } from '@/components/player/StepMediaArea'
@@ -24,6 +24,8 @@ import { cn } from '@/lib/util/cn'
 import { CheckDialog } from './CheckDialog'
 import { AssistMenu, EditorHeader, iconButton, QuestionsPill, ViewMenu, type StageTop } from './EditorBar'
 import { useStepAssist } from './StepAssist'
+import { OperatorFeedbackNote } from './OperatorFeedback'
+import { StepScope } from './StepScope'
 import { StepMediaEditor } from './StepMediaEditor'
 import { ChecksBlock, keepCheck, SectionField, stepMenu, type StepActions } from './StepParts'
 
@@ -55,6 +57,9 @@ export interface StageEditorProps {
   remoteNote?: string | null
   /** Ce qu'un opérateur a signalé sur cette étape. */
   feedbackNote?: string | null
+  /** La photo jointe au retour de l'opérateur, et le geste qui la met à l'étape (toggle `feedbackMedia`). */
+  feedbackPhoto?: string | null
+  onUseFeedbackPhoto?: () => Promise<void>
   feedbackByStep?: Record<string, number>
   /** En approbation : les étapes nouvelles ou modifiées depuis la version publiée. */
   changes?: Record<string, StepChange>
@@ -71,7 +76,11 @@ export interface StageEditorProps {
   onInsertAfter: () => void
   /** Ajouter une étape à la fin (bande des étapes, première étape). */
   onAddEnd: () => void
+  /** Insérer un bloc commun à la fin, à côté de « Ajouter une étape » (toggle `sharedBlocks`) ; absent : pas offert. */
+  onInsertBlock?: () => void
   onSourceAdded: (s: Source) => void
+  /** Revoir le média d'origine d'où vient celui de l'étape (toggle `sourceLibrary`) ; absent : pas offert. */
+  onShowSource?: (sourceId: string, at?: number) => void
   onMove: (dir: -1 | 1) => void
   onDuplicate: () => void
   onDelete: () => void
@@ -98,7 +107,7 @@ export function StageEditor(props: StageEditorProps) {
       {assist.element}
       {props.step && (
         <Modal open={mediaOpen} onClose={() => setMediaOpen(false)} size="lg" title={t.editor.stage.mediaTitle(props.index + 1)}>
-          <StepMediaEditor content={props.content} step={props.step} sources={props.sources} readOnly={props.readOnly} onChange={props.onChange} onSourceAdded={props.onSourceAdded} />
+          <StepMediaEditor content={props.content} step={props.step} sources={props.sources} readOnly={props.readOnly} onChange={props.onChange} onSourceAdded={props.onSourceAdded} onShowSource={props.onShowSource} />
         </Modal>
       )}
     </>
@@ -207,12 +216,14 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
           <Sparkles className="h-4 w-4 animate-pulse" /> {t.editor.step.assistantWorking}
         </p>
       )}
-      {p.feedbackNote && <p className="rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">{t.editor.stepEditor.operatorFeedback(p.feedbackNote)}</p>}
+      <OperatorFeedbackNote note={p.feedbackNote} photo={p.feedbackPhoto} onUsePhoto={p.readOnly ? undefined : p.onUseFeedbackPhoto} />
+      {/* Où s'applique l'étape (variantes) et si elle est essentielle (version courte). */}
+      <StepScope content={p.content} step={step} onChange={p.onChange} readOnly={p.readOnly} />
 
       {p.sections && !!step.section && <SectionField steps={p.content.steps} index={index} readOnly={p.readOnly} naming={p.namingSection} onNamed={() => p.setNamingSection(false)} onSteps={p.onSteps} className="-mb-2" />}
       <div className="flex items-start gap-4">
         <span className="bg-gradient-primary shadow-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl text-3xl font-black text-white tabular-nums">{index + 1}</span>
-        <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label={t.editor.stage.titleLabel} placeholder={t.editor.stage.titlePlaceholder} className={cn(editable, 'min-w-0 flex-1 px-2 pt-1 leading-[1.05] font-black tracking-tighter hyphens-auto text-slate-900 dark:text-white', p.agentOpen ? 'text-3xl' : 'text-3xl sm:text-4xl')} />
+        <AutoTextarea singleLine value={step.title} readOnly={readOnly} onChange={(e) => set({ title: e.target.value })} aria-label={t.editor.stage.titleLabel} placeholder={t.editor.stage.titlePlaceholder} className={cn(editable, 'min-w-0 flex-1 px-2 pt-1 leading-[1.05] font-black tracking-tighter hyphens-auto text-slate-900 dark:text-white', 'text-3xl sm:text-4xl')} />
         {menu && !readOnly && <StepMenu p={p} step={step} />}
       </div>
 
@@ -358,6 +369,11 @@ function StepStrip({ p }: { p: Inner }) {
             <Plus className="h-5 w-5" />
           </button>
         )}
+        {!readOnly && p.onInsertBlock && (
+          <button type="button" onClick={p.onInsertBlock} aria-label={t.blocks.insert} title={t.blocks.insert} className="btn-press flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 text-slate-500 hover:border-[var(--primary)] hover:text-[var(--primary)] dark:border-slate-700">
+            <Blocks className="h-5 w-5" />
+          </button>
+        )}
       </div>
       <button type="button" onClick={() => p.onSelect(content.steps[index + 1]?.id)} disabled={!step || index >= total - 1} aria-label={t.editor.stage.next} className={iconButton}>
         <ChevronRight className="h-5 w-5" />
@@ -369,6 +385,8 @@ function StepStrip({ p }: { p: Inner }) {
 /** Sur ordinateur : le poste en plein écran, à modifier sur place. */
 function StageCanvas(p: Inner) {
   const t = useMessages()
+  // Plusieurs médias à l'étape : vignettes, « 2 / 3 » et grandes flèches (toggle `mediaNav`).
+  const mediaNav = useToggle('mediaNav')
   const { content, step, index, readOnly, top } = p
   const total = content.steps.length
   const hasMedia = !!step?.media.length
@@ -386,7 +404,7 @@ function StageCanvas(p: Inner) {
   }, [p, content.steps, index])
 
   return (
-    <div className={cn('fixed inset-y-0 left-0 z-40 flex flex-col bg-slate-50 dark:bg-slate-950', p.agentOpen ? 'right-[424px]' : 'right-0')} role="region" aria-label={t.editor.stage.region}>
+    <div className="fixed inset-0 z-40 flex flex-col bg-slate-50 dark:bg-slate-950" role="region" aria-label={t.editor.stage.region}>
       <EditorHeader wide top={top} readOnly={readOnly} history={p.history} badge={p.badge} assist={p.assist} showAssist={!!step && !step.fromBlock} onAssistant={p.onAssistant} agentOpen={p.agentOpen} progress={step ? (index + 1) / Math.max(1, total) : 0} />
       {p.notices && <div className="shrink-0 space-y-2 px-4 pt-3">{p.notices}</div>}
 
@@ -395,7 +413,7 @@ function StageCanvas(p: Inner) {
           {hasMedia && (
             <div className="flex min-w-0 flex-[1.5] flex-col bg-slate-900">
               <div className="relative min-h-0 flex-1">
-                <StepMediaArea step={step} labels={t.editor.mediaArea} />
+                <StepMediaArea step={step} labels={t.editor.mediaArea} nav={mediaNav} />
               </div>
               <MediaBar p={p} />
             </div>
@@ -429,6 +447,7 @@ function StagePhone(p: Inner) {
   const { step, readOnly, top } = p
   // Le média à ses vraies proportions, comme au poste au téléphone (toggle `phoneReader`).
   const phoneReader = useToggle('phoneReader')
+  const mediaNav = useToggle('mediaNav')
   const first = step?.media[0]
   const focus = !!step && layoutOf(step) === 'focus'
   const ratio = useMediaRatio(phoneReader && focus ? ratioKeys(first, false) : [])
@@ -470,7 +489,7 @@ function StagePhone(p: Inner) {
                 className={cn('relative bg-slate-900', mediaBox !== null ? 'transition-[height] duration-300 ease-out' : 'h-[42dvh] sm:h-[50dvh]')}
               >
                 {step.media.length ? (
-                  <StepMediaArea key={step.id} step={step} labels={t.editor.mediaArea} />
+                  <StepMediaArea key={step.id} step={step} labels={t.editor.mediaArea} nav={mediaNav} />
                 ) : (
                   <button type="button" disabled={readOnly || !!step.fromBlock} onClick={p.openMedia} className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/80">
                     <ImagePlus className="h-10 w-10" />

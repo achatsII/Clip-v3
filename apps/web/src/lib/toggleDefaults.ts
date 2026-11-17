@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate' | 'mediaOrder' | 'feedbackMedia' | 'variants' | 'quickMode' | 'gifInStep' | 'screenCapture' | 'learnFromEdits'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -81,6 +81,71 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // L'accord pour l'IA se donne à la connexion : une ligne sous le bouton, plus de fenêtre au premier
   // usage. Il se retire et se redonne dans Réglages › Données. Éteint : la fenêtre d'avant (`aiConsent`).
   aiConsentAtSignIn: true,
+  // La lecture fluide des vidéos : une vidéo qui quitte l'écran arrête de télécharger (avant, les
+  // vidéos des étapes déjà vues continuaient en arrière-plan et bloquaient l'étape affichée), l'éditeur
+  // garde un lecteur par vidéo d'une étape à l'autre comme au poste, chaque étape montre son extrait
+  // depuis le début, et « Tout voir » ne charge et ne joue que les vidéos à l'écran.
+  smoothVideos: true,
+  // La nomenclature de l'usine : ses familles d'étiquettes (département, machine, produit, BT…), le
+  // classement de chaque instruction proposé par l'IA, et les postes qui prennent leurs instructions
+  // par règle (une instruction bien classée y va d'elle-même).
+  nomenclature: true,
+  // Au poste, une instruction mise à jour le dit : « Mise à jour le … », les étapes nouvelles et
+  // modifiées marquées, la version précédente à revoir en lecture, et « Mis à jour » sur sa carte.
+  operatorUpdates: true,
+  // L'import d'un document (PDF, Word) reprend ses figures : l'étape reçoit la photo ou le dessin de
+  // la page qui l'illustre, recadré, plutôt que la page entière (qui reste à un geste dans l'éditeur).
+  documentFigures: true,
+  // Le GIF d'un extrait, à la demande dans l'éditeur, pour sortir une étape de CLIP (courriel, Teams,
+  // présentation). Le média de l'étape reste l'extrait : au poste, il joue déjà en boucle.
+  clipGif: true,
+  // Les gabarits du PDF : trois dispositions (étapes en grand, tableau, une page), portrait ou paysage ;
+  // avec le logo et les couleurs, le cartouche, le pied de page de chaque page et un gabarit d'après
+  // un exemple de l'usine.
+  printTemplates: true,
+  // Au téléphone, l'IA continue quand l'app quitte l'écran : les réponses de l'assistant passent par
+  // le serveur (le même chemin que la génération au serveur) et la génération y va par défaut.
+  backgroundAi: true,
+  // Les outils et le matériel en images : au poste, une tuile par outil (un grand emoji, puis son
+  // nom) ; dans l'éditeur, un toucher change l'image ; dans le PDF, l'emoji devant chaque outil.
+  toolImages: true,
+  // Le son des vidéos se retient sur l'appareil : activé sur une étape, il suit aux autres étapes et
+  // à la prochaine ouverture. Éteint : chaque extrait repart muet.
+  videoSound: true,
+  // Plusieurs médias à une étape, impossibles à manquer : leurs vignettes, « 2 / 3 » et de grandes
+  // flèches, au poste comme dans l'éditeur, et leur nombre sur l'étape dans la liste de la Fiche.
+  mediaNav: true,
+  // Les médias d'origine : ce qui a servi à rédiger l'instruction (vidéos entières, photos, notes
+  // vocales et leur transcription, notes, documents), à revoir dans l'éditeur et, pour qui rédige,
+  // en lecture ; chacun dit à quelles étapes il sert et se met à l'étape ouverte. Jamais au poste.
+  sourceLibrary: true,
+  // Joindre des médias dans l'assistant (photo, vidéo, note vocale, document) : ils rejoignent les
+  // médias d'origine de l'instruction, et l'assistant les reçoit avec la demande pour s'en servir.
+  agentAttach: true,
+  // Un PowerPoint (.pptx) se lit dans l'app, sans la Gateway (qui ne le convertit pas) : le texte de
+  // chaque diapositive en note, ses images en photos ; capture, import en lot, assistant, médias d'origine.
+  slidesImport: true,
+  // Le modèle de nom (Réglages › Classement) : les valeurs des familles choisies devant le titre,
+  // « Découpe – Presse P-12 – Changer le filtre », dans la bibliothèque, au poste et dans le PDF.
+  nameTemplate: true,
+  // L'ordre des médias d'une étape, dans l'éditeur : « avant » et « après » sur le média choisi.
+  mediaOrder: true,
+  // La photo jointe au retour d'un opérateur (« Pas clair ? ») se met, d'un toucher, dans le média de l'étape.
+  feedbackMedia: true,
+  // Les variantes d'une instruction (« Pompe A », « Pompe B ») : au poste, on touche la sienne au
+  // départ et ne restent que ses étapes ; l'IA les propose quand les sources décrivent plusieurs cas.
+  variants: true,
+  // La version courte pour les habitués, si l'auteur l'offre : « L'essentiel » ou « Tout en détail ».
+  quickMode: true,
+  // Le GIF d'un extrait : choisir son début et sa fin, puis le mettre à l'étape, à la place de la
+  // vidéo ou en plus ; « Vidéo · Image · GIF » sur le média de l'étape.
+  gifInStep: true,
+  // Enregistrer l'écran d'un ordinateur, sans rien installer : la vidéo, une image nette à chaque
+  // action, la voix en option ; l'IA en fait une étape par clic et entoure où cliquer.
+  screenCapture: true,
+  // L'IA qui apprend des corrections : ce qu'on change après une génération, des règles proposées
+  // (pour moi ou pour l'usine), des instructions modèles, des préférences personnelles versionnées.
+  learnFromEdits: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -122,4 +187,25 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   editorSwipe: false,
   splashHandoff: false,
   aiConsentAtSignIn: false,
+  smoothVideos: false,
+  nomenclature: false,
+  operatorUpdates: false,
+  documentFigures: false,
+  clipGif: false,
+  printTemplates: false,
+  backgroundAi: false,
+  toolImages: false,
+  videoSound: false,
+  mediaNav: false,
+  sourceLibrary: false,
+  agentAttach: false,
+  slidesImport: false,
+  nameTemplate: false,
+  mediaOrder: false,
+  feedbackMedia: false,
+  variants: false,
+  quickMode: false,
+  gifInStep: false,
+  screenCapture: false,
+  learnFromEdits: false,
 }

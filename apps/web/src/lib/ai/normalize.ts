@@ -6,7 +6,8 @@ import { cleanChecks } from '../model/checks'
 import { cleanSections } from '../model/sections'
 import { CATEGORY_KEYS, ENERGY, PPE } from '../model/catalog'
 import { uid } from '../model/repo'
-import type { Annotation, CategoryKey, EnergyPoint, InstructionContent, LockoutData, Source, Step, StepMedia, WarningLevel } from '../model/types'
+import { stepVariantsOfAi, variantsOfAi } from '../model/variants'
+import type { Annotation, CategoryKey, EnergyPoint, InstructionContent, LockoutData, Source, Step, StepMedia, Variant, WarningLevel } from '../model/types'
 
 export interface AiMediaRef {
   source?: string
@@ -20,6 +21,8 @@ export interface AiMediaRef {
    * a vu la vidéo en basse définition) : il se pose ensuite sur l'image elle-même (`autoAnnotate.ts`).
    */
   focusLabel?: string
+  /** Document : la figure de la page qui illustre l'étape ; recadrée après la génération (`enrichMedia`). */
+  figure?: string
 }
 
 /** Ce que la génération veut montrer sur ses images : une demande par image, annotée au deuxième temps. */
@@ -30,6 +33,8 @@ export interface MarkHint {
 }
 
 export interface AiStep {
+  /** Les variantes où l'étape s'applique (des noms), si l'instruction en a. */
+  variants?: unknown
   id?: string
   title?: string
   text?: string
@@ -44,12 +49,17 @@ export interface AiStep {
 }
 
 export interface AiInstruction {
+  /** Les variantes de la tâche (des noms) et ce qui les distingue. */
+  variants?: unknown
+  variantsLabel?: string
   title?: string
   summary?: string
   kind?: string
   category?: string
   tags?: string[]
   station?: string
+  /** Le classement proposé selon les familles de l'usine (`labelsFromAi`). */
+  labels?: unknown
   equipment?: string
   frequency?: string
   durationMin?: number
@@ -84,7 +94,17 @@ export function warningFrom(level: unknown, text: unknown): Step['warning'] {
 export function resolveMedia(ref: AiMediaRef, sourcesById: Map<string, Source>): StepMedia | null {
   const src = ref.source ? sourcesById.get(ref.source.trim().toUpperCase()) : undefined
   if (!src || !src.url) return null
-  if (src.kind === 'photo') return { kind: 'image', url: src.url, sourceId: src.id }
+  if (src.kind === 'photo') {
+    // Une image nette de l'écran sait d'où elle vient : « Vidéo » ou « GIF » repartent de cet instant.
+    const video = src.shot ? [...sourcesById.values()].find((v) => v.id === src.shot!.sourceId && v.kind === 'video' && v.url) : undefined
+    if (src.shot && video?.url) {
+      const at = src.shot.at
+      const end = video.durationSec && video.durationSec > 0 ? Math.min(video.durationSec, at + 2) : at + 2
+      const round = (v: number) => Math.round(v * 10) / 10
+      return { kind: 'image', url: src.url, sourceId: src.id, frame: { videoUrl: video.url, at: round(at), start: round(Math.max(0, at - 3)), end: round(Math.max(end, at + 0.5)) } }
+    }
+    return { kind: 'image', url: src.url, sourceId: src.id }
+  }
   if (src.kind === 'video') {
     const dur = src.durationSec && src.durationSec > 0 ? src.durationSec : Number.POSITIVE_INFINITY
     if (Number.isFinite(ref.at)) {
@@ -108,7 +128,8 @@ export function resolveMedia(ref: AiMediaRef, sourcesById: Map<string, Source>):
   if (src.kind === 'document') {
     const page = Number.isFinite(ref.page) && Number(ref.page) >= 1 ? Math.round(Number(ref.page)) : 1
     const max = src.pageCount && src.pageCount > 0 ? src.pageCount : page
-    return { kind: 'document', url: src.url, sourceId: src.id, page: Math.min(page, max), name: src.originalName ?? src.name }
+    const figure = clean(ref.figure).slice(0, 120)
+    return { kind: 'document', url: src.url, sourceId: src.id, page: Math.min(page, max), name: src.originalName ?? src.name, ...(figure ? { figure } : {}) }
   }
   return null
 }
@@ -118,7 +139,7 @@ function mediaKey(m: StepMedia): string {
   if (m.kind === 'video') return `v:${m.url}#${m.start}`
   if (m.kind === 'image' && m.frame) return `f:${m.frame.videoUrl}@${m.frame.at}`
   if (m.kind === 'html') return `h:${m.html.length}:${m.html.slice(0, 64)}`
-  return `${m.kind}:${m.url}${m.kind === 'document' ? `#${m.page ?? 1}` : ''}`
+  return `${m.kind}:${m.url}${m.kind === 'document' ? `#${m.page ?? 1}${m.figure ? `:${m.figure.toLowerCase()}` : ''}` : ''}`
 }
 
 /**
@@ -132,7 +153,7 @@ function withChecks(raw: unknown): Pick<Step, 'checks'> {
 }
 
 /** `marks` : reçoit, pour chaque image où l'IA veut un repère, ce qu'il faut y montrer. */
-export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<string, Source>, keepIds?: Set<string>, marks?: MarkHint[]): Step[] {
+export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<string, Source>, keepIds?: Set<string>, marks?: MarkHint[], variants?: Variant[] | null): Step[] {
   const out: Step[] = []
   for (const s of steps ?? []) {
     const title = clean(s.title)
@@ -160,9 +181,25 @@ export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<str
       energyPointId: clean(s.energyTag) || null,
       ...(clean(s.section) ? { section: clean(s.section) } : {}),
       ...withChecks(s.checks),
+      ...((v) => (v ? { variants: v } : {}))(stepVariantsOfAi(s.variants, variants)),
     })
   }
-  return cleanSections(out)
+  return cleanSections(trimOverlaps(out))
+}
+
+/**
+ * Le média colle à son étape : deux étapes qui se suivent ne montrent pas les mêmes secondes de la
+ * même vidéo. L'extrait d'une étape s'arrête là où commence celui de l'étape suivante (il garde au
+ * moins une seconde) ; un extrait qui commence avant celui d'avant n'est pas touché.
+ */
+function trimOverlaps(steps: Step[]): Step[] {
+  for (let i = 0; i < steps.length - 1; i++) {
+    const a = steps[i].media.find((m) => m.kind === 'video')
+    const b = steps[i + 1].media.find((m) => m.kind === 'video')
+    if (a?.kind !== 'video' || b?.kind !== 'video' || a.url !== b.url) continue
+    if (b.start >= a.start + 1 && a.end > b.start) a.end = b.start
+  }
+  return steps
 }
 
 function normalizeLockout(raw: AiInstruction['lockout'], sourcesById: Map<string, Source>): LockoutData | null {
@@ -201,11 +238,15 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
   choices: Record<string, string[]>
   /** Les images où un repère aide, à annoter sur l'image elle-même. */
   marks: MarkHint[]
+  /** Le classement proposé par l'IA, tel quel ; ramené aux familles de l'usine par `labelsFromAi`. */
+  aiLabels: unknown
 } {
   const sourcesById = new Map<string, Source>()
   sources.forEach((s, i) => sourcesById.set(`S${i + 1}`, s))
   const marks: MarkHint[] = []
-  const steps = normalizeSteps(raw.steps, sourcesById, undefined, marks)
+  // Les variantes de la tâche (« Pompe A », « Pompe B »), si les sources en décrivent plusieurs.
+  const variants = variantsOfAi(raw.variants)
+  const steps = normalizeSteps(raw.steps, sourcesById, undefined, marks, variants)
   const category = (CATEGORY_KEYS.includes(raw.category as CategoryKey) ? raw.category : 'production') as CategoryKey
   const lockout = normalizeLockout(raw.lockout, sourcesById)
   const kind = raw.kind === 'lockout' && lockout ? 'lockout' : 'procedure'
@@ -234,10 +275,13 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
       steps,
       lockout: kind === 'lockout' ? lockout : null,
       language,
+      // Des variantes qu'aucune étape ne distingue ne servent à rien.
+      ...(variants && steps.some((s) => s.variants?.length) ? { variants, ...(clean(raw.variantsLabel) ? { variantsLabel: clean(raw.variantsLabel).slice(0, 40) } : {}) } : {}),
     },
     stationGuess: clean(raw.station) || null,
     ...normalizeQuestions(raw.questions),
     marks,
+    aiLabels: Array.isArray(raw.labels) ? raw.labels : [],
   }
 }
 

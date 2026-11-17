@@ -22,7 +22,7 @@ import type { Shift } from '@/lib/model/types'
 import { printHtml } from '@/lib/pdf/print'
 import { reportOf, type Block, type ReportContext, type ReportDef } from '@/lib/reports/catalog'
 import { DAY, PERIOD_CHOICES, periodOf, previousOf, type PeriodDays } from '@/lib/reports/facts'
-import { EVENTS_CAP, loadCards, loadEvents, loadExecutions, loadFeedback, loadLibrary, loadTraining, type EventKind } from '@/lib/reports/load'
+import { EVENTS_CAP, loadAiUse, loadCards, loadEvents, loadExecutions, loadFeedback, loadLibrary, loadTraining, type EventKind } from '@/lib/reports/load'
 import { reportHtml } from '@/lib/reports/print'
 import { useToggle } from '@/lib/toggles'
 import { cn, formatDate, formatDateTime } from '@/lib/util/cn'
@@ -91,10 +91,11 @@ function Report({ def }: { def: ReportDef }) {
   const feedback = useQuery({ queryKey: ['report', 'feedback', since], queryFn: () => loadFeedback(data, since), enabled: need('feedback') })
   const training = useQuery({ queryKey: ['report', 'training', withAcademy], queryFn: () => loadTraining(data, withAcademy), enabled: need('training') })
   const library = useQuery({ queryKey: ['report', 'library'], queryFn: () => loadLibrary(data), enabled: need('library') })
+  const ai = useQuery({ queryKey: ['report', 'ai', since], queryFn: () => loadAiUse(data, since), enabled: need('ai') })
   const cards = useQuery({ queryKey: ['report', 'cards'], queryFn: () => loadCards(data), staleTime: 10 * 60_000 })
   const stations = useStations()
   const ops = useQuery({ queryKey: ['operators'], queryFn: () => listOperators(data), enabled: operatorsOn })
-  const queries = [events, executions, feedback, training, library, cards, stations]
+  const queries = [events, executions, feedback, training, library, ai, cards, stations]
   const loading = queries.some((q) => q.isLoading)
   const failed = queries.find((q) => q.error)
 
@@ -115,9 +116,11 @@ function Report({ def }: { def: ReportDef }) {
       stations: new Map((stations.data ?? []).map((s) => [s._id, { name: s.json_data.name, area: s.json_data.area?.trim() || null }])),
       training: training.data ?? null,
       library: library.data ?? null,
+      ai: ai.data?.uses ?? null,
+      people: new Map(Object.entries(org.json_data.members ?? {}).map(([id, m]) => [id, m.name || m.email || id] as const)),
     }
     return def.build(ctx)
-  }, [def, loading, failed, days, now, stationIds, shift, shiftOf, events.data, executions.data, feedback.data, cards.data, stations.data, training.data, library.data])
+  }, [def, loading, failed, days, now, stationIds, shift, shiftOf, events.data, executions.data, feedback.data, cards.data, stations.data, training.data, library.data, ai.data, org.json_data.members])
 
   const title = t.list[def.key].title
   const periodText = `${t.periodLong(days)} · ${t.dataUntil(formatDateTime(new Date(now).toISOString()))}`
@@ -162,7 +165,7 @@ function Report({ def }: { def: ReportDef }) {
         )}
       </div>
       <p className="px-1 text-xs font-bold text-slate-500">{periodText}</p>
-      {events.data?.capped && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">{t.capped(num(EVENTS_CAP))}</p>}
+      {(events.data?.capped || ai.data?.capped) && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">{t.capped(num(EVENTS_CAP))}</p>}
 
       {failed ? (
         <ErrorState error={failed.error} onRetry={() => void Promise.all(queries.map((q) => q.refetch()))} />

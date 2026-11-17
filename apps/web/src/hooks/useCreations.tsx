@@ -81,7 +81,7 @@ export function CreationWatcher() {
   const router = useRouter()
   const qc = useQueryClient()
   const toast = useToast()
-  const { data, files, ai, profile, displayName } = useSession()
+  const { data, files, ai, profile, displayName, org } = useSession()
   const creations = useCreations({ idle: pathname === '/accueil' || pathname === '/instructions' })
   const stations = useStations()
   // La génération au serveur : les travaux des créations en cours, relus toutes les 10 s (jamais onglet
@@ -152,7 +152,7 @@ export function CreationWatcher() {
       const id = creation._id
       void data
         .get<Instruction>(T.instruction, id)
-        .then((doc) => (doc ? finishServerGeneration({ doc, job, data, files, ai, stations: stations.data ?? [], actor: { id: profile.userId, name: displayName } }) : undefined))
+        .then((doc) => (doc ? finishServerGeneration({ doc, job, data, files, ai, stations: stations.data ?? [], actor: { id: profile.userId, name: displayName }, nomenclature: org.json_data.nomenclature }) : undefined))
         .catch(() => undefined)
         .finally(() => {
           // Terminée (ou ratée) ici sans qu'on la regarde : on l'annonce ; l'appareil qui l'a lancée peut être ailleurs.

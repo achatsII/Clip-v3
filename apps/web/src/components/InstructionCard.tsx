@@ -3,6 +3,8 @@
 import { renewalState } from '@/lib/model/renewal'
 import { useToggle } from '@/lib/toggles'
 import { Blocks, CalendarClock, Loader2, Lock, MapPin, Sparkles } from 'lucide-react'
+import { instructionHref, type LibraryMode } from '@/lib/ui/libraryMode'
+import { useInstructionName } from '@/lib/ui/naming'
 import Link from 'next/link'
 import { CategoryIcon } from '@/components/icons'
 import { useCreations } from '@/hooks/useCreations'
@@ -58,15 +60,25 @@ function RenewalChip({ i, className }: { i: Instruction; className?: string }) {
   )
 }
 
-export function InstructionTile({ doc, stationNames }: { doc: Doc<Instruction>; stationNames: string[] }) {
+/** Le classement d'une instruction en quelques mots (« Découpe · M-1234 »), pour les listes. */
+export function labelLine(i: Pick<Instruction, 'labels'>, max = 3): string {
+  return Object.values(i.labels ?? {})
+    .flat()
+    .slice(0, max)
+    .join(' · ')
+}
+
+export function InstructionTile({ doc, stationNames, mode = 'edit' }: { doc: Doc<Instruction>; stationNames: string[]; mode?: LibraryMode }) {
   const t = useMessages().instructions.card
   const blockLabel = useMessages().blocks.chip
   const i = doc.json_data
+  // Le nom tiré des familles, devant le titre (toggle `nameTemplate`).
+  const name = useInstructionName()(i.title, i.labels)
   const cat = CATEGORIES[i.category] ?? CATEGORIES.autre
   const st = statusOf(i)
   const stage = useRunningStage(doc._id, i)
   return (
-    <Link href={`/instructions/${doc._id}`} className={cn('btn-press lift group relative flex flex-col overflow-hidden rounded-[28px] text-white shadow-[0_15px_35px_rgba(15,23,42,0.12)]', stage && 'shadow-primary ring-2 ring-[rgba(var(--primary-rgb),0.35)]')}>
+    <Link href={instructionHref(doc._id, mode, !!i.publishedVersion)} className={cn('btn-press lift group relative flex flex-col overflow-hidden rounded-[28px] text-white shadow-[0_15px_35px_rgba(15,23,42,0.12)]', stage && 'shadow-primary ring-2 ring-[rgba(var(--primary-rgb),0.35)]')}>
       <span className={cn('relative block h-40 overflow-hidden', stage ? 'creating-flow creating-sweep' : cn('bg-gradient-to-br', cat.tile))}>
         {stage ? (
           <Sparkles className="absolute top-[42%] left-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 animate-pulse text-white/85" aria-hidden />
@@ -88,7 +100,8 @@ export function InstructionTile({ doc, stationNames }: { doc: Doc<Instruction>; 
         </span>
         {!i.coverUrl && !stage && <CategoryIcon category={i.category} className="absolute top-1/2 right-6 h-16 w-16 -translate-y-1/2 text-white/25" />}
         <span className="absolute inset-x-4 bottom-3">
-          <span className={cn('text-lg leading-tight font-black tracking-tight text-balance', stage ? 'line-clamp-1' : 'line-clamp-2')}>{i.title}</span>
+          <span className={cn('text-lg leading-tight font-black tracking-tight text-balance', stage ? 'line-clamp-1' : 'line-clamp-2')}>{name}</span>
+          {!stage && labelLine(i) && <span className="mt-0.5 block truncate text-xs font-bold text-white/85">{labelLine(i)}</span>}
           {stage && (
             <span className="mt-1 flex items-center gap-1.5 text-xs font-bold text-white/90">
               <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> <span className="truncate">{stage}</span>
@@ -110,22 +123,24 @@ export function InstructionTile({ doc, stationNames }: { doc: Doc<Instruction>; 
   )
 }
 
-export function InstructionRow({ doc, stationNames }: { doc: Doc<Instruction>; stationNames: string[] }) {
+export function InstructionRow({ doc, stationNames, mode = 'edit' }: { doc: Doc<Instruction>; stationNames: string[]; mode?: LibraryMode }) {
   const t = useMessages().instructions.card
   const blockLabel = useMessages().blocks.chip
   const i = doc.json_data
+  // Le nom tiré des familles, devant le titre (toggle `nameTemplate`).
+  const name = useInstructionName()(i.title, i.labels)
   const cat = CATEGORIES[i.category] ?? CATEGORIES.autre
   const st = statusOf(i)
   const stage = useRunningStage(doc._id, i)
   return (
-    <Link href={`/instructions/${doc._id}`} className={cn('btn-press glass-card flex items-center gap-4 rounded-[24px] p-3 pr-4', stage && 'ring-2 ring-[rgba(var(--primary-rgb),0.3)]')}>
+    <Link href={instructionHref(doc._id, mode, !!i.publishedVersion)} className={cn('btn-press glass-card flex items-center gap-4 rounded-[24px] p-3 pr-4', stage && 'ring-2 ring-[rgba(var(--primary-rgb),0.3)]')}>
       <span className={cn('relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-white', stage ? 'creating-flow creating-sweep' : cn('bg-gradient-to-br', cat.tile))}>
         {stage ? <Loader2 className="h-6 w-6 animate-spin" /> : i.coverUrl ? <img src={i.coverUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <CategoryIcon category={i.category} className="h-6 w-6" />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{i.title}</span>
+        <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{name}</span>
         <span className={cn('block truncate text-xs font-bold', stage ? 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-500')}>
-          {stage ?? [i.number, i.block ? blockLabel : cat.label, i.block ? null : stationNames.length ? stationNames.join(', ') : t.noStation, timeAgo(i.updatedAt)].filter(Boolean).join(' · ')}
+          {stage ?? [i.number, i.block ? blockLabel : cat.label, labelLine(i, 2), i.block ? null : stationNames.length ? stationNames.join(', ') : t.noStation, timeAgo(i.updatedAt)].filter(Boolean).join(' · ')}
         </span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-1">

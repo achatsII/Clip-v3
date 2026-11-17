@@ -34,6 +34,11 @@ export default function InstructionPage() {
     if (instruction.data && !instruction.isFetching) setFreshId(id)
   }, [instruction.data, instruction.isFetching, id])
   const stations = useStations()
+  // Qui ne rédige pas lit la version publiée, comme au poste ; le brouillon n'est pas pour lui.
+  const readsOnly = !session.can('instructions', 'write') && !!instruction.data?.json_data.publishedVersion
+  useEffect(() => {
+    if (readsOnly) router.replace(`/instructions/${id}/lire`)
+  }, [readsOnly, id, router])
   const job = useSyncExternalStore(subscribeJobs, () => jobOf(id), () => undefined)
   const started = useRef(false)
   // Une création lancée sur un autre appareil : on la suit, et la page se met à jour à la fin.
@@ -81,7 +86,7 @@ export default function InstructionPage() {
     }
   }, [job?.status, id, refresh])
 
-  if (instruction.isLoading || (freshId !== id && instruction.isFetching)) {
+  if (instruction.isLoading || (freshId !== id && instruction.isFetching) || readsOnly) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-2/3" />

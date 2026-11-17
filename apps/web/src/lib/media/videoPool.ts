@@ -1,11 +1,12 @@
 'use client'
 
 /**
- * Les lecteurs vidéo du lecteur d'instruction, gardés d'une étape à l'autre : un par adresse. En
- * passant à l'étape suivante, le même lecteur saute au bon moment, avec ce qu'il a déjà
- * téléchargé : rien ne se recharge. Avec la vidéo des étapes, toutes les étapes partagent un seul
- * lecteur. L'étape suivante peut se préparer en avance (`warm`), sauf sur une connexion lente.
- * Au plus quelques lecteurs gardés ; les plus anciens se libèrent.
+ * Les lecteurs vidéo gardés d'une étape à l'autre : un par adresse, au lecteur d'instruction et,
+ * avec la lecture fluide (toggle `smoothVideos`), dans l'éditeur. En passant à l'étape suivante, le
+ * même lecteur saute au bon moment, avec ce qu'il a déjà téléchargé : rien ne se recharge. Avec la
+ * vidéo des étapes, toutes les étapes partagent un seul lecteur. Au poste, l'étape suivante peut se
+ * préparer en avance (`warm`), sauf sur une connexion lente. Au plus quelques lecteurs gardés ; les
+ * plus anciens se libèrent.
  */
 import { createContext, useContext } from 'react'
 
@@ -86,13 +87,7 @@ export class VideoPool {
 
   /** Libère un lecteur : plus de téléchargement ni de mémoire. */
   private drop(v: HTMLVideoElement) {
-    v.pause()
-    v.removeAttribute('src')
-    try {
-      v.load()
-    } catch {
-      /* rien à libérer */
-    }
+    stopVideo(v)
   }
 
   dispose() {
@@ -103,12 +98,44 @@ export class VideoPool {
   }
 }
 
-/** Ce que le lecteur d'instruction donne à ses vidéos : les lecteurs gardés, et la vidéo des étapes (toggle `stepReel`). */
+/**
+ * Arrête pour de bon une vidéo qui a quitté l'écran. Détachée de la page, elle continuerait de
+ * télécharger une dizaine de secondes d'avance (plusieurs Mo) jusqu'à ce que le navigateur la jette :
+ * d'une étape à l'autre, ces téléchargements s'additionnaient et privaient la vidéo affichée de
+ * réseau, jusqu'à la bloquer (mesuré à 3 Mbit/s : plus rien ne démarrait à la 6e étape).
+ */
+export function stopVideo(v: HTMLMediaElement) {
+  v.pause()
+  v.removeAttribute('src')
+  try {
+    v.load()
+  } catch {
+    /* rien à libérer */
+  }
+}
+
+/** Arrête la vidéo après son démontage, sauf si elle est encore à l'écran (React, en mode strict, démonte puis remonte pour voir). */
+export function stopWhenGone(v: HTMLMediaElement) {
+  setTimeout(() => {
+    if (!v.isConnected) stopVideo(v)
+  }, 0)
+}
+
+/**
+ * Ce que l'écran donne à ses vidéos : les lecteurs gardés (`pool`), la vidéo des étapes (`reel`,
+ * toggle `stepReel`, au poste seulement) et la lecture fluide (`smooth`, toggle `smoothVideos`) :
+ * une vidéo qui quitte l'écran arrête de télécharger, un lecteur repris d'une autre étape repart au
+ * début de son extrait, et une liste de vidéos (« Tout voir ») ne charge et ne joue que celles qu'on voit.
+ * `sound` (toggle `videoSound`) : le son activé sur une vidéo suit aux autres et se retient sur
+ * l'appareil (`videoSound.ts`) ; sans lui, chaque extrait repart muet.
+ */
 export interface MediaPlayback {
   pool: VideoPool | null
   reel: boolean
+  smooth?: boolean
+  sound?: boolean
 }
-const PlaybackContext = createContext<MediaPlayback>({ pool: null, reel: false })
+const PlaybackContext = createContext<MediaPlayback>({ pool: null, reel: false, smooth: false })
 export const MediaPlaybackProvider = PlaybackContext.Provider
 export const useMediaPlayback = () => useContext(PlaybackContext)
 

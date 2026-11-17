@@ -3,8 +3,12 @@
  * sont injectés : c'est ainsi qu'une usine « règle » son générateur sans toucher au code.
  */
 import { CATEGORIES, ENERGY, PPE } from '../model/catalog'
+import type { Nomenclature } from '../model/nomenclature'
 import { firstStepOf } from '../model/firstStep'
-import type { InstructionContent, OrgSettings, Step, WritingStandard } from '../model/types'
+import type { InstructionContent, OrgSettings, PersonalWriting, Step, WritingStandard } from '../model/types'
+
+/** Ce que l'IA lit de la façon d'écrire : le standard de l'usine et, s'il y en a, les préférences de la personne. */
+export type WritingContext = Pick<OrgSettings, 'standard' | 'learnings'> & { personal?: PersonalWriting | null }
 
 const TONE: Record<WritingStandard['tone'], string> = {
   infinitif: "à l'infinitif (« Retirer le garde »), sans tutoyer ni vouvoyer",
@@ -32,22 +36,43 @@ export function firstStepRule(s: WritingStandard): string {
   return '- Pas d’étape d’introduction pour les EPI ni pour la sécurité générale : ils vont dans la fiche (ppe, safety), affichée avant la première étape. La première étape est le premier geste du travail.'
 }
 
-export function standardBlock(org: Pick<OrgSettings, 'standard' | 'learnings'>): string {
+/**
+ * Ce que la génération et l'assistant savent de la façon d'écrire : le standard de l'usine (ses
+ * règles, son vocabulaire, ses 👎 commentés, ses instructions modèles), puis, avec `learnFromEdits`,
+ * les préférences de la personne qui rédige (`personal`), qui ne passent jamais devant l'usine.
+ */
+export function standardBlock(org: WritingContext): string {
   const s = org.standard
   const lines: string[] = []
   // Une usine plus ancienne peut ne pas avoir de standard enregistré : l'IA suit alors ses règles de base.
-  if (!s) return ''
-  lines.push('STANDARD DE RÉDACTION DE L’USINE (prioritaire) :')
-  s.rules.forEach((r) => lines.push(`- ${r}`))
-  lines.push(`- Au plus ${s.maxWordsPerStep} mots par texte d’étape, ${TONE[s.tone]}.`)
-  lines.push(firstStepRule(s))
-  if (s.glossary.length) {
-    lines.push('VOCABULAIRE DE L’USINE (utilise ces termes) :')
-    s.glossary.forEach((g) => lines.push(`- « ${g.term} » : ${g.meaning}`))
+  if (s) {
+    lines.push('STANDARD DE RÉDACTION DE L’USINE (prioritaire) :')
+    s.rules.forEach((r) => lines.push(`- ${r}`))
+    lines.push(`- Au plus ${s.maxWordsPerStep} mots par texte d’étape, ${TONE[s.tone]}.`)
+    lines.push(firstStepRule(s))
+    if (s.glossary.length) {
+      lines.push('VOCABULAIRE DE L’USINE (utilise ces termes) :')
+      s.glossary.forEach((g) => lines.push(`- « ${g.term} » : ${g.meaning}`))
+    }
+    if (org.learnings?.length) {
+      lines.push('CE QUE L’USINE A DEMANDÉ APRÈS DE PRÉCÉDENTES GÉNÉRATIONS (applique-le) :')
+      org.learnings.slice(-12).forEach((l) => lines.push(`- ${l.text}`))
+    }
   }
-  if (org.learnings?.length) {
-    lines.push('CE QUE L’USINE A DEMANDÉ APRÈS DE PRÉCÉDENTES GÉNÉRATIONS (applique-le) :')
-    org.learnings.slice(-12).forEach((l) => lines.push(`- ${l.text}`))
+  const p = org.personal
+  // Les instructions modèles : un exemple de style, jamais de contenu à recopier.
+  const examples = [...(s?.examples ?? []), ...(p?.examples ?? [])].slice(-3)
+  if (examples.length) {
+    lines.push('INSTRUCTIONS MODÈLES — imite leur style (longueur des textes, ton, découpage, points clés), jamais leur contenu :')
+    for (const ex of examples) {
+      lines.push(`« ${ex.title} »${ex.why ? ` — un modèle pour : ${ex.why}` : ''}`)
+      ex.steps.slice(0, 3).forEach((st, i) => lines.push(`  ${i + 1}. ${st.title}${st.text ? ` — ${st.text}` : ''}${st.keyPoints.length ? ` (points clés : ${st.keyPoints.join(' ; ')})` : ''}`))
+    }
+  }
+  if (p && (p.rules.length || p.learnings.length)) {
+    lines.push('PRÉFÉRENCES DE LA PERSONNE QUI RÉDIGE (suis-les, sauf si elles contredisent le standard de l’usine) :')
+    p.rules.forEach((r) => lines.push(`- ${r}`))
+    p.learnings.slice(-8).forEach((l) => lines.push(`- ${l.text}`))
   }
   return lines.join('\n')
 }
@@ -59,37 +84,75 @@ const LOCKOUT_RULES = `FICHE DE CADENASSAGE — si les sources décrivent l’is
 - "restartSteps" décrit le retrait des cadenas et la remise en marche, dans l’ordre ;
 - une source probable mais non confirmée par les sources est quand même listée, avec « À confirmer » dans sa description, et fait l’objet d’une question.`
 
-export function generationSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, opts: { language: string; forceKind?: 'procedure' | 'lockout' }): string {
+/**
+ * Les familles d'étiquettes de l'usine (toggle `nomenclature`), pour que l'IA classe comme elle :
+ * dans une liste, seulement ses valeurs ; une valeur libre, seulement si elle est écrite ou dite.
+ */
+export function nomenclatureBlock(nomenclature: Nomenclature | null | undefined): string {
+  const families = nomenclature?.families.filter((f) => f.kind === 'free' || f.values.length) ?? []
+  if (!families.length) return ''
+  const lines = families.map((f) => {
+    const how = f.kind === 'list' ? `${f.multiple ? 'une ou plusieurs valeurs' : 'une seule valeur'}, parmi : ${f.values.slice(0, 120).map((v) => (v.code ? `${v.label} (${v.code})` : v.label)).join(', ')}` : `valeur libre${f.multiple ? ', une ou plusieurs' : ''} : écris-la telle qu’elle apparaît${f.values.length ? ` (déjà vues : ${f.values.slice(0, 20).map((v) => v.label).join(', ')})` : ''}`
+    return `- « ${f.name} » — ${how}${f.hint ? ` ; ${f.hint}` : ''}`
+  })
+  return `CLASSEMENT DE L’USINE — labels : pour chaque famille, ce qui s’applique à cette instruction, d’après les sources, ce que la personne a dit, le titre de travail et le nom des fichiers :
+${lines.join('\n')}
+Une famille dont rien ne parle reste absente. Dans une liste, seulement ses valeurs, écrites comme ci-dessus : jamais une valeur inventée. Une valeur libre (numéro de produit, de bon de travail, de pièce) seulement si elle est écrite ou dite, sans la deviner.`
+}
+
+/** La règle des relevés ; `false` : la personne n'en veut pas cette fois (`proposeChecks`). */
+function checksRule(on: boolean): string {
+  if (!on) return '- Relevés (checks) : la personne n’en veut pas cette fois ; checks reste une liste vide à chaque étape.'
+  return '- Relevés (checks) : seulement là où le travail demande de noter quelque chose pour la trace — lire une valeur (pression, température, couple, dimension, niveau) → "measure" avec son unité ; « vérifier que… », « s’assurer que… » → "yesno" avec la bonne réponse ; un état parmi quelques-uns (propre, sale, à remplacer) → "choice" avec les choix qui sont un écart ; un numéro de lot ou de série → "text" ; une preuve demandée → "photo". Les limites (min, max, target) seulement si les sources les disent : jamais inventées ; une valeur à relever sans limite connue reste sans limite, et tu poses une question. 0 à 2 relevés par étape ; la plupart des étapes n’en ont aucun.'
+}
+
+/**
+ * Un enregistrement de l'écran parmi les sources (toggle `screenCapture`) : une étape par action à
+ * l'écran, l'image nette d'avant l'action comme média, l'élément à toucher entouré.
+ */
+export const SCREEN_RULES = `ENREGISTREMENT D’ÉCRAN (un logiciel) :
+- Une étape par action à l’écran : un clic, une saisie, un choix dans une liste, un raccourci clavier. Le titre commence par le verbe et nomme l’élément tel qu’il est écrit à l’écran : « Cliquer sur Enregistrer », « Saisir le numéro de lot dans Lot ».
+- Le média d’une étape : l’image nette de l’écran prise juste avant cette action (une source « image nette de l’écran », la plus proche de l’instant de l’action), avec focusLabel = l’élément à toucher, tel qu’il est écrit à l’écran (1 à 4 mots). Sans image nette pour ce moment, une image fixe de la vidéo à l’instant de l’action (at). Un extrait vidéo seulement si le mouvement compte (glisser-déposer, dessiner).
+- Une valeur saisie qui change d’une fois à l’autre (un numéro, une date, une quantité) se dit pour ce qu’elle est (« le numéro du bon de travail ») sans recopier celle de l’enregistrement. Ne recopie jamais un mot de passe ni une donnée personnelle visible à l’écran.
+- Une tâche à l’écran n’a ni EPI ni cadenassage, sauf si les sources en parlent.`
+
+export function generationSystem(org: WritingContext & { nomenclature?: Nomenclature | null }, opts: { language: string; forceKind?: 'procedure' | 'lockout'; checks?: boolean; screen?: boolean }): string {
   return `Tu es un expert en méthodes industrielles et en instructions de travail pour le plancher de production (méthode TWI « Job Instruction », travail standardisé, SST). Tu transformes des notes de terrain — vidéos, photos, notes vocales, notes écrites, anciens documents — en une instruction de travail exacte, claire et visuelle, pour des opérateurs qui lisent peu, debout, parfois avec des gants.
 
+DÉCOUPAGE EN ÉTAPES — le plus important : chaque action est une étape.
+- Une action = un geste qu’on voit commencer et finir : saisir, ouvrir, retirer, insérer, tourner, serrer, appuyer, régler, vérifier, noter… Chaque action faite dans les sources devient une étape, même courte (enlever un bouchon, appuyer sur un bouton, refermer un garde), même si personne ne la nomme à voix haute.
+- Jamais deux actions dans une étape : un titre ou un texte qui demanderait « … et … », « … puis … » ou « ensuite » se coupe en deux étapes. Le même geste répété sur plusieurs pièces (serrer les 4 vis) reste une étape, avec le nombre.
+- Avant d’écrire, parcours chaque vidéo du début à la fin et repère les actions dans l’ordre où elles sont faites : le nombre d’étapes suit le nombre d’actions, sans plafond. Dans le doute, deux étapes plutôt qu’une.
+
 RÈGLES D’ÉCRITURE — le moins de texte possible : l’opérateur lit une étape d’un coup d’œil ; le média montre, le texte dit seulement ce qu’on ne voit pas :
-- Une étape = une seule action observable. Titre : verbe d’action à l’infinitif + objet, 2 à 6 mots.
+- Titre : verbe d’action à l’infinitif + objet, 2 à 6 mots.
 - Le texte d’une étape : une ou deux phrases courtes et concrètes qui disent comment faire. Il ne répète ni le titre ni ce que le média montre déjà ; aucune phrase inutile ; pas de jargon sans explication.
-- Deux étapes courtes valent mieux qu’une étape chargée.
 - Points clés : seulement ce qui fait vraiment réussir l’étape ou évite une erreur (sécurité, qualité), en 3 à 8 mots chacun. 0 à 2 par étape ; la plupart des étapes n’en ont aucun ; jamais une redite du texte.
 - Mise en garde (warningLevel), en une phrase courte, seulement si un risque réel existe à cette étape : "danger" = blessure grave possible ; "caution" = blessure légère ou dommage ; "info" = astuce importante ; sinon "none". Une même mise en garde ne se répète pas d’une étape à l’autre : elle va à l’étape où le risque se présente. Les EPI et les consignes générales vont dans la fiche (ppe, safety), pas dans chaque étape.
 - N’invente JAMAIS une valeur (couple, pression, température, quantité, numéro de pièce, réglage) : si elle n’est ni dite ni visible, ne l’écris pas et pose une question.
 - Respecte l’ordre réel des gestes, tel qu’on le voit et l’entend dans les sources.
-- Au-delà de 8 étapes, regroupe-les en 3 à 8 phases (section : 1 à 3 mots, « Démontage », « Nettoyage », « Remontage ») ; les étapes d’une phase se suivent et portent le même nom. 8 étapes ou moins : aucune section.
-- Relevés (checks) : seulement là où le travail demande de noter quelque chose pour la trace — lire une valeur (pression, température, couple, dimension, niveau) → "measure" avec son unité ; « vérifier que… », « s’assurer que… » → "yesno" avec la bonne réponse ; un état parmi quelques-uns (propre, sale, à remplacer) → "choice" avec les choix qui sont un écart ; un numéro de lot ou de série → "text" ; une preuve demandée → "photo". Les limites (min, max, target) seulement si les sources les disent : jamais inventées ; une valeur à relever sans limite connue reste sans limite, et tu poses une question. 0 à 2 relevés par étape ; la plupart des étapes n’en ont aucun.
+- Au-delà de 8 étapes, regroupe-les en 3 à 8 phases (section : 1 à 3 mots, « Démontage », « Nettoyage », « Remontage ») : une phase est une opération, ses étapes en sont les actions ; elles se suivent et portent le même nom. 8 étapes ou moins : aucune section.
+- Variantes : seulement si les sources décrivent la même tâche pour plusieurs modèles ou cas aux étapes presque pareilles (« si c’est la pompe B… », « modèle 3196 : aller à l’étape 42 »), fais UNE instruction : nomme les variantes (variants, 2 à 6, et variantsLabel : ce qui les distingue), puis, sur chaque étape propre à certaines variantes, donne-les (variants de l’étape) ; une étape commune n’en a pas. Une seule tâche, ou des tâches vraiment différentes : aucune variante.
+${checksRule(opts.checks !== false)}
 - Langue de sortie : ${opts.language === 'fr' ? 'français québécois clair, avec les termes du métier en usage au Québec (EPI, cadenassage, quart de travail…)' : opts.language === 'en' ? 'anglais nord-américain clair (English), avec les termes du métier en usage dans les usines (PPE, lockout/tagout, shift…)' : `la langue « ${opts.language} »`}.
 
 MÉDIAS :
-- Chaque étape porte le média qui montre le mieux l’action :
-  · un extrait vidéo (start et end en secondes, 3 à 20 s, centré sur le geste) quand le mouvement compte : manipuler, tourner, insérer, enchaîner des gestes ;
+- Le média d’une étape montre CETTE action, et elle seule :
+  · un extrait vidéo (start et end en secondes) quand le mouvement compte : manipuler, tourner, insérer. Il commence juste avant le geste (1 s au plus) et s’arrête quand le geste est fini, sans montrer l’action suivante : le plus souvent 2 à 12 s. Les extraits de deux étapes qui se suivent se suivent dans la vidéo, sans se chevaucher ;
   · une image fixe tirée de la vidéo (at = l’instant en secondes, sans start ni end) quand un coup d’œil suffit : un bouton à appuyer, un réglage, une étiquette, une position, un état à vérifier. Choisis l’instant où ce qu’il faut voir est net et bien visible ;
-  · une photo, ou la page d’un document (plan, dessin, schéma).
+  · une photo, ou la page d’un document (page = n). Sur un document, figure (2 à 8 mots) nomme la photo, le dessin ou le schéma de la page qui illustre l’étape, de façon à le distinguer des autres figures de la page (« Photo de la vanne V-12 ») : seule cette figure sera montrée. figure vide seulement quand l’étape a besoin de la page entière (un plan ou un tableau qui la remplit).
 - Sur une image fixe ou une photo, focusLabel (1 à 4 mots) dit ce qu’un repère doit montrer (ex. « Bouton vert »), seulement si c’est bien visible et qu’un repère aide vraiment l’opérateur ; sinon, vide. Tu ne places pas le repère : il sera posé ensuite, sur l’image elle-même. Un extrait vidéo n’en a jamais.
 - Référence uniquement les identifiants de sources fournis (S1, S2…). Pour une vidéo, start < end, et start, end et at restent dans la durée indiquée.
 - Le plus souvent, l’extrait vidéo ; l’image fixe seulement quand le mouvement n’apporte rien (un « appuyer sur le bouton » n’a pas besoin de trois secondes de vidéo).
 - Une étape sans média pertinent garde une liste vide plutôt qu’un média hors sujet.
-
+${opts.screen ? `\n${SCREEN_RULES}\n` : ''}
 CLASSEMENT :
 - category parmi : ${Object.entries(CATEGORIES).map(([k, v]) => `${k} (${v.label})`).join(', ')}.
 - station : le poste, la machine ou l’équipement nommé (« Machine 1234 », « Presse P-12 ») ; vide si rien ne le dit. Utilise de préférence le nom d’un poste existant de l’usine s’il correspond.
 - frequency : seulement si elle est dite.
 - tags : 2 à 6 mots-clés utiles à la recherche, en minuscules.
 - ppe : uniquement parmi ${Object.keys(PPE).join(', ')}, ce qui est requis, dit ou visible.
+${nomenclatureBlock(org.nomenclature)}
 
 ${opts.forceKind === 'lockout' ? 'La personne a choisi le format « fiche de cadenassage » : kind = "lockout".\n' : opts.forceKind === 'procedure' ? 'La personne a choisi le format « instruction de travail » : kind = "procedure".\n' : ''}${LOCKOUT_RULES}
 
@@ -114,10 +177,14 @@ export function generationPrompt(input: { intent?: string; stations: string[]; s
   return parts.join('\n')
 }
 
-export function importSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, language = 'fr'): string {
+export function importSystem(org: WritingContext & { nomenclature?: Nomenclature | null }, language = 'fr', from: 'pdf' | 'slides' = 'pdf'): string {
+  if (from === 'slides')
+    return `${generationSystem(org, { language })}
+
+CONTEXTE PARTICULIER : la source est une ANCIENNE instruction faite en présentation PowerPoint. S1 en est le texte, diapositive par diapositive (titres, textes, tableaux, notes du présentateur) ; les sources suivantes sont ses images, chacune nommée d’après sa diapositive. Restructure-la fidèlement selon les règles ci-dessus, sans rien perdre d’important et sans rien inventer : chaque consigne, valeur, mise en garde et EPI de la présentation doit se retrouver dans le résultat. Quand une image illustre une étape, mets-la en média de cette étape avec son numéro de source (une image de la même diapositive, en général). Un logo, un en-tête, un pictogramme d’EPI ou de danger n’illustre pas une étape.`
   return `${generationSystem(org, { language })}
 
-CONTEXTE PARTICULIER : la source est une ANCIENNE instruction (PDF). Restructure-la fidèlement selon les règles ci-dessus, sans rien perdre d’important et sans rien inventer : chaque consigne, valeur, mise en garde et EPI du document doit se retrouver dans le résultat. Quand une figure, un plan ou une photo d’une page illustre une étape, mets en média {source: "S1", page: n}.`
+CONTEXTE PARTICULIER : la source est une ANCIENNE instruction (PDF). Restructure-la fidèlement selon les règles ci-dessus, sans rien perdre d’important et sans rien inventer : chaque consigne, valeur, mise en garde et EPI du document doit se retrouver dans le résultat. Quand une figure, un plan ou une photo d’une page illustre une étape, mets en média {source: "S1", page: n, figure: "<ce qu’elle montre>"} : l’étape montrera cette figure seule, recadrée. Un logo, un en-tête, un pictogramme d’EPI ou de danger n’illustre pas une étape.`
 }
 
 function contentForPrompt(content: InstructionContent, focusStepId?: string): string {
@@ -143,7 +210,7 @@ export const STEP_ACTIONS = {
  * de la demande (les retouches en un geste sont écrites en français) ; `explainIn` : celle de
  * l'outil, pour l'explication montrée à la personne.
  */
-export function stepAssistSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, language = 'fr', explainIn = language): string {
+export function stepAssistSystem(org: WritingContext, language = 'fr', explainIn = language): string {
   return `Tu corriges UNE étape d’une instruction de travail d’usine, selon la demande. Tu gardes le sens et les valeurs exactes ; tu n’inventes aucune valeur. Titre : verbe à l’infinitif + objet, 2 à 8 mots. L’étape s’écrit ${writtenIn(language)}, la langue de l’instruction, quelle que soit celle de la demande${explainIn !== language ? ` ; l’explication (explanation), ${writtenIn(explainIn)}` : ''}.
 
 ${standardBlock(org)}`
@@ -197,6 +264,14 @@ export function translateImageSystem(language: string): string {
 export function translatedImagePrompt(texts: Array<{ from: string; to: string }>): string {
   const swaps = texts.map((t) => `"${t.from.replace(/"/g, "'")}" → "${t.to.replace(/"/g, "'")}"`).join('; ')
   return `Recreate the reference image exactly: same framing, composition, objects, colors, lighting and perspective. Only replace the visible text, keeping each text in the same place, size, color and font style: ${swaps}. Do not add, remove or move anything else. No watermark.`
+}
+
+export function figuresSystem(): string {
+  return 'Tu repères des figures sur la page d’un document technique (instruction de travail, procédure, manuel). Pour chaque figure demandée, rends sa boîte [ymin, xmin, ymax, xmax] normalisée de 0 à 1000, autour de la figure entière : la photo, le dessin ou le schéma, avec ses repères, ses flèches et ses cotes, mais sans sa légende (« Figure 2 — … » : le texte de l’étape la remplace), ni le texte courant de la page, ni l’en-tête, ni le pied de page, ni le cadre du tableau qui la contient. Serre la boîte sur les bords de la figure : une photo voisine qui la touche n’en fait pas partie. Une figure faite de plusieurs vues côte à côte qui vont ensemble se prend en une seule boîte. found = false si la figure demandée n’est pas sur la page : n’en prends jamais une autre à sa place.'
+}
+
+export function figuresPrompt(figures: string[]): string {
+  return `FIGURES DEMANDÉES SUR CETTE PAGE :\n${figures.map((f, i) => `${i + 1}. ${f}`).join('\n')}`
 }
 
 export function annotateSystem(): string {

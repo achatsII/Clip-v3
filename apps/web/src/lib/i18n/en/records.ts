@@ -15,6 +15,7 @@ export const records: typeof Fr = {
   emptyDeviationsHint: 'Everything recorded was within limits.',
   noMatch: 'Nothing matches this search.',
   conform: 'Compliant',
+  quick: 'Essentials',
   deviationCount: (n: number) => (n === 1 ? '1 deviation' : `${num(n)} deviations`),
   readings: (n: number) => (n > 1 ? `${num(n)} readings` : n === 1 ? '1 reading' : 'No readings'),
   nobody: 'No one named',

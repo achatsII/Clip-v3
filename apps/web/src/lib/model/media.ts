@@ -45,9 +45,22 @@ export function mediaLabel(m: StepMedia): string {
   if (m.kind === 'video') return t.clip
   if (m.kind === 'document') return t.page(m.page ?? 1)
   if (m.kind === 'html') return t.visual
+  if (m.gif) return t.gif
   if (m.frame) return t.image
   return m.generated ? t.illustration : t.photo
 }
 
+/**
+ * Un GIF tiré d'un extrait (`gif` de l'image). L'IA ne le lit pas (ni marques, ni traduction, ni
+ * illustration à partir de lui : elle ne prend pas les GIF) et un GIF ne se refait pas en image.
+ */
+export const isGif = (m: StepMedia | null | undefined): boolean => m?.kind === 'image' && !!m.gif
+
+/** Une image que l'IA peut lire : une photo, une image figée, une figure, une illustration — pas un GIF. */
+export const isAiImage = (m: StepMedia | null | undefined): m is Extract<StepMedia, { kind: 'image' }> => m?.kind === 'image' && !m.gif
+
 /** Un schéma HTML trop lourd ne voyage pas avec l'instruction. */
+/** Assez pour comparer et pour une grille, sans noyer l'étape. */
+export const MAX_STEP_MEDIA = 6
+
 export const MAX_HTML_BYTES = 300_000

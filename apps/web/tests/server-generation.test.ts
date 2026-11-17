@@ -162,6 +162,16 @@ describe('lancer au serveur', () => {
     expect(vi.mocked(publishRealtime).mock.calls.map((c) => (c[0] as { phase?: string }).phase)).toContain('stage')
   })
 
+  it('les choix de la personne voyagent avec le travail : pas de relevés (la consigne le dit), les figures des documents', async () => {
+    const db = memoryData({ [`${T.instruction}/i1`]: { _id: 'i1', json_data: baseInstruction } })
+    const startJob = vi.fn(async () => 'job1')
+    await startGeneration({ doc: { _id: 'i1', json_data: baseInstruction }, data: db.api, files: {} as never, ai: { startJob, ask: vi.fn() } as never, org, stations: [], actor: { id: 'u1', name: 'Mélanie' }, server: true, checks: false, figures: true })
+    const sent = (startJob.mock.calls[0] as unknown as [{ ask: AskBody }])[0]
+    expect(sent.ask.system_instruction).toContain('checks reste une liste vide à chaque étape')
+    expect(sent.ask.system_instruction).not.toContain('"measure" avec son unité')
+    expect((db.docs.get(`${T.instruction}/i1`)!.json_data as Instruction).generating!.job).toMatchObject({ checks: false, figures: true })
+  })
+
   it('un serveur qui ne prend pas la génération la laisse tourner ici, avec la même requête', async () => {
     const db = memoryData({ [`${T.instruction}/i1`]: { _id: 'i1', json_data: baseInstruction } })
     const startJob = vi.fn(async () => {
@@ -209,6 +219,22 @@ describe('terminer sur un autre appareil', () => {
     expect((db.docs.get(`${T.serverJob}/job1`)!.json_data as ServerJob).finalizedAt).toBeTruthy()
     // Le verrou a été posé avant tout le reste.
     expect(db.patch.mock.calls[0][2]).toMatchObject({ 'generating.finishing': { by: DEVICE_ID } })
+  })
+
+  it('pas de relevés demandés : ceux que l’IA aurait mis quand même ne restent pas ; un travail d’avant les garde (proposés)', async () => {
+    const withChecks = { ...aiJson, steps: [{ ...aiJson.steps[0], checks: [{ kind: 'measure', label: 'Couple de serrage', unit: 'N·m', min: '', max: '', target: '25', expected: 'none', options: [], bad: [] }] }] }
+    for (const [checks, kept] of [
+      [false, 0],
+      [undefined, 1],
+    ] as const) {
+      const job = jobDoc({ result: { json: withChecks, model: 'gemini', billing: { costs: { cad: 0.01 } } } })
+      const doc: Instruction = { ...running(), generating: { ...running().generating!, job: { ...context, ...(checks === undefined ? {} : { checks }) } } }
+      const db = memoryData({ [`${T.instruction}/i1`]: { _id: 'i1', json_data: doc }, [`${T.serverJob}/job1`]: job })
+      await finishServerGeneration({ doc: { _id: 'i1', json_data: doc }, job, data: db.api, files: {} as never, ai: { chargeCost: vi.fn(async () => 1) } as never, stations: [], actor: { id: 'u2', name: 'Paul' } })
+      const step = (db.docs.get(`${T.instruction}/i1`)!.json_data as Instruction).draft!.steps[0]
+      expect(step.checks?.length ?? 0).toBe(kept)
+      if (kept) expect(step.checks![0]).toMatchObject({ label: 'Couple de serrage', proposed: true })
+    }
   })
 
   it('un autre appareil la termine déjà : on n’y touche pas', async () => {

@@ -20,6 +20,8 @@ import { nativeEnv } from '@/lib/bridge/native'
 import { byQuote, FEATURED_PLAN, LIMIT_FEATURES, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
 import { BILLING_INTERVAL, parsePlanIntent, type PlanIntent } from '@/lib/billing/intent'
 import { BillingError, creditsOf } from '@/lib/billing/client'
+import { amountOf, planFor } from '@/lib/billing/advice'
+import { creditsForecast } from '@/lib/billing/forecast'
 import { useBilling } from '@/lib/billing/state'
 import { useBillingMode } from '@/lib/billing/mode'
 import { num, useMessages } from '@/lib/i18n'
@@ -49,6 +51,11 @@ function Subscription() {
   const platform = devicePlatform()
   const isAdmin = role === 'admin'
   const c = creditsOf(state, 'ai_credits')
+  // À ce rythme : quand les crédits seront épuisés, et le plan qui en donne plus (s'il se vend ici).
+  const [now] = useState(() => Date.now())
+  const forecast = creditsForecast(c, now)
+  const more = forecast && plans.data ? planFor(plans.data.plans, state, 'ai_credits') : null
+  const moreCredits = more && !byQuote(more) ? more : null
   const usage = useUsage()
   const limited = LIMIT_FEATURES.filter((k) => usage[k] && usage[k].limit !== null)
   // Les modules en option : sur le web (un module ne se vend pas dans les magasins), une fois bâtis.
@@ -149,6 +156,13 @@ function Subscription() {
                 <div className="bg-gradient-primary h-full rounded-full" style={{ width: `${Math.min(100, (c.available / Math.max(1, c.granted)) * 100)}%` }} />
               </div>
               {c.period_end && <p className="mt-2 text-sm font-bold text-slate-500">{t.billing.renewsOn(formatDate(c.period_end))}</p>}
+              {/* À ce rythme : quand ils seront épuisés, et le plan qui en donne plus (sans rien acheter d'ici). */}
+              {forecast && (
+                <p className="mt-2 text-sm font-bold text-amber-700 dark:text-amber-300">
+                  {t.billing.forecastLine(formatDate(forecast.runsOutAt), forecast.daysShort)}
+                  {moreCredits && ` ${t.billing.forecastOffer(moreCredits.name, t.billing.credits(amountOf(moreCredits, 'ai_credits')))}`}
+                </p>
+              )}
             </Panel>
           )}
         </div>
@@ -223,9 +237,13 @@ function Subscription() {
                         {inShell ? (
                           <p className={cn('rounded-2xl p-3 text-center text-sm font-bold', highlight ? 'bg-white/15' : 'bg-slate-900/5')}>{t.billing.quoteInApp}</p>
                         ) : (
-                          <Link href={salesHref()} className={cn('btn-press flex h-12 items-center justify-center rounded-full text-sm font-black', highlight ? 'bg-white text-slate-900' : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900')}>
-                            {t.billing.contactSales}
-                          </Link>
+                          <>
+                            <Link href={salesHref()} className={cn('btn-press flex h-12 items-center justify-center rounded-full text-sm font-black', highlight ? 'bg-white text-slate-900' : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900')}>
+                              {t.billing.contactSales}
+                            </Link>
+                            {/* La durée, au contrat : 3 ans, 5 ans (le libre-service a l'annuel, deux mois offerts). */}
+                            <p className={cn('mt-2 text-center text-xs font-bold', highlight ? 'text-white/80' : 'text-slate-500 dark:text-slate-400')}>{t.billing.multiYear}</p>
+                          </>
                         )}
                       </div>
                     )}

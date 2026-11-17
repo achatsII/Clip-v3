@@ -52,7 +52,7 @@ describe('ce que l’aperçu montre', () => {
     expect(solo.features).toMatchObject({ academy: false, records_plus: false, translations: false, adoption_stats: true })
     expect(solo.credits[0]).toMatchObject({ granted: 2500, available: 0 })
     expect(previewState({ plan: 'equipe', modules: ['academy'], credits: 'low' })).toMatchObject({ features: { academy: false } })
-    expect(previewState({ plan: 'equipe', modules: [], credits: 'low' }).credits[0].available).toBe(1200)
+    expect(previewState({ plan: 'equipe', modules: [], credits: 'low' }).credits[0].available).toBe(1500)
   })
 
   it('« acheter » un plan le remplace (les modules qu’il ne reçoit pas tombent) ; un module s’ajoute', () => {

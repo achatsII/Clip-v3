@@ -4,6 +4,8 @@ export const publicLinks = {
   deadLink: 'Ce lien ne fonctionne plus',
   /** La tablette d’un poste (code QR du poste). */
   kiosk: {
+    updated: 'Mis à jour',
+
     /** « Qui êtes-vous ? » : le nom, puis le code à 4 chiffres. */
     who: {
       title: 'Qui êtes-vous ?',

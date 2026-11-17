@@ -14,6 +14,8 @@ export const records = {
   emptyDeviationsHint: 'Tout ce qui a été relevé était dans la norme.',
   noMatch: 'Rien ne correspond à cette recherche.',
   conform: 'Conforme',
+  /** La version courte suivie (toggle `quickMode`). */
+  quick: 'L’essentiel',
   deviationCount: (n: number) => (n > 1 ? `${num(n)} écarts` : '1 écart'),
   readings: (n: number) => (n > 1 ? `${num(n)} relevés` : n === 1 ? '1 relevé' : 'Aucun relevé'),
   nobody: 'Personne de nommé',

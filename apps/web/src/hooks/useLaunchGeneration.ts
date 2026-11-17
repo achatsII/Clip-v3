@@ -4,11 +4,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { readAutoAnnotate } from '@/lib/ai/autoAnnotate'
+import { generatesOnServer } from '@/lib/ai/durableAsk'
+import { readProposeChecks } from '@/lib/ai/proposeChecks'
 import { startGeneration } from '@/lib/ai/runGeneration'
 import { T } from '@/lib/model/repo'
 import type { Instruction } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
 import { qk, useStations } from './queries'
+import { usePersonalWriting } from './useWriting'
 
 /**
  * Lance la génération d'une instruction, depuis n'importe quel écran : relit l'instruction, puis
@@ -20,8 +23,15 @@ export function useLaunchGeneration() {
   const qc = useQueryClient()
   const stations = useStations()
   const draftHistory = useToggle('draftHistory')
+  const figures = useToggle('documentFigures')
+  const records = useToggle('records')
   const serverToggle = useToggle('serverGeneration')
-  const serverOn = serverToggle && session.org.json_data.generation?.server === true
+  const backgroundAi = useToggle('backgroundAi')
+  // Le choix de l'usine ; sans choix, au serveur au téléphone (iOS coupe l'app hors de l'écran).
+  const serverOn = serverToggle && generatesOnServer(session.org.json_data.generation?.server, serverToggle, backgroundAi)
+  // L'IA qui apprend des corrections : les préférences de la personne, et la version de l'IA gardée.
+  const learn = useToggle('learnFromEdits')
+  const personal = usePersonalWriting()
   return useCallback(
     async (id: string, kind: 'auto' | 'procedure' | 'lockout', opts: { device?: boolean; onDone?: () => void } = {}) => {
       const fresh = await session.data.get<Instruction>(T.instruction, id)
@@ -32,16 +42,20 @@ export function useLaunchGeneration() {
         data: session.data,
         files: session.files,
         ai: session.ai,
-        org: session.org.json_data,
+        org: learn ? { ...session.org.json_data, personal: personal.data?.json_data ?? null } : session.org.json_data,
         stations: stations.data ?? [],
         actor: { id: session.profile.userId, name: session.displayName },
         forceKind: kind === 'auto' ? undefined : kind,
         autoAnnotate: readAutoAnnotate(),
         checkpoints: draftHistory,
+        figures,
+        // Sans le module Relevés, l'IA n'en propose pas ; avec, selon le choix de la personne.
+        checks: records && readProposeChecks(),
         server: serverOn && !opts.device,
+        learn,
         onDone: opts.onDone,
       })
     },
-    [session, qc, stations.data, draftHistory, serverOn],
+    [session, qc, stations.data, draftHistory, figures, records, serverOn, learn, personal.data],
   )
 }

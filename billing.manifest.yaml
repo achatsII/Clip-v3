@@ -98,6 +98,17 @@ features:
   - key: shared_blocks
     kind: boolean
     name: Blocs communs
+  # Enregistrer l'écran d'un ordinateur (un logiciel, clic par clic), sans rien installer : la vidéo,
+  # une image nette à chaque action, et l'IA en fait une étape par clic. Dès Solo : le champion qui
+  # documente son ERP ou son MES ne doit pas partir chez un outil de captures d'écran.
+  - key: screen_capture
+    kind: boolean
+    name: Enregistrement de l'écran
+  # L'IA qui apprend des corrections de toute l'équipe : règles proposées pour l'usine, analyse par
+  # l'IA, instructions modèles de l'usine. Les préférences de chacun restent ouvertes à tous les plans.
+  - key: ai_learning
+    kind: boolean
+    name: L'IA apprend de toute l'équipe
   # Les modules en option (plus bas, kind: addon) : aucun plan de base ne les donne.
   - key: academy
     kind: boolean
@@ -114,6 +125,11 @@ plans:
   #
   # La grille suit la valeur : les postes (la couverture du plancher), les rédacteurs (la capacité de
   # création) et les instructions publiées. Les opérateurs et les lecteurs ne se comptent jamais.
+  #
+  # LE VOLUME : plus on monte, moins chaque unité coûte. Équipe donne 5 fois les quantités de Solo
+  # (postes, rédacteurs, instructions, crédits) pour 4 fois le prix : chaque poste, rédacteur,
+  # instruction et crédit y revient environ 20 % moins cher, en plus des fonctions d'équipe. Usine
+  # descend encore, au contrat. La durée : l'annuel vaut 10 mois ; 3 et 5 ans, au contrat d'Usine.
   #
   # En libre-service (site et magasins), seulement des forfaits d'entrée, tous plafonnés : rien
   # d'illimité, rien qu'une usine entière pourrait utiliser. Toute l'usine passe par l'équipe de
@@ -135,7 +151,7 @@ plans:
     # Montré comme plan courant dans l'app ; rien à acheter.
     availability: { channels: [web, ios, android], audience: personal }
     entitlements:
-      features: { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, academy: false, records_plus: false }
+      features: { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, screen_capture: false, ai_learning: false, academy: false, records_plus: false }
       limits: { published_instructions: 3, stations: 1, editors: 1 }
       credits:
         - { feature: ai_credits, amount: 500, period: monthly, rollover: none }
@@ -155,15 +171,16 @@ plans:
       - { interval: monthly, currency: CAD, amount_cents: 4900, store_product_id: clip_v3_solo_monthly_v1 }
       - { interval: yearly, currency: CAD, amount_cents: 49000, store_product_id: clip_v3_solo_yearly_v1 }
     entitlements:
-      features: { translations: false, adoption_stats: true, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, academy: false, records_plus: false }
+      features: { translations: false, adoption_stats: true, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, screen_capture: true, ai_learning: false, academy: false, records_plus: false }
       limits: { published_instructions: 15, stations: 3, editors: 1 }
       credits:
         - { feature: ai_credits, amount: 2500, period: monthly, rollover: none }
 
-  # Équipe : l'essai d'une équipe sur une ligne ou un secteur, le plan mis en avant. 3 rédacteurs,
-  # 50 instructions, 10 postes : on y vit un pilote complet (approbation, traduction, blocs communs),
-  # pas une usine. 199 $ : environ 66 $ par rédacteur, comme les offres d'équipe plafonnées des outils
-  # de documentation (Guidde Business : 39 à 59 $ US par créateur, 5 au plus, puis sur devis).
+  # Équipe : une équipe sur une ligne ou un secteur, le plan mis en avant. 5 rédacteurs,
+  # 75 instructions, 15 postes, 12 500 crédits : 5 fois Solo pour 4 fois le prix. On y vit un pilote
+  # complet (approbation, traduction, blocs communs, l'IA qui apprend de l'équipe), pas une usine.
+  # 199 $ : environ 40 $ par rédacteur, comme les offres d'équipe plafonnées des outils de
+  # documentation (Guidde Business : 39 à 59 $ US par créateur, 5 au plus, puis sur devis).
   - code: equipe
     kind: base
     name: Équipe
@@ -175,10 +192,10 @@ plans:
       - { interval: monthly, currency: CAD, amount_cents: 19900, store_product_id: clip_v3_equipe_monthly_v1 }
       - { interval: yearly, currency: CAD, amount_cents: 199000, store_product_id: clip_v3_equipe_yearly_v1 }
     entitlements:
-      features: { translations: true, adoption_stats: true, approvals: true, bulk_import: false, voice_assistant: false, brand_kit: true, full_export: false, shared_blocks: true, academy: false, records_plus: false }
-      limits: { published_instructions: 50, stations: 10, editors: 3 }
+      features: { translations: true, adoption_stats: true, approvals: true, bulk_import: false, voice_assistant: false, brand_kit: true, full_export: false, shared_blocks: true, screen_capture: true, ai_learning: true, academy: false, records_plus: false }
+      limits: { published_instructions: 75, stations: 15, editors: 5 }
       credits:
-        - { feature: ai_credits, amount: 10000, period: monthly, rollover: none }
+        - { feature: ai_credits, amount: 12500, period: monthly, rollover: none }
 
   # Usine : toute l'usine, sur devis. Aucun prix : il ne s'achète ni sur le site ni dans les
   # magasins ; l'équipe de CLIP l'attribue à l'organisation une fois la vente faite (prix au contrat).
@@ -191,7 +208,7 @@ plans:
     sort_order: 40
     availability: { channels: [web], audience: personal }
     entitlements:
-      features: { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true, academy: false, records_plus: false }
+      features: { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true, screen_capture: true, ai_learning: true, academy: false, records_plus: false }
       limits: { published_instructions: null, stations: 100, editors: 15 }
       credits:
         - { feature: ai_credits, amount: 40000, period: monthly, rollover: none }

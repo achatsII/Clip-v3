@@ -15,6 +15,7 @@ export const capture = {
       audio: { label: 'Note vocale', hint: 'Expliquez à voix haute' },
       note: { label: 'Note', hint: 'Une précision écrite' },
       file: { label: 'Fichiers', hint: 'PDF, Word, vidéos' },
+      screen: { label: 'Écran', hint: 'Un logiciel, clic par clic' },
     },
     dropHint: 'Vous pouvez aussi glisser des fichiers ici : vidéos d’une autre caméra, photos, anciennes instructions en PDF ou Word.',
     notes: 'Vos notes',
@@ -31,6 +32,18 @@ export const capture = {
     addMore: 'Ajouter',
     uploading: 'Envoi en cours… vous pouvez continuer à capturer.',
     tooBig: 'C’est beaucoup pour une seule instruction : séparez-la en plusieurs.',
+    /** La limite dépassée, ou bientôt atteinte (`limitUse`) : laquelle, et où l’on en est. */
+    limit: {
+      videoSec: (used: number, max: number) => `${Math.ceil(used / 60).toLocaleString('fr-CA')} min de vidéo sur ${(max / 60).toLocaleString('fr-CA')}`,
+      audioSec: (used: number, max: number) => `${Math.ceil(used / 60).toLocaleString('fr-CA')} min de notes vocales sur ${(max / 60).toLocaleString('fr-CA')}`,
+      photos: (used: number, max: number) => `${used.toLocaleString('fr-CA')} photos sur ${max.toLocaleString('fr-CA')}`,
+      pages: (used: number, max: number) => `${used.toLocaleString('fr-CA')} pages de documents sur ${max.toLocaleString('fr-CA')}`,
+    },
+    overLimit: (what: string) => `${what} : c’est plus que ce que l’IA lit en une fois. Retirez-en, ou séparez-la en plusieurs instructions.`,
+    nearLimit: (what: string) => `${what} : c’est bientôt la limite d’une instruction.`,
+    /** Ce que l’IA lit en une fois, dans les options. */
+    limitsHint: (l: { videoMin: number; audioMin: number; photos: number; pages: number }) =>
+      `En une fois, l’IA lit jusqu’à ${l.videoMin} min de vidéo, ${l.audioMin} min de notes vocales, ${l.photos} photos et ${l.pages} pages de documents, en autant de fichiers qu’il faut. Une vidéo trop lourde est réduite toute seule.`,
     ready: (n: number) => `${n.toLocaleString('fr-CA')} note${n > 1 ? 's' : ''} prête${n > 1 ? 's' : ''}. L’IA va ${n > 1 ? 'les ' : 'l’'}analyser.`,
     generate: 'Générer l’instruction',
     /** « Générer » pendant les envois : la génération part toute seule à la fin. */
@@ -68,6 +81,37 @@ export const capture = {
     tapToStart: 'Touchez pour commencer',
     /** Le début du nom du fichier, montré sur la carte de la note. */
     fileName: 'note-vocale',
+  },
+  /** Enregistrer l'écran d'un ordinateur (toggle `screenCapture`), sans rien installer. */
+  screen: {
+    title: 'Enregistrer l’écran',
+    steps: [
+      'Choisissez la fenêtre du logiciel, ou tout l’écran.',
+      'Faites la tâche comme d’habitude. CLIP garde une image nette à chaque clic.',
+      'Revenez ici et touchez « Terminer ».',
+    ],
+    voice: 'Avec ma voix',
+    voiceHint: 'Dites ce que vous faites et pourquoi : l’IA s’en sert pour expliquer chaque étape.',
+    privacy: 'Rien à installer. Seul ce que vous choisissez est enregistré : fermez d’abord ce qui est personnel.',
+    choose: 'Choisir l’écran',
+    recording: 'Enregistrement en cours',
+    elapsed: (time: string, max: string) => `${time} sur ${max}`,
+    shots: (n: number) => (n ? `${n.toLocaleString('fr-CA')} image${n > 1 ? 's' : ''} nette${n > 1 ? 's' : ''}` : 'Les images nettes viendront à vos clics'),
+    withVoice: 'Micro ouvert',
+    noVoice: 'Sans la voix',
+    voiceDenied: 'Micro refusé : l’écran s’enregistre sans la voix.',
+    stopHint: 'Le bouton « Arrêter le partage » du navigateur termine aussi.',
+    lastMinute: 'Encore une minute : l’enregistrement s’arrêtera seul.',
+    finish: 'Terminer',
+    discard: 'Recommencer',
+    discardTitle: 'Effacer cet enregistrement ?',
+    discardText: 'La vidéo et ses images seront perdues.',
+    saving: 'Préparation des images…',
+    failed: 'L’écran n’a pas pu être partagé',
+    failedHint: 'Autorisez le partage d’écran dans le navigateur, puis réessayez.',
+    previewLabel: 'Ce qui est enregistré',
+    /** Le nom de l'enregistrement, sur sa carte et dans les médias d'origine. */
+    fileName: (when: string) => `Écran — ${when}`,
   },
   /** La caméra du navigateur. */
   camera: {
@@ -112,6 +156,8 @@ export const capture = {
     percent: (n: number) => `${n.toLocaleString('fr-CA')} %`,
     /** La note dite pendant une série de photos, et l'instant de chaque photo dans cette note. */
     narration: 'Commentaire des photos',
+    /** Un enregistrement de l'écran : ses images nettes, prises à chaque action. */
+    screenShots: (n: number) => `${n.toLocaleString('fr-CA')} image${n > 1 ? 's' : ''} de l’écran`,
     narrated: (n: number) => `${n.toLocaleString('fr-CA')} photo${n > 1 ? 's' : ''} commentée${n > 1 ? 's' : ''}`,
     voiceAt: (time: string) => `Prise à ${time} du commentaire`,
   },
@@ -132,6 +178,11 @@ export const capture = {
     selected: 'Choisi',
   },
   /** Le choix des annotations automatiques, dans les options de génération. */
+  /** Proposer des relevés : quand l’IA en propose, et qui décide. */
+  proposeChecks: {
+    label: 'Proposer des relevés',
+    hint: 'Là où une étape demande de lire une valeur (pression, couple…), de vérifier un point ou de noter un numéro de lot, l’IA propose un relevé, sans jamais inventer de limite. Vous le gardez ou le retirez : aucun ne va au poste sans vous.',
+  },
   autoAnnotate: {
     label: 'Annoter les images automatiquement',
     hint: 'L’IA encercle ce qu’il faut regarder sur chaque image figée ou photo qui en a besoin, sur l’image elle-même. Jamais sur un extrait vidéo.',
@@ -147,6 +198,7 @@ export const capture = {
     /** Le détail d'une étape : la source préparée sur le total, les vignettes. */
     sourceOf: (index: number, total: number) => `${index.toLocaleString('fr-CA')} sur ${total.toLocaleString('fr-CA')}`,
     thumbnails: 'Vignettes des extraits',
+    figures: 'Les figures du document',
     /** D'où vient une création : « Lancée depuis l’app mobile par Mélanie » ; `inline` : au fil d'une phrase. */
     launchedFrom: (device: 'app' | 'web', byName: string | null | undefined, inline: boolean) =>
       `${inline ? 'lancée' : 'Lancée'} depuis ${device === 'app' ? 'l’app mobile' : 'un navigateur'}${byName ? ` par ${byName}` : ''}`,
@@ -187,6 +239,19 @@ export const capture = {
   upload: {
     failed: 'Envoi impossible',
     unsupported: 'Ce type de fichier n’est pas pris en charge.',
+    slides: 'Un PowerPoint ne se lit pas encore tel quel : enregistrez-le en PDF (Fichier › Exporter), puis déposez le PDF.',
+    /** Un .ppt, un Keynote ou un .odp (toggle `slidesImport` : un .pptx se lit dans l’app). */
+    oldSlides: 'Ce format de présentation ne se lit pas : enregistrez-la en .pptx ou en PDF, puis déposez-la.',
+    unreadableSlides: 'Cette présentation n’a pas pu être lue. Enregistrez-la en PDF (Fichier › Exporter), puis déposez le PDF.',
+    /** Le texte d’une présentation lue dans l’app : ce que l’IA et l’écran en montrent. */
+    deck: {
+      title: (name: string, n: number) => `Présentation « ${name} », ${n} diapositive${n > 1 ? 's' : ''}.`,
+      slide: 'Diapositive',
+      image: 'image',
+      notes: 'Notes du présentateur',
+      images: 'Images',
+      skipped: (n: number) => `(${n} autres images non reprises.)`,
+    },
     refused: (first: number | string, then: number) => `L’envoi a été refusé (${first} puis ${then}). Réessayez ; si ça revient, signalez-le.`,
   },
   /** La dictée des champs de texte. */

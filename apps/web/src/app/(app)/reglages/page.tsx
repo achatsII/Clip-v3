@@ -1,5 +1,6 @@
 'use client'
 
+import { VersionLine } from '@/components/shell/VersionLine'
 import { useToggle } from '@/lib/toggles'
 import { DEFAULT_RENEWAL_MONTHS, RENEWAL_CHOICES } from '@/lib/model/renewal'
 import { AccountCard } from '@/components/settings/Account'
@@ -13,6 +14,7 @@ import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
 import { AppearanceControls } from '@/components/settings/Appearance'
 import { MembersTab } from '@/components/settings/MembersTab'
+import { NomenclatureTab } from '@/components/settings/NomenclatureTab'
 import { StandardTab } from '@/components/settings/StandardTab'
 import { Button } from '@/components/ui/Button'
 import { ChoiceTile, Input, Label, Segmented } from '@/components/ui/Field'
@@ -30,12 +32,14 @@ import { useEntitlement, useGate } from '@/lib/billing/state'
 import { cn } from '@/lib/util/cn'
 import { useBilling } from '@/lib/billing/state'
 
-type Tab = 'usine' | 'standard' | 'approbation' | 'membres' | 'avertissements' | 'apparence' | 'donnees'
+type Tab = 'usine' | 'standard' | 'classement' | 'approbation' | 'membres' | 'avertissements' | 'apparence' | 'donnees'
 
 /** Les onglets : la valeur dans l'adresse, la clé du libellé (lu au rendu, dans la langue de l'outil). */
 const TABS: Array<{ value: Tab; label: keyof Messages['settings']['tabs']; admin?: boolean }> = [
   { value: 'usine', label: 'plant', admin: true },
   { value: 'standard', label: 'standard' },
+  // Les façons de classer de l'usine (toggle `nomenclature`) : à tous en lecture, aux administrateurs en écriture.
+  { value: 'classement', label: 'nomenclature' },
   { value: 'approbation', label: 'approval', admin: true },
   { value: 'membres', label: 'members', admin: true },
   // Les avertissements : les miens pour chacun, ceux de l'usine pour un administrateur (toggle `notify`).
@@ -52,7 +56,8 @@ export default function SettingsPage() {
   const t = useMessages().settings
   const isAdmin = can('settings', 'write')
   const notifyOn = useToggle('notify')
-  const tabs = TABS.filter((x) => (!x.admin || isAdmin) && (x.value !== 'avertissements' || notifyOn))
+  const nomenclatureOn = useToggle('nomenclature')
+  const tabs = TABS.filter((x) => (!x.admin || isAdmin) && (x.value !== 'avertissements' || notifyOn) && (x.value !== 'classement' || nomenclatureOn))
   const requested = params.get('onglet') as Tab | null
   const tab: Tab = tabs.some((x) => x.value === requested) ? requested! : tabs[0].value
 
@@ -77,6 +82,7 @@ export default function SettingsPage() {
       </div>
       {tab === 'usine' && <PlantTab />}
       {tab === 'standard' && <StandardTab />}
+      {tab === 'classement' && <NomenclatureTab />}
       {tab === 'approbation' && <ApprovalTab />}
       {tab === 'membres' && <MembersTab />}
       {tab === 'avertissements' && <AlertsTab />}
@@ -254,7 +260,8 @@ function AppearanceTab() {
 
 function DataTab() {
   const { data, org } = useSession()
-  const t = useMessages().settings.data
+  const words = useMessages()
+  const t = words.settings.data
   const toast = useToast()
   const fullExport = useEntitlement('full_export')
   const gate = useGate()
@@ -295,6 +302,12 @@ function DataTab() {
         </Button>
       </Panel>
       <AccountCard />
+      {/* La version de CLIP (2.0.x) : le dernier chiffre augmente à chaque mise à jour. */}
+      <Panel>
+        <h2 className="mb-2 text-lg font-black tracking-tight">{words.shell.version.title}</h2>
+        <VersionLine detailed />
+        <p className="mt-2 text-xs font-bold text-slate-400">{words.shell.version.hint}</p>
+      </Panel>
       <Panel>
         <h2 className="mb-2 text-lg font-black tracking-tight">{t.connection}</h2>
         <p className="text-sm font-medium text-slate-500">{t.gateway(GATEWAY_URL.replace('https://', ''), APP_IDENTIFIER)}</p>

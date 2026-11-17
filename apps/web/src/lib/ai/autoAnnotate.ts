@@ -73,7 +73,7 @@ export async function annotateMarks(
   const next: InstructionContent = { ...content, steps: content.steps.map((s) => ({ ...s, media: s.media.map((m) => ({ ...m })) as StepMedia[] })) }
   const todo = marks.filter((m) => {
     const media = next.steps.find((s) => s.id === m.stepId)?.media[m.mediaIndex]
-    return media?.kind === 'image' && !!media.url && !media.annotations?.length
+    return media?.kind === 'image' && !!media.url && !media.gif && !media.annotations?.length
   })
   let done = 0
   let marked = 0

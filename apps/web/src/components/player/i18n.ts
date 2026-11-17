@@ -9,6 +9,17 @@ import type { Check, EnergyType, FeedbackKind, WarningLevel } from '@/lib/model/
 
 const fr = {
   start: 'Commencer',
+  /** Les variantes d'une instruction (toggle `variants`) et la version courte (toggle `quickMode`). */
+  variants: {
+    question: (label?: string) => (label ? `${label} ?` : 'Laquelle ?'),
+    steps: (n: number) => `${n.toLocaleString('fr-CA')} étape${n > 1 ? 's' : ''}`,
+  },
+  quick: {
+    full: (n?: number) => (n === undefined ? 'Tout en détail' : `Tout en détail · ${n.toLocaleString('fr-CA')}`),
+    short: (n?: number) => (n === undefined ? 'L’essentiel' : `L’essentiel · ${n.toLocaleString('fr-CA')}`),
+    hint: 'L’essentiel : pour qui connaît déjà la tâche, seulement les étapes importantes.',
+    chip: 'L’essentiel',
+  },
   before: 'Avant de commencer',
   ppe: 'Équipements de protection',
   tools: 'Outils et matériel',
@@ -27,6 +38,9 @@ const fr = {
   zoom: 'Agrandir',
   doIt: 'À faire',
   avoid: 'À éviter',
+  previousMedia: 'Média précédent',
+  nextMedia: 'Média suivant',
+  mediaOf: (i: number, n: number) => `${i} / ${n}`,
   stopReading: 'Arrêter la lecture',
   ask: 'Poser une question',
   askPlaceholder: 'Ex. : quel couple de serrage ?',
@@ -48,6 +62,9 @@ const fr = {
   voice: 'Assistant vocal',
   stepView: 'Pas à pas',
   docView: 'Tout voir',
+  edit: 'Modifier',
+  /** Pour qui rédige : ce qui a servi à rédiger l'instruction (toggle `sourceLibrary`). */
+  sources: 'Médias d’origine',
   language: 'Langue',
   feedbackTitle: 'Qu’est-ce qui ne va pas ?',
   feedbackComment: 'Expliquez en quelques mots (facultatif)',
@@ -65,6 +82,34 @@ const fr = {
   warningLine: (level: string, text: string) => `${level} : ${text}`,
   /** Les relevés d'une étape : ce que l'opérateur note pour la trace. */
   /** La formation au poste : quelques questions après l'instruction. */
+  /** Une instruction mise à jour depuis la dernière fois (toggle `operatorUpdates`). */
+  update: {
+    title: (date: string) => `Mise à jour le ${date}`,
+    date: (iso: string) => new Date(iso).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' }),
+    summary: (c: { added: number; modified: number; removed: number; ppe?: boolean; safety?: boolean; lockout?: boolean }) =>
+      [
+        c.modified ? `${c.modified} ${c.modified > 1 ? 'étapes modifiées' : 'étape modifiée'}` : '',
+        c.added ? `${c.added} ${c.added > 1 ? 'nouvelles' : 'nouvelle'}` : '',
+        c.removed ? `${c.removed} ${c.removed > 1 ? 'retirées' : 'retirée'}` : '',
+        c.ppe ? 'EPI changés' : '',
+        c.safety ? 'mises en garde changées' : '',
+        c.lockout ? 'cadenassage changé' : '',
+      ]
+        .filter(Boolean)
+        .join(' · ') || 'Retouches de forme',
+    why: 'Pourquoi :',
+    see: 'Voir ce qui change',
+    hide: 'Masquer',
+    removedTitle: 'Retirées :',
+    goTo: (n: number, title: string) => `Étape ${n} · ${title}`,
+    previous: (v: number) => `Version précédente (v${v})`,
+    previousTitle: (v: number, date: string | null) => (date ? `Version ${v}, en service jusqu’au ${date}` : `Version ${v}, l’ancienne`),
+    previousHint: 'Pour comparer seulement : suivez la version actuelle.',
+    back: 'Revenir à la version actuelle',
+    added: 'Nouvelle',
+    modified: 'Modifiée',
+    badge: 'Mis à jour',
+  },
   training: {
     start: 'Valider ma formation',
     startHint: (n: number) => `${n} question${n > 1 ? 's' : ''} sur cette instruction`,
@@ -201,6 +246,16 @@ export type PlayerStrings = typeof fr
 
 const en: PlayerStrings = {
   start: 'Start',
+  variants: {
+    question: (label?: string) => (label ? `${label}?` : 'Which one?'),
+    steps: (n: number) => `${n.toLocaleString('en-CA')} step${n !== 1 ? 's' : ''}`,
+  },
+  quick: {
+    full: (n?: number) => (n === undefined ? 'Full detail' : `Full detail · ${n.toLocaleString('en-CA')}`),
+    short: (n?: number) => (n === undefined ? 'Essentials' : `Essentials · ${n.toLocaleString('en-CA')}`),
+    hint: 'Essentials: for people who already know the task, only the important steps.',
+    chip: 'Essentials',
+  },
   before: 'Before you start',
   ppe: 'Protective equipment',
   tools: 'Tools and material',
@@ -219,6 +274,9 @@ const en: PlayerStrings = {
   zoom: 'Enlarge',
   doIt: 'Do',
   avoid: 'Avoid',
+  previousMedia: 'Previous media',
+  nextMedia: 'Next media',
+  mediaOf: (i: number, n: number) => `${i} / ${n}`,
   stopReading: 'Stop reading',
   ask: 'Ask a question',
   askPlaceholder: 'E.g. what torque?',
@@ -239,6 +297,8 @@ const en: PlayerStrings = {
   voice: 'Voice assistant',
   stepView: 'Step by step',
   docView: 'See all',
+  edit: 'Edit',
+  sources: 'Original media',
   language: 'Language',
   feedbackTitle: 'What is wrong?',
   feedbackComment: 'Explain in a few words (optional)',
@@ -253,6 +313,33 @@ const en: PlayerStrings = {
   location: 'Location',
   method: 'Lockout',
   warningLine: (level: string, text: string) => `${level}: ${text}`,
+  update: {
+    title: (date: string) => `Updated on ${date}`,
+    date: (iso: string) => new Date(iso).toLocaleDateString('en-CA', { day: 'numeric', month: 'long' }),
+    summary: (c: { added: number; modified: number; removed: number; ppe?: boolean; safety?: boolean; lockout?: boolean }) =>
+      [
+        c.modified ? `${c.modified} ${c.modified === 1 ? 'step changed' : 'steps changed'}` : '',
+        c.added ? `${c.added} new` : '',
+        c.removed ? `${c.removed} removed` : '',
+        c.ppe ? 'PPE changed' : '',
+        c.safety ? 'warnings changed' : '',
+        c.lockout ? 'lockout changed' : '',
+      ]
+        .filter(Boolean)
+        .join(' · ') || 'Wording touch-ups',
+    why: 'Why:',
+    see: 'See what changed',
+    hide: 'Hide',
+    removedTitle: 'Removed:',
+    goTo: (n: number, title: string) => `Step ${n} · ${title}`,
+    previous: (v: number) => `Previous version (v${v})`,
+    previousTitle: (v: number, date: string | null) => (date ? `Version ${v}, in use until ${date}` : `Version ${v}, the old one`),
+    previousHint: 'For comparison only: follow the current version.',
+    back: 'Back to the current version',
+    added: 'New',
+    modified: 'Changed',
+    badge: 'Updated',
+  },
   training: {
     start: 'Validate my training',
     startHint: (n: number) => `${n} question${n === 1 ? '' : 's'} on this instruction`,
@@ -383,6 +470,16 @@ const en: PlayerStrings = {
 
 const es: PlayerStrings = {
   start: 'Empezar',
+  variants: {
+    question: (label?: string) => (label ? `¿${label}?` : '¿Cuál?'),
+    steps: (n: number) => `${n.toLocaleString('es')} paso${n !== 1 ? 's' : ''}`,
+  },
+  quick: {
+    full: (n?: number) => (n === undefined ? 'Todo en detalle' : `Todo en detalle · ${n.toLocaleString('es')}`),
+    short: (n?: number) => (n === undefined ? 'Lo esencial' : `Lo esencial · ${n.toLocaleString('es')}`),
+    hint: 'Lo esencial: para quien ya conoce la tarea, solo los pasos importantes.',
+    chip: 'Lo esencial',
+  },
   before: 'Antes de empezar',
   ppe: 'Equipo de protección',
   tools: 'Herramientas y material',
@@ -401,6 +498,9 @@ const es: PlayerStrings = {
   zoom: 'Ampliar',
   doIt: 'Correcto',
   avoid: 'Evitar',
+  previousMedia: 'Medio anterior',
+  nextMedia: 'Medio siguiente',
+  mediaOf: (i: number, n: number) => `${i} / ${n}`,
   stopReading: 'Detener la lectura',
   ask: 'Hacer una pregunta',
   askPlaceholder: 'Ej.: ¿qué par de apriete?',
@@ -421,6 +521,8 @@ const es: PlayerStrings = {
   voice: 'Asistente de voz',
   stepView: 'Paso a paso',
   docView: 'Ver todo',
+  edit: 'Editar',
+  sources: 'Medios originales',
   language: 'Idioma',
   feedbackTitle: '¿Qué está mal?',
   feedbackComment: 'Explica en pocas palabras (opcional)',
@@ -435,6 +537,33 @@ const es: PlayerStrings = {
   location: 'Ubicación',
   method: 'Bloqueo',
   warningLine: (level: string, text: string) => `${level}: ${text}`,
+  update: {
+    title: (date: string) => `Actualizada el ${date}`,
+    date: (iso: string) => new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'long' }),
+    summary: (c: { added: number; modified: number; removed: number; ppe?: boolean; safety?: boolean; lockout?: boolean }) =>
+      [
+        c.modified ? `${c.modified} ${c.modified === 1 ? 'paso modificado' : 'pasos modificados'}` : '',
+        c.added ? `${c.added} ${c.added === 1 ? 'nuevo' : 'nuevos'}` : '',
+        c.removed ? `${c.removed} ${c.removed === 1 ? 'quitado' : 'quitados'}` : '',
+        c.ppe ? 'EPP cambiados' : '',
+        c.safety ? 'advertencias cambiadas' : '',
+        c.lockout ? 'bloqueo cambiado' : '',
+      ]
+        .filter(Boolean)
+        .join(' · ') || 'Retoques de forma',
+    why: 'Por qué:',
+    see: 'Ver qué cambió',
+    hide: 'Ocultar',
+    removedTitle: 'Quitados:',
+    goTo: (n: number, title: string) => `Paso ${n} · ${title}`,
+    previous: (v: number) => `Versión anterior (v${v})`,
+    previousTitle: (v: number, date: string | null) => (date ? `Versión ${v}, en uso hasta el ${date}` : `Versión ${v}, la anterior`),
+    previousHint: 'Solo para comparar: siga la versión actual.',
+    back: 'Volver a la versión actual',
+    added: 'Nuevo',
+    modified: 'Modificado',
+    badge: 'Actualizada',
+  },
   training: {
     start: 'Validar mi formación',
     startHint: (n: number) => `${n} pregunta${n === 1 ? '' : 's'} sobre esta instrucción`,

@@ -141,10 +141,10 @@ export function PreviewEditing({ doc, player }: { doc: Doc<Instruction>; player:
 
   return (
     <>
-      <Player {...player} content={content} focus={focus} onStepChange={setStepId} frameClassName={agentOpen ? 'lg:right-[424px]' : undefined} accessory={agentOpen ? null : <AgentBubble onClick={() => setAgentOpen(true)} />} />
-      {/* Sur ordinateur, le panneau ouvert a sa colonne à droite ; le lecteur se pousse. */}
-      {agentOpen && <div className="fixed inset-y-0 right-0 z-50 w-[424px] bg-slate-100 max-lg:hidden dark:bg-slate-900" aria-hidden />}
+      {/* L'assistant flotte par-dessus le lecteur, dans le coin : l'étape reste à sa place, on la voit changer. */}
+      <Player {...player} content={content} focus={focus} onStepChange={setStepId} accessory={agentOpen ? null : <AgentBubble onClick={() => setAgentOpen(true)} />} />
       <AgentPanel
+        instructionId={doc._id}
         variant="bubble"
         open={agentOpen}
         content={content}

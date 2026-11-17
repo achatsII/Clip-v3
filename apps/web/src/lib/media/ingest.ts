@@ -13,11 +13,22 @@ import { messages } from '../i18n'
 import { uid } from '../model/repo'
 import type { Source, SourceKind } from '../model/types'
 import { audioDuration, compressImage, dataUrlToBlob, pdfPageCount, videoInfo } from './image'
+import { canReadSlides, deckText, isPptx, readSlides } from './slides'
 
 export type IngestStage = 'import' | 'prepare' | 'upload' | 'offline' | 'optimize' | 'transcribe' | 'convert'
 export type IngestProgress = (stage: IngestStage, ratio?: number) => void
 
 const WORD = /\.(docx?|odt)$/i
+const SLIDES = /\.(pptx?|ppsx?|odp|key)$/i
+const SLIDES_TYPES = /powerpoint|presentationml|opendocument\.presentation|keynote/i
+
+/**
+ * Une présentation (PowerPoint, Keynote) : la Gateway ne la convertit pas encore en PDF (sa route
+ * n'accepte que Word et ODT). On le dit, avec le geste qui règle tout : l'enregistrer en PDF.
+ */
+export function isSlides(file: { type: string; name: string }): boolean {
+  return SLIDES.test(file.name) || SLIDES_TYPES.test(file.type)
+}
 /** Au-delà, une vidéo du navigateur est réduite en 720p par la Gateway avant d'aller à l'IA. */
 const VIDEO_OPTIMIZE_BYTES = 60 * 1024 * 1024
 
@@ -29,17 +40,17 @@ export function kindOfFile(file: { type: string; name: string }): SourceKind | n
   return null
 }
 
-export const ACCEPTED_FILES = 'image/*,video/*,audio/*,application/pdf,.pdf,.doc,.docx,.odt,.heic,.mov'
+export const ACCEPTED_FILES = 'image/*,video/*,audio/*,application/pdf,.pdf,.doc,.docx,.odt,.heic,.mov,.pptx,.ppsx'
 
 /**
  * `preset` : ce que la séance sait d'avance d'une source, comme le lien d'une photo à la note de sa
  * série (`voice`) ou l'identifiant donné d'avance à cette note.
  */
-export type SourcePreset = Pick<Partial<Source>, 'id' | 'voice'>
+export type SourcePreset = Pick<Partial<Source>, 'id' | 'voice' | 'screen'>
 
 export async function ingestFile(file: File, files: FilesApi, onProgress?: IngestProgress, capturedOn: Source['capturedOn'] = 'web', preset: SourcePreset = {}): Promise<Source> {
   const kind = kindOfFile(file)
-  if (!kind) throw new Error(messages().capture.upload.unsupported)
+  if (!kind) throw new Error(isSlides(file) ? messages().capture.upload.slides : messages().capture.upload.unsupported)
   const base: Source = { id: uid('src_'), kind, name: file.name, createdAt: new Date().toISOString(), capturedOn, ...preset }
   const up = (r: number) => onProgress?.('upload', r)
   // Un gros fichier part par morceaux : réseau coupé, il attend son retour, et la carte le dit.
@@ -93,6 +104,96 @@ export async function ingestFile(file: File, files: FilesApi, onProgress?: Inges
   const pageCount = await pdfPageCount(pdf)
   const u = await files.upload(new Blob([pdf], { type: 'application/pdf' }), name, 'documents', (s, t) => up(s / t), wait)
   return { ...base, name, originalName: file.name, url: u.url, path: u.path, mimeType: 'application/pdf', sizeBytes: u.sizeBytes, pageCount }
+}
+
+/** Ce qu'un enregistrement de l'écran donne à envoyer (`screenRecorder.ts`). */
+export interface ScreenCapture {
+  video: File
+  durationSec: number
+  shots: Array<{ blob: Blob; at: number; width: number; height: number }>
+}
+
+/**
+ * Ce qui est déjà parti d'un enregistrement de l'écran : « Réessayer » reprend où l'envoi s'était
+ * arrêté, sans renvoyer la vidéo ni les images déjà en ligne.
+ */
+export interface ScreenProgress {
+  video?: Source
+  shots: Array<Source | undefined>
+}
+
+/**
+ * Un enregistrement de l'écran (toggle `screenCapture`) : la vidéo, puis ses images nettes, quatre à
+ * la fois. Rend la vidéo (`screen`) suivie de ses images (`shot` : la vidéo et l'instant), dans
+ * l'ordre du temps. `videoId` : l'identifiant donné d'avance à la vidéo.
+ */
+export async function ingestScreen(capture: ScreenCapture, files: FilesApi, onProgress: IngestProgress | undefined, videoId: string, done: ScreenProgress = { shots: [] }): Promise<Source[]> {
+  const share = capture.shots.length ? 0.8 : 1
+  if (!done.video) {
+    const video = await ingestFile(capture.video, files, (stage, r) => onProgress?.(stage, r === undefined ? undefined : r * share), 'web', { id: videoId, screen: true })
+    // Un enregistrement du navigateur ne dit pas toujours sa durée : on la connaît, on la garde.
+    done.video = video.durationSec && Number.isFinite(video.durationSec) ? video : { ...video, durationSec: Math.round(capture.durationSec * 10) / 10 }
+  }
+  const createdAt = new Date().toISOString()
+  let sent = done.shots.filter(Boolean).length
+  const total = capture.shots.length
+  const queue = capture.shots.map((shot, i) => ({ shot, i })).filter(({ i }) => !done.shots[i])
+  async function worker() {
+    for (let job = queue.shift(); job; job = queue.shift()) {
+      const { shot, i } = job
+      const name = `${capture.video.name.replace(/\.[a-z0-9]+$/i, '')} ${clockName(shot.at)}.jpg`
+      const u = await files.upload(shot.blob, name, 'captures')
+      done.shots[i] = { id: uid('src_'), kind: 'photo', name, url: u.url, path: u.path, mimeType: u.mimeType || 'image/jpeg', sizeBytes: u.sizeBytes, width: shot.width, height: shot.height, thumbnailUrl: u.url, createdAt, capturedOn: 'web', shot: { sourceId: videoId, at: Math.round(shot.at * 10) / 10 } }
+      sent++
+      onProgress?.('upload', share + ((1 - share) * sent) / Math.max(1, total))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker))
+  const shots = done.shots.filter((x): x is Source => !!x)
+  const video = !done.video.thumbnailUrl && shots[0] ? { ...done.video, thumbnailUrl: shots[0].url } : done.video
+  return [video, ...shots]
+}
+
+/** « 1m05s » : l'instant d'une image de l'écran, dans un nom de fichier. */
+const clockName = (sec: number) => {
+  const t = Math.max(0, Math.round(sec))
+  return `${Math.floor(t / 60)}m${String(t % 60).padStart(2, '0')}s`
+}
+
+/**
+ * Une présentation PowerPoint lue dans l'app (toggle `slidesImport`, `slides.ts`) : une note avec son
+ * texte, diapositive par diapositive, puis une photo par image, nommée d'après sa diapositive. La note
+ * vient d'abord : l'IA la lit avant de regarder les images.
+ */
+export async function ingestSlides(file: File, files: FilesApi, onProgress?: IngestProgress, capturedOn: Source['capturedOn'] = 'web'): Promise<Source[]> {
+  onProgress?.('prepare')
+  let deck: Awaited<ReturnType<typeof readSlides>>
+  try {
+    deck = await readSlides(file)
+  } catch {
+    throw new Error(messages().capture.upload.unreadableSlides)
+  }
+  const at = new Date().toISOString()
+  const photos: Source[] = []
+  for (const [i, img] of deck.images.entries()) {
+    onProgress?.('upload', i / Math.max(1, deck.images.length))
+    photos.push(await ingestFile(new File([img.blob], img.name, { type: img.blob.type }), files, undefined, capturedOn))
+  }
+  const note: Source = { id: uid('src_'), kind: 'note', name: file.name, originalName: file.name, text: deckText(file.name, deck), pageCount: deck.slides.length, createdAt: at, capturedOn }
+  return [note, ...photos]
+}
+
+/**
+ * Un fichier, quel qu'il soit, en sources : une seule le plus souvent ; une présentation en donne
+ * plusieurs (sa note et ses images). `slides` : le toggle `slidesImport`. Un .ppt, un Keynote ou un
+ * .odp ne se lit pas : on dit de l'enregistrer en .pptx ou en PDF.
+ */
+export async function ingestAny(file: File, files: FilesApi, opts: { slides?: boolean; onProgress?: IngestProgress; capturedOn?: Source['capturedOn'] } = {}): Promise<Source[]> {
+  if (opts.slides && canReadSlides()) {
+    if (isPptx(file)) return ingestSlides(file, files, opts.onProgress, opts.capturedOn)
+    if (isSlides(file)) throw new Error(messages().capture.upload.oldSlides)
+  }
+  return [await ingestFile(file, files, opts.onProgress, opts.capturedOn)]
 }
 
 /**

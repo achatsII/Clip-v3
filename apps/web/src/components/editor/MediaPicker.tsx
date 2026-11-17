@@ -1,21 +1,25 @@
 'use client'
 
 import { ArrowLeft, FileText, Loader2, Upload, Video } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
 import { Input, Label } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { ACCEPTED_FILES, ingestFile } from '@/lib/media/ingest'
+import { ACCEPTED_FILES, ingestAny } from '@/lib/media/ingest'
+import { useToggle } from '@/lib/toggles'
 import { useMessages } from '@/lib/i18n'
 import type { Source, StepMedia } from '@/lib/model/types'
 import { formatDuration } from '@/lib/util/cn'
 import { VideoTrimmer } from './VideoTrimmer'
 
-/** Choisir le média d'une étape parmi les sources, ou en ajouter un nouveau. */
-export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, current }: { open: boolean; onClose: () => void; sources: Source[]; onPick: (m: StepMedia) => void; onSourceAdded: (s: Source) => void; current?: StepMedia }) {
+/**
+ * Choisir le média d'une étape parmi les sources, ou en ajouter un nouveau. `initial` : ouvert depuis
+ * les médias d'origine, il va droit au choix de l'extrait (une vidéo) ou de la page (un document).
+ */
+export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, current, initial }: { open: boolean; onClose: () => void; sources: Source[]; onPick: (m: StepMedia) => void; onSourceAdded: (s: Source) => void; current?: StepMedia; initial?: Source | null }) {
   const { files } = useSession()
   const toast = useToast()
   const t = useMessages()
@@ -23,6 +27,12 @@ export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, cur
   const [doc, setDoc] = useState<{ source: Source; page: number } | null>(null)
   const [uploading, setUploading] = useState(false)
   const input = useRef<HTMLInputElement>(null)
+  const slides = useToggle('slidesImport')
+  useEffect(() => {
+    if (!open || !initial?.url) return
+    if (initial.kind === 'video') setVideo({ source: initial, start: 0, end: Math.min(10, initial.durationSec ?? 10) })
+    else if (initial.kind === 'document') setDoc({ source: initial, page: 1 })
+  }, [open, initial])
 
   const photos = sources.filter((s) => s.kind === 'photo' && s.url)
   const videos = sources.filter((s) => s.kind === 'video' && s.url)
@@ -37,8 +47,14 @@ export function MediaPicker({ open, onClose, sources, onPick, onSourceAdded, cur
   async function upload(file: File) {
     setUploading(true)
     try {
-      const s = await ingestFile(file, files)
-      onSourceAdded(s)
+      const added = await ingestAny(file, files, { slides })
+      added.forEach(onSourceAdded)
+      // Une présentation : ses images rejoignent les médias ; on choisit ensuite celle de l'étape.
+      if (added.length > 1 || added[0]?.kind === 'note') {
+        toast.success(t.editorTools.mediaPicker.deckAdded(added.filter((x) => x.kind === 'photo').length))
+        return
+      }
+      const s = added[0]
       if (s.kind === 'photo') {
         onPick({ kind: 'image', url: s.url!, sourceId: s.id })
         close()

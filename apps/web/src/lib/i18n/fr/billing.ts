@@ -24,9 +24,15 @@ export const billing = {
   contactSales: 'Parler à l’équipe CLIP',
   /** Dans l’app mobile : ni lien ni prix d’ailleurs (règles des magasins). */
   quoteInApp: 'Pour toute l’usine, l’équipe de CLIP l’installe avec votre organisation.',
+  /** Usine, au contrat : un rabais sur la durée de l'engagement. */
+  multiYear: 'Engagement de 3 ou 5 ans : jusqu’à 25 % de rabais.',
   perMonth: '/ mois',
   perYear: '/ an',
   renewsOn: (date: string) => `Renouvellement le ${date}.`,
+  /** À ce rythme (`forecast.ts`) : quand les crédits de la période seront épuisés. */
+  forecastLine: (date: string, days: number) => `À ce rythme, ils seront épuisés vers le ${date}, ${fmt(days)} jour${days > 1 ? 's' : ''} avant le renouvellement.`,
+  /** Le plan qui en donne plus, sous la prévision. */
+  forecastOffer: (plan: string, amount: string) => `${plan} : ${amount} par mois.`,
   managedByAdmin: 'Votre plan se gère par l’administrateur de votre usine.',
   retrySoon: 'Réessayez dans un instant.',
   interval: {
@@ -253,6 +259,9 @@ export const billing = {
     triedModulePlan: (n: number, module: string, plan: string) => `Essayé ${fmt(n)} fois ce mois-ci : le module ${module} s’ajoute au plan ${plan}.`,
     creditsTitle: 'Vos crédits IA s’épuisent',
     credits: (n: number, offer: string) => `Épuisés ${fmt(n)} fois ce mois-ci. ${offer}.`,
+    /** À ce rythme, les crédits finiront avant le renouvellement (`forecast.ts`). */
+    forecastTitle: 'Vos crédits finiront avant le renouvellement',
+    forecast: (date: string, days: number, offer: string) => `À ce rythme, vers le ${date}, ${fmt(days)} jour${days > 1 ? 's' : ''} avant le renouvellement. ${offer}.`,
     /** Un module que l’usage appelle. */
     academyTitle: 'Vos formations prennent de l’ampleur',
     academy: (n: number, trial: string) => `${fmt(n)} formations validées ce mois-ci. L’Académie suit les revalidations et la couverture de chaque quart${trial ? ` : ${trial}` : ''}.`,

@@ -12,6 +12,9 @@ import { LANGS, messagesIn, type Messages } from '../i18n'
 import { annotationsMarkup } from '../annotations/markup'
 import { layoutOf } from '../model/media'
 import type { Branding, InstructionContent, Step, StepMedia } from '../model/types'
+import { toolIcon } from '../model/tools'
+import { hasVariants, isEssential, variantNames } from '../model/variants'
+import { BOTTOM_MM, MARGIN_MM, pageBox, shows, type HeaderField, type PrintTemplate } from './template'
 
 /** Les mots du document : ceux du lecteur (`player`), ceux de l'impression (`print`) et ceux du métier (`catalog`). */
 interface Words {
@@ -36,10 +39,10 @@ function mediaImage(m: StepMedia | undefined): string | null {
 }
 
 /** L'image d'une étape et ses annotations, cadrées ensemble : la boîte prend les proportions de l'image. */
-function mediaBlock(m: StepMedia | undefined, img: string, ratio: number | undefined, key: string, w: Words): string {
+function mediaBlock(m: StepMedia | undefined, img: string, ratio: number | undefined, key: string, w: Words, maxMm = 62): string {
   const r = ratio && ratio > 0 ? ratio : null
   const marks = m?.kind === 'image' && m.annotations?.length ? annotationsMarkup(m.annotations, { ratio: r ?? 16 / 10, idPrefix: `p${key}`, print: true }) : ''
-  const frame = r ? `aspect-ratio:${r};width:min(100%, calc(62mm * ${r}))` : 'aspect-ratio:16/10;width:100%'
+  const frame = r ? `aspect-ratio:${r};width:min(100%, calc(${maxMm}mm * ${r}))` : 'aspect-ratio:16/10;width:100%'
   const vid = m?.kind === 'video' ? `<span class="vid">${w.print.videoClip}</span>` : ''
   return `<div class="media"><div class="frame" style="${frame}"><img src="${esc(img)}" alt="" style="object-fit:${r ? 'fill' : 'contain'}"><div class="ann">${marks}</div></div>${vid}</div>`
 }
@@ -48,13 +51,13 @@ function mediaBlock(m: StepMedia | undefined, img: string, ratio: number | undef
 const htmlPlaceholder = (w: Words) => `<div class="ph">${w.print.visual}<small>${w.print.visualHint}</small></div>`
 
 /** Les médias d'une étape selon sa disposition : un seul, ou une grille de deux à quatre. */
-function stepMediaBlock(s: Step, ratios: Record<string, number> | undefined, key: string, w: Words): string {
+function stepMediaBlock(s: Step, ratios: Record<string, number> | undefined, key: string, w: Words, maxMm?: number): string {
   const layout = layoutOf(s)
   const list = layout === 'focus' ? s.media.slice(0, 1) : layout === 'compare' ? s.media.slice(0, 2) : s.media.slice(0, 4)
   const one = (m: StepMedia, k: string) => {
     if (m.kind === 'html') return htmlPlaceholder(w)
     const img = mediaImage(m)
-    return img ? mediaBlock(m, img, ratios?.[img], k, w) : ''
+    return img ? mediaBlock(m, img, ratios?.[img], k, w, maxMm) : ''
   }
   const label = (m: StepMedia) =>
     `${m.verdict ? `<span class="verdict">${m.verdict === 'do' ? `✓ ${esc(w.player.doIt)}` : `✕ ${esc(w.player.avoid)}`}</span>` : ''}${m.caption ? `<span class="cap">${esc(m.caption)}</span>` : ''}`
@@ -78,6 +81,51 @@ export interface PrintMeta {
   ratios?: Record<string, number>
   /** Les relevés s'impriment comme des cases à remplir (toggle `records`). */
   records?: boolean
+  /** Le gabarit (toggle `printTemplates`) ; absent : la mise en page d'avant, telle quelle. */
+  template?: PrintTemplate
+  /** « Une page » : l'échelle qui fait tenir la feuille sur une page (mesurée dans l'aperçu). */
+  scale?: number
+  /** Les outils en images (toggle `toolImages`) : l'emoji devant chaque outil ; absent : le texte tel quel. */
+  toolImages?: boolean
+  /** Les variantes (toggle `variants`) et la version courte (toggle `quickMode`) : marquées sur les étapes. */
+  variants?: boolean
+  quick?: boolean
+}
+
+/** Un outil du PDF : son emoji puis son nom, ou le texte tel qu'écrit. */
+function toolChip(tool: string, images: boolean): string {
+  if (!images) return esc(tool)
+  const { emoji, label } = toolIcon(tool)
+  return `<span class="emoji">${esc(emoji)}</span> ${esc(label)}`
+}
+
+/** Une chaîne pour `content:` d'une règle CSS (le pied de page de chaque page). */
+const cssStr = (v: string) => `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/</g, '\\3c ').replace(/[\r\n]+/g, ' ')}"`
+
+/**
+ * Ce que le gabarit change au document : la page (orientation, pied de page sur chaque page, avec le
+ * numéro, la version et la page), la feuille à la largeur de la page (l'aperçu se compose comme
+ * le papier ; « Une page » la réduit pour qu'elle tienne), et la disposition des étapes.
+ */
+function templateCss(tpl: PrintTemplate, meta: PrintMeta, t: Words['print']): string {
+  const box = pageBox(tpl.orientation)
+  const scale = tpl.layout === 'onePage' ? Math.min(1, Math.max(0.3, meta.scale ?? 1)) : 1
+  const landscape = tpl.orientation === 'landscape'
+  const ref = [meta.number, meta.version ? t.versionShort(meta.version) : meta.draft ? t.draftShort : null].filter(Boolean).join(' · ')
+  const left = tpl.footer?.trim() ? `@bottom-left{content:${cssStr(tpl.footer.trim())};font:600 7.5pt Inter,system-ui,sans-serif;color:#64748b}` : ''
+  const right =
+    tpl.pageNumbers !== false
+      ? `@bottom-right{content:${cssStr(`${ref ? `${ref} · ` : ''}${t.pageWord} `)} counter(page) ${cssStr(` ${t.ofWord} `)} counter(pages);font:800 7.5pt Inter,system-ui,sans-serif;color:#334155}`
+      : ''
+  const page = `@page{size:letter ${tpl.orientation};margin:${MARGIN_MM}mm ${MARGIN_MM}mm ${BOTTOM_MM}mm;${left}${right}}`
+  const sheet = `@media print{body{padding:0}}@media screen{body{max-width:none;padding:24px 0}}#sheet{width:${Math.floor(box.width / scale)}px;margin:0 auto${scale < 1 ? `;zoom:${scale}` : ''}}`
+  const layout =
+    tpl.layout === 'table'
+      ? `.steps{display:block}.steps .section{margin:12px 0 6px}.step{display:grid;grid-template-columns:${landscape ? '30%' : '40%'} 1fr;margin-bottom:10px}.step.nomedia{grid-template-columns:1fr}.step .media{background:#f1f5f9;align-items:center;height:100%}`
+      : tpl.layout === 'onePage'
+        ? `.steps{grid-template-columns:repeat(${landscape ? 4 : 3},1fr);gap:8px}header{padding-bottom:10px;margin-bottom:10px}header h1{font-size:21px}.block{padding:8px 10px;margin-bottom:8px}.grid{gap:8px;margin-bottom:8px}.body{padding:7px 9px}.step h3{font-size:12px;margin-bottom:4px}.n{min-width:20px;height:20px;font-size:11px}.text{font-size:11px}.kp{font-size:10px}.warn{font-size:10.5px;padding:4px 6px}.step .media{background:#f1f5f9}`
+        : `.steps{grid-template-columns:repeat(${landscape ? 3 : 2},1fr)}`
+  return `${page}${sheet}${layout}`
 }
 
 /** Les relevés d'une étape, à remplir à la main : une ligne pour la valeur, des cases pour cocher. */
@@ -107,19 +155,31 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
   const cat = words.catalog
   // « fr-CA », « en-CA » ; une langue que l'outil ne parle pas garde son code.
   const htmlLang = (LANGS as readonly string[]).includes(lang) ? t.locale : lang
-  // La couleur de l'usine, sinon celle de CLIP ; les teintes des repères en découlent.
-  const color = brandColorOf(meta.branding.color) ?? BRAND.primary
+  const tpl = meta.template ?? null
+  // La couleur du gabarit, sinon celle de l'usine, sinon celle de CLIP ; les teintes des repères en découlent.
+  const color = (tpl?.accent && /^#[0-9a-f]{6}$/i.test(tpl.accent) ? tpl.accent : null) ?? brandColorOf(meta.branding.color) ?? BRAND.primary
+  // Ce que montre le cartouche : tout, sauf ce que le gabarit retire.
+  const show = (f: HeaderField) => !tpl || shows(tpl, f)
+  const maxMm = tpl?.layout === 'onePage' ? 34 : tpl?.layout === 'table' ? 55 : 62
   const date = meta.publishedAt ? t.date(meta.publishedAt) : t.today()
   const ppe = content.ppe.map((k) => `<span class="chip">${esc((cat.ppe as Record<string, string>)[k] ?? k)}</span>`).join('')
+  // Une étape propre à une variante, une étape de la version courte (toggles `variants`, `quickMode`).
+  const tags = (s: Step) => {
+    const only = meta.variants ? variantNames(content, s) : []
+    const star = meta.quick && content.quick && isEssential(s)
+    return only.length || star ? `<p class="tags">${only.length ? `<span class="tag">${esc(t.only(only.join(', ')))}</span>` : ''}${star ? `<span class="tag star">★ ${esc(t.essential)}</span>` : ''}</p>` : ''
+  }
   const steps = content.steps
     .map((s, i) => {
       const w = s.warning
       // Une section s'ouvre : son nom, en titre, sur toute la largeur.
       const opens = !!s.section?.trim() && (i === 0 || content.steps[i - 1].section !== s.section)
-      return `${opens ? `<h2 class="section">${esc(s.section!.trim())}</h2>` : ''}<article class="step">
-        ${stepMediaBlock(s, meta.ratios, String(i), words)}
+      const media = stepMediaBlock(s, meta.ratios, String(i), words, maxMm)
+      return `${opens ? `<h2 class="section">${esc(s.section!.trim())}</h2>` : ''}<article class="step${media ? '' : ' nomedia'}">
+        ${media}
         <div class="body">
           <h3><span class="n">${i + 1}</span>${esc(s.title)}</h3>
+          ${tags(s)}
           ${w ? `<p class="warn ${w.level}"><b>${t.warning(esc(cat.warnings[w.level]))}</b> ${esc(w.text)}</p>` : ''}
           ${s.text ? `<p class="text">${esc(s.text)}</p>` : ''}
           ${s.keyPoints?.length ? `<ul class="kp">${s.keyPoints.map((k) => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
@@ -145,8 +205,7 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
 <title>${esc(content.title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
 <style>
-@page{size:letter;margin:12mm}
-*{box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;color:#0f172a;margin:0;padding:24px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+${tpl ? '' : '@page{size:letter;margin:12mm}\n'}*{box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;color:#0f172a;margin:0;padding:24px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 header{display:flex;align-items:flex-start;gap:18px;border-bottom:4px solid ${esc(color)};padding-bottom:14px;margin-bottom:16px}
 header img.logo{max-height:52px;max-width:140px;object-fit:contain}
 header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-weight:900;letter-spacing:-.02em}
@@ -157,7 +216,7 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .block{border:1px solid #e2e8f0;border-radius:14px;padding:12px 14px;break-inside:avoid;margin-bottom:12px}
 .block h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px;color:#334155}
-.chip{display:inline-block;background:color-mix(in srgb,${esc(color)} 12%,white);color:color-mix(in srgb,${esc(color)} 75%,black);border-radius:8px;padding:4px 8px;margin:0 6px 6px 0;font-size:12px;font-weight:800}
+.chip .emoji{font-size:15px;line-height:1;vertical-align:-2px}.chip{display:inline-block;background:color-mix(in srgb,${esc(color)} 12%,white);color:color-mix(in srgb,${esc(color)} 75%,black);border-radius:8px;padding:4px 8px;margin:0 6px 6px 0;font-size:12px;font-weight:800}
 .safety{background:#fff1f2;border-color:#fecdd3}.safety li{font-weight:700}
 .steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .steps .section{grid-column:1/-1;margin:10px 0 0;font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:color-mix(in srgb,${esc(color)} 85%,black);break-after:avoid;page-break-after:avoid}
@@ -174,29 +233,41 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .body{padding:10px 12px}.step h3{font-size:15px;margin:0 0 6px;font-weight:900;display:flex;gap:8px;align-items:flex-start}
 .n{display:inline-flex;min-width:24px;height:24px;border-radius:8px;background:${esc(color)};color:#fff;align-items:center;justify-content:center;font-size:13px}
 .text{font-size:13px;margin:4px 0;font-weight:600;color:#334155}.kp{margin:4px 0 0 18px;padding:0;font-size:12px;color:#334155}
+.tags{margin:2px 0 4px}.tag{display:inline-block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;background:#0f172a;color:#fff;border-radius:6px;padding:2px 6px;margin-right:4px}.tag.star{background:#fbbf24;color:#451a03}
 .warn{font-size:12px;padding:6px 8px;border-radius:8px;margin:4px 0}.warn.danger{background:#ffe4e6;color:#9f1239}.warn.caution{background:#fef9c3;color:#854d0e}.warn.info{background:#e0f2fe;color:#075985}
 table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #e2e8f0;padding:6px;text-align:left;vertical-align:top}th{background:#f1f5f9;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
 footer{margin-top:16px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:10px;color:#64748b;display:flex;justify-content:space-between}
 @media screen{body{max-width:900px;margin:0 auto}}
-</style></head><body>
+${tpl ? templateCss(tpl, meta, t) : ''}
+</style></head><body>${tpl ? '<main id="sheet">' : ''}
 ${meta.draft ? `<div class="draft">${t.draft}</div>` : ''}
 <header>
   ${meta.branding.logoUrl ? `<img class="logo" src="${esc(meta.branding.logoUrl)}" alt="">` : ''}
   <div class="t">
     <div class="eyebrow">${esc(meta.branding.orgName)} · ${esc(cat.kinds[content.kind].label)} · ${esc((cat.categories as Record<string, { label: string }>)[content.category]?.label ?? '')}</div>
     <h1>${esc(content.title)}</h1>
-    <div class="meta">${meta.number ? `<b>${esc(meta.number)}</b> · ` : ''}${meta.version ? t.version(meta.version, esc(date)) : t.printedOn(esc(date))}${meta.approvedByName ? ` · ${t.approvedBy(esc(meta.approvedByName))}` : ''}${meta.stationNames.length ? ` · ${t.stations(meta.stationNames.map(esc).join(', '))}` : ''}${content.durationMin ? ` · ${t.minutes(content.durationMin)}` : ''}${content.frequency ? ` · ${esc(content.frequency)}` : ''}</div>
+    <div class="meta">${[
+      show('number') && meta.number ? `<b>${esc(meta.number)}</b>` : '',
+      show('version') ? (meta.version ? t.version(meta.version, esc(date)) : t.printedOn(esc(date))) : '',
+      show('approvedBy') && meta.approvedByName ? t.approvedBy(esc(meta.approvedByName)) : '',
+      show('stations') && meta.stationNames.length ? t.stations(meta.stationNames.map(esc).join(', ')) : '',
+      show('duration') && content.durationMin ? t.minutes(content.durationMin) : '',
+      show('duration') && content.frequency ? esc(content.frequency) : '',
+    ]
+      .filter(Boolean)
+      .join(' · ')}</div>
     ${content.summary ? `<p class="text">${esc(content.summary)}</p>` : ''}
+    ${meta.variants && hasVariants(content) ? `<p class="tags"><span class="tag">${esc(t.variants(content.variantsLabel?.trim() || t.variantsDefault, (content.variants ?? []).map((v) => v.name).join(', ')))}</span></p>` : ''}
   </div>
-  ${meta.qrSvg ? `<div class="qr">${meta.qrSvg}<div>${t.upToDate}</div></div>` : ''}
+  ${meta.qrSvg && show('qr') ? `<div class="qr">${meta.qrSvg}<div>${t.upToDate}</div></div>` : ''}
 </header>
 <div class="grid">
   ${ppe ? `<section class="block"><h2>${esc(p.ppe)}</h2>${ppe}</section>` : ''}
-  ${content.tools.filter(Boolean).length ? `<section class="block"><h2>${esc(p.tools)}</h2>${content.tools.filter(Boolean).map((tool) => `<span class="chip" style="background:#f1f5f9;color:#334155">${esc(tool)}</span>`).join('')}</section>` : ''}
+  ${content.tools.filter(Boolean).length ? `<section class="block"><h2>${esc(p.tools)}</h2>${content.tools.filter(Boolean).map((tool) => `<span class="chip" style="background:#f1f5f9;color:#334155">${toolChip(tool, meta.toolImages === true)}</span>`).join('')}</section>` : ''}
 </div>
 ${content.safety.filter(Boolean).length ? `<section class="block safety"><h2>${esc(p.safety)}</h2><ul>${content.safety.filter(Boolean).map((s) => `<li>${esc(s)}</li>`).join('')}</ul></section>` : ''}
 ${lockout}
 <section class="steps">${steps}</section>
 <footer><span>${meta.liveUrl ? t.liveUrl(esc(meta.liveUrl)) : t.mayBeStale}</span><span>${meta.showClipMention ? t.madeWithClip : ''}</span></footer>
-</body></html>`
+${tpl ? '</main>' : ''}</body></html>`
 }

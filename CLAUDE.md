@@ -74,6 +74,13 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `Job_Generate_CLIP_V3` (nœud « Shape analysis result »), et ce qui s'écrit de plus dans
   `clip_job`, dans la branche de Job_start. Les consignes, le schéma et les fichiers passent tels
   quels : les changer ne demande rien dans n8n.
+- **L'IA continue hors de l'écran** (toggle `backgroundAi`) : au téléphone (l'app, ou Safari sur iPhone),
+  iOS suspend l'app hors de l'écran et coupe la requête en cours. La réponse de l'assistant se prépare
+  donc au serveur, par la même branche clip-v3 de Job_start que la génération (elle roule toute requête
+  avec un schéma ; rien à changer dans n8n) : `durableAsk` (`src/lib/ai/durableAsk.ts`) relit `clip_job`
+  toutes les 2 s à l'écran et aussitôt au retour, débite le coût réel une fois (`jobDebitKey`) et ferme
+  le travail ; pas pris en 45 s ou refusé, la demande part sur l'appareil. Sans choix de l'usine, la
+  génération part au serveur au téléphone (`generatesOnServer`).
 - **Gros fichiers** (toggle `resumableUpload`) : dès 16 Mo, un fichier du navigateur part par
   morceaux de 4 Mo, directement à la Gateway (TUS, `src/lib/gateway/resumable.ts`).
   - Un morceau raté se renvoie seul, à partir de ce que la Gateway a vraiment reçu.
@@ -93,6 +100,21 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   Un standard d'avant n'a que `startWithSafety` : `firstStepOf` le lit tel quel, et `firstStep` n'entre
   jamais dans `defaultStandard()` (sinon `normalizeOrg` changerait les usines existantes). La consigne
   part telle quelle au serveur : rien à changer dans n8n.
+- **Figures des documents** (toggle `documentFigures`) : à l'import d'un PDF ou d'un Word (converti en
+  PDF), la génération nomme la figure de la page qui illustre l'étape (`figure` du média ; consigne et
+  schéma passent tels quels : rien dans n8n). À la fin (`enrichMedia`, sur l'appareil qui termine, même
+  au serveur), la page se rend à 200 dpi, l'IA y trouve les boîtes en une question par page (usage
+  `figures`, `src/lib/ai/figures.ts`) et l'étape reçoit la figure recadrée, qui sait d'où elle vient
+  (`fromPage`, `src/lib/media/figures.ts`). Introuvable, minuscule ou presque toute la page : la page
+  reste. Dans l'éditeur, « Figure » et « Page entière » passent de l'une à l'autre.
+- **PowerPoint** (toggle `slidesImport`, `src/lib/media/slides.ts`) : la Gateway ne le convertit pas (la
+  route `convert-to-pdf` n'accepte que Word et ODT et répond 500 pour un .pptx, revérifié en QA le 17
+  novembre 2026). L'app lit le .pptx elle-même (une archive zip, `DecompressionStream`) : une note avec le
+  texte de chaque diapositive (titre, texte, tableaux, notes du présentateur), puis une photo par image,
+  nommée d'après sa diapositive (`ingestSlides`, `ingestAny`). Capture, import en lot (`importAsk` : le
+  texte dans la demande, les images jointes, `importSystem(…, 'slides')` ; rien dans n8n), assistant et
+  médias d'origine. Un .ppt, un Keynote ou un .odp : « enregistrez-la en .pptx ou en PDF » ; toggle coupé,
+  le message d'avant (`isSlides`).
 - **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
   (`src/lib/model/translation.ts`), médias compris : légendes, annotations, texte des schémas, et
   en option les images refaites avec leur texte traduit. Un média traduit nomme l'original (`of`).
@@ -101,14 +123,109 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`src/lib/model/checkpoints.ts`) : au plus un par 10 minutes de modification, avant l'assistant, une
   régénération ou un retour, sans doublon ni copie de la version publiée, 20 par instruction. Après
   chaque enregistrement, le cache de l'instruction suit (`cacheDraft`).
-- **Vidéos au poste** (toggle `stepReel`, allumé ; les vidéos de l'éditeur gardent chacune leur lecteur) : un seul lecteur gardé d'une étape à l'autre, la vidéo ne
-  se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la publication
-  sans jamais la retenir (`src/lib/media/reel.ts`). En novembre 2026, la route de montage répond 500
-  en QA : le poste lit alors la vidéo d'origine.
+- **Vidéos au poste** (toggle `stepReel`, allumé) : un seul lecteur gardé d'une étape à l'autre, la
+  vidéo ne se recharge pas (`src/lib/media/videoPool.ts`) ; la vidéo des étapes, montée après la
+  publication sans jamais la retenir (`src/lib/media/reel.ts`) ; montage raté, le poste lit la vidéo
+  d'origine (la route a répondu 500 en QA le 12 novembre 2026, puis monté en 1080p au lieu de 720p).
+- **Lecture fluide** (toggle `smoothVideos` ; « La lecture fluide des vidéos », `docs/architecture.md`) : une vidéo qui quitte l'écran
+  arrête de télécharger (`stopVideo`) : détachée, elle continuait, et d'étape en étape ces
+  téléchargements bloquaient la vidéo affichée, même sur un PC puissant. L'éditeur garde lui aussi un
+  lecteur par vidéo (jamais la vidéo des étapes) ; chaque étape montre son extrait depuis le début ;
+  « Tout voir » ne charge et ne joue que les vidéos à l'écran (`lazy`). Un nouvel élément vidéo passe
+  par `VideoSegment` ou appelle `stopWhenGone` à son démontage.
+- **Outils en images** (toggle `toolImages`, `src/lib/model/tools.ts`) : chaque outil a son emoji, en
+  tête de son texte (« 🔧 Clé de 13 mm » : l'IA le met, consigne du schéma, rien dans n8n), sinon tiré
+  de son nom (`toolIcon`, 🧰 à défaut). Au poste, des tuiles (`ToolTiles`) ; dans l'éditeur, un toucher
+  en change l'image (`withToolEmoji`) ; le PDF le montre (`toolImages` du `PrintMeta`) ; une traduction
+  garde l'emoji de l'original (`keepToolEmojis`). Toggle coupé, le texte s'affiche tel qu'écrit.
+- **Son des vidéos** (toggle `videoSound`, `src/lib/media/videoSound.ts`, `sound` du
+  `MediaPlaybackProvider`) : activé une fois, il suit aux autres étapes et se retient sur l'appareil
+  (`clip_pref_video_sound`) ; muet par défaut. Un navigateur qui refuse le son sans un toucher fait partir
+  la vidéo muette, sans oublier le choix.
+- **Plusieurs médias à une étape** (toggle `mediaNav`, `MediaNav` de `StepMediaArea`, prop `nav`) : leurs
+  vraies vignettes, « 2 / 3 » et de grandes flèches, au poste et dans les deux vues de l'éditeur ; la
+  flèche « suivant » pulse tant qu'on n'a rien regardé d'autre ; leur nombre sur l'étape dans la liste de
+  la Fiche. Pas de glisser sur le média : au poste, glisser change d'étape.
+- **Médias d'origine** (toggle `sourceLibrary`, `SourceLibrary`, `src/lib/model/sources.ts`) : ce qui a servi
+  à rédiger l'instruction (`Instruction.sources`), à revoir dans l'éditeur (menu « … », et « Voir l'original »
+  sous le média d'une étape, qui ouvre la vidéo à l'instant de l'extrait) et, pour qui rédige, en lecture :
+  la vidéo entière (`preload="none"`, `stopWhenGone`), les photos en grand (une photo prise en parlant fait
+  réentendre sa note, `voiceOf`), les notes vocales et leur transcription, les notes, les documents. Chaque
+  média dit à quelles étapes il sert (`sourceUses`) et se met à l'étape ouverte (une vidéo choisit son
+  extrait : `MediaPicker` `initial`). Jamais au poste : `clip_published` ne porte pas les sources.
+- **Joindre à l'assistant** (toggle `agentAttach`) : le trombone de la conversation envoie tout de suite le
+  fichier (`ingestAny`) ; il rejoint les sources de l'instruction (S7…), et le tour suivant le donne à l'IA
+  avec la demande, en un seul tour facturé selon sa taille, comme une revue (`agentTurn` `attached`,
+  `look_s/m/l` ; `files` et `mediaResolution` passent déjà au serveur : rien dans n8n). Retiré avant
+  l'envoi, il quitte aussi les sources.
+- **Variantes et version courte** (toggles `variants` et `quickMode`, `src/lib/model/variants.ts`) : une
+  instruction pour des tâches presque pareilles (« Pompe A », « Pompe B » : `InstructionContent.variants`,
+  deux au moins, et `variantsLabel`) ; chaque étape dit où elle s'applique (`Step.variants`, vide : partout).
+  Au poste, une grande tuile par variante, avec son nombre d'étapes, choisit et commence ; ne restent que
+  ses étapes (`stepsFor`), et la trace garde la variante (`Execution.variant`). La version courte, si
+  l'auteur l'offre (`InstructionContent.quick`) : « L'essentiel » pour les habitués, « Tout en détail »
+  (défaut) pour les nouveaux ; `Step.essential`, cochée d'office pour les étapes à points clés ou mise en
+  garde (`withQuick`), et toujours pour un relevé, un danger ou une attention (`alwaysEssential` : la
+  trace et la sécurité ne se raccourcissent pas). Éditeur : la carte « Variantes et version courte » des
+  infos (`VariantsCard`) et, sur chaque étape des deux vues, « Pour » et l'étoile (`StepScope`). L'IA les
+  propose à la génération et à l'import quand les sources décrivent plusieurs modèles (schéma `variants`,
+  `variantsLabel`, `variants` de l'étape : rien dans n8n), l'assistant les crée (`set_instruction`,
+  `update_step`), la traduction traduit leurs noms, le PDF les nomme, une copie de bloc les garde.
+- **Ordre et photos des médias** : le média choisi passe avant ou après son voisin (toggle `mediaOrder`,
+  `StepMediaEditor`) ; la photo jointe au retour d'un opérateur se voit dans l'éditeur, sous l'étape, et
+  « Mettre cette photo à l'étape » en fait une source et un média (toggle `feedbackMedia`,
+  `OperatorFeedbackNote`, `photoToStorage` : une photo de la base part d'abord au stockage).
+- **Version** (`src/lib/version.ts`) : `APP_VERSION` = 2.0.x ; **le dernier chiffre augmente à chaque mise en
+  production**, dans le commit qui part en production. La date et le commit viennent de la build
+  (`next.config.ts`, `NEXT_PUBLIC_BUILD_SHA`, `NEXT_PUBLIC_BUILD_DATE`). Affichée sous le menu, dans le compte
+  au téléphone et dans Réglages › Données (`VersionLine`), avec la version de l'app mobile.
 - **Capturer** (« Nouvelle instruction », `CaptureBoard`) : d'un seul écran au téléphone, qui prend tout
   l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
   ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher. Les sources
   restent dans l'ordre de prise, même quand un envoi finit avant un autre.
+- **Options de la génération** (« Options » de la capture) : le format, « Annoter les images », « Proposer
+  des relevés » (module `records`, retenu sur l'appareil, `src/lib/ai/proposeChecks.ts` ; non : la consigne
+  dit aucun et la fin les retire, `ServerJobContext.checks` au serveur ; rien dans n8n) et ce que l'IA lit
+  en une fois (`GENERATION_LIMITS` : 30 min de vidéo, 45 min d'audio, 80 photos, 60 pages, en autant de
+  fichiers qu'il faut ; la limite la plus proche se dit dès 80 %, `limitUse`).
+- **GIF d'un extrait** (toggle `clipGif`) : dans l'éditeur, à la demande (`files.gif`, `gifs/generate`,
+  480p, 15 s au plus), téléchargé ou partagé par la feuille du téléphone (`saveFile`). Pas de « GIF » à la
+  génération. **À l'étape** (toggle `gifInStep`, `GifDialog`) : « Vidéo · Image · GIF » sur le média ; on
+  choisit le début et la fin dans la vidéo (`clampGifRange` : le bout bougé reste, l'autre suit), puis « À
+  la place », « En plus » ou « Seulement le partager ». Le GIF est une image qui sait d'où il vient (`gif` :
+  la vidéo, l'extrait, l'image d'attente) : « Vidéo » y revient sans rien perdre (légende, verdict, marques).
+  L'IA ne lit jamais un GIF (`isAiImage` : ni marques, ni image refaite à la traduction, ni illustration).
+- **Enregistrer l'écran** (toggle `screenCapture`, feature `screen_capture`, dès Solo) : à l'ordinateur
+  seulement (`canRecordScreen`), sans extension, par le partage d'écran du navigateur ; la voix en option
+  (`clip_pref_screen_voice`), dix minutes au plus (`src/lib/media/screenRecorder.ts`). L'app regarde chaque
+  image de l'écran en petit (`MediaStreamTrackProcessor` quand il existe : l'onglet de CLIP est en
+  arrière-plan) et garde une image nette juste avant chaque vrai changement d'un écran calme, mesuré contre
+  l'écran de référence (`ShotPicker`, `src/lib/media/screenShots.ts`) : un clic rapide n'échappe pas, sans
+  payer plus d'images par seconde à l'IA. Un seul envoi qui reprend où il s'était arrêté (`ingestScreen`) :
+  la vidéo (`Source.screen`) puis ses images (`Source.shot` : la vidéo et l'instant). L'IA reçoit les deux
+  et des consignes d'écran (`SCREEN_RULES`) : une étape par action, l'image nette en média avec
+  `focusLabel` (entourée ensuite), jamais un mot de passe recopié. L'image d'une étape sait son instant
+  (`frame`) : « Vidéo » et « GIF » en repartent. Aussi dans l'assistant (bouton à côté du trombone).
+  Consignes et fichiers passent tels quels au serveur : rien dans n8n.
+- **L'IA qui apprend des corrections** (toggle `learnFromEdits`, `src/lib/learning/`) : la génération garde
+  le texte de sa version (`generation.original`) ; à la première publication, ce que la personne a corrigé
+  part dans `clip_edit` (`editSignals` : longueurs, points clés, mises en garde, étapes, mots remplacés,
+  quelques exemples) et la version de l'IA s'efface (`learnedAt`). Quand une habitude revient dans au
+  moins 3 instructions et 60 % des dernières (`proposeRules`, sans IA), la carte `LearningCard` le dit
+  après la publication : « Oui, pour moi », « Pour toute l'usine » (droit `settings` et feature
+  `ai_learning`, dès Équipe), « Non merci » (ne revient pas). Chacun a ses préférences (`clip_writing`,
+  versionnées, dix versions), que l'IA suit après le standard de l'usine (`standardBlock`, aussi pour
+  l'assistant) ; un 👎 commenté va à l'usine si c'est l'administrateur, à la personne sinon. « Prendre
+  comme modèle » (menu « … ») : l'IA en tire des règles de style (`learn_rules`) et l'instruction devient
+  un exemple que la génération imite (`examples`, trois pour l'usine, deux par personne). Réglages ›
+  Standard : « Mes préférences » et, pour l'usine, ce que les corrections de l'équipe proposent et
+  « Analyser avec l'IA ». Tout passe tel quel dans la requête : rien dans n8n.
+- **Gabarits du PDF** (toggle `printTemplates`, `src/lib/pdf/template.ts`, « Mise en page » à côté de
+  l'aperçu d'impression) : pour tous, trois dispositions (étapes en grand, tableau, une page) en portrait ou
+  en paysage ; avec `brand_kit`, le cartouche, le pied de page de chaque page (numéro, version, page), la
+  couleur et « D'après un exemple » (l'IA lit une instruction de l'usine, usage `print_template`). L'usine
+  garde la sienne (`OrgSettings.print`) ; « Une page » se réduit pour tenir (`nextScale`, mesuré dans
+  l'aperçu).
 - **Parler pendant les photos** (toggle `photoVoice`) : le micro s'ouvre avec la caméra photo (une pastille
   le dit et le ferme ; le dernier geste se retient sur l'appareil). Un seul enregistrement par série,
   jamais coupé ; chaque photo garde son instant (`Source.voice`, `src/lib/media/photoVoice.ts` ; dans l'app,
@@ -120,7 +237,13 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   rejoint la section où on la lâche, `placeStep`), retenues sur l'appareil
   (`clip_pref_editor_view` ; sans choix, la fiche au bureau, le poste au téléphone). Une fonction
   nouvelle de l'éditeur existe dans les deux. L'Aperçu (l'œil) est le lecteur du poste, pas une vue.
-  En-tête commun : `src/components/editor/EditorBar.tsx`. Au téléphone, glisser change d'étape comme au
+  En-tête commun : `src/components/editor/EditorBar.tsx`. L'assistant flotte par-dessus l'éditeur, dans
+  le coin, sans le tasser, et se réduit en pastille ; au bureau large (≥ 1280 px), la Fiche va sur deux
+  colonnes (ce qu'on écrit à gauche, ce qu'on montre et relève à droite).
+- **Lire ou modifier** (`src/lib/ui/libraryMode.ts`) : dans la bibliothèque, qui rédige choisit ce que
+  fait le toucher d'une carte (« Modifier » ou « Lire », retenu sur l'appareil, `clip_pref_library_mode`) ;
+  « Lire » ouvre la version publiée (`/instructions/[id]/lire`), avec « Modifier » dans son en-tête.
+  Qui ne rédige pas lit toujours la version publiée : `/instructions/[id]` l'y envoie. Au téléphone, glisser change d'étape comme au
   poste (toggle `editorSwipe`, `src/lib/ui/swipe.ts`) : sur un champ qu'on n'écrit pas aussi, jamais
   clavier ouvert, depuis une vidéo, une rangée qui défile ou par un appui long.
 - **La lecture au téléphone** (toggle `phoneReader`) : le média à ses vraies proportions, qui cède au
@@ -160,8 +283,31 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   sous la clé `instructions`). Les postes se regroupent en secteurs (`Station.area`) ; le numéro de
   document (`number`, « IT-0042 ») se donne à la première publication. Au poste, la liste lit la
   fiche des versions publiées (`Published.card`) ; l'instruction complète se lit à l'ouverture.
-- **Académie** (module ; toggle `academy`, feature `academy`), dans Équipe › Compétences : le
-  parcours d'un poste = ses instructions publiées ; un superviseur (droit `approve`) valide sur le
+- **Mises à jour au poste** (toggle `operatorUpdates`, `src/lib/model/updates.ts`) : la version
+  publique garde ce qui a changé (`Published.changes`) et la version d'avant (`Published.previous`) ;
+  au poste, « Mise à jour le … », les étapes nouvelles ou modifiées marquées, la version précédente en
+  lecture, et « Mis à jour » sur la carte, jusqu'à ce que l'appareil ouvre la nouvelle version.
+- **Nomenclature** (toggle `nomenclature`, Réglages › Classement ; « La nomenclature de l'usine »,
+  `docs/architecture.md`) : chaque usine se donne ses familles d'étiquettes, une liste de valeurs ou
+  une valeur libre (département, machine, produit, BT…). Le classement (`Instruction.labels`) se range
+  en texte par famille, hors du contenu (pas de version), et la version publiée suit aussitôt
+  (`saveClassification`). L'IA le propose à la génération (`nomenclatureBlock`, champ `labels` du
+  schéma : rien à changer dans n8n) et à la demande (`classify`), sans rien inventer dans une liste
+  (`labelsFromAi`). Un poste prend aussi ses instructions par règle (`Station.rule` : OU dans une
+  famille, ET entre les familles) ; elle s'écrit dans `ruleStationIds` et dans `stationIds` de la
+  version publiée (`applyStationRule`), et toute requête « instructions d'un poste » passe par
+  `atStations`. **Le nom des instructions** (toggle `nameTemplate`) : jusqu'à trois familles devant le titre
+  (`Nomenclature.naming`, « Découpe – Presse P-12 – Changer le filtre », `namePrefix`, `displayName`) ; le
+  titre reste l'action, le nom se compose à l'affichage (`useInstructionName`, bibliothèque, éditeur,
+  lecture, PDF) ; la version publiée en garde le début (`Published.namePrefix`, à la publication, au
+  classement et quand le modèle change, `renamePublished`), que le poste et les liens lisent
+  (`usePublishedPrefix` ; le lecteur le pose devant le titre dans chaque langue).
+- **Académie** (module ; toggle `academy`, feature `academy`), dans Équipe › Compétences, en quatre
+  vues : « À faire » (d'entrée : qui former, le plus pressé d'abord, `todoList`), Qualifications,
+  Parcours, Couverture ; « Former quelqu'un » (un poste, des personnes, une date) écrit `clip_assignment`
+  (`src/lib/model/assignments.ts` ; les postes habituels comptent aussi), une formation en retard paraît
+  dans « À voir », et un guide en trois gestes dit où l'usine en est. Le parcours d'un poste = ses
+  instructions publiées (y compris par règle) ; un superviseur (droit `approve`) valide sur le
   terrain, « qualifié » ou « peut former » (`clip_qualification`, un journal : la plus récente fait foi,
   et c'est le registre) ; la qualification se revalide tous les 6, 12 ou 24 mois
   (`OrgSettings.academy`), rappelée dans « À voir » un mois avant ; couverture par quart, registre
@@ -171,7 +317,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (cadenassage, démarrage, EPI) dans une instruction marquée `block`, qui ne va à aucun poste
   (`src/lib/model/blocks.ts`). Dans une instruction, ses étapes sont des copies verrouillées
   (`Step.fromBlock`, identifiant `copyId`) ; publier le bloc republie les instructions à jour et
-  met à jour le brouillon des autres (`propagateBlock`).
+  met à jour le brouillon des autres (`propagateBlock`). « Insérer un bloc commun » se trouve à côté de
+  « Ajouter une étape » (liste de la Fiche, bande de « Comme au poste »), pas seulement dans le menu « … ».
 - **Formation** (toggle `training`) : 3 à 5 questions par instruction, préparées par l'IA (`quiz`,
   `src/lib/ai/quiz.ts`) et retouchées par l'auteur ; elles vivent dans le brouillon et se traduisent
   avec lui. Au poste, une personne nommée les passe à la fin ; réussie à 80 %, la trace s'écrit dans
@@ -181,7 +328,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - **Rapports** (toggle `reports`, page `/rapports`, à la place de Statistiques dans le menu) : un
   répertoire à la K2 Cadence, des modèles prêts qui répondent chacun à une question (revue de la
   semaine, temps par instruction, qui a fait quoi, par poste, écarts, avant / après une révision,
-  formation, retours, bibliothèque ; l'adoption reste `/statistiques`), sur 7, 30 ou 90 jours de
+  formation, retours, bibliothèque, crédits d'IA ; l'adoption reste `/statistiques`), sur 7, 30 ou 90 jours de
   calendrier comparés à la même fenêtre d'avant, par lieu et par quart. Le code calcule chaque chiffre
   (`src/lib/reports/facts.ts`, `catalog.ts`) : un taux en somme sur somme, un temps en médiane et
   « 9 fois sur 10 », une durée hors de 10 s à 12 h exclue des temps, « peu de données » sous 5
@@ -275,12 +422,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   de `billing-publish` avant d'être publié ; le verrou `billing.manifest.lock.json` dira ce qui est
   publié (rien ne l'est encore). Le slug `clip-v3` doit d'abord être enregistré à la Gateway comme
   application.
-- La grille (manifeste, décision du 2026-11-16) : en libre-service (site par Stripe, magasins par
-  RevenueCat), seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : Gratuit (1 rédacteur,
-  3 publiées, 1 poste, 500 crédits) · Solo 49 $/mois (1, 15, 3, 2 500) · Équipe 199 $/mois, mis en avant
-  (3 rédacteurs, 50 publiées, 10 postes, 10 000). Annuel = 10 mois. Toute l'usine passe par l'équipe de
-  CLIP : **Usine** (15 rédacteurs, illimitées, 100 postes, 40 000) n'a aucun prix, ne s'achète nulle part
-  et s'attribue à l'organisation après la vente ; il remplace l'ancienne carte Entreprise du site.
+- La grille (manifeste, décision du 2026-11-16, volume du 2026-11-17) : en libre-service (site par Stripe,
+  magasins par RevenueCat), seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : Gratuit
+  (1 rédacteur, 3 publiées, 1 poste, 500 crédits) · Solo 49 $/mois (1, 15, 3, 2 500, l'écran) · Équipe
+  199 $/mois, mis en avant (5 rédacteurs, 75 publiées, 15 postes, 12 500, l'IA qui apprend de l'équipe).
+  **Le volume** : Équipe donne 5 fois Solo pour 4 fois le prix, chaque poste, rédacteur, instruction et
+  crédit y revient ~20 % moins cher (un test le tient) ; Usine descend encore, au contrat. **La durée** :
+  annuel = 10 mois ; 3 et 5 ans (jusqu'à 25 %), au contrat d'Usine (`multiYear`, sur le web seulement).
+  Toute l'usine passe par l'équipe de CLIP : **Usine** (15 rédacteurs, illimitées, 100 postes, 40 000) n'a
+  aucun prix, ne s'achète nulle part et s'attribue à l'organisation après la vente ; il remplace l'ancienne
+  carte Entreprise du site. **Recharges de crédits** : pas encore (la plateforme refuse un achat à une
+  usine déjà abonnée, `checkout` en 409, et n'a pas de route de recharge) ; d'ici là, le plan qui en donne
+  plus, ou l'équipe de CLIP (don de crédits par la console).
 - **Sur devis** (`byQuote`, `src/lib/billing/catalog.ts`) : un plan ou un module sans prix, autre que le
   gratuit (`FREE_PLAN`, le `default_plan_code`). La page Abonnement, la fenêtre des refus, la jauge et le
   dossier pour la direction le nomment « Sur devis » ; sur le web, « Parler à l'équipe CLIP » mène à
@@ -296,7 +449,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Ce qui se facture : `ai_credits`, une banque de crédits d'IA par mois · `published_instructions`,
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,
-  `full_export`, `shared_blocks`, oui ou non selon le plan. Les opérateurs et les lecteurs ne se comptent jamais.
+  `full_export`, `shared_blocks`, `screen_capture`, `ai_learning`, oui ou non selon le plan. Les opérateurs et
+  les lecteurs ne se comptent jamais.
 - **L'IA au coût réel** : aucun prix fixe, rien ne se prédit. Pas de section `ai_operations` au
   manifeste, aucun prix sur un bouton : chaque réponse de l'IA est débitée, une fois terminée, de ce
   qu'elle a vraiment coûté (`aiApi.ask`, `src/lib/gateway/ai.ts`, l'askAi du skill `billing`).
@@ -346,7 +500,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   n'y est pas, ou si l'IA retrouve un prix fixe (`ai_operations`).
 - Le branchement, app web : le drapeau public `NEXT_PUBLIC_BILLING_V2` (éteint par défaut) ; la page
   `/reglages/abonnement` (introuvable sans le drapeau ni l'aperçu ; ouverte par « Abonnement et crédits » du
-  menu et par la pastille de crédits), avec le paiement et le portail Stripe ; la fenêtre des
+  menu et par la pastille de crédits), avec le paiement et le portail Stripe, et sous les crédits « à ce
+  rythme, épuisés vers le … » avec le plan qui en donne plus (`creditsForecast`, `src/lib/billing/forecast.ts`) ;
+  le rapport « Crédits d'IA : où ils vont » (`/rapports/ia`, `clip_event` `type: 'ai'`) ; la fenêtre des
   refus `Paywall`, qui ne conseille jamais le plan actuel, seulement le moins cher des plans qui
   donnent vraiment plus (`src/lib/billing/advice.ts`). Pas de route serveur : le navigateur appelle
   la passerelle avec le jeton de l'utilisateur.
@@ -374,7 +530,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Le conseiller d'achat (toggle `salesAdvisor`, `src/lib/billing/advisor.ts`, carte `OfferCard` de
   l'accueil seulement : jamais au poste ni pendant une tâche) : une offre à la fois, tirée de l'usage
   (une limite pleine ou à 80 % dès deux unités, une fonction fermée essayée deux fois en 30 jours, un
-  module que l'usage appelle : 10 formations ou 30 relevés en 30 jours). Une nouvelle au plus par
+  module que l'usage appelle : 10 formations ou 30 relevés en 30 jours ; des crédits qui, à ce rythme,
+  finiront au moins 3 jours avant le renouvellement, `creditsForecast`, une fois par période). Une nouvelle au plus par
   semaine ; « Plus tard » la range 30 jours, et deux semaines sans réponse aussi. La mémoire est
   par personne et par appareil (`advisorStore.ts`) ; chaque offre montrée, ouverte, rangée ou
   demandée se note dans `clip_event` (`type: 'offer'`). Qui ne peut pas acheter « Demande à

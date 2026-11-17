@@ -30,7 +30,7 @@ const content: InstructionContent = {
 }
 
 /** L'éditeur réduit à ce que la fiche reçoit : l'étape choisie, et ce qu'on change. */
-function Harness({ onChange, tool }: { onChange: (s: Step) => void; tool: () => void }) {
+function Harness({ onChange, tool, onInsertBlock }: { onChange: (s: Step) => void; tool: () => void; onInsertBlock?: () => void }) {
   const [selected, setSelected] = useState('s1')
   const index = content.steps.findIndex((s) => s.id === selected)
   return (
@@ -50,6 +50,7 @@ function Harness({ onChange, tool }: { onChange: (s: Step) => void; tool: () => 
           onSelect={setSelected}
           onInsertAfter={vi.fn()}
           onAddEnd={vi.fn()}
+          onInsertBlock={onInsertBlock}
           onSourceAdded={vi.fn()}
           onMove={vi.fn()}
           onDuplicate={vi.fn()}
@@ -135,5 +136,17 @@ describe('la vue « Fiche » au téléphone', () => {
     expect(tool).toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: /Toutes les étapes/ }))
     expect(screen.getByText('Retirer le garde')).toBeTruthy()
+  })
+})
+
+describe('les blocs communs, là où on ajoute une étape', () => {
+  it('« Insérer un bloc commun » suit « Ajouter une étape » dans la liste ; sans les blocs, rien', () => {
+    const onInsertBlock = vi.fn()
+    render(<Harness onChange={vi.fn()} tool={vi.fn()} onInsertBlock={onInsertBlock} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Insérer un bloc commun' }))
+    expect(onInsertBlock).toHaveBeenCalled()
+    cleanup()
+    render(<Harness onChange={vi.fn()} tool={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: 'Insérer un bloc commun' })).toBeNull()
   })
 })

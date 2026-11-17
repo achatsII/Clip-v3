@@ -207,7 +207,6 @@ export function EditorHeader({
   assist,
   showAssist,
   onAssistant,
-  agentOpen,
   progress,
 }: {
   wide: boolean
@@ -219,6 +218,7 @@ export function EditorHeader({
   assist: StepAssistState | null
   showAssist: boolean
   onAssistant: () => void
+  /** L'assistant ouvert : il flotte par-dessus l'éditeur, l'en-tête ne change pas (gardé pour les appels). */
   agentOpen?: boolean
   /** La position dans l'instruction (0 à 1), en barre sous l'en-tête. */
   progress?: number
@@ -250,13 +250,13 @@ export function EditorHeader({
         </div>
         {top.views && (
           <>
-            <ViewSwitch views={top.views} compact={agentOpen || !roomy} />
+            <ViewSwitch views={top.views} compact={!roomy} />
             <span className="mx-1 h-7 w-px shrink-0 bg-slate-900/10 dark:bg-white/10" aria-hidden />
           </>
         )}
         {badge}
         {!readOnly && history && <UndoButtons history={history} className="shrink-0" />}
-        {!readOnly && showAssist && <AssistMenu assist={assist} onAssistant={onAssistant} compact={agentOpen} />}
+        {!readOnly && showAssist && <AssistMenu assist={assist} onAssistant={onAssistant} />}
         <InstructionMenu menu={top.menu} />
         {top.primary(false)}
       </div>

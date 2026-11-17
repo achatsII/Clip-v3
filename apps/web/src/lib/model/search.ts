@@ -8,6 +8,7 @@
  */
 import type { DataApi, Doc } from '../gateway/data'
 import { mapPool } from '../util/pool'
+import { labelsFilter, labelWords, type Labels } from './nomenclature'
 import { RENEWAL_SOON_DAYS } from './renewal'
 import { coverOf, readOrg, T } from './repo'
 import type { CategoryKey, Instruction, InstructionContent, OrgSettings, Published, PublishedCard } from './types'
@@ -42,11 +43,12 @@ export function searchKey(parts: Array<string | null | undefined>): string {
   return out.join(' ')
 }
 
-/** L'index d'une instruction : son numéro et son titre d'abord, puis ce que disent ses étapes. */
-export function instructionSearchText(i: { number?: string | null; title?: string; tags?: string[]; intent?: string }, c: InstructionContent | null | undefined): string {
+/** L'index d'une instruction : son numéro et son titre d'abord, son classement, puis ce que disent ses étapes. */
+export function instructionSearchText(i: { number?: string | null; title?: string; tags?: string[]; intent?: string; labels?: Labels | null }, c: InstructionContent | null | undefined): string {
   return searchKey([
     i.number,
     c?.title ?? i.title,
+    ...labelWords(i.labels),
     ...(c?.tags ?? i.tags ?? []),
     c?.equipment,
     c?.summary,
@@ -103,6 +105,8 @@ export interface LibraryQuery {
   mine?: { userId: string; categories: string[]; stationIds: string[] } | null
   /** Les blocs communs seulement ; sinon, ils n'y sont pas (ils ne s'affichent à aucun poste). */
   blocks?: boolean
+  /** Le classement de l'usine : dans une famille, l'une des valeurs ; entre les familles, toutes. */
+  labels?: Labels | null
 }
 
 /** Un poste tel que la recherche le connaît : un mot qui le nomme trouve ses instructions. */
@@ -125,7 +129,7 @@ export function libraryFilter(query: LibraryQuery, stations: StationRef[], now =
     const re = escapeRegex(tok)
     const or: Record<string, unknown>[] = [{ 'json_data.searchText': { $regex: re } }, { 'json_data.title': { $regex: re, $options: 'i' } }]
     const ids = stations.filter((s) => plain(`${s.name} ${s.code ?? ''} ${s.area ?? ''}`).includes(tok)).map((s) => s.id)
-    if (ids.length) or.push({ 'json_data.stationIds': { $in: ids.slice(0, 300) } })
+    if (ids.length) or.push(...atStations(ids.slice(0, 300)))
     and.push({ $or: or })
   }
   // Sans recherche, un brouillon vide de plus d'une heure (rien n'a été capturé) ne s'affiche pas.
@@ -136,13 +140,19 @@ export function libraryFilter(query: LibraryQuery, stations: StationRef[], now =
   if (query.status === 'review') and.push({ 'json_data.status': { $eq: 'review' } })
   if (query.status === 'renew') and.push({ 'json_data.publishedVersion': { $gt: 0 } }, { 'json_data.renewal.dueAt': { $lte: new Date(now + RENEWAL_SOON_DAYS * DAY).toISOString() } })
   if (query.category) and.push({ 'json_data.category': { $eq: query.category } })
-  if (query.stationIds?.length) and.push({ 'json_data.stationIds': { $in: query.stationIds.slice(0, 500) } })
+  if (query.stationIds?.length) and.push({ $or: atStations(query.stationIds.slice(0, 500)) })
+  and.push(...labelsFilter(query.labels))
   const m = query.mine
   if (m && (m.categories.length || m.stationIds.length)) {
-    and.push({ $or: [...(m.categories.length ? [{ 'json_data.category': { $in: m.categories } }] : []), ...(m.stationIds.length ? [{ 'json_data.stationIds': { $in: m.stationIds } }] : []), { 'json_data.authorId': { $eq: m.userId } }] })
+    and.push({ $or: [...(m.categories.length ? [{ 'json_data.category': { $in: m.categories } }] : []), ...(m.stationIds.length ? atStations(m.stationIds) : []), { 'json_data.authorId': { $eq: m.userId } }] })
   }
   if (cursor) and.push({ 'json_data.updatedAt': { $lt: cursor } })
   return { $and: and }
+}
+
+/** Une instruction est à ces postes : choisis à la main, ou par la règle du poste (nomenclature). */
+export function atStations(ids: string[]): Record<string, unknown>[] {
+  return [{ 'json_data.stationIds': { $in: ids } }, { 'json_data.ruleStationIds': { $in: ids } }]
 }
 
 /** Ce qu'une liste lit d'une instruction : ni le brouillon, ni les médias, ni l'index. */
@@ -189,28 +199,28 @@ export function instructionsWhere(data: DataApi, filter: Record<string, unknown>
 export const inboxInstructions = (data: DataApi, userId: string) =>
   instructionsWhere(data, { $or: [{ 'json_data.status': { $eq: 'review' } }, { $and: [{ 'json_data.authorId': { $eq: userId } }, { 'json_data.review.changesRequested.at': { $exists: true } }] }] }, 200)
 
-/** Les postes qui ont au moins une instruction publiée. */
+/** Les postes qui ont au moins une instruction publiée (choisis à la main ou par leur règle). */
 export async function coveredStations(data: DataApi): Promise<Set<string>> {
-  const ids = await data.distinct(T.instruction, 'json_data.stationIds', publishedOnly)
-  return new Set(ids.filter((x): x is string => typeof x === 'string'))
+  const [manual, byRule] = await Promise.all([data.distinct(T.instruction, 'json_data.stationIds', publishedOnly), data.distinct(T.instruction, 'json_data.ruleStationIds', publishedOnly).catch(() => [])])
+  return new Set([...manual, ...byRule].filter((x): x is string => typeof x === 'string'))
 }
 
 /** Le nombre d'instructions publiées par poste (la page Postes). */
 export async function publishedPerStation(data: DataApi): Promise<Map<string, number>> {
-  const docs = await data.filter<Pick<Instruction, 'stationIds'>>(T.instruction, { filter: publishedOnly, projection: { 'json_data.stationIds': 1 }, limit: 10_000 })
+  const docs = await data.filter<Pick<Instruction, 'stationIds' | 'ruleStationIds'>>(T.instruction, { filter: publishedOnly, projection: { 'json_data.stationIds': 1, 'json_data.ruleStationIds': 1 }, limit: 10_000 })
   const m = new Map<string, number>()
-  for (const d of docs) for (const s of d.json_data.stationIds ?? []) m.set(s, (m.get(s) ?? 0) + 1)
+  for (const d of docs) for (const s of new Set([...(d.json_data.stationIds ?? []), ...(d.json_data.ruleStationIds ?? [])])) m.set(s, (m.get(s) ?? 0) + 1)
   return m
 }
 
 /** Les instructions d'un poste. */
-export const instructionsAtStation = (data: DataApi, stationId: string) => instructionsWhere(data, { 'json_data.stationIds': { $eq: stationId } }, 1000, { 'json_data.title': 1 })
+export const instructionsAtStation = (data: DataApi, stationId: string) => instructionsWhere(data, { $or: atStations([stationId]) }, 1000, { 'json_data.title': 1 })
 
 /** Les instructions publiées qui ont des questions de formation (la matrice). */
 export function trainingCatalog(data: DataApi): Promise<Doc<Instruction>[]> {
   return data.filter<Instruction>(T.instruction, {
     filter: { $and: [live, { 'json_data.publishedVersion': { $gt: 0 } }, { 'json_data.publishedQuiz': { $gt: 0 } }] },
-    projection: { 'json_data.title': 1, 'json_data.stationIds': 1, 'json_data.status': 1, 'json_data.publishedVersion': 1, 'json_data.publishedQuiz': 1, 'json_data.trainingVersion': 1 },
+    projection: { 'json_data.title': 1, 'json_data.stationIds': 1, 'json_data.ruleStationIds': 1, 'json_data.status': 1, 'json_data.publishedVersion': 1, 'json_data.publishedQuiz': 1, 'json_data.trainingVersion': 1 },
     limit: 10_000,
   })
 }
@@ -251,6 +261,8 @@ export const CARD_FIELDS = {
   'json_data.stationIds': 1,
   'json_data.branding': 1,
   'json_data.publishedAt': 1,
+  // « Mis à jour » sur la carte : la version a-t-elle des changements pour l'opérateur ?
+  'json_data.changes.from': 1,
   // Une version publiée avant les fiches : de quoi l'afficher quand même.
   'json_data.content.title': 1,
   'json_data.content.category': 1,

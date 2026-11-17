@@ -8,6 +8,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { LockBadge } from '@/components/billing/Billing'
 import { InstructionRow } from '@/components/InstructionCard'
+import { StationRuleCard } from '@/components/StationRule'
 import { QrCode as Qr } from '@/components/QrCode'
 import { useSession } from '@/components/providers/Session'
 import { Button } from '@/components/ui/Button'
@@ -39,6 +40,7 @@ export default function StationPage() {
   const stations = useStations()
   const instructions = useStationInstructions(id)
   const voiceToggle = useToggle('voiceAssistant')
+  const nomenclatureOn = useToggle('nomenclature')
   const operatorsOn = useToggle('operators')
   const voice = useEntitlement('voice_assistant')
   const gate = useGate()
@@ -244,6 +246,12 @@ export default function StationPage() {
           </div>
         </Panel>
       </div>
+
+      {nomenclatureOn && (
+        <div className="mb-8">
+          <StationRuleCard station={station} canWrite={canWrite} />
+        </div>
+      )}
 
       <section>
         <h2 className="mb-3 text-lg font-black tracking-tight">{w.instructions(linked.length)}</h2>

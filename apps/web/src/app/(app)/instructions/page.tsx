@@ -1,13 +1,16 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { Blocks, BookOpen, LayoutGrid, List, Loader2, Plus, Search, SearchX, Upload, X } from 'lucide-react'
+import { Blocks, BookOpen, LayoutGrid, List, Loader2, PenLine, Plus, Search, SearchX, Upload, X } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CreditPill, LowBalanceBanner } from '@/components/billing/Billing'
 import { UsageMeter } from '@/components/billing/Usage'
 import { InstructionRow, InstructionTile } from '@/components/InstructionCard'
 import { PlacePicker, placeStations, type Place } from '@/components/PlacePicker'
+import { LabelFilters } from '@/components/LabelFilters'
+import { allStationIds, hasLabels, readNomenclature, type Labels } from '@/lib/model/nomenclature'
+import { instructionHref, setLibraryMode, useLibraryMode } from '@/lib/ui/libraryMode'
 import { useSession } from '@/components/providers/Session'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { Segmented } from '@/components/ui/Field'
@@ -55,7 +58,7 @@ export default function InstructionsPage() {
   const router = useRouter()
   const params = useSearchParams()
   const qc = useQueryClient()
-  const { me, can, profile, data, displayName } = useSession()
+  const { me, can, profile, data, displayName, org } = useSession()
   const t = useMessages()
   const tl = t.instructions.list
   const stations = useStations()
@@ -72,6 +75,10 @@ export default function InstructionsPage() {
   const [status, setStatus] = useState<LibraryStatus>(params.get('statut') === 'review' ? 'review' : params.get('statut') === 'revoir' ? 'renew' : 'all')
   const [place, setPlace] = useState<Place>(() => (params.get('poste') ? { kind: 'station', id: params.get('poste')! } : params.get('secteur') ? { kind: 'sector', name: params.get('secteur')! } : null))
   const renewalOn = useToggle('renewal')
+  // Le classement de l'usine (toggle `nomenclature`) : une pastille par famille en liste.
+  const nomenclatureOn = useToggle('nomenclature')
+  const nomenclature = useMemo(() => readNomenclature(org.json_data.nomenclature), [org.json_data.nomenclature])
+  const [labels, setLabels] = useState<Labels>({})
   // Les blocs communs : une vue à part (ils ne vont à aucun poste).
   const blocksOn = useToggle('sharedBlocks')
   const [blocks, setBlocks] = useState(params.get('vue') === 'blocs')
@@ -82,6 +89,10 @@ export default function InstructionsPage() {
     router.replace(on ? '/instructions?vue=blocs' : '/instructions', { scroll: false })
   }
   const [view, setView] = useState<'grid' | 'list'>('grid')
+  // Lire ou modifier : ce que fait le toucher d'une carte (qui ne rédige pas lit toujours).
+  const canWrite = can('instructions', 'write')
+  const mode = useLibraryMode(canWrite)
+  const reading = mode === 'read'
 
   useEffect(() => setView(pref('library_view', 'grid')), [])
   useEffect(() => {
@@ -108,20 +119,21 @@ export default function InstructionsPage() {
   // La vue des blocs communs : ils ne vont à aucun poste, « Pour moi » et « Où ? » n'y servent pas.
   const blocksView = blocksOn && blocks
   const search: LibraryQuery = useMemo(
-    () => ({ q, status, category, stationIds: blocksView ? null : stationIds, blocks: blocksView, mine: scope === 'mine' && hasFocus && !blocksView ? { userId: profile.userId, categories: me.categories, stationIds: me.stationIds } : null }),
-    [q, status, category, stationIds, blocksView, scope, hasFocus, profile.userId, me.categories, me.stationIds],
+    // En lecture, seulement ce qui est publié : c'est ce qu'on lit.
+    () => ({ q, status: reading ? 'published' : status, category, stationIds: blocksView ? null : stationIds, blocks: blocksView && !reading, labels: nomenclatureOn && !blocksView ? labels : null, mine: scope === 'mine' && hasFocus && !blocksView ? { userId: profile.userId, categories: me.categories, stationIds: me.stationIds } : null }),
+    [q, status, reading, category, stationIds, blocksView, labels, nomenclatureOn, scope, hasFocus, profile.userId, me.categories, me.stationIds],
   )
   const ready = !stations.isLoading
   const results = useInstructionSearch(search, refs, ready)
   const shown = useInstructionCount(search, refs, ready)
   const total = useInstructionCount(blocksView ? { blocks: true } : {}, refs, ready)
   const list = useMemo(() => results.data?.pages.flatMap((p) => p.docs) ?? [], [results.data])
-  const filtered = !!(q || category || status !== 'all' || (!blocksView && (stationIds || (scope === 'mine' && hasFocus))))
+  const filtered = !!(q || category || status !== 'all' || (!blocksView && (stationIds || (scope === 'mine' && hasFocus) || (nomenclatureOn && hasLabels(labels)))))
 
   // Un code scanné qui correspond à une seule instruction l'ouvre directement.
   useEffect(() => {
-    if (params.get('q') && q === params.get('q')?.trim() && results.data && list.length === 1 && !results.hasNextPage) router.replace(`/instructions/${list[0]._id}`)
-  }, [params, q, list, results.data, results.hasNextPage, router])
+    if (params.get('q') && q === params.get('q')?.trim() && results.data && list.length === 1 && !results.hasNextPage) router.replace(instructionHref(list[0]._id, mode, !!list[0].json_data.publishedVersion))
+  }, [params, q, list, results.data, results.hasNextPage, router, mode])
 
   // La page suivante se charge quand on arrive au bas de la liste.
   const more = useRef<HTMLDivElement>(null)
@@ -142,6 +154,7 @@ export default function InstructionsPage() {
     setStatus('all')
     setScope('all')
     setPlace(null)
+    setLabels({})
   }
   const blocksChip = (
     <button type="button" aria-pressed={blocks} onClick={() => showBlocks(!blocks)} className={cn('btn-press flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-xs font-black', blocks ? 'bg-violet-600 text-white' : 'bg-violet-50 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200')}>
@@ -219,7 +232,21 @@ export default function InstructionsPage() {
           />
         )}
         {/* « Où ? » d'abord : au téléphone, il se voit sans faire défiler. */}
+        {/* Lire ou modifier : ce que fait le toucher d'une carte, au choix de qui rédige. */}
+        {canWrite && !blocksView && (
+          <Segmented
+            size="sm"
+            value={mode}
+            onChange={setLibraryMode}
+            options={[
+              { value: 'edit', label: tl.mode.edit, icon: <PenLine className="h-4 w-4" /> },
+              { value: 'read', label: tl.mode.read, icon: <BookOpen className="h-4 w-4" /> },
+            ]}
+          />
+        )}
         {!blocksView && <PlacePicker value={place} onChange={setPlace} stations={stations.data ?? []} />}
+        {nomenclatureOn && !blocksView && <LabelFilters nomenclature={nomenclature} value={labels} onChange={setLabels} />}
+        {!reading && (
         <Segmented
           size="sm"
           value={status}
@@ -232,7 +259,8 @@ export default function InstructionsPage() {
             ...(renewalOn ? [{ value: 'renew' as const, label: tl.filters.renew }] : []),
           ]}
         />
-        {blocksOn && !blocksView && blocksChip}
+        )}
+        {blocksOn && !blocksView && !reading && blocksChip}
         {CATEGORY_KEYS.filter((k) => categoriesInUse.data?.has(k)).map((k) => (
           <button key={k} type="button" onClick={() => setCategory(category === k ? null : k)} className={cn('btn-press h-11 shrink-0 rounded-2xl px-3 text-xs font-black', category === k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : CATEGORIES[k].soft)}>
             {CATEGORIES[k].label}
@@ -282,13 +310,13 @@ export default function InstructionsPage() {
           {view === 'grid' ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((d) => (
-                <InstructionTile key={d._id} doc={d} stationNames={d.json_data.stationIds.map((s) => stationName.get(s)).filter(Boolean) as string[]} />
+                <InstructionTile key={d._id} doc={d} mode={mode} stationNames={allStationIds(d.json_data.stationIds, d.json_data.ruleStationIds).map((s) => stationName.get(s)).filter(Boolean) as string[]} />
               ))}
             </div>
           ) : (
             <div className="space-y-2">
               {list.map((d) => (
-                <InstructionRow key={d._id} doc={d} stationNames={d.json_data.stationIds.map((s) => stationName.get(s)).filter(Boolean) as string[]} />
+                <InstructionRow key={d._id} doc={d} mode={mode} stationNames={allStationIds(d.json_data.stationIds, d.json_data.ruleStationIds).map((s) => stationName.get(s)).filter(Boolean) as string[]} />
               ))}
             </div>
           )}

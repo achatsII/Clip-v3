@@ -12,6 +12,8 @@ import { CheckDialog } from './CheckDialog'
 import { iconButton } from './EditorBar'
 import { FormCard } from './FormParts'
 import { ASSIST_ACTIONS, type useStepAssist } from './StepAssist'
+import { OperatorFeedbackNote } from './OperatorFeedback'
+import { StepScope } from './StepScope'
 import { StepMediaEditor } from './StepMediaEditor'
 import { ChecksBlock, keepCheck, SectionField, type StepActions } from './StepParts'
 
@@ -34,9 +36,13 @@ export interface StepFormProps extends StepActions {
   agentWorking?: boolean
   remoteNote?: string | null
   feedbackNote?: string | null
+  /** La photo jointe au retour de l'opérateur, et le geste qui la met à l'étape (toggle `feedbackMedia`). */
+  feedbackPhoto?: string | null
+  onUseFeedbackPhoto?: () => Promise<void>
   namingSection: boolean
   onChange: (s: Step) => void
   onSourceAdded: (s: Source) => void
+  onShowSource?: (sourceId: string, at?: number) => void
   onAssistant: () => void
 }
 
@@ -99,10 +105,17 @@ export function StepForm(p: StepFormProps) {
           <Sparkles className="h-4 w-4 animate-pulse" /> {t.editor.step.assistantWorking}
         </p>
       )}
-      {p.feedbackNote && <p className="rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">{t.editor.stepEditor.operatorFeedback(p.feedbackNote)}</p>}
+      <OperatorFeedbackNote note={p.feedbackNote} photo={p.feedbackPhoto} onUsePhoto={readOnly ? undefined : p.onUseFeedbackPhoto} />
+      {/* Où s'applique l'étape (variantes) et si elle est essentielle (version courte). */}
+      <StepScope content={p.content} step={step} onChange={p.onChange} readOnly={readOnly} />
 
+      {/* Au bureau large, deux colonnes : à gauche ce qu'on écrit (texte, mise en garde, points clés), à
+          droite ce qu'on montre et relève (média, relevés, section). Plus étroit, une colonne, dans
+          l'ordre d'avant (`max-xl:order-*`). */}
+      <div className="flex flex-col gap-4 xl:grid xl:grid-cols-2 xl:items-start">
+      <div className="contents xl:flex xl:flex-col xl:gap-4">
       {/* Le texte, et l'IA qui le retouche */}
-      <FormCard icon={<Type className="h-4 w-4" />} title={tf.text}>
+      <FormCard icon={<Type className="h-4 w-4" />} title={tf.text} className="max-xl:order-1">
         <div className="space-y-4">
           <div>
             <Label htmlFor={`f-title-${step.id}`}>{tf.action}</Label>
@@ -138,13 +151,8 @@ export function StepForm(p: StepFormProps) {
         )}
       </FormCard>
 
-      {/* Le média : l'aperçu et tous ses réglages */}
-      <FormCard icon={<ImageIcon className="h-4 w-4" />} title={tf.media}>
-        <StepMediaEditor content={p.content} step={step} sources={p.sources} readOnly={readOnly} onChange={p.onChange} onSourceAdded={p.onSourceAdded} expanded />
-      </FormCard>
-
       {/* La mise en garde : son niveau, puis son texte, de la couleur du poste */}
-      <FormCard icon={<TriangleAlert className="h-4 w-4" />} title={tf.warning}>
+      <FormCard icon={<TriangleAlert className="h-4 w-4" />} title={tf.warning} className="max-xl:order-3">
         <div role="radiogroup" aria-label={t.editor.stage.warningLevel} className="flex flex-wrap gap-1.5">
           {([null, ...LEVELS] as Array<WarningLevel | null>).map((level) => {
             const on = (warning?.level ?? null) === level
@@ -175,7 +183,7 @@ export function StepForm(p: StepFormProps) {
       </FormCard>
 
       {/* Les points clés */}
-      <FormCard icon={<Check className="h-4 w-4" />} title={t.editor.step.keyPoints} hint={tf.keyPointsHint}>
+      <FormCard icon={<Check className="h-4 w-4" />} title={t.editor.step.keyPoints} hint={tf.keyPointsHint} className="max-xl:order-4">
         {keyPoints.length > 0 && (
           <ul className="mb-2 space-y-2">
             {keyPoints.map((k, i) => (
@@ -196,10 +204,18 @@ export function StepForm(p: StepFormProps) {
           </button>
         )}
       </FormCard>
+      </div>
+
+      <div className="contents xl:flex xl:flex-col xl:gap-4">
+      {/* Le média : l'aperçu et tous ses réglages */}
+      <FormCard icon={<ImageIcon className="h-4 w-4" />} title={tf.media} className="max-xl:order-2">
+        <StepMediaEditor content={p.content} step={step} sources={p.sources} readOnly={readOnly} onChange={p.onChange} onSourceAdded={p.onSourceAdded} onShowSource={p.onShowSource} expanded />
+      </FormCard>
+
 
       {/* Les relevés (toggle `records`) */}
       {p.records && (
-        <FormCard icon={<ClipboardCheck className="h-4 w-4" />} title={tf.checks} hint={tf.checksHint}>
+        <FormCard icon={<ClipboardCheck className="h-4 w-4" />} title={tf.checks} hint={tf.checksHint} className="max-xl:order-5">
           {checks.length > 0 && (
             <div className="mb-2">
               <ChecksBlock bare step={step} language={p.content.language} readOnly={readOnly} onEdit={setEditingCheck} onKeep={(c) => setChecks(checks.map((x) => (x.id === c.id ? keepCheck(x) : x)))} onDismiss={(c) => setChecks(checks.filter((x) => x.id !== c.id))} />
@@ -215,7 +231,7 @@ export function StepForm(p: StepFormProps) {
 
       {/* La section (toggle `sections`) : les phases d'une longue instruction */}
       {p.sections && !readOnly && (
-        <FormCard icon={<Heading className="h-4 w-4" />} title={tf.section} hint={tf.sectionHint}>
+        <FormCard icon={<Heading className="h-4 w-4" />} title={tf.section} hint={tf.sectionHint} className="max-xl:order-6">
           {step.section ? (
             <div className="space-y-2">
               <div className="glass-input flex h-12 items-center rounded-2xl px-2">
@@ -239,6 +255,8 @@ export function StepForm(p: StepFormProps) {
           )}
         </FormCard>
       )}
+      </div>
+      </div>
 
       {!readOnly && (
         <button type="button" onClick={p.onInsertAfter} className="btn-press flex h-14 w-full items-center justify-center gap-2 rounded-[22px] border-2 border-dashed border-slate-300 text-sm font-black text-slate-500 hover:border-[var(--primary)] hover:text-[var(--primary)] dark:border-slate-700">

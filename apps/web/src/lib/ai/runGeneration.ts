@@ -10,12 +10,15 @@ import { createInstruction, saveDraft, type Actor } from '../model/service'
 import type { GeneratingInfo, Instruction, InstructionContent, OrgSettings, ServerJob, ServerJobContext, Source, Station } from '../model/types'
 import { publishRealtime } from '../realtime/client'
 import { annotateMarks } from './autoAnnotate'
-import { creationReporter, DETAIL_THUMBNAILS, sourceDetail } from './creation'
+import { creationReporter, DETAIL_FIGURES, DETAIL_THUMBNAILS, sourceDetail } from './creation'
 import { enrichMedia, finishGeneration, generateInstruction, importAsk, prepareGeneration } from './generate'
+import type { WritingContext } from './prompts'
 import { runJob } from './jobs'
 import type { AiInstruction, MarkHint } from './normalize'
 import { matchStation } from './normalize'
+import { hasLabels, labelsFromAi, ruleStationsFor, type Nomenclature } from '../model/nomenclature'
 import { DEVICE_ID, jobOutcome, lockedByOther } from './serverJob'
+import { snapshotOf } from '../learning/signals'
 
 /** Dans la coquille, l'écran reste allumé pendant la génération : un téléphone en veille l'arrêterait. */
 function keepAwake(on: boolean) {
@@ -48,16 +51,25 @@ async function completeGeneration(c: {
   choices: Record<string, string[]>
   model: string | null
   operation: string
+  /** Le classement proposé par l'IA, et la nomenclature de l'usine pour le ramener à ses familles. */
+  aiLabels?: unknown
+  nomenclature?: Nomenclature | null
   mode: 'device' | 'server'
   autoAnnotate: boolean
   checkpoints: boolean
+  /** Les figures des documents cités, recadrées pour les étapes (toggle `documentFigures`). */
+  figures?: boolean
+  /** Garder le texte de la version de l'IA, pour apprendre des corrections (toggle `learnFromEdits`). */
+  learn?: boolean
   stage: (key: string, detail?: string) => void
   /** Juste avant l'enregistrement (l'appareil arrête ses signes de vie). */
   beforeSave?: () => Promise<void>
 }) {
   const instr = c.doc.json_data
   c.stage('finish', DETAIL_THUMBNAILS)
-  let content = await enrichMedia(c.content, c.files, async (png, name) => (await c.files.upload(png, name, 'pages')).url)
+  let content = await enrichMedia(c.content, c.files, async (png, name) => (await c.files.upload(png, name, 'pages')).url, {
+    figures: c.figures ? { ai: c.ai, onStart: () => c.stage('finish', DETAIL_FIGURES) } : null,
+  })
 
   // Deuxième temps : les repères se posent sur les images elles-mêmes, en haute définition.
   if (c.autoAnnotate && c.marks.length) {
@@ -67,9 +79,17 @@ async function completeGeneration(c: {
 
   const matched = matchStation(c.stationGuess, c.stations.map((s) => ({ id: s._id, name: s.json_data.name, code: s.json_data.code })))
   const stationIds = instr.stationIds.length ? instr.stationIds : matched ? [matched] : []
+  // Le classement : celui de l'IA, sauf si une personne a déjà classé l'instruction (il reste).
+  const proposed = labelsFromAi(c.aiLabels, c.nomenclature)
+  const keepMine = hasLabels(instr.labels) && instr.labelsCheck !== 'ai'
+  const labels = keepMine ? instr.labels! : proposed
+  const classification = c.nomenclature?.families.length
+    ? { labels, labelsCheck: keepMine ? (instr.labelsCheck ?? null) : hasLabels(proposed) ? ('ai' as const) : null, ruleStationIds: ruleStationsFor(c.stations, labels, content.category) }
+    : {}
   await c.beforeSave?.()
   await saveDraft(c.data, c.doc._id, instr, content, c.actor, {
     stationIds,
+    ...classification,
     generating: null,
     generationError: null,
     generation: {
@@ -82,6 +102,8 @@ async function completeGeneration(c: {
       choices: c.choices,
       stationGuess: c.stationGuess,
       ...(c.mode === 'server' ? { mode: 'server' as const } : {}),
+      // Le texte de l'IA, comparé à la première publication (`learning/store.ts`), puis effacé.
+      ...(c.learn ? { original: snapshotOf(content), learnedAt: null } : {}),
     },
   })
   // La version de l'IA, gardée pour y revenir après des modifications.
@@ -93,7 +115,8 @@ export function startGeneration(input: {
   data: DataApi
   files: FilesApi
   ai: AiApi
-  org: OrgSettings
+  /** Avec `personal` (toggle `learnFromEdits`) : les préférences de la personne qui lance. */
+  org: OrgSettings & Pick<WritingContext, 'personal'>
   stations: Doc<Station>[]
   actor: Actor
   forceKind?: 'procedure' | 'lockout'
@@ -104,6 +127,12 @@ export function startGeneration(input: {
    * régénération en garde un, et la version de l'IA aussi.
    */
   checkpoints?: boolean
+  /** Les figures des documents, recadrées pour les étapes (toggle `documentFigures`). */
+  figures?: boolean
+  /** Proposer des relevés (module `records` et choix de la personne) ; non : aucun. Oui par défaut. */
+  checks?: boolean
+  /** Garder le texte de la version de l'IA, pour apprendre des corrections (toggle `learnFromEdits`). */
+  learn?: boolean
   /**
    * L'analyse au serveur (toggle `serverGeneration` et réglage de l'usine) : une fois la requête
    * confiée à Job_start, l'appareil peut se fermer. Si le serveur ne la prend pas, elle tourne ici.
@@ -138,6 +167,7 @@ export function startGeneration(input: {
         forceKind: input.forceKind,
         // Une régénération garde la langue de l'instruction déjà écrite.
         language: instr.draft?.language,
+        checks: input.checks,
         onStage: stage,
       }
       let out: Awaited<ReturnType<typeof generateInstruction>>
@@ -160,6 +190,9 @@ export function startGeneration(input: {
             forceKind: input.forceKind ?? null,
             autoAnnotate: input.autoAnnotate !== false,
             checkpoints: !!input.checkpoints,
+            figures: !!input.figures,
+            checks: input.checks !== false,
+            ...(input.learn ? { learn: true } : {}),
           }
           // Le relais au serveur : plus de signe de vie à donner, l'appareil peut se fermer.
           report.stop()
@@ -180,7 +213,7 @@ export function startGeneration(input: {
         const result = await ai.ask<AiInstruction>(p.operation, p.ask, { scope: 'generation', timeoutMs: 300_000 })
         if (!result.json) throw new ApiError(messages().capture.generate.noInstruction, 502)
         stage('finish')
-        out = { ...finishGeneration(result.json, p.sources, p.language), sources: p.allSources, model: result.model, operation: p.operation }
+        out = { ...finishGeneration(result.json, p.sources, p.language, { checks: input.checks }), sources: p.allSources, model: result.model, operation: p.operation }
       } else {
         out = await generateInstruction({ ai, ...common })
         // Les URI Gemini sont gardées : une régénération dans les 48 h ne retéléverse rien.
@@ -201,9 +234,13 @@ export function startGeneration(input: {
         choices: out.choices,
         model: out.model,
         operation: out.operation,
+        aiLabels: out.aiLabels,
+        nomenclature: org.nomenclature,
         mode: 'device',
         autoAnnotate: input.autoAnnotate !== false,
         checkpoints: !!input.checkpoints,
+        figures: !!input.figures,
+        learn: !!input.learn,
         stage,
         beforeSave: async () => {
           report.stop()
@@ -236,6 +273,8 @@ export function finishServerGeneration(input: {
   ai: AiApi
   stations: Doc<Station>[]
   actor: Actor
+  /** La nomenclature de l'usine : le classement proposé par l'IA se ramène à ses familles. */
+  nomenclature?: Nomenclature | null
   onDone?: () => void
 }): Promise<void> {
   const { doc, data, files, ai, stations, actor } = input
@@ -272,7 +311,7 @@ export function finishServerGeneration(input: {
     }
     try {
       const sources = context.sourceIds.map((id) => fresh.json_data.sources.find((s) => s.id === id)).filter((s): s is Source => !!s)
-      const out = finishGeneration(outcome.json as AiInstruction, sources, context.language)
+      const out = finishGeneration(outcome.json as AiInstruction, sources, context.language, { checks: context.checks })
       await completeGeneration({
         doc: fresh,
         data,
@@ -281,11 +320,14 @@ export function finishServerGeneration(input: {
         stations,
         actor,
         ...out,
+        nomenclature: input.nomenclature,
         model: outcome.model,
         operation,
         mode: 'server',
         autoAnnotate: context.autoAnnotate,
         checkpoints: context.checkpoints,
+        figures: context.figures === true,
+        learn: context.learn === true,
         stage: (key, detail) => setStage(key, detail),
       })
       await settleJob()
@@ -311,12 +353,17 @@ export async function startServerImport(input: {
   ai: AiApi
   org: OrgSettings
   source: Source
+  /** Une présentation lue dans l'app : sa note, puis ses images (S1, S2…). */
+  sources?: Source[]
   stations: Doc<Station>[]
   actor: Actor
   title: string
+  /** Les figures du document, recadrées pour les étapes à la fin (toggle `documentFigures`). */
+  figures?: boolean
 }): Promise<{ doc: Doc<Instruction>; jobId: string | null }> {
-  const { operation, language, ask } = importAsk({ org: input.org, source: input.source, stationNames: stationLabels(input.stations) })
-  const doc = await createInstruction(input.data, input.actor, { title: input.title, origin: 'import', sources: [input.source] })
+  const all = input.sources?.length ? input.sources : [input.source]
+  const { operation, language, ask } = importAsk({ org: input.org, source: input.source, sources: all, stationNames: stationLabels(input.stations) })
+  const doc = await createInstruction(input.data, input.actor, { title: input.title, origin: 'import', sources: all })
   let jobId: string | null
   try {
     jobId = await input.ai.startJob({ operation, instructionId: doc._id, ask })
@@ -340,7 +387,7 @@ export async function startServerImport(input: {
     device: inNativeShell() ? 'app' : 'web',
     mode: 'server',
     jobId,
-    job: { sourceIds: [input.source.id], language, operation, forceKind: null, autoAnnotate: false, checkpoints: false },
+    job: { sourceIds: all.map((s) => s.id), language, operation, forceKind: null, autoAnnotate: false, checkpoints: false, figures: !!input.figures && all[0].kind === 'document' },
     finishing: null,
   }
   await input.data.patch(T.instruction, doc._id, { generating, generationError: null })

@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowUp, Check, ChevronDown, ChevronUp, Loader2, Mic, RotateCcw, Sparkles, X } from 'lucide-react'
+import { ArrowUp, Check, ChevronDown, ChevronUp, FileText, Film, Image as ImageIcon, Loader2, Lock, Mic, MonitorUp, Paperclip, RotateCcw, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
@@ -10,16 +10,41 @@ import { agentBusy, agentTurn, runAgentOps, type AgentLogEntry, type VoiceTurnRe
 import { suggestEdits } from '@/lib/ai/suggest'
 import { useBilling, useEntitlement, useGate } from '@/lib/billing/state'
 import { useMessages } from '@/lib/i18n'
-import type { InstructionContent, Source } from '@/lib/model/types'
+import { ACCEPTED_FILES, ingestAny, ingestScreen, kindOfFile, type ScreenCapture } from '@/lib/media/ingest'
+import { canRecordScreen } from '@/lib/media/screenRecorder'
+import { ScreenRecorder } from '@/components/capture/ScreenRecorder'
+import { uid } from '@/lib/model/repo'
+import { sourceTag } from '@/lib/model/sources'
+import type { InstructionContent, Source, SourceKind } from '@/lib/model/types'
+import { useToast } from '@/components/ui/Toast'
+import { suspendsInBackground } from '@/lib/ai/durableAsk'
 import { useToggle } from '@/lib/toggles'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { LiveEditVoice } from './LiveEditVoice'
+import { usePersonalWriting } from '@/hooks/useWriting'
+
+/** Un média joint à la demande : envoyé tout de suite, il rejoint les médias d'origine. */
+interface Attachment {
+  key: string
+  name: string
+  kind: SourceKind | null
+  previewUrl?: string
+  /** Ses sources : une le plus souvent ; une présentation donne sa note et ses images. */
+  sourceIds?: string[]
+  /** S7 (ou S7–S12) : le nom que l'assistant lui donne. */
+  tag?: string
+  uploading: boolean
+}
 
 interface Message {
   id: number
   role: 'user' | 'agent'
   text: string
+  /** Les médias joints à cette demande. */
+  attachments?: Attachment[]
   working?: boolean
+  /** La réponse se prépare au serveur : on peut quitter l'app, elle attendra. */
+  durable?: boolean
   error?: boolean
   actions?: AgentLogEntry[]
   /** L'instruction avant ce tour : « Annuler ces changements » y revient. */
@@ -55,7 +80,10 @@ export function AgentPanel({
   onTurnEnd,
   variant = 'panel',
   open: openProp,
+  instructionId,
 }: {
+  /** L'instruction modifiée : au téléphone, la réponse se prépare au serveur sous son nom. */
+  instructionId?: string
   content: InstructionContent
   setContent: (c: InstructionContent) => void
   /** L'étape que la personne regarde : « cette étape », et les premières suggestions. */
@@ -82,7 +110,30 @@ export function AgentPanel({
   /** Ouvert ou fermé par la page (la bulle de l'aperçu vit dans la barre du lecteur). */
   open?: boolean
 }) {
-  const { ai, org, files } = useSession()
+  const { ai, org, files, data } = useSession()
+  const toast = useToast()
+  // Joindre des médias (toggle `agentAttach`) : seulement là où l'instruction garde ses sources.
+  const attachOn = useToggle('agentAttach') && !!onSourcesChange
+  const slides = useToggle('slidesImport')
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const attachInput = useRef<HTMLInputElement>(null)
+  // Enregistrer l'écran pour l'assistant (toggle `screenCapture`) : des étapes d'un logiciel, à l'ordinateur.
+  const screenToggle = useToggle('screenCapture')
+  const [screenReady, setScreenReady] = useState(false)
+  useEffect(() => setScreenReady(canRecordScreen()), [])
+  const screenOn = attachOn && screenToggle && screenReady
+  const screenRight = useEntitlement('screen_capture')
+  // Les préférences de rédaction de la personne (toggle `learnFromEdits`) : l'assistant les suit aussi.
+  const learnOn = useToggle('learnFromEdits')
+  const personal = usePersonalWriting()
+  const [screenOpen, setScreenOpen] = useState(false)
+  // La liste à jour, même entre deux rendus (plusieurs envois qui finissent ensemble).
+  const sourcesRef = useRef<Source[]>(sources ?? [])
+  sourcesRef.current = sources ?? sourcesRef.current
+  // Au téléphone, la réponse se prépare au serveur : iOS suspend l'app hors de l'écran (`durableAsk`).
+  const backgroundAi = useToggle('backgroundAi')
+  const serverJobs = useToggle('serverGeneration')
+  const durable = backgroundAi && serverJobs && !!instructionId && suspendsInBackground() ? { data, instructionId } : undefined
   const t = useMessages()
   const [openInner, setOpenInner] = useState(false)
   const open = openProp ?? openInner
@@ -134,7 +185,7 @@ export function AgentPanel({
 
   const patch = (id: number, p: Partial<Message> | ((m: Message) => Partial<Message>)) => setMessages((list) => list.map((m) => (m.id === id ? { ...m, ...(typeof p === 'function' ? p(m) : p) } : m)))
 
-  async function runTurn(request: string, via: 'text' | 'voice'): Promise<VoiceTurnResult> {
+  async function runTurn(request: string, via: 'text' | 'voice', attached: Attachment[] = []): Promise<VoiceTurnResult> {
     const ask = request.trim()
     if (!ask) return { reply: '', done: [], failed: [] }
     // Seule la voix peut demander pendant un tour : la réponse est pour le modèle.
@@ -145,19 +196,21 @@ export function AgentPanel({
     const agentId = nextId.current++
     const done: string[] = []
     const failed: string[] = []
-    setMessages((list) => [...list, { id: userId, role: 'user', text: via === 'voice' ? `🎙 ${ask}` : ask }, { id: agentId, role: 'agent', text: '', working: true }])
+    setMessages((list) => [...list, { id: userId, role: 'user', text: via === 'voice' ? `🎙 ${ask}` : ask, attachments: attached.length ? attached : undefined }, { id: agentId, role: 'agent', text: '', working: true, durable: !!durable }])
     try {
       const ta = t.editorTools.agent
       let looked: string | null = null
       const turn = await agentTurn({
         ai,
         files,
-        org: org.json_data,
+        org: learnOn ? { ...org.json_data, personal: personal.data?.json_data ?? null } : org.json_data,
         content: liveContent.current,
         focusStepId,
         request: ask,
         history: history.current,
-        sources,
+        sources: sourcesRef.current,
+        // Les médias joints à la demande : l'assistant les reçoit tout de suite.
+        attached: attached.flatMap((a) => a.sourceIds ?? []),
         // Revoir les sources : une action visible dans la conversation, avec ce qu'on revoit.
         onLook: (info) => {
           looked = info.sourceIds.join(', ')
@@ -167,6 +220,7 @@ export function AgentPanel({
         },
         onSources: onSourcesChange,
         canTranslate,
+        durable,
       })
       if (looked) patch(agentId, (m) => ({ actions: (m.actions ?? []).map((a) => (a.key === -1 ? { ...a, label: ta.looked(looked!), state: 'done' as const } : a)) }))
       history.current.push({ role: 'user', content: ask }, { role: 'assistant', content: turn.reply })
@@ -182,7 +236,7 @@ export function AgentPanel({
         try {
           await runAgentOps(turn.operations, {
             ai,
-            sources,
+            sources: sourcesRef.current,
             files,
             canTranslate,
             onLocked: (feature) => openPaywall({ feature }),
@@ -219,10 +273,66 @@ export function AgentPanel({
     }
   }
 
+  const uploading = attachments.some((a) => a.uploading)
+  const ready = attachments.filter((a) => a.sourceIds?.length)
   async function send(request = text) {
-    if (!request.trim() || busy) return
+    if (busy || uploading || (!request.trim() && !ready.length)) return
     setText('')
-    await runTurn(request, 'text')
+    setAttachments([])
+    await runTurn(request.trim() || t.editorTools.agent.attachOnly, 'text', ready)
+  }
+
+  /** Les fichiers joints partent tout de suite et rejoignent les médias d'origine, dans l'ordre. */
+  const dropped = useRef(new Set<string>())
+  async function attach(list: File[]) {
+    for (const file of list) {
+      const kind = kindOfFile(file)
+      await attachJob(file.name, kind, kind === 'photo' ? URL.createObjectURL(file) : undefined, () => ingestAny(file, files, { slides }))
+    }
+  }
+  /** Un enregistrement de l'écran : la vidéo et ses images nettes, une seule pièce jointe. */
+  function attachScreen(capture: ScreenCapture) {
+    const preview = capture.shots[0] ? URL.createObjectURL(capture.shots[0].blob) : undefined
+    void attachJob(capture.video.name.replace(/\.[a-z0-9]+$/i, ''), 'video', preview, () => ingestScreen(capture, files, undefined, uid('src_')))
+  }
+  async function attachJob(name: string, kind: SourceKind | null, blobUrl: string | undefined, job: () => Promise<Source[]>) {
+    const key = uid('att_')
+    setAttachments((a) => [...a, { key, name, kind, previewUrl: blobUrl, uploading: true }])
+    try {
+      const added = await job()
+      if (dropped.current.has(key)) {
+        const paths = added.flatMap((s) => (s.path ? [s.path] : []))
+        if (paths.length) void files.remove(paths).catch(() => undefined)
+        return
+      }
+      const first = sourcesRef.current.length
+      const next = [...sourcesRef.current, ...added]
+      sourcesRef.current = next
+      onSourcesChange?.(next)
+      const src = added.find((s) => s.kind !== 'note') ?? added[0]
+      const thumb = src.thumbnailUrl ?? (src.kind === 'photo' ? src.url : undefined)
+      if (thumb && blobUrl) URL.revokeObjectURL(blobUrl)
+      const tag = added.length > 1 ? `${sourceTag(first)}–${sourceTag(next.length - 1)}` : sourceTag(first)
+      // Un enregistrement de l'écran reste une vidéo, même avec ses images nettes.
+      const shownKind = added[0]?.screen ? 'video' : added.length > 1 ? 'document' : src.kind
+      setAttachments((a) => a.map((x) => (x.key === key ? { ...x, kind: shownKind, sourceIds: added.map((s) => s.id), tag, previewUrl: thumb ?? x.previewUrl, uploading: false } : x)))
+    } catch (e) {
+      setAttachments((a) => a.filter((x) => x.key !== key))
+      toast.error(t.editorTools.agent.attachFailed, errorText(e))
+    }
+  }
+  /** Retiré avant l'envoi : le média quitte aussi les médias d'origine (c'était une erreur de fichier). */
+  function detach(a: Attachment) {
+    setAttachments((list) => list.filter((x) => x.key !== a.key))
+    if (a.uploading) return void dropped.current.add(a.key)
+    const ids = new Set(a.sourceIds ?? [])
+    const victims = sourcesRef.current.filter((x) => ids.has(x.id))
+    if (!victims.length) return
+    const next = sourcesRef.current.filter((x) => !ids.has(x.id))
+    sourcesRef.current = next
+    onSourcesChange?.(next)
+    const paths = victims.flatMap((v) => (v.path ? [v.path] : []))
+    if (paths.length) void files.remove(paths).catch(() => undefined)
   }
 
   /** Pour la voix : annule le dernier tour qui a changé quelque chose ; faux s'il n'y en a pas. */
@@ -256,11 +366,12 @@ export function AgentPanel({
   }
 
   if (minimized) {
+    // Réduit : une pastille en bas (au bureau, dans le coin) ; l'éditeur reste tout entier visible.
     return (
-      <div className={cn('kb-bottom pb-safe fixed inset-x-0 bottom-0 px-3 pb-3 lg:hidden', bubble ? 'z-[60]' : 'z-50')}>
-        <button type="button" onClick={() => setMinimized(false)} className="glass-float flex h-14 w-full items-center gap-3 rounded-full px-4 text-left">
-          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[var(--primary)]" />
-          <span className="min-w-0 flex-1 truncate text-sm font-black">{current?.label ?? t.editorTools.agent.busy}</span>
+      <div className={cn('kb-bottom pb-safe fixed inset-x-0 bottom-0 px-3 pb-3 lg:inset-x-auto lg:right-6 lg:bottom-6 lg:px-0 lg:pb-0', bubble ? 'z-[60]' : 'z-50')}>
+        <button type="button" onClick={() => setMinimized(false)} aria-label={t.editorTools.agent.title} className="glass-float flex h-14 w-full items-center gap-3 rounded-full px-4 text-left lg:w-[320px]">
+          {busy ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[var(--primary)]" /> : <Sparkles className="h-5 w-5 shrink-0 text-[var(--primary)]" />}
+          <span className="min-w-0 flex-1 truncate text-sm font-black">{busy ? (current?.label ?? t.editorTools.agent.busy) : t.editorTools.agent.title}</span>
           <ChevronUp className="h-5 w-5 shrink-0 text-slate-400" />
         </button>
       </div>
@@ -272,7 +383,8 @@ export function AgentPanel({
       aria-label={t.editorTools.agent.label}
       // Ses champs gardent leur propre annulation : Ctrl+Z n'y annule pas l'instruction.
       data-own-undo=""
-      className={cn('kb-bottom fixed inset-x-0 bottom-0 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:max-h-none lg:w-[400px] lg:rounded-[32px] dark:border-white/10 dark:bg-slate-900', bubble ? 'z-[60] lg:top-6' : 'z-50 lg:top-6')}
+      // Au bureau, une fenêtre qui flotte par-dessus l'éditeur, dans le coin : rien n'est tassé, on voit ce qui change.
+      className={cn('kb-bottom fixed inset-x-0 bottom-0 flex max-h-[64dvh] flex-col rounded-t-[32px] border border-white/60 bg-white shadow-[0_-12px_40px_rgba(15,23,42,0.18)] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:h-[min(640px,calc(100dvh-7rem))] lg:max-h-none lg:w-[380px] lg:rounded-[32px] lg:shadow-[0_24px_60px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-slate-900', bubble ? 'z-[60]' : 'z-50')}
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-slate-900/5 px-4 py-3 dark:border-white/5">
         <span className="bg-gradient-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">
@@ -283,7 +395,7 @@ export function AgentPanel({
           <p className="truncate text-xs font-bold text-slate-500">{t.editorTools.agent.subtitle}</p>
         </div>
         {voiceToggle && !liveOn && <LiveButton locked={voiceRight === 'locked'} onClick={() => gate(voiceRight, 'voice_assistant', () => setLiveOn(true))} />}
-        <button type="button" onClick={() => setMinimized(true)} aria-label={t.editorTools.agent.minimize} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 lg:hidden">
+        <button type="button" onClick={() => setMinimized(true)} aria-label={t.editorTools.agent.minimize} title={t.editorTools.agent.minimize} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5">
           <ChevronDown className="h-5 w-5" />
         </button>
         <button type="button" onClick={() => { setLiveOn(false); setOpen(false) }} disabled={busy} aria-label={t.editorTools.agent.close} className="btn-press flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 disabled:opacity-40">
@@ -299,12 +411,20 @@ export function AgentPanel({
         )}
         {messages.map((m) =>
           m.role === 'user' ? (
-            <p key={m.id} className="ml-10 rounded-2xl rounded-br-md bg-slate-900 px-3.5 py-2.5 text-sm font-bold text-white dark:bg-white dark:text-slate-900">
-              {m.text}
-            </p>
+            <div key={m.id} className="ml-10 space-y-1.5">
+              {!!m.attachments?.length && (
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {m.attachments.map((a) => (
+                    <AttachmentThumb key={a.key} a={a} />
+                  ))}
+                </div>
+              )}
+              <p className="rounded-2xl rounded-br-md bg-slate-900 px-3.5 py-2.5 text-sm font-bold text-white dark:bg-white dark:text-slate-900">{m.text}</p>
+            </div>
           ) : (
             <div key={m.id} className={cn('mr-6 rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm', m.error ? 'bg-rose-50 text-rose-900 dark:bg-rose-500/10 dark:text-rose-200' : 'bg-slate-900/[0.04] dark:bg-white/5')}>
               {m.text ? <p className="font-bold">{m.text}</p> : <p className="flex items-center gap-2 font-bold text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> {t.editorTools.agent.reading}</p>}
+              {!m.text && m.working && m.durable && <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400">{t.editorTools.agent.keepsGoing}</p>}
               {!!m.actions?.length && (
                 <ul className="mt-2 space-y-1">
                   {m.actions.map((a) => (
@@ -338,21 +458,76 @@ export function AgentPanel({
         </div>
       )}
 
+      {screenOn && <ScreenRecorder open={screenOpen} onClose={() => setScreenOpen(false)} onCaptured={attachScreen} />}
       {liveOn && <LiveEditVoice content={content} onModify={(r) => runTurn(r, 'voice')} onGoTo={onFocus} onUndo={undoLast} onStop={() => setLiveOn(false)} />}
 
+      {attachments.length > 0 && (
+        <div className="no-scrollbar flex shrink-0 gap-2 overflow-x-auto border-t border-slate-900/5 px-3 pt-3 dark:border-white/5">
+          {attachments.map((a) => (
+            <span key={a.key} title={a.uploading ? t.editorTools.agent.attaching(a.name) : t.editorTools.agent.attached} className="flex h-14 shrink-0 items-center gap-1.5 rounded-2xl bg-slate-900/[0.05] p-1 dark:bg-white/10">
+              <AttachmentThumb a={a} />
+              <span className="max-w-28 truncate text-xs font-bold">{a.name}</span>
+              <button type="button" onClick={() => detach(a)} aria-label={t.editorTools.agent.removeAttachment(a.name)} className="btn-press flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10">
+                <X className="h-4 w-4" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <form
-        className="pb-safe flex shrink-0 items-center gap-2 border-t border-slate-900/5 px-3 pt-3 pb-3 dark:border-white/5"
+        className={cn('pb-safe flex shrink-0 items-center gap-2 px-3 pt-3 pb-3', !attachments.length && 'border-t border-slate-900/5 dark:border-white/5')}
         onSubmit={(e) => {
           e.preventDefault()
           void send()
         }}
       >
+        {attachOn && (
+          <>
+            <button type="button" onClick={() => attachInput.current?.click()} disabled={busy} aria-label={t.editorTools.agent.attach} title={t.editorTools.agent.attach} className="btn-press flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-600 hover:bg-slate-900/5 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-white/10">
+              <Paperclip className="h-5 w-5" />
+            </button>
+            {screenOn && (
+              <button type="button" onClick={() => gate(screenRight, 'screen_capture', () => setScreenOpen(true))} disabled={busy} aria-label={t.capture.screen.title} title={t.capture.screen.title} className="btn-press relative -ml-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-600 hover:bg-slate-900/5 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-white/10">
+                <MonitorUp className="h-5 w-5" />
+                {screenRight === 'locked' && <Lock className="absolute top-1.5 right-1.5 h-3 w-3" aria-hidden />}
+              </button>
+            )}
+            <input
+              ref={attachInput}
+              type="file"
+              multiple
+              accept={ACCEPTED_FILES}
+              className="hidden"
+              onChange={(e) => {
+                const list = [...(e.target.files ?? [])]
+                e.target.value = ''
+                if (list.length) void attach(list)
+              }}
+            />
+          </>
+        )}
         <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={t.editorTools.agent.placeholder} aria-label={t.editorTools.agent.inputLabel} className="h-12" wrapperClassName="flex-1" disabled={busy} />
-        <button type="submit" disabled={busy || !text.trim()} aria-label={t.editorTools.agent.send} className="btn-press bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white disabled:opacity-40">
-          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowUp className="h-5 w-5" />}
+        <button type="submit" disabled={busy || uploading || (!text.trim() && !ready.length)} aria-label={t.editorTools.agent.send} className="btn-press bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white disabled:opacity-40">
+          {busy || uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowUp className="h-5 w-5" />}
         </button>
       </form>
     </section>
+  )
+}
+
+/** La vignette d'un média joint : son image, ou l'icône de son genre ; son numéro (S7) une fois envoyé. */
+function AttachmentThumb({ a }: { a: Attachment }) {
+  const Icon = a.kind === 'video' ? Film : a.kind === 'audio' ? Mic : a.kind === 'photo' ? ImageIcon : FileText
+  return (
+    <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+      {a.previewUrl ? <img src={a.previewUrl} alt="" className="h-full w-full object-cover" /> : <Icon className="h-5 w-5" />}
+      {a.uploading && (
+        <span className="absolute inset-0 flex items-center justify-center bg-black/45">
+          <Loader2 className="h-5 w-5 animate-spin text-white" />
+        </span>
+      )}
+      {a.tag && <span className="absolute top-0.5 left-0.5 rounded bg-black/70 px-1 text-[10px] font-black text-white tabular-nums">{a.tag}</span>}
+    </span>
   )
 }
 

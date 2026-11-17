@@ -1,3 +1,6 @@
+import type { PrintTemplate } from '../pdf/template'
+import type { Labels, Nomenclature, StationRule } from './nomenclature'
+import type { PreviousVersion, PublishedChanges } from './updates'
 /**
  * Modèle de données de CLIP V3 (contenu de `json_data` sur la Gateway).
  *
@@ -41,6 +44,17 @@ export interface Source {
    * enregistrement par série, jamais coupé ; l'IA apparie chaque photo avec ce qui est dit autour.
    */
   voice?: { sourceId: string; at: number }
+  /**
+   * Un enregistrement de l'écran (toggle `screenCapture`) : la vidéo d'un logiciel, le pointeur et
+   * chaque clic visibles. Ses images nettes sont des photos qui portent `shot`.
+   */
+  screen?: true
+  /**
+   * Une image nette de l'écran, prise par l'app juste avant une action (`screenShots.ts`) : la vidéo
+   * d'où elle vient (`sourceId`) et son instant, en secondes. L'étape la montre, le pointeur sur ce
+   * qu'on touche ; « Vidéo » ou « GIF » repartent de cet instant.
+   */
+  shot?: { sourceId: string; at: number }
 }
 
 export type AnnotationType = 'pen' | 'highlight' | 'arrow' | 'line' | 'measure' | 'circle' | 'rect' | 'text' | 'number' | 'icon' | 'blur'
@@ -86,6 +100,37 @@ export interface VideoFrame {
   end: number
 }
 
+/**
+ * Un GIF tiré d'un extrait (toggle `gifInStep`) : l'étape le montre à la place de la vidéo ou en plus.
+ * On sait d'où il vient : « Vidéo » y revient d'un geste, sans rien perdre.
+ */
+export interface GifOrigin {
+  videoUrl: string
+  start: number
+  end: number
+  /** L'image d'attente de la vidéo, reprise au retour à la vidéo. */
+  posterUrl?: string
+  sizeBytes?: number
+}
+
+/**
+ * La page d'un document d'où vient une figure recadrée (toggle `documentFigures`) : l'étape montre la
+ * figure, et revient à la page entière d'un geste si la figure ne suffit pas.
+ */
+export interface DocumentPage {
+  url: string
+  page: number
+  pageImageUrl?: string
+  name?: string
+}
+
+/** Une figure recadrée, gardée pendant que l'étape montre la page entière. */
+export interface PageFigure {
+  url: string
+  alt?: string
+  annotations?: Annotation[]
+}
+
 /** Un média montre ce qu'il faut faire, ou ce qu'il faut éviter (photo « bon » / « pas bon »). */
 export type MediaVerdict = 'do' | 'dont'
 
@@ -97,9 +142,20 @@ interface MediaCommon {
 
 export type StepMedia = MediaCommon &
   (
-    | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame }
+    | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame; fromPage?: DocumentPage; gif?: GifOrigin }
     | { kind: 'video'; url: string; sourceId?: string; start: number; end: number; posterUrl?: string; clip?: ReelClip }
-    | { kind: 'document'; url: string; sourceId?: string; page?: number; pageImageUrl?: string; name?: string }
+    | {
+        kind: 'document'
+        url: string
+        sourceId?: string
+        page?: number
+        pageImageUrl?: string
+        name?: string
+        /** Ce que la génération veut y prendre (« Photo de la vanne V-12 ») : recadré ensuite (`enrichMedia`). */
+        figure?: string
+        /** La figure qu'on avait tirée de cette page : l'étape y revient d'un geste. */
+        cropped?: PageFigure
+      }
     /**
      * Un schéma généré par l'IA : une page HTML autonome (SVG, dessin, vue 3D), affichée dans un
      * cadre isolé (iframe sans accès à l'app). `url` reste vide : le HTML voyage avec l'instruction.
@@ -156,6 +212,13 @@ export interface Step {
    * sa version publiée, qui ne se modifie pas ici et suit le bloc quand il change.
    */
   fromBlock?: { id: string; version: number; title: string }
+  /**
+   * Les variantes où l'étape s'applique (toggle `variants`, `src/lib/model/variants.ts`) : leurs
+   * identifiants ; absent ou vide, toutes. Au poste, la personne choisit sa variante au départ.
+   */
+  variants?: string[]
+  /** La version courte pour les habitués (toggle `quickMode`) : l'étape y reste. */
+  essential?: boolean
 }
 
 /**
@@ -254,6 +317,24 @@ export interface InstructionContent {
   translations?: Record<string, TranslatedContent>
   /** Les questions de formation (toggle `training`) : vérifier qu'on a compris, en quelques questions. */
   quiz?: QuizQuestion[]
+  /**
+   * Les variantes d'une même tâche (toggle `variants`) : « Pompe A », « Pompe B ». Deux au moins ;
+   * chaque étape dit où elle s'applique (`Step.variants`). `variantsLabel` : ce qui change
+   * (« Modèle de pompe »), la question posée au départ.
+   */
+  variants?: Variant[]
+  variantsLabel?: string
+  /**
+   * La version courte pour les habitués (toggle `quickMode`) : au poste, « L'essentiel » ne montre que
+   * les étapes essentielles (`Step.essential`, et toujours celles qui ont un relevé ou une mise en garde).
+   */
+  quick?: boolean
+}
+
+/** Une variante d'une instruction (`InstructionContent.variants`). */
+export interface Variant {
+  id: string
+  name: string
 }
 
 /** Une question de formation : quelques choix courts, un seul bon, et pourquoi. */
@@ -314,6 +395,9 @@ export interface TranslatedContent {
   }>
   tools?: string[]
   equipment?: string
+  /** Les noms des variantes dans cette langue (par id), et ce qui les distingue. */
+  variants?: Record<string, string>
+  variantsLabel?: string
   lockout?: LockoutTranslation
   /** Les questions de formation dans cette langue (par id). */
   quiz?: Array<{ id: string; question?: string; choices?: string[]; why?: string }>
@@ -366,6 +450,12 @@ export interface GenerationInfo {
   stationGuess?: string | null
   /** `server` : l'analyse a tourné au serveur (Job_start). */
   mode?: 'device' | 'server'
+  /**
+   * Le texte de la version de l'IA (toggle `learnFromEdits`), sans les médias : comparé à la première
+   * publication pour voir ce que la personne corrige (`clip_edit`), puis effacé (`learnedAt`).
+   */
+  original?: { title: string; steps: Array<{ title: string; text: string; keyPoints: string[]; warning: string | null }> } | null
+  learnedAt?: string | null
 }
 
 export interface ReviewRequest {
@@ -436,6 +526,12 @@ export interface ServerJobContext {
   forceKind?: 'procedure' | 'lockout' | null
   autoAnnotate: boolean
   checkpoints: boolean
+  /** Les figures des documents, recadrées à la fin (toggle `documentFigures`) ; absent : la page entière, comme avant. */
+  figures?: boolean
+  /** Des relevés proposés ; false : aucun (la fin retire ceux que l'IA aurait mis). Absent : oui, comme avant. */
+  checks?: boolean
+  /** Garder le texte de la version de l'IA pour apprendre des corrections (toggle `learnFromEdits`). */
+  learn?: boolean
 }
 
 /** Le travail au serveur, tel que n8n l'écrit (`clip_job`). */
@@ -466,6 +562,15 @@ export interface Instruction {
   category: CategoryKey
   tags: string[]
   stationIds: string[]
+  /**
+   * Le classement de l'usine (toggle `nomenclature`, `src/lib/model/nomenclature.ts`) : par famille
+   * d'étiquettes, ses valeurs. Il n'appartient pas au contenu : le changer ne fait pas de version.
+   */
+  labels?: Labels
+  /** `ai` : l'IA a classé l'instruction et personne n'a encore regardé ; effacé au premier geste. */
+  labelsCheck?: 'ai' | null
+  /** Les postes où l'instruction va par leur règle (en plus de `stationIds`, choisis à la main). */
+  ruleStationIds?: string[]
   status: InstructionStatus
   /** Une idée de départ dictée ou tapée par la personne (« nettoyage des rails, machine 1234 »). */
   intent?: string
@@ -579,6 +684,19 @@ export interface Published {
   card?: PublishedCard
   /** L'index de recherche de la version publiée (les liens publics cherchent au serveur). */
   searchText?: string
+  /** Le classement de l'usine, pour l'afficher et le filtrer au poste. */
+  labels?: Labels
+  /**
+   * Le début du nom tiré des familles (« Découpe – Presse P-12 », toggle `nameTemplate`) : un lien
+   * public ne lit pas les réglages de l'usine. Suit le classement et le modèle de nom.
+   */
+  namePrefix?: string | null
+  /** Parmi `stationIds`, ceux qui viennent d'une règle de poste (à refaire quand la règle change). */
+  ruleStationIds?: string[]
+  /** Ce qui a changé depuis la version d'avant, pour l'opérateur (toggle `operatorUpdates`). */
+  changes?: PublishedChanges | null
+  /** La version publiée d'avant, à revoir au poste en lecture (un lien ne lit que `clip_published`). */
+  previous?: PreviousVersion | null
 }
 
 /** La fiche légère d'une instruction publiée : la liste d'un poste ne lit qu'elle. */
@@ -617,6 +735,8 @@ export interface Station {
   linkAssistant?: boolean
   /** Au poste, demander qui travaille (nom et code à 4 chiffres) avant d'ouvrir une instruction. */
   askOperator?: boolean
+  /** Les instructions classées ainsi viennent au poste d'elles-mêmes (toggle `nomenclature`). */
+  rule?: StationRule | null
   createdAt: string
 }
 
@@ -717,6 +837,23 @@ export interface Qualification {
 }
 
 /**
+ * Une personne à former à un poste (`clip_assignment`, Académie) : un journal, où la plus récente
+ * ligne par personne et par poste fait foi ; `removed` la retire de « À faire ».
+ */
+export interface Assignment {
+  operatorId: string
+  operatorName: string
+  stationId: string
+  stationName: string
+  /** D'ici quand (jour, AAAA-MM-JJ) ; null : sans échéance. */
+  due: string | null
+  byId: string
+  byName: string
+  at: string
+  removed?: boolean
+}
+
+/**
  * Une demande à l'administrateur (`clip_request`, conseiller d'achat) : une personne qui ne peut pas
  * acheter voudrait une fonction. « À voir » la montre aux administrateurs 30 jours, ou jusqu'à ce
  * que l'usine l'ait.
@@ -799,6 +936,9 @@ export interface Execution extends OperatorRef {
   /** La personne connectée, quand ce n'est pas une personne de l'équipe nommée à la tablette. */
   userId?: string | null
   userName?: string | null
+  /** La variante suivie (toggle `variants`), et la version courte (toggle `quickMode`). */
+  variant?: { id: string; name: string } | null
+  quick?: boolean
 }
 
 export type MemberRole = 'admin' | 'author' | 'approver' | 'reader'
@@ -827,9 +967,52 @@ export interface WritingStandard {
   tone: 'tu' | 'vous' | 'infinitif'
   /** Vocabulaire propre à l'usine : terme → sens. */
   glossary: Array<{ term: string; meaning: string }>
+  /** Les instructions modèles de l'usine (toggle `learnFromEdits`) : l'IA imite leur style, jamais leur contenu. */
+  examples?: ModelExample[]
   version: number
   updatedAt: string
   updatedByName?: string
+}
+
+/**
+ * Une instruction prise comme modèle (« Prendre comme modèle ») : ce qui la rend bonne, et quelques
+ * étapes, que l'IA lit comme un exemple de style.
+ */
+export interface ModelExample {
+  instructionId: string
+  title: string
+  /** Ce qui la rend bonne, dit par la personne (« Textes courts, bons points clés »). */
+  why: string
+  steps: Array<{ title: string; text: string; keyPoints: string[] }>
+  at: string
+  byName?: string
+}
+
+/**
+ * Les préférences de rédaction d'une personne (`clip_writing`, une par personne) : ses règles, ce
+ * qu'elle a demandé après une génération (👎), ses modèles ; l'IA les suit pour ses instructions, après
+ * le standard de l'usine. Versionnées, comme le standard.
+ */
+export interface PersonalWriting {
+  userId: string
+  rules: string[]
+  learnings: Array<{ text: string; at: string }>
+  examples: ModelExample[]
+  /** Les propositions déjà répondues (clé → oui ou non) : elles ne reviennent pas. */
+  answered: Record<string, 'yes' | 'no'>
+  version: number
+  updatedAt: string
+  /** Les versions d'avant, la plus récente d'abord (10 au plus). */
+  history: Array<{ version: number; rules: string[]; at: string }>
+}
+
+/** Ce qu'une personne a corrigé à la version de l'IA, à la première publication (`clip_edit`). */
+export interface EditRecord {
+  instructionId: string
+  userId: string
+  userName?: string
+  at: string
+  signals: import('../learning/signals').EditSignals
 }
 
 /** La relecture périodique d'une instruction publiée (`src/lib/model/renewal.ts`). */
@@ -849,8 +1032,12 @@ export interface OrgSettings {
   academy?: { revalidateMonths: number }
   /** La numérotation des documents : un préfixe (« IT ») et le prochain numéro. */
   numbering?: { prefix: string; next: number }
+  /** Les façons de classer de l'usine : ses familles d'étiquettes (toggle `nomenclature`). */
+  nomenclature?: Nomenclature
   logoUrl?: string | null
   color?: string | null
+  /** Le gabarit du PDF de l'usine (toggle `printTemplates`, `src/lib/pdf/template.ts`). */
+  print?: PrintTemplate
   /**
    * `none` : on publie directement ; `one` : une approbation suffit ; `all` : chaque groupe signe
    * (toggle `multiApproval` ; coupé, `all` se comporte comme `one`).
@@ -863,6 +1050,8 @@ export interface OrgSettings {
   standardHistory: WritingStandard[]
   /** Ce que la génération retient des avis donnés sur ses brouillons. */
   learnings: Array<{ text: string; at: string }>
+  /** Les propositions de règles déjà répondues pour l'usine (clé → oui ou non) : elles ne reviennent pas. */
+  learningAnswered?: Record<string, 'yes' | 'no'>
   members: Record<string, MemberSettings>
   goals: CategoryKey[]
   onboardedAt?: string | null

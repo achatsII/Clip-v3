@@ -17,12 +17,14 @@ import {
   FileJson,
   GraduationCap,
   History,
+  Images,
   Info,
   Languages,
   MessageSquare,
   Send,
   Share2,
   Sparkles,
+  Star,
   ThumbsDown,
   ThumbsUp,
   RotateCcw,
@@ -75,7 +77,7 @@ import {
   saveSources,
   updatePublishedStations,
 } from '@/lib/model/service'
-import type { ApprovalGroup, Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
+import type { ApprovalGroup, Instruction, InstructionContent, Published, Source, Station, Step, StepMedia } from '@/lib/model/types'
 import { markCreatedSeen } from '@/lib/prefs'
 import { cn, formatDate, formatDateTime, timeAgo } from '@/lib/util/cn'
 import { AgentPanel, type AgentRequest } from './AgentPanel'
@@ -91,6 +93,21 @@ import { cleanQuiz } from '@/lib/model/training'
 import { StageEditor } from './StageEditor'
 import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
 import { attachReel, carryClips } from '@/lib/media/reel'
+import { MediaPlaybackProvider, VideoPool } from '@/lib/media/videoPool'
+import { MAX_STEP_MEDIA } from '@/lib/model/media'
+import { useInstructionName } from '@/lib/ui/naming'
+import { viewableSources } from '@/lib/model/sources'
+import { photoToStorage } from '@/lib/media/photos'
+import { MediaPicker } from './MediaPicker'
+import { SourceLibrary } from './SourceLibrary'
+import { LearningCard } from '@/components/learning/LearningCard'
+import { ModelDialog } from '@/components/learning/ModelDialog'
+import { useLearning } from '@/hooks/useLearning'
+import type { Proposal } from '@/lib/learning/proposals'
+import { loadPersonal, proposalsFor, recentEdits, recordEdits } from '@/lib/learning/store'
+import { saveClassification, staleRuleStations } from '@/lib/model/classification'
+import { addValues, hasLabels, mergeLabels, readNomenclature, type Labels } from '@/lib/model/nomenclature'
+import { suggestLabels } from '@/lib/ai/classify'
 import { LiveBadge } from './LiveBadge'
 import { UndoPill } from './UndoControls'
 
@@ -122,7 +139,14 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
 
   const [content, setContent] = useState<InstructionContent>(instr.draft!)
   const [sources, setSources] = useState<Source[]>(instr.sources)
+  // Plusieurs médias ajoutés d'un coup (médias d'origine, assistant) : chacun part de la liste à jour.
+  const sourcesRef = useRef(sources)
+  sourcesRef.current = sources
   const [stationIds, setStationIds] = useState<string[]>(instr.stationIds)
+  // Le classement de l'usine (toggle `nomenclature`) : il n'est pas du contenu, il s'enregistre à part.
+  const [labels, setLabels] = useState<Labels>(instr.labels ?? {})
+  const [labelsCheck, setLabelsCheck] = useState(instr.labelsCheck ?? null)
+  const [ruleStationIds, setRuleStationIds] = useState<string[]>(instr.ruleStationIds ?? [])
   const [selected, setSelected] = useState<string | null>(params.get('etape') ?? instr.draft?.steps[0]?.id ?? null)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [publishing, setPublishing] = useState(false)
@@ -134,12 +158,28 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [renewMonths, setRenewMonths] = useState<number | null>(() => renewalMonthsOf(instr, org.json_data))
   const [renewedAt, setRenewedAt] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(false)
-  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz' | 'makeBlock' | 'insertBlock'>(null)
+  // `?formation=1` (le parcours d'un poste, dans l'Académie) ouvre tout de suite les questions de formation.
+  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz' | 'makeBlock' | 'insertBlock' | 'sources'>(() => (params.get('formation') ? 'quiz' : null))
+  // Où un bloc commun s'insère : après l'étape choisie (menu « … »), ou à la fin (à côté de « Ajouter une étape »).
+  const [blockAtEnd, setBlockAtEnd] = useState(false)
   // La formation (toggle `training`) : les questions, et « il faut se re-former » à la publication.
   const trainingToggle = useToggle('training')
   const [retrain, setRetrain] = useState(false)
   // Les blocs communs (toggle `sharedBlocks`) : ce document en est-il un, et combien d'instructions l'utilisent.
   const blocksToggle = useToggle('sharedBlocks')
+  // Les médias d'origine, à revoir et à remettre dans une étape (toggle `sourceLibrary`).
+  const sourceLibraryOn = useToggle('sourceLibrary')
+  // L'IA qui apprend des corrections (toggle `learnFromEdits`) : après une publication, ce qu'elle a remarqué.
+  const learnOn = useToggle('learnFromEdits')
+  const [learningCard, setLearningCard] = useState<Proposal[] | null>(null)
+  const learning = useLearning()
+  const [modelOpen, setModelOpen] = useState(false)
+  // La photo d'un retour d'opérateur, mise à l'étape d'un toucher (toggle `feedbackMedia`).
+  const feedbackMediaOn = useToggle('feedbackMedia')
+  // Le nom tiré des familles, devant le titre, dans l'en-tête (toggle `nameTemplate`).
+  const instructionName = useInstructionName()
+  const [sourceFocus, setSourceFocus] = useState<{ sourceId: string; at?: number } | null>(null)
+  const [pickFrom, setPickFrom] = useState<Source | null>(null)
   const isBlock = !!instr.block
   const usedBy = useQuery({ queryKey: ['instructions', 'block-use', doc._id], queryFn: () => countUsing(data, doc._id), enabled: isBlock && blocksToggle })
   const [propagation, setPropagation] = useState<{ done: number; total: number } | null>(null)
@@ -396,6 +436,15 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   // « Fiche ». Changer de vue garde l'étape ; la fiche l'ouvre directement.
   const viewsToggle = useToggle('editorViews')
   const [view, saveView] = useEditorView(viewsToggle)
+  // Les vidéos des deux vues (lecture fluide, toggle `smoothVideos`) : un lecteur gardé par vidéo
+  // d'une étape à l'autre, comme au poste ; il saute au début de l'extrait avec ce qu'il a déjà. Avant,
+  // chaque étape ouvrait un lecteur neuf et les anciens téléchargeaient encore. Jamais la vidéo des
+  // étapes : l'éditeur montre la vidéo d'origine.
+  const smoothVideos = useToggle('smoothVideos')
+  const videoPool = useMemo(() => new VideoPool(3), [])
+  useEffect(() => () => videoPool.dispose(), [videoPool])
+  const sound = useToggle('videoSound')
+  const playback = useMemo(() => ({ pool: smoothVideos ? videoPool : null, reel: false, smooth: smoothVideos, sound }), [smoothVideos, videoPool, sound])
   const switched = useRef(false)
   const chooseView = (v: EditorView) => {
     switched.current = true
@@ -456,6 +505,59 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     }
   }
 
+  // Le classement relu (la génération, un autre appareil) remplace celui qu'on affiche.
+  const savedLabels = JSON.stringify(instr.labels ?? {})
+  useEffect(() => {
+    setLabels(JSON.parse(savedLabels) as Labels)
+  }, [savedLabels])
+  useEffect(() => setLabelsCheck(instr.labelsCheck ?? null), [instr.labelsCheck])
+  const savedRule = (instr.ruleStationIds ?? []).join(',')
+  useEffect(() => setRuleStationIds(savedRule ? savedRule.split(',') : []), [savedRule])
+
+  const nomenclatureOn = useToggle('nomenclature')
+  const nomenclature = useMemo(() => readNomenclature(org.json_data.nomenclature), [org.json_data.nomenclature])
+  async function changeLabels(next: Labels, confirmed = true) {
+    setLabels(next)
+    if (confirmed) setLabelsCheck(null)
+    try {
+      const r = await saveClassification(data, { ...doc, json_data: { ...docRef.current.json_data, draft: latest.current } }, { labels: next, nomenclature, stations, category: latest.current.category, confirm: confirmed })
+      setRuleStationIds(r.ruleStationIds)
+      refresh()
+    } catch (e) {
+      toast.error(t.nomenclature.card.notSaved, errorText(e))
+    }
+  }
+  async function suggestClassification() {
+    const tc = t.nomenclature.card
+    try {
+      const proposed = await suggestLabels(session.ai, docRef.current.json_data, latest.current, nomenclature)
+      if (!hasLabels(proposed)) {
+        toast.info(tc.nothing, tc.nothingHint)
+        return
+      }
+      await changeLabels(mergeLabels(labels, proposed, nomenclature))
+      toast.success(tc.suggested, tc.suggestedHint)
+    } catch (e) {
+      toast.error(tc.suggestFailed, errorText(e))
+    }
+  }
+  /** Une valeur nouvelle ajoutée à une liste de l'usine, depuis l'éditeur (un administrateur). */
+  async function addListValue(familyIdOf: string, value: string) {
+    const next = { families: nomenclature.families.map((f) => (f.id === familyIdOf ? addValues(f, value) : f)) }
+    await session.updateOrg({ nomenclature: next })
+  }
+  // La catégorie change (l'assistant, une régénération) ou une règle de poste a changé ailleurs :
+  // les postes par règle suivent, sans rien demander.
+  const category = content.category
+  useEffect(() => {
+    if (!nomenclatureOn || readOnly || !nomenclature.families.length) return
+    const want = staleRuleStations({ labels, ruleStationIds, category, draft: null }, stations)
+    if (!want) return
+    const timer = setTimeout(() => void changeLabels(labels, false), 800)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- changeLabels relit l'état courant
+  }, [nomenclatureOn, readOnly, category, labels, ruleStationIds, stations, nomenclature])
+
   async function createStation(name: string): Promise<string | null> {
     if (!name) return null
     try {
@@ -507,6 +609,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       // Le numéro de document, tout de suite dans le cache : le prochain enregistrement l'indexe.
       if (docNumber) cacheInstruction(qc, doc._id, { number: docNumber })
       setRetrain(false)
+      // Ce que la personne a corrigé à la version de l'IA : retenu, et une règle proposée si une habitude revient.
+      if (learnOn && !docRef.current.json_data.block) void learnAfterPublish(current, draft)
       if (notifyOn && requester && requester !== actor.id) void notifyEvent({ kind: 'published', instructionId: doc._id, to: [requester] })
       if (reelToggle && publishedId)
         void attachReel(files, data, { publishedId, version: n }, draft).then((ok) => {
@@ -532,6 +636,26 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       toast.error(tp.toasts.publishFailed, e instanceof Error && e.message !== 'save' ? e.message : tp.toasts.tryAgain)
     } finally {
       setPublishing(false)
+    }
+  }
+
+  /**
+   * À la première publication d'une instruction générée : ses corrections dans `clip_edit`, puis, pour
+   * la personne qui l'a écrite, les règles que ses dernières corrections proposent (une carte, pas une fenêtre).
+   */
+  async function learnAfterPublish(published: Doc<Instruction>, draft: InstructionContent) {
+    try {
+      const signals = await recordEdits(data, published, draft, actor)
+      if (!signals || (published.json_data.authorId && published.json_data.authorId !== actor.id)) return
+      const [mine, personal] = await Promise.all([recentEdits(data, { userId: actor.id }), loadPersonal(data, actor.id)])
+      const proposals = proposalsFor(
+        mine.map((d) => d.json_data.signals),
+        org.json_data,
+        personal?.json_data ?? null,
+      )
+      if (proposals.length) setLearningCard(proposals)
+    } catch {
+      /* apprendre est un plus : une publication réussie le reste */
     }
   }
 
@@ -597,8 +721,14 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setRating(value)
     await data.patch(T.instruction, doc._id, { 'generation.rating': value, 'generation.comment': text ?? null }).catch(() => undefined)
     if (value === 'down' && text?.trim()) {
-      await session.updateOrg({ learnings: [...org.json_data.learnings, { text: text.trim(), at: nowIso() }].slice(-30) }).catch(() => undefined)
-      toast.success(tp.rating.noted, tp.rating.notedDetail)
+      // Qui règle l'usine apprend à toute l'usine ; les autres, pour leurs propres générations (toggle `learnFromEdits`).
+      if (learnOn && !can('settings', 'write')) {
+        await learning.saveMine((m) => ({ learnings: [...m.learnings, { text: text.trim(), at: nowIso() }] })).catch(() => undefined)
+        toast.success(tp.rating.noted, t.learning.rated.mine)
+      } else {
+        await session.updateOrg({ learnings: [...org.json_data.learnings, { text: text.trim(), at: nowIso() }].slice(-30) }).catch(() => undefined)
+        toast.success(tp.rating.noted, learnOn ? t.learning.rated.org : tp.rating.notedDetail)
+      }
     } else if (value === 'up') toast.success(tp.rating.thanks)
   }
 
@@ -662,12 +792,34 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   // Tout ce qui touche l'instruction entière : rangé dans son « … » ; à découvert dans la fiche.
   const actions: MenuItem[] = [
     { label: tp.menu.share, icon: <Share2 className="h-4 w-4" />, onClick: () => setDialog('share'), hidden: isBlock },
+    // Ce qui a servi à rédiger l'instruction, à revoir, relire et réécouter (toggle `sourceLibrary`).
+    {
+      label: t.editorTools.sources.menu(viewableSources(sources).length),
+      icon: <Images className="h-4 w-4" />,
+      onClick: () => {
+        setSourceFocus(null)
+        setDialog('sources')
+      },
+      hidden: !sourceLibraryOn || !viewableSources(sources).length,
+    },
     { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle || isBlock, hint: translations === 'locked' ? <LockBadge /> : undefined },
     // Les blocs communs : faire un bloc de quelques étapes (il se publie tout de suite), ou en insérer un.
     { label: t.blocks.make, icon: <Blocks className="h-4 w-4" />, onClick: () => gate(blocksEnt, 'shared_blocks', () => setDialog('makeBlock')), hidden: !blocksToggle || isBlock || readOnly || approval || !content.steps.some((s) => !s.fromBlock), hint: blocksEnt === 'locked' ? <LockBadge /> : undefined },
-    { label: t.blocks.insert, icon: <Blocks className="h-4 w-4" />, onClick: () => gate(blocksEnt, 'shared_blocks', () => setDialog('insertBlock')), hidden: !blocksToggle || isBlock || readOnly, hint: blocksEnt === 'locked' ? <LockBadge /> : undefined },
+    {
+      label: t.blocks.insert,
+      icon: <Blocks className="h-4 w-4" />,
+      onClick: () =>
+        gate(blocksEnt, 'shared_blocks', () => {
+          setBlockAtEnd(false)
+          setDialog('insertBlock')
+        }),
+      hidden: !blocksToggle || isBlock || readOnly,
+      hint: blocksEnt === 'locked' ? <LockBadge /> : undefined,
+    },
     // Les questions de formation : préparées par l'IA, retouchées ici (toggle `training`).
     { label: t.training.menu, icon: <GraduationCap className="h-4 w-4" />, onClick: () => setDialog('quiz'), hidden: !trainingToggle || isBlock || (readOnly && !content.quiz?.length), hint: content.quiz?.length ? <span className="text-xs font-black text-slate-400 tabular-nums">{content.quiz.length}</span> : undefined },
+    // Une instruction réussie : l'IA en imite le style pour les prochaines (toggle `learnFromEdits`).
+    { label: t.learning.model.menu, icon: <Star className="h-4 w-4" />, onClick: () => setModelOpen(true), hidden: !learnOn || isBlock || readOnly || !content.steps.some((s) => !s.fromBlock) },
     { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history'), divider: true },
     // Le travail fait avec cette instruction : ses relevés, ses écarts (toggle `records`).
     { label: t.records.openForInstruction, icon: <ClipboardCheck className="h-4 w-4" />, onClick: () => router.push(`/registre?instruction=${doc._id}`), hidden: !recordsToggle || !hasChecks(content.steps) || !can('feedback') },
@@ -812,12 +964,46 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       </>
     ) : null
 
-  const feedbackNote = !step ? null : highlightFeedback && highlightFeedback.json_data.stepId === step.id ? highlightFeedback.json_data.comment || FEEDBACK_KINDS.unclear.label : ((feedback.data ?? []).find((f) => f.json_data.stepId === step.id)?.json_data.comment ?? null)
+  // Le retour d'un opérateur sur l'étape : celui qu'on vient ouvrir, sinon le plus récent ; son commentaire et sa photo.
+  const stepFeedback = !step ? null : highlightFeedback && highlightFeedback.json_data.stepId === step.id ? highlightFeedback : ((feedback.data ?? []).find((f) => f.json_data.stepId === step.id && (f.json_data.comment || f.json_data.photoUrl)) ?? null)
+  const feedbackNote = !stepFeedback ? null : stepFeedback.json_data.comment || (stepFeedback === highlightFeedback ? FEEDBACK_KINDS.unclear.label : null)
+  const feedbackPhoto = feedbackMediaOn ? (stepFeedback?.json_data.photoUrl ?? null) : null
+  /** La photo du retour devient une source de l'instruction et un média de l'étape (envoyée au stockage si elle est dans la base). */
+  async function putFeedbackPhoto() {
+    if (!stepFeedback?.json_data.photoUrl || !step) return
+    const ts = t.editor.stepEditor
+    try {
+      // Une photo prise sur un lien est dans la base : elle part au stockage pour aller au poste.
+      const url = await photoToStorage(data, files, stepFeedback.json_data.photoUrl, `retour-${stepFeedback._id}.jpg`)
+      const who = stepFeedback.json_data.operatorName ?? stepFeedback.json_data.authorName ?? null
+      const source: Source = { id: uid('src_'), kind: 'photo', url, thumbnailUrl: url, mimeType: 'image/jpeg', name: ts.feedbackPhotoName(who, formatDate(stepFeedback.json_data.createdAt)), createdAt: nowIso() }
+      addSource(source)
+      addMediaToStep({ kind: 'image', url, sourceId: source.id })
+    } catch (e) {
+      toast.error(ts.feedbackPhotoFailed, errorText(e))
+    }
+  }
   const addSource = (src: Source) => {
-    const next = [...sources, src]
+    const next = [...sourcesRef.current, src]
+    sourcesRef.current = next
     setSources(next)
     cacheInstruction(qc, doc._id, { sources: next })
     void saveSources(data, doc._id, next, actor)
+  }
+
+  /** Un média de plus à l'étape ouverte (depuis les médias d'origine) ; une étape pleine le dit. */
+  function addMediaToStep(m: StepMedia) {
+    if (!step) return
+    const ts = t.editorTools.sources
+    if (step.media.length >= MAX_STEP_MEDIA) return toast.error(ts.stepFull(MAX_STEP_MEDIA), ts.stepFullHint)
+    update({ ...content, steps: steps.map((s) => (s.id === step.id ? { ...s, media: [...s.media, m] } : s)) })
+    toast.success(ts.added(idx + 1))
+  }
+  /** Mettre un média d'origine à l'étape ouverte : une photo tout de suite ; une vidéo choisit son extrait, un document sa page. */
+  function putSourceInStep(s: Source) {
+    if (s.kind === 'photo' && s.url) return addMediaToStep({ kind: 'image', url: s.url, sourceId: s.id })
+    setDialog(null)
+    setPickFrom(s)
   }
 
   function duplicateStep() {
@@ -885,7 +1071,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     agentWorking: !!step && agentStep === step.id,
     agentOpen,
     top: {
-      title: content.title,
+      title: instructionName(content.title, labels),
       status,
       statusTone: liveLabel ? ('live' as const) : saveState === 'error' ? ('error' as const) : undefined,
       primary,
@@ -905,6 +1091,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     badge: liveToggle ? <LiveBadge state={realtimeState} compact /> : null,
     remoteNote: step && flash?.stepId === step.id ? flash.note : null,
     feedbackNote,
+    feedbackPhoto,
+    onUseFeedbackPhoto: feedbackPhoto && !readOnly && !step?.fromBlock ? putFeedbackPhoto : undefined,
     feedbackByStep,
     changes: inReview ? changes : undefined,
     history,
@@ -916,21 +1104,55 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     onSelect: (id: string) => id && setSelected(id),
     onInsertAfter: () => insertAfter(idx),
     onAddEnd: () => insertAfter(steps.length - 1),
+    onInsertBlock:
+      blocksToggle && !isBlock && !readOnly
+        ? () =>
+            gate(blocksEnt, 'shared_blocks', () => {
+              setBlockAtEnd(true)
+              setDialog('insertBlock')
+            })
+        : undefined,
     onMove: moveStep,
     onDuplicate: duplicateStep,
     onDelete: deleteStep,
     onSourceAdded: addSource,
+    onShowSource: sourceLibraryOn
+      ? (sourceId: string, at?: number) => {
+          setSourceFocus({ sourceId, at })
+          setDialog('sources')
+        }
+      : undefined,
   }
-  const fieldProps = { content, onChange: update, readOnly, block: isBlock, stationIds, stations, onStations: changeStations, onCreateStation: can('stations', 'write') ? createStation : undefined }
+  const classification =
+    nomenclatureOn && !isBlock
+      ? {
+          labels,
+          nomenclature,
+          readOnly,
+          onChange: (next: Labels) => void changeLabels(next),
+          aiCheck: labelsCheck === 'ai',
+          onConfirm: () => void changeLabels(labels),
+          onSuggest: suggestClassification,
+          ruleStations: ruleStationIds.map((id) => stations.find((s) => s._id === id)?.json_data.name).filter((n): n is string => !!n),
+          onAddValue: can('settings', 'write') ? addListValue : undefined,
+          canSetUp: can('settings', 'write'),
+        }
+      : null
+  const fieldProps = { content, onChange: update, readOnly, block: isBlock, stationIds, stations, onStations: changeStations, onCreateStation: can('stations', 'write') ? createStation : undefined, classification }
 
   return (
     <div>
       <Confetti show={celebrate} />
-      {viewsToggle && view === 'form' ? <FormEditor {...viewProps} info={<InstructionFields layout="cards" {...fieldProps} />} tools={tools} focus={formFocus} startOn={switched.current || formFocus ? 'step' : 'list'} stationCount={stationIds.length} block={isBlock} /> : <StageEditor {...viewProps} />}
+      {learnOn && learningCard && <LearningCard proposals={learningCard} onClose={() => setLearningCard(null)} />}
+      {learnOn && <ModelDialog open={modelOpen} onClose={() => setModelOpen(false)} instructionId={doc._id} content={content} />}
+      <MediaPlaybackProvider value={playback}>
+        {viewsToggle && view === 'form' ? <FormEditor {...viewProps} info={<InstructionFields layout="cards" {...fieldProps} />} tools={tools} focus={formFocus} startOn={switched.current || formFocus ? 'step' : 'list'} stationCount={stationIds.length} block={isBlock} /> : <StageEditor {...viewProps} />}
+      </MediaPlaybackProvider>
       <QuestionsDialog open={questionsOpen} questions={questions} choices={instr.generation?.choices ?? {}} onClose={() => setQuestionsOpen(false)} onApply={answerQuestions} onChecked={(q) => settleQuestions([q])} />
 
       {!readOnly && (
         <AgentPanel
+          instructionId={doc._id}
           content={content}
           setContent={update}
           focusStepId={step?.id ?? null}
@@ -978,6 +1200,32 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         }}
       />
       <UndoPill history={history} />
+      {sourceLibraryOn && (
+        <>
+          <SourceLibrary
+            open={dialog === 'sources'}
+            onClose={() => setDialog(null)}
+            sources={sources}
+            content={content}
+            focus={sourceFocus}
+            stepNumber={!readOnly && step && !step.fromBlock ? idx + 1 : null}
+            onGoToStep={focusStep}
+            onUse={readOnly ? undefined : putSourceInStep}
+            onSourceAdded={readOnly ? undefined : addSource}
+          />
+          <MediaPicker
+            open={!!pickFrom}
+            initial={pickFrom}
+            onClose={() => setPickFrom(null)}
+            sources={sources}
+            onSourceAdded={addSource}
+            onPick={(m) => {
+              setPickFrom(null)
+              addMediaToStep(m)
+            }}
+          />
+        </>
+      )}
       <QuizDialog open={dialog === 'quiz'} onClose={() => setDialog(null)} content={content} ai={session.ai} readOnly={readOnly} published={!!instr.publishedVersion} onChange={(quiz) => update({ ...content, quiz })} />
       {blocksToggle && !isBlock && (
         <>
@@ -996,7 +1244,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
             open={dialog === 'insertBlock'}
             onClose={() => setDialog(null)}
             content={content}
-            after={idx}
+            after={blockAtEnd ? content.steps.length - 1 : idx}
             onInserted={(next, title) => {
               const first = next.steps.find((s) => s.fromBlock && !content.steps.some((x) => x.id === s.id))
               update(next)

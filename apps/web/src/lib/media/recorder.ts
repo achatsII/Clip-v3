@@ -54,16 +54,19 @@ export function startRecording(stream: MediaStream, kind: 'video' | 'audio'): Re
   const rec = new MediaRecorder(stream, options)
   const chunks: BlobPart[] = []
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
+  // La fin s'attend dès le départ : un enregistrement peut s'arrêter seul (le partage d'écran arrêté
+  // par le navigateur ferme toutes ses pistes) avant qu'on demande `stop`.
+  const finished = new Promise<Blob>((resolve) => {
+    rec.addEventListener('stop', () => resolve(new Blob(chunks, { type: (rec.mimeType || mime || (kind === 'video' ? 'video/webm' : 'audio/webm')).split(';')[0] })))
+  })
   rec.start(kind === 'audio' ? 50 : 1000)
   return {
     mime: rec.mimeType || mime,
-    stop: () =>
-      new Promise<Blob>((resolve) => {
-        rec.onstop = () => resolve(new Blob(chunks, { type: (rec.mimeType || mime || (kind === 'video' ? 'video/webm' : 'audio/webm')).split(';')[0] }))
-        if (rec.state !== 'inactive') rec.stop()
-      }),
+    stop: () => {
+      if (rec.state !== 'inactive') rec.stop()
+      return finished
+    },
     cancel: () => {
-      rec.onstop = null
       if (rec.state !== 'inactive') rec.stop()
     },
     pause: () => {
