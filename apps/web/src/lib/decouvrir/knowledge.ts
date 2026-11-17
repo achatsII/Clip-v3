@@ -81,6 +81,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 ## 2. Générer l'instruction avec l'IA
 - Un seul bouton, « Générer l'instruction » : l'IA regarde et écoute les médias et rédige les étapes,
   d'habitude en moins de 2 minutes.
+- Chaque action devient une étape, même courte (enlever un bouchon, appuyer sur un bouton), et son extrait
+  vidéo montre ce geste-là, sans déborder sur le suivant.
 - Une action par étape, le moins de texte possible (un titre de quelques mots, une ou deux phrases), 0 à 2
   points clés, une mise en garde à l'étape où le risque se présente (« Danger », « Attention », « Bon à
   savoir »), les équipements de protection (EPI), les outils et le matériel.

@@ -167,7 +167,22 @@ export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<str
       ...withChecks(s.checks),
     })
   }
-  return cleanSections(out)
+  return cleanSections(trimOverlaps(out))
+}
+
+/**
+ * Le média colle à son étape : deux étapes qui se suivent ne montrent pas les mêmes secondes de la
+ * même vidéo. L'extrait d'une étape s'arrête là où commence celui de l'étape suivante (il garde au
+ * moins une seconde) ; un extrait qui commence avant celui d'avant n'est pas touché.
+ */
+function trimOverlaps(steps: Step[]): Step[] {
+  for (let i = 0; i < steps.length - 1; i++) {
+    const a = steps[i].media.find((m) => m.kind === 'video')
+    const b = steps[i + 1].media.find((m) => m.kind === 'video')
+    if (a?.kind !== 'video' || b?.kind !== 'video' || a.url !== b.url) continue
+    if (b.start >= a.start + 1 && a.end > b.start) a.end = b.start
+  }
+  return steps
 }
 
 function normalizeLockout(raw: AiInstruction['lockout'], sourcesById: Map<string, Source>): LockoutData | null {

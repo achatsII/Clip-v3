@@ -164,6 +164,14 @@ fichier jusqu'à `media.discard`.
    gardé sur l'appareil, oui par défaut). Une image qui échoue reste sans marque ; un refus de
    facturation arrête la suite sans faire échouer la génération.
 
+**Chaque action est une étape** (consigne `generationSystem`, « Découpage en étapes ») : un geste qu'on
+voit commencer et finir devient une étape, même court ou non dit ; jamais « … et … » ni « … puis … »
+dans une étape ; le nombre d'étapes suit le nombre d'actions, sans plafond (les phases regroupent
+au-delà de 8). Le média montre cette action seule : l'extrait commence juste avant le geste et
+s'arrête quand il est fini (2 à 12 s le plus souvent). La normalisation le tient aussi : deux étapes
+qui se suivent ne montrent pas les mêmes secondes de la même vidéo (`trimOverlaps`). La consigne
+passe telle quelle au serveur : rien à changer dans n8n.
+
 **Extrait vidéo plutôt que GIF** : un extrait joué en boucle depuis la vidéo source (début/fin) est
 10 à 20 fois plus léger qu'un GIF, garde la qualité et le son, et se règle à la seconde dans
 l'éditeur. Les captures servent de vignettes et d'images pour le PDF. Le GIF sert à sortir une
