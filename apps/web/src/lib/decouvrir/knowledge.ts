@@ -129,6 +129,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   montrer à faire / à éviter), écrit ou dicté. Il modifie l'instruction sous les yeux de la personne, et tout
   son passage s'annule d'un geste ; au besoin, il revoit les vidéos et les notes d'origine.
 - « Direct » : parler à l'assistant d'édition à voix haute, en direct (forfait Usine).
+- Au téléphone, on peut quitter l'app pendant que l'assistant prépare sa réponse ou que l'IA génère une
+  instruction : le travail continue au serveur, et la réponse attend au retour.
 - « Annoter l'image » : crayon, surligneur, flèche, ligne, distance (une cote : « 12 mm »), cercle, cadre,
   texte, numéro, icônes (danger, gants, cadenas, sens horaire…) et flou (cacher un visage, un nom, un écran).
   « Annoter par IA » place les flèches et les cercles sur ce qu'il faut voir.

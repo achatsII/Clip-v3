@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { readAutoAnnotate } from '@/lib/ai/autoAnnotate'
+import { generatesOnServer } from '@/lib/ai/durableAsk'
 import { readProposeChecks } from '@/lib/ai/proposeChecks'
 import { startGeneration } from '@/lib/ai/runGeneration'
 import { T } from '@/lib/model/repo'
@@ -24,7 +25,9 @@ export function useLaunchGeneration() {
   const figures = useToggle('documentFigures')
   const records = useToggle('records')
   const serverToggle = useToggle('serverGeneration')
-  const serverOn = serverToggle && session.org.json_data.generation?.server === true
+  const backgroundAi = useToggle('backgroundAi')
+  // Le choix de l'usine ; sans choix, au serveur au téléphone (iOS coupe l'app hors de l'écran).
+  const serverOn = serverToggle && generatesOnServer(session.org.json_data.generation?.server, serverToggle, backgroundAi)
   return useCallback(
     async (id: string, kind: 'auto' | 'procedure' | 'lockout', opts: { device?: boolean; onDone?: () => void } = {}) => {
       const fresh = await session.data.get<Instruction>(T.instruction, id)

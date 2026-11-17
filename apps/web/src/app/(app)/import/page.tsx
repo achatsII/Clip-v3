@@ -18,6 +18,7 @@ import { startServerImport } from '@/lib/ai/runGeneration'
 import type { Doc } from '@/lib/gateway/data'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { messages, useMessages } from '@/lib/i18n'
+import { generatesOnServer } from '@/lib/ai/durableAsk'
 import { ingestFile, isSlides } from '@/lib/media/ingest'
 import { nowIso, T } from '@/lib/model/repo'
 import { hasLabels, labelsFromAi, ruleStationsFor } from '@/lib/model/nomenclature'
@@ -55,7 +56,10 @@ export default function ImportPage() {
   const stations = useStations()
   const toggle = useToggle('bulkImport')
   // L'analyse au serveur (toggle `serverGeneration` et réglage de l'usine) : on peut fermer l'app.
-  const serverOn = useToggle('serverGeneration') && org.json_data.generation?.server === true
+  const serverToggle = useToggle('serverGeneration')
+  const backgroundAi = useToggle('backgroundAi')
+  // Le choix de l'usine ; sans choix, au serveur au téléphone (iOS coupe l'app hors de l'écran).
+  const serverOn = generatesOnServer(org.json_data.generation?.server, serverToggle, backgroundAi)
   const figures = useToggle('documentFigures')
   const creations = useCreations()
   const entitlement = useEntitlement('bulk_import')

@@ -1038,6 +1038,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
 
       {!readOnly && (
         <AgentPanel
+          instructionId={doc._id}
           content={content}
           setContent={update}
           focusStepId={step?.id ?? null}

@@ -144,6 +144,7 @@ export function PreviewEditing({ doc, player }: { doc: Doc<Instruction>; player:
       {/* L'assistant flotte par-dessus le lecteur, dans le coin : l'étape reste à sa place, on la voit changer. */}
       <Player {...player} content={content} focus={focus} onStepChange={setStepId} accessory={agentOpen ? null : <AgentBubble onClick={() => setAgentOpen(true)} />} />
       <AgentPanel
+        instructionId={doc._id}
         variant="bubble"
         open={agentOpen}
         content={content}

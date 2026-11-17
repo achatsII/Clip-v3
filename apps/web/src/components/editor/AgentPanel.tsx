@@ -11,6 +11,7 @@ import { suggestEdits } from '@/lib/ai/suggest'
 import { useBilling, useEntitlement, useGate } from '@/lib/billing/state'
 import { useMessages } from '@/lib/i18n'
 import type { InstructionContent, Source } from '@/lib/model/types'
+import { suspendsInBackground } from '@/lib/ai/durableAsk'
 import { useToggle } from '@/lib/toggles'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { LiveEditVoice } from './LiveEditVoice'
@@ -20,6 +21,8 @@ interface Message {
   role: 'user' | 'agent'
   text: string
   working?: boolean
+  /** La réponse se prépare au serveur : on peut quitter l'app, elle attendra. */
+  durable?: boolean
   error?: boolean
   actions?: AgentLogEntry[]
   /** L'instruction avant ce tour : « Annuler ces changements » y revient. */
@@ -55,7 +58,10 @@ export function AgentPanel({
   onTurnEnd,
   variant = 'panel',
   open: openProp,
+  instructionId,
 }: {
+  /** L'instruction modifiée : au téléphone, la réponse se prépare au serveur sous son nom. */
+  instructionId?: string
   content: InstructionContent
   setContent: (c: InstructionContent) => void
   /** L'étape que la personne regarde : « cette étape », et les premières suggestions. */
@@ -82,7 +88,11 @@ export function AgentPanel({
   /** Ouvert ou fermé par la page (la bulle de l'aperçu vit dans la barre du lecteur). */
   open?: boolean
 }) {
-  const { ai, org, files } = useSession()
+  const { ai, org, files, data } = useSession()
+  // Au téléphone, la réponse se prépare au serveur : iOS suspend l'app hors de l'écran (`durableAsk`).
+  const backgroundAi = useToggle('backgroundAi')
+  const serverJobs = useToggle('serverGeneration')
+  const durable = backgroundAi && serverJobs && !!instructionId && suspendsInBackground() ? { data, instructionId } : undefined
   const t = useMessages()
   const [openInner, setOpenInner] = useState(false)
   const open = openProp ?? openInner
@@ -145,7 +155,7 @@ export function AgentPanel({
     const agentId = nextId.current++
     const done: string[] = []
     const failed: string[] = []
-    setMessages((list) => [...list, { id: userId, role: 'user', text: via === 'voice' ? `🎙 ${ask}` : ask }, { id: agentId, role: 'agent', text: '', working: true }])
+    setMessages((list) => [...list, { id: userId, role: 'user', text: via === 'voice' ? `🎙 ${ask}` : ask }, { id: agentId, role: 'agent', text: '', working: true, durable: !!durable }])
     try {
       const ta = t.editorTools.agent
       let looked: string | null = null
@@ -167,6 +177,7 @@ export function AgentPanel({
         },
         onSources: onSourcesChange,
         canTranslate,
+        durable,
       })
       if (looked) patch(agentId, (m) => ({ actions: (m.actions ?? []).map((a) => (a.key === -1 ? { ...a, label: ta.looked(looked!), state: 'done' as const } : a)) }))
       history.current.push({ role: 'user', content: ask }, { role: 'assistant', content: turn.reply })
@@ -307,6 +318,7 @@ export function AgentPanel({
           ) : (
             <div key={m.id} className={cn('mr-6 rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm', m.error ? 'bg-rose-50 text-rose-900 dark:bg-rose-500/10 dark:text-rose-200' : 'bg-slate-900/[0.04] dark:bg-white/5')}>
               {m.text ? <p className="font-bold">{m.text}</p> : <p className="flex items-center gap-2 font-bold text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> {t.editorTools.agent.reading}</p>}
+              {!m.text && m.working && m.durable && <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400">{t.editorTools.agent.keepsGoing}</p>}
               {!!m.actions?.length && (
                 <ul className="mt-2 space-y-1">
                   {m.actions.map((a) => (

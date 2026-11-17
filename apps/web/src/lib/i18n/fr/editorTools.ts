@@ -123,6 +123,8 @@ export const editorTools = {
     close: 'Fermer l’assistant',
     intro: 'Demandez n’importe quel changement : réécrire ou ajouter une étape, « encercle le bouton vert sur la photo de l’étape 3 », dessiner un schéma, montrer à faire / à éviter… Vous pouvez aussi dicter au micro.',
     reading: 'Je lis l’instruction…',
+    /** Au téléphone : la réponse se prépare au serveur. */
+    keepsGoing: 'Vous pouvez quitter l’app : la réponse vous attendra.',
     undoTurn: 'Annuler ces changements',
     undone: 'Changements annulés.',
     placeholder: 'Demandez un changement…',

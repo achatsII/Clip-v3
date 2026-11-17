@@ -420,6 +420,22 @@ Gateway refuse ce mode (route absente, morceau refusé), le fichier part d'un bl
 tests jouent contre une fausse Gateway TUS qui se comporte comme la vraie
 (`tests/resumable-upload.test.ts`).
 
+**L'IA continue hors de l'écran** (toggle `backgroundAi`, `src/lib/ai/durableAsk.ts`). Au téléphone,
+iOS suspend l'app quelques secondes après qu'elle quitte l'écran et coupe la requête en cours : une
+réponse de l'assistant était perdue. Sur un appareil que l'arrière-plan suspend (l'app, ou Safari sur
+iPhone et iPad : `suspendsInBackground`), la demande part au serveur par la branche clip-v3 de
+Job_start, la même que la génération au serveur. Vérifié dans n8n : la branche ne regarde pas
+l'opération, ne touche pas à l'instruction, et rend tout résultat JSON d'une requête avec un schéma.
+`durableAsk` relit le travail toutes les 2 s tant que l'app est à l'écran, et aussitôt qu'elle y
+revient (`visibilitychange`). À la fin, il débite le coût réel avec la clé du travail et ferme le
+travail (`finalizedAt`). Pas pris en 45 s, ou refusé, la demande part sur l'appareil ; un refus de
+facturation se montre tel quel. Une demande arrêtée est suivie jusqu'au bout pour débiter son coût.
+L'assistant l'utilise (`askAgent`, `durable`), avec « Vous pouvez quitter l'app : la réponse vous
+attendra » pendant qu'il travaille. Sans choix de l'usine, la génération et l'import partent au
+serveur au téléphone (`generatesOnServer`) ; un choix de l'usine décide toujours. Limite : si iOS
+ferme complètement l'app en arrière-plan, la réponse de l'assistant reste dans `clip_job` sans être
+reprise.
+
 **Les envois ne retiennent plus.** « Générer » se touche pendant les envois de la capture : la
 génération part toute seule à leur fin (`CaptureSession.whenUploaded`), même si l'on a quitté
 l'écran entretemps. Dans la coquille iOS, les fichiers partent par une session d'envoi en

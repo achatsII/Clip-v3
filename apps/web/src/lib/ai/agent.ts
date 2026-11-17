@@ -20,7 +20,9 @@
 import { cleanChecks, describeCheck } from '../model/checks'
 import { inheritSection } from '../model/sections'
 import { checkSchema } from './schemas'
-import type { AiApi, AiOperation, AskFile } from '../gateway/ai'
+import type { AiApi, AiOperation, AskBody, AskFile } from '../gateway/ai'
+import type { DataApi } from '../gateway/data'
+import { durableAsk } from './durableAsk'
 import { ApiError } from '../gateway/client'
 import { getLang, messages } from '../i18n'
 import { LANGUAGES, PPE } from '../model/catalog'
@@ -261,27 +263,28 @@ export async function askAgent(
     look?: { operation: AiOperation; files: AskFile[]; lines: string[]; question: string }
     /** Faux : la traduction n'est pas offerte (toggle coupé, ou pas dans le plan). */
     canTranslate?: boolean
+    /** Au téléphone (toggle `backgroundAi`) : la réponse se prépare au serveur et survit à l'arrière-plan. */
+    durable?: { data: Pick<DataApi, 'get' | 'patch'>; instructionId: string }
   } = {},
 ): Promise<AgentTurn> {
   const ui = getLang()
   const look = opts.look
   const system = agentSystem(org, { ui, content: contentLang(content) }, { translate: opts.canTranslate })
-  const res = await ai.ask<AgentTurn>(
-    look ? look.operation : 'edit_agent',
-    {
-      provider: 'google',
-      level: 'mid',
-      thinking: 'enabled',
-      effort: 'low',
-      system_instruction: look ? `${system}\n\nLES SOURCES DEMANDÉES SONT JOINTES : appuie-toi sur ce que tu vois et entends pour faire la demande. N’utilise plus look.` : system,
-      prompt: look ? `${agentPrompt(content, focusStepId, request, opts.sources)}\n\nSOURCES JOINTES :\n${look.lines.join('\n')}\nCE QU’IL FAUT Y TROUVER : ${look.question}` : agentPrompt(content, focusStepId, request, opts.sources),
-      json_schema: agentSchema(ui),
-      history: history.slice(-8),
-      maxOutputTokens: 16000,
-      ...(look ? { files: look.files, mediaResolution: 'low' as const } : {}),
-    },
-    { scope: look ? 'agent-look' : 'agent', timeoutMs: look ? 240_000 : 120_000 },
-  )
+  const operation: AiOperation = look ? look.operation : 'edit_agent'
+  const body: AskBody = {
+    provider: 'google',
+    level: 'mid',
+    thinking: 'enabled',
+    effort: 'low',
+    system_instruction: look ? `${system}\n\nLES SOURCES DEMANDÉES SONT JOINTES : appuie-toi sur ce que tu vois et entends pour faire la demande. N’utilise plus look.` : system,
+    prompt: look ? `${agentPrompt(content, focusStepId, request, opts.sources)}\n\nSOURCES JOINTES :\n${look.lines.join('\n')}\nCE QU’IL FAUT Y TROUVER : ${look.question}` : agentPrompt(content, focusStepId, request, opts.sources),
+    json_schema: agentSchema(ui),
+    history: history.slice(-8),
+    maxOutputTokens: 16000,
+    ...(look ? { files: look.files, mediaResolution: 'low' as const } : {}),
+  }
+  const how = { scope: look ? 'agent-look' : 'agent', timeoutMs: look ? 240_000 : 120_000 }
+  const res = opts.durable ? await durableAsk<AgentTurn>({ ai, data: opts.durable.data }, operation, body, { instructionId: opts.durable.instructionId, ...how }) : await ai.ask<AgentTurn>(operation, body, how)
   const j = res.json
   if (!j || typeof j.reply !== 'string') throw new ApiError(messages().editorTools.agent.errors.noAnswer, 502)
   return {
@@ -326,9 +329,11 @@ export async function agentTurn(input: {
   onLook?: (info: LookInfo) => void
   onSources?: (sources: Source[]) => void
   canTranslate?: boolean
+  /** La réponse se prépare au serveur et survit à l'arrière-plan (toggle `backgroundAi`, au téléphone). */
+  durable?: { data: Pick<DataApi, 'get' | 'patch'>; instructionId: string }
 }): Promise<AgentTurn> {
   const sources = input.sources ?? []
-  const first = await askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, { sources, canTranslate: input.canTranslate })
+  const first = await askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, { sources, canTranslate: input.canTranslate, durable: input.durable })
   const lookOp = first.operations.find((o) => o.op === 'look')
   const operations = first.operations.filter((o) => o.op !== 'look')
   if (!lookOp) return first
@@ -355,6 +360,7 @@ export async function agentTurn(input: {
   return askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, {
     sources,
     canTranslate: input.canTranslate,
+    durable: input.durable,
     look: { operation: tier.op, files: prepared.askFiles, lines, question: lookOp.question?.trim() || input.request },
   })
 }

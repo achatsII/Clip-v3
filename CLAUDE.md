@@ -71,6 +71,13 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `Job_Generate_CLIP_V3` (nœud « Shape analysis result »), et ce qui s'écrit de plus dans
   `clip_job`, dans la branche de Job_start. Les consignes, le schéma et les fichiers passent tels
   quels : les changer ne demande rien dans n8n.
+- **L'IA continue hors de l'écran** (toggle `backgroundAi`) : au téléphone (l'app, ou Safari sur iPhone),
+  iOS suspend l'app hors de l'écran et coupe la requête en cours. La réponse de l'assistant se prépare
+  donc au serveur, par la même branche clip-v3 de Job_start que la génération (elle roule toute requête
+  avec un schéma ; rien à changer dans n8n) : `durableAsk` (`src/lib/ai/durableAsk.ts`) relit `clip_job`
+  toutes les 2 s à l'écran et aussitôt au retour, débite le coût réel une fois (`jobDebitKey`) et ferme
+  le travail ; pas pris en 45 s ou refusé, la demande part sur l'appareil. Sans choix de l'usine, la
+  génération part au serveur au téléphone (`generatesOnServer`).
 - **Gros fichiers** (toggle `resumableUpload`) : dès 16 Mo, un fichier du navigateur part par
   morceaux de 4 Mo, directement à la Gateway (TUS, `src/lib/gateway/resumable.ts`).
   - Un morceau raté se renvoie seul, à partir de ce que la Gateway a vraiment reçu.

@@ -115,6 +115,7 @@ export const editorTools: typeof Fr = {
     close: 'Close the assistant',
     intro: 'Ask for any change: rewrite or add a step, “circle the green button in the step 3 photo”, draw a diagram, show do / don’t… You can also dictate with the mic.',
     reading: 'Reading the instruction…',
+    keepsGoing: 'You can leave the app: the answer will be waiting.',
     undoTurn: 'Undo these changes',
     undone: 'Changes undone.',
     placeholder: 'Ask for a change…',
