@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, type ReactN
 import { callNative, hasCapability } from '@/lib/bridge/native'
 import { aiApi, onAiDebitError, onAiUsage, type AiApi } from '@/lib/gateway/ai'
 import { fetchProfile, type Profile } from '@/lib/gateway/auth'
-import { gateway, hasSession } from '@/lib/gateway/client'
+import { ApiError, gateway, hasSession, logout } from '@/lib/gateway/client'
 import { dataApi, type DataApi, type Doc } from '@/lib/gateway/data'
 import { filesApi, setResumableUploads, type FilesApi } from '@/lib/gateway/files'
 import { messages, useMessages } from '@/lib/i18n'
@@ -75,6 +75,13 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
   const profile = profileQ.data
   const org = orgQ.data
 
+  // Un profil refusé (jeton que la Gateway ne reconnaît pas, sans le 401 qui déconnecte déjà) :
+  // la session ne vaut rien, on repart de la connexion plutôt que de laisser « Réessayer » sans fin.
+  const profileDenied = profileQ.error instanceof ApiError && (profileQ.error.status === 401 || profileQ.error.status === 403)
+  useEffect(() => {
+    if (profileDenied) logout(true)
+  }, [profileDenied])
+
   useEffect(() => {
     applyBrandColor(org?.json_data.color)
   }, [org?.json_data.color])
@@ -134,6 +141,7 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
     }
   }, [profile, org, updateOrg, refreshOrg, t])
 
+  if (profileDenied) return <>{fallback}</>
   if (profileQ.error || orgQ.error) {
     return <SessionError onRetry={() => (profileQ.error ? profileQ.refetch() : orgQ.refetch())} />
   }
@@ -145,8 +153,9 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
   )
 }
 
+/** Jamais sans issue : « Réessayer », et toujours « Se déconnecter » pour repartir de la connexion. */
 function SessionError({ onRetry }: { onRetry: () => void }) {
-  const { common, auth } = useMessages()
+  const { common, auth, shell } = useMessages()
   return (
     <div className="flex min-h-dvh items-center justify-center p-6">
       <div className="glass-panel max-w-md rounded-[32px] p-8 text-center">
@@ -154,6 +163,9 @@ function SessionError({ onRetry }: { onRetry: () => void }) {
         <p className="mt-2 font-medium text-slate-500">{auth.session.serverDown}</p>
         <button type="button" onClick={onRetry} className="btn-press bg-gradient-primary shadow-primary mt-6 h-12 rounded-full px-6 font-black text-white">
           {common.retry}
+        </button>
+        <button type="button" onClick={() => logout(true)} className="btn-press mx-auto mt-2 flex h-11 items-center rounded-full px-5 font-bold text-slate-500 dark:text-slate-400">
+          {shell.signOut}
         </button>
       </div>
     </div>

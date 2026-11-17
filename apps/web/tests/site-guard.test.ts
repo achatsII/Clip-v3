@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { hasSession } from '@/lib/gateway/client'
+import { hasSession, SESSION_ORIGIN } from '@/lib/gateway/client'
 import { getLang, setLang } from '@/lib/i18n'
 import { SESSION_KEY, SITE_GUARD_SCRIPT } from '@/lib/site/guard'
 
@@ -25,6 +25,7 @@ function run({ path = '/', session = false, shell = '' as '' | 'native' | 'webvi
 
 afterEach(() => {
   localStorage.removeItem(SESSION_KEY)
+  localStorage.removeItem('clip_session_of')
   document.body.innerHTML = ''
   setLang('fr')
 })
@@ -33,6 +34,7 @@ describe('le script de garde du site', () => {
   it('teste la session comme l’app (`hasSession`)', () => {
     expect(hasSession()).toBe(false)
     localStorage.setItem(SESSION_KEY, 'jeton')
+    localStorage.setItem('clip_session_of', SESSION_ORIGIN)
     expect(hasSession()).toBe(true)
   })
 

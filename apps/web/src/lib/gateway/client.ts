@@ -59,6 +59,9 @@ function messageFrom(detail: unknown, status: number): { message: string; code?:
     if (typeof d.message === 'string') return { message: d.message, code }
     if (typeof d.title === 'string') return { message: d.title, code }
   }
+  // Une page HTML (un service derrière la Gateway qui ne connaît pas la route : « Cannot POST … »)
+  // ne s'affiche jamais telle quelle ; elle reste dans `detail` pour le diagnostic.
+  if (typeof detail === 'string' && /^\s*</.test(detail)) return { message: messages().common.errors.server }
   if (typeof detail === 'string' && detail) return { message: detail }
   return { message: `Erreur ${status}` }
 }
@@ -146,6 +149,15 @@ export function createGatewayClient(source: TokenSource): GatewayClient {
 
 const ACCESS = 'access_token'
 const REFRESH = 'refresh_token'
+/**
+ * D'où viennent les jetons gardés : la Gateway et l'application qui les ont donnés. Un jeton d'une
+ * autre Gateway (QA ↔ prod) ou d'une autre application (`html` ↔ `clip-v2`) ne vaut rien ici, et la
+ * Gateway ne le refuse pas toujours par un 401 : l'app restait sur « Impossible d'ouvrir CLIP » sans
+ * autre issue que la réinstaller (novembre 2026, main passée à la Gateway prod). Un jeton sans cette
+ * marque date d'avant elle : on ne sait pas d'où il vient, il s'oublie aussi (une reconnexion, une fois).
+ */
+const SESSION_OF = 'clip_session_of'
+export const SESSION_ORIGIN = `${GATEWAY_URL}|${APP_IDENTIFIER}`
 
 function ls(): Storage | null {
   try {
@@ -173,7 +185,15 @@ function emitAuth() {
 }
 
 export function getAccessToken(): string | null {
-  return ls()?.getItem(ACCESS) ?? null
+  const s = ls()
+  if (!s) return null
+  const token = s.getItem(ACCESS)
+  if (token && s.getItem(SESSION_OF) !== SESSION_ORIGIN) {
+    // Sans prévenir les écouteurs : on peut être en plein rendu ; la page ira à la connexion.
+    clearSession(s)
+    return null
+  }
+  return token
 }
 
 export function hasSession(): boolean {
@@ -185,6 +205,7 @@ export function storeTokens(access: string, refresh?: string | null) {
   if (!s) return
   s.setItem(ACCESS, access)
   if (refresh) s.setItem(REFRESH, refresh)
+  s.setItem(SESSION_OF, SESSION_ORIGIN)
   emitAuth()
 }
 
@@ -192,6 +213,8 @@ async function refreshUserSession(): Promise<boolean> {
   if (refreshInFlight) return refreshInFlight
   refreshInFlight = (async () => {
     try {
+      // Jamais le jeton d'une autre Gateway ou d'une autre application (`getAccessToken` l'oublie).
+      if (!getAccessToken()) return false
       const refreshToken = ls()?.getItem(REFRESH)
       if (!refreshToken) return false
       const res = await fetch(`${GATEWAY_URL}/api/v1/auth/token/refresh?app_identifier=${encodeURIComponent(APP_IDENTIFIER)}`, {
@@ -219,20 +242,26 @@ export const refreshSession = refreshUserSession
 /** Vide la session en gardant les préférences d'affichage. */
 export function logout(redirect = true) {
   const s = ls()
-  if (s) {
-    const keep: Record<string, string> = {}
-    for (const key of ['ui_theme', 'clip_install_id']) {
-      const v = s.getItem(key)
-      if (v) keep[key] = v
-    }
-    for (let i = s.length - 1; i >= 0; i--) {
-      const k = s.key(i)
-      if (k && !k.startsWith('clip_pref_')) s.removeItem(k)
-    }
-    Object.entries(keep).forEach(([k, v]) => s.setItem(k, v))
-  }
+  if (s) clearSession(s)
   emitAuth()
   if (redirect && typeof window !== 'undefined') window.location.assign('/connexion')
+}
+
+/**
+ * Vide les jetons et ce que l'app garde des données de l'usine (caches, files d'attente), en gardant
+ * le thème, l'identifiant de l'installation et les préférences (`clip_pref_*`).
+ */
+function clearSession(s: Storage) {
+  const keep: Record<string, string> = {}
+  for (const key of ['ui_theme', 'clip_install_id']) {
+    const v = s.getItem(key)
+    if (v) keep[key] = v
+  }
+  for (let i = s.length - 1; i >= 0; i--) {
+    const k = s.key(i)
+    if (k && !k.startsWith('clip_pref_')) s.removeItem(k)
+  }
+  Object.entries(keep).forEach(([k, v]) => s.setItem(k, v))
 }
 
 const userSource: TokenSource = {

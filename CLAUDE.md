@@ -410,6 +410,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   reprend en clair seulement). Sinon, fond pâle et texte blanc en sombre (points clés illisibles,
   novembre 2026). Le bleu foncé `text-[var(--primary-strong)]` a toujours sa couleur `dark:` dans la
   même chaîne de classes (`tests/theme-dark.test.ts`).
+- Un jeton gardé ne vaut que pour la Gateway et l'application qui l'ont donné : la session les retient
+  (`clip_session_of`, `SESSION_ORIGIN`, `src/lib/gateway/client.ts`) et oublie un jeton d'ailleurs ou
+  sans marque. Sinon, au passage de main de la QA à la prod (novembre 2026), TestFlight restait sur
+  « Impossible d'ouvrir CLIP » jusqu'à réinstaller l'app. Cet écran garde toujours « Se déconnecter », et
+  un profil refusé (401, 403) renvoie à la connexion. Une erreur en page HTML (un service derrière la
+  Gateway qui ne connaît pas la route) ne s'affiche jamais telle quelle.
 - La Gateway refuse l'envoi de fichiers au rôle `guest` d'un lien public (routes
   `files/upload/generate/presigned-url` et `files/upload/direct` : `user` et `admin` seulement) : une
   photo prise au poste passe par la base (`guestPhotoSaver`), jamais par `files.upload`.
