@@ -35,8 +35,11 @@ export const BILLING_V2 = process.env.NEXT_PUBLIC_BILLING_V2 === '1'
  */
 export const AI_CREDITS_PER_CAD = 1000
 
-/** Slug du produit pour la facturation (`X-Product`) : l'identifiant à enregistrer. */
-export const PRODUCT_SLUG = 'clip-v3'
+/**
+ * Le produit facturé (`X-Product`, `product.slug` du manifeste) : l'application de la connexion à la
+ * Gateway, `clip-v2` (les deux marques sont le même produit, le même catalogue).
+ */
+export const PRODUCT_SLUG = 'clip-v2'
 
 /** Le nom du produit, celui de la marque de cette build (`src/lib/brand/product.ts`). */
 export const APP_NAME = PRODUCT.name

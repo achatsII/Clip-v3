@@ -458,8 +458,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Le catalogue (plans, prix, crédits) vit dans `billing.manifest.yaml`, à la racine. On ne le modifie
   qu'en passant par ce fichier, jamais par une écriture directe en base. Il doit passer la simulation
   de `billing-publish` avant d'être publié ; le verrou `billing.manifest.lock.json` dira ce qui est
-  publié (rien ne l'est encore). Le slug `clip-v3` doit d'abord être enregistré à la Gateway comme
-  application.
+  publié (rien ne l'est encore). Le produit facturé est `clip-v2`, l'application de la connexion à la
+  Gateway (`PRODUCT_SLUG`, `product.slug`) : les deux marques, un seul catalogue.
 - La grille (manifeste, décision du 2026-11-16, volume et essai du 2026-11-17) : sur le web seulement (Stripe),
   seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : **Sans abonnement** (le plan par défaut :
   aucune IA, 1 rédacteur, 3 publiées, 1 poste ; plus de crédits offerts sans fin) · Solo 49 $/mois (1, 15, 3,
@@ -511,7 +511,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   ou d'un import (`generationTier`, `src/lib/ai/generate.ts`) ne fixe plus de prix : au-delà de la
   plus grande taille, l'app demande toujours de séparer l'instruction.
 - Les routes de facturation passent par la passerelle Octopus, avec le jeton de l'utilisateur et
-  `X-Product: clip-v3` (`src/lib/billing/client.ts`) : `GET /api/v2/billing/context` (plan, état,
+  `X-Product: clip-v2` (`src/lib/billing/client.ts`) : `GET /api/v2/billing/context` (plan, état,
   crédits restants), `POST /api/v2/billing/check` (droit à une feature), `POST /api/v2/billing/consume`
   (le débit du coût réel d'une réponse de l'IA), `GET /api/v2/billing/plans` (page des plans),
   `POST /api/v2/billing/checkout` (paiement Stripe, réservé à l'administrateur de l'organisation) et
@@ -592,4 +592,4 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
     (`src/lib/billing/store.ts`, `src/components/billing/Store.tsx`).
   - Le module natif part dans une build EAS, jamais dans une mise à jour à distance seule.
 - Le drapeau reste éteint partout tant que le catalogue n'est pas publié ; on l'allume en QA quand
-  `GET /api/v2/billing/context` y répond pour `clip-v3`.
+  `GET /api/v2/billing/context` y répond pour `clip-v2`.

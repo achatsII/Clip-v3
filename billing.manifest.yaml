@@ -7,8 +7,9 @@
 manifest_version: 1
 
 product:
-  # À enregistrer à la Gateway avant la publication : l'app se connecte encore avec « html ».
-  slug: clip-v3
+  # L'application de la Gateway avec laquelle l'app se connecte (`clip-v2`, NEXT_PUBLIC_APP_IDENTIFIER) :
+  # le produit facturé porte l'identifiant de la connexion (décision du 2026-11-17).
+  slug: clip-v2
   name: CLIP
   # Le web seulement (Stripe), décision du 2026-11-17 : on s'abonne sur le site, une seule facturation.
   # L'app mobile est une app compagnon : elle ne vend rien (ni prix, ni bouton, ni lien d'achat) et ouvre

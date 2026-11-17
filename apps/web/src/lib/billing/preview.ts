@@ -10,6 +10,7 @@
  * - Rien ne s'achète et rien n'est débité : « choisir » un plan ou « essayer » un module change
  *   seulement l'aperçu. L'IA garde sa route d'avant ; le serveur ne vérifie rien de plus.
  */
+import { PRODUCT_SLUG } from '../config'
 import { addonFor, MODULES, presentOffer, type FeatureKey, type ModuleKey } from './catalog'
 import type { BillingClient, BillingState, CheckResult, PlansOffer, PublicPlan } from './client'
 
@@ -106,7 +107,7 @@ export function previewState(sel: PreviewSelection, now = new Date()): BillingSt
   const available = Math.round(granted * REMAINING[s.credits])
   const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString()
   return {
-    product: 'clip-v3',
+    product: PRODUCT_SLUG,
     state: 'active',
     plan_code: s.plan,
     plan_version: 1,
@@ -146,7 +147,7 @@ export function createPreviewClient(store: { read: () => PreviewSelection; write
     },
     plans: async (): Promise<PlansOffer> => {
       const current = store.read().plan
-      return presentOffer({ product: 'clip-v3', channel: 'web', currency: 'CAD', plans: PREVIEW_PLANS.map((p) => ({ ...p, is_current: p.code === current })) })
+      return presentOffer({ product: PRODUCT_SLUG, channel: 'web', currency: 'CAD', plans: PREVIEW_PLANS.map((p) => ({ ...p, is_current: p.code === current })) })
     },
     mobileSync: context,
     // Pas de paiement : l'aperçu prend le plan ou le module, et on revient là où on était.
