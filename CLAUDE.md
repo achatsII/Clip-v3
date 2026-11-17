@@ -10,6 +10,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - À la racine (workspaces npm `apps/web` et `packages/*`) : `npm run dev`, `npm run typecheck`,
   `npm test` (Vitest, `apps/web/tests`), `npm run build`.
 - Coquille mobile, hors workspaces : `cd apps/mobile && npm test` (Jest) et `npm run typecheck`.
+- Déploiement : un push suffit (GitHub Action `deploy-vercel.yml`, workflow partagé de l'organisation).
+  `main` → production (Gateway prod), `dev` → QA (Gateway QA), autre branche → preview. Les variables
+  vivent par environnement dans Vercel (`docs/architecture.md`, « Les environnements »).
 
 ## Repères
 
