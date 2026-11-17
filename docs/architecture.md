@@ -462,7 +462,13 @@ définition) : la boîte de chaque figure, [ymin, xmin, ymax, xmax] de 0 à 1000
 Gemini et des repères automatiques. La figure se recadre dans le navigateur avec une marge de 2 %
 (`cropImage`, `figureRect`), part en JPEG dans `figures/` et devient l'image de l'étape, avec la page
 d'où elle vient (`fromPage`). Une figure introuvable, plus petite qu'un centième de la page ou qui en
-couvre plus des quatre cinquièmes laisse la page entière. Les pages se traitent trois à la fois, et
+couvre plus des quatre cinquièmes laisse la page entière. Vérifié avec la vraie IA en QA le 17 novembre
+2026 (un vrai PDF de procédure, photos dans des cellules de tableau, et une page de test avec légendes
+et vues côte à côte) : la bonne figure chaque fois, des boîtes à 0–6 px des vrais bords, une figure
+absente dite absente (`found: false`), environ 3 crédits et 6 à 7 s par page. La marge autour de la
+boîte est donc de 4 px à 200 dpi (`MARGIN` = 0,2 %) : celle de 2 % ramenait des bordures de tableau,
+des lignes de texte coupées et une bande des photos voisines. La légende (« Figure 2 — … ») reste
+dehors : le texte de l'étape la remplace. Les pages se traitent trois à la fois, et
 le choix voyage avec le travail au serveur (`ServerJobContext.figures`) : l'appareil qui termine fait
 le recadrage, comme les vignettes. Dans l'éditeur, « Figure / Page entière » échange les deux sans
 rien perdre (légende, verdict, annotations : `toWholePage`, `toFigure`).

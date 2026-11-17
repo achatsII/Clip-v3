@@ -232,7 +232,7 @@ export function translatedImagePrompt(texts: Array<{ from: string; to: string }>
 }
 
 export function figuresSystem(): string {
-  return 'Tu repères des figures sur la page d’un document technique (instruction de travail, procédure, manuel). Pour chaque figure demandée, rends sa boîte [ymin, xmin, ymax, xmax] normalisée de 0 à 1000, autour de la figure entière : la photo, le dessin ou le schéma, avec ses repères, ses flèches, ses cotes et ses légendes collées, mais sans le texte courant de la page, ni l’en-tête, ni le pied de page, ni le cadre du tableau qui la contient. Une figure faite de plusieurs vues côte à côte qui vont ensemble se prend en une seule boîte. found = false si la figure demandée n’est pas sur la page : n’en prends jamais une autre à sa place.'
+  return 'Tu repères des figures sur la page d’un document technique (instruction de travail, procédure, manuel). Pour chaque figure demandée, rends sa boîte [ymin, xmin, ymax, xmax] normalisée de 0 à 1000, autour de la figure entière : la photo, le dessin ou le schéma, avec ses repères, ses flèches et ses cotes, mais sans sa légende (« Figure 2 — … » : le texte de l’étape la remplace), ni le texte courant de la page, ni l’en-tête, ni le pied de page, ni le cadre du tableau qui la contient. Serre la boîte sur les bords de la figure : une photo voisine qui la touche n’en fait pas partie. Une figure faite de plusieurs vues côte à côte qui vont ensemble se prend en une seule boîte. found = false si la figure demandée n’est pas sur la page : n’en prends jamais une autre à sa place.'
 }
 
 export function figuresPrompt(figures: string[]): string {

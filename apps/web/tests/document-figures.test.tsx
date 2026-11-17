@@ -79,7 +79,8 @@ describe('les figures d’un document', () => {
     expect(parseBox(['a', 1, 2, 3])).toBeNull()
     expect(parseBox([1, 2, 3])).toBeNull()
     // Page de 1700 × 2200 px : marge de 2 % du plus grand côté (44 px).
-    expect(figureRect([100, 200, 400, 800], 1700, 2200)).toEqual({ x: 296, y: 176, w: 1108, h: 748 })
+    // Une marge de 4 px à 200 dpi : la boîte de l'IA tombe à 0–6 px des bords (mesuré en QA).
+    expect(figureRect([100, 200, 400, 800], 1700, 2200)).toEqual({ x: 336, y: 216, w: 1028, h: 668 })
     expect(figureRect([500, 500, 560, 560], 1700, 2200)).toBeNull()
     expect(figureRect([20, 20, 980, 980], 1700, 2200)).toBeNull()
   })

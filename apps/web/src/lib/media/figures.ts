@@ -18,8 +18,13 @@ export interface PixelRect {
   h: number
 }
 
-/** Marge autour de la figure (la boîte de l'IA est souvent serrée), en part du plus grand côté. */
-const MARGIN = 0.02
+/**
+ * Une petite marge autour de la figure, en part du plus grand côté (4 px à 200 dpi). Vérifié en QA le
+ * 17 novembre 2026 sur de vrais PDF : la boîte de l'IA tombe à 0–6 px des vrais bords de la figure.
+ * L'ancienne marge de 2 % (44 px) ramenait des bordures de tableau, des lignes de texte coupées et une
+ * bande des photos voisines quand elles se touchent.
+ */
+const MARGIN = 0.002
 /** Plus petite qu'un centième de la page : une icône, pas une figure. */
 const MIN_AREA = 0.01
 /** Plus des quatre cinquièmes de la page : la page entière dit la même chose. */
