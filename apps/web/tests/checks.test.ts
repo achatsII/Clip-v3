@@ -178,15 +178,15 @@ describe('la trace du travail fait', () => {
       const up = fakeGateway(() => ({ results: [{ inserted_id: 'y', json_data: {} }] }))
       expect(await flushExecutions(dataApi(up))).toBe(1)
       expect(pendingExecutions()).toBe(0)
-      expect((up.calls[0].options.body as { json_data: { instructionId: string; app_identifier: string } }).json_data).toMatchObject({ instructionId: 'i1', app_identifier: 'clip-v3' })
+      expect((up.calls[0].options.body as { json_data: { instructionId: string; app_identifier: string } }).json_data).toMatchObject({ instructionId: 'i1' })
     })
   })
 
   it('le registre filtre par instruction, par écarts et par date, du plus récent au plus ancien', async () => {
     const gw = fakeGateway(() => ({ results: [] }))
     await listExecutions(dataApi(gw), { instructionId: 'i1', deviations: true, since: '2026-11-06T00:00:00Z' })
-    const body = gw.calls[0].options.body as { mongo_filter: { $and: unknown[] }; sort: Record<string, number> }
-    expect(body.mongo_filter.$and[1]).toEqual({ 'json_data.instructionId': { $eq: 'i1' }, 'json_data.deviations': { $gt: 0 }, 'json_data.finishedAt': { $gte: '2026-11-06T00:00:00Z' } })
+    const body = gw.calls[0].options.body as { mongo_filter: unknown; sort: Record<string, number> }
+    expect(body.mongo_filter).toEqual({ 'json_data.instructionId': { $eq: 'i1' }, 'json_data.deviations': { $gt: 0 }, 'json_data.finishedAt': { $gte: '2026-11-06T00:00:00Z' } })
     expect(body.sort).toEqual({ 'json_data.finishedAt': -1 })
   })
 })

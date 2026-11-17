@@ -87,7 +87,7 @@ describe('la formation validée, sans réseau', () => {
     const up = fakeGateway(() => ({ results: [{ inserted_id: 't1', json_data: {} }] }))
     expect(await flushTrainings(dataApi(up))).toBe(1)
     expect(up.calls[0].endpoint).toBe('/api/v1/data/clip_training')
-    expect((up.calls[0].options.body as { json_data: Training & { app_identifier: string } }).json_data).toMatchObject({ operatorName: 'Julie', app_identifier: 'clip-v3' })
+    expect((up.calls[0].options.body as { json_data: Training & { app_identifier: string } }).json_data).toMatchObject({ operatorName: 'Julie' })
     expect(await flushTrainings(dataApi(up))).toBe(0)
   })
 })

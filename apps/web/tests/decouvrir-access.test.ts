@@ -36,10 +36,10 @@ function fakeFetch(routes: Record<string, Handler>, calls: Call[]): Fetch {
   }
 }
 
-/** Clip aujourd'hui : l'application partagée `html`, donc aucune étape « client de Clip ». */
+/** Clip par l'application partagée `html` : aucune étape « client de Clip ». */
 const CONFIG: DecouvrirConfig = { gateway: GW, productApp: null, probeType: 'clip_org', sandboxesApp: 'sandboxes', sandboxes: { url: SBX, cle: KEY } }
-/** Le jour où `clip-v3` existe à la passerelle : l'étape client s'allume. */
-const WITH_APP: DecouvrirConfig = { ...CONFIG, productApp: 'clip-v3' }
+/** Clip par sa propre application, `clip-v2` : l'étape client s'allume. */
+const WITH_APP: DecouvrirConfig = { ...CONFIG, productApp: 'clip-v2' }
 const NOW = Date.UTC(2026, 10, 13, 15, 0, 0)
 /** Fin d'accès : minuit (heure du Québec) au soir du 15 décembre 2026 ; une fin passée, le 12 octobre. */
 const FIN = Date.UTC(2026, 11, 16, 5, 0, 0)
@@ -66,8 +66,8 @@ describe('l’interrupteur et la configuration', () => {
     expect(accessMode({ DECOUVRIR_ACCES: ' Sandboxes ' })).toBe('sandboxes')
   })
 
-  it('saute l’étape client tant que Clip partage `html`, et l’allume avec son propre identifiant', () => {
-    expect(decouvrirConfig({}).productApp).toBeNull()
+  it('allume l’étape client avec l’application de Clip, `clip-v2` par défaut, et la saute si Clip partage `html`', () => {
+    expect(decouvrirConfig({}).productApp).toBe('clip-v2')
     expect(decouvrirConfig({ NEXT_PUBLIC_APP_IDENTIFIER: 'html' }).productApp).toBeNull()
     expect(decouvrirConfig({ NEXT_PUBLIC_APP_IDENTIFIER: 'clip-v3' }).productApp).toBe('clip-v3')
   })
@@ -140,7 +140,7 @@ describe('la connexion', () => {
 
   describe('le jour où Clip a sa propre application', () => {
     const clientRoutes = (acces: Handler): Record<string, Handler> => ({
-      [`POST ${GW}/api/v1/auth/token`]: byApp({ 'clip-v3': tokens('A-prod', 'R-prod') }),
+      [`POST ${GW}/api/v1/auth/token`]: byApp({ 'clip-v2': tokens('A-prod', 'R-prod') }),
       [`POST ${GW}/api/v1/data/clip_org/count`]: (c) => (c.headers.authorization === 'Bearer A-prod' ? { status: 200, body: { count: 1 } } : { status: 401 }),
       [`GET ${GW}/api/v1/auth/me`]: () => me,
       [`POST ${SBX}/api/v1/acces`]: acces,
@@ -149,7 +149,7 @@ describe('la connexion', () => {
     it('une cliente entre avec son compte Clip, confirmée par une lecture ; Sandboxes en est informé (via produit)', async () => {
       const calls: Call[] = []
       const r = await signIn('cliente@usine-demo.test', 'secret', deps(clientRoutes((c) => (c.body?.via === 'produit' ? { status: 200, body: { ok: true, type: 'client' } } : { status: 400 })), calls, { config: WITH_APP }))
-      expect(r.ok && r.session).toMatchObject({ type: 'client', app: 'clip-v3', fin: null, access: 'A-prod', personne: { id: 'u-client-1', nom: 'Camille Démo' }, entreprise: { id: 'org-client' } })
+      expect(r.ok && r.session).toMatchObject({ type: 'client', app: 'clip-v2', fin: null, access: 'A-prod', personne: { id: 'u-client-1', nom: 'Camille Démo' }, entreprise: { id: 'org-client' } })
       expect(called(calls, `POST ${SBX}/api/v1/acces`)[0]?.body).toEqual({ jeton: 'A-prod', via: 'produit' })
       expect(calls.some((c) => c.query.get('app_identifier') === 'sandboxes')).toBe(false)
     })
@@ -161,7 +161,7 @@ describe('la connexion', () => {
 
     it('un compte Clip sans lecture permise n’est pas client : on essaie `sandboxes`', async () => {
       const r = await signIn('prospect@exemple.test', 'secret', deps({
-        [`POST ${GW}/api/v1/auth/token`]: byApp({ 'clip-v3': tokens('A-prod', 'R-prod'), sandboxes: tokens('A-sbx', 'R-sbx') }),
+        [`POST ${GW}/api/v1/auth/token`]: byApp({ 'clip-v2': tokens('A-prod', 'R-prod'), sandboxes: tokens('A-sbx', 'R-sbx') }),
         [`POST ${GW}/api/v1/data/clip_org/count`]: () => ({ status: 403 }),
         [`POST ${SBX}/api/v1/acces`]: () => prospectOk,
       }, [], { config: WITH_APP }))
@@ -170,7 +170,7 @@ describe('la connexion', () => {
 
     it('de bons identifiants sans aucun accès : « pas encore ouvert », pas « mot de passe incorrect »', async () => {
       const r = await signIn('cliente@usine-demo.test', 'secret', deps({
-        [`POST ${GW}/api/v1/auth/token`]: byApp({ 'clip-v3': tokens('A-prod', 'R-prod') }),
+        [`POST ${GW}/api/v1/auth/token`]: byApp({ 'clip-v2': tokens('A-prod', 'R-prod') }),
         [`POST ${GW}/api/v1/data/clip_org/count`]: () => ({ status: 403 }),
       }, [], { config: WITH_APP }))
       expect(r).toEqual({ ok: false, status: 403, raison: 'aucun_acces' })
@@ -182,7 +182,7 @@ describe('la connexion', () => {
     })
 
     it('l’application inconnue de la passerelle de Découvrir (404) : on essaie `sandboxes`', async () => {
-      const r = await signIn('prospect@exemple.test', 'secret', deps({ [`POST ${GW}/api/v1/auth/token`]: byApp({ 'clip-v3': { status: 404, body: { error: 'Unknown application slug' } }, sandboxes: tokens('A-sbx', 'R-sbx') }), [`POST ${SBX}/api/v1/acces`]: () => prospectOk }, [], { config: WITH_APP }))
+      const r = await signIn('prospect@exemple.test', 'secret', deps({ [`POST ${GW}/api/v1/auth/token`]: byApp({ 'clip-v2': { status: 404, body: { error: 'Unknown application slug' } }, sandboxes: tokens('A-sbx', 'R-sbx') }), [`POST ${SBX}/api/v1/acces`]: () => prospectOk }, [], { config: WITH_APP }))
       expect(r.ok && r.session.app).toBe('sandboxes')
     })
   })
@@ -243,7 +243,7 @@ describe('la revérification', () => {
   })
 
   it('une cliente (application de Clip) : la lecture autorisée, puis via produit ; fermée si elle perd Clip', async () => {
-    const client: DecouvrirSession = { ...due, app: 'clip-v3', type: 'client', fin: null, access: 'A-prod', refresh: 'R-prod' }
+    const client: DecouvrirSession = { ...due, app: 'clip-v2', type: 'client', fin: null, access: 'A-prod', refresh: 'R-prod' }
     const calls: Call[] = []
     const ok = await verify(client, deps({ [`POST ${GW}/api/v1/data/clip_org/count`]: () => ({ status: 200, body: { count: 1 } }), [`POST ${SBX}/api/v1/acces`]: () => ({ status: 200, body: { ok: true, type: 'client' } }) }, calls, { config: WITH_APP }))
     expect(ok.closed).toBe(false)

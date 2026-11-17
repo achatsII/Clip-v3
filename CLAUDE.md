@@ -21,8 +21,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - **La Gateway Octopus est le seul backend.** Ses contrats sont dans `apps/web/src/lib/gateway`
   (`client.ts` : jetons, un seul rafraîchissement sur 401 ; `data.ts` ; `files.ts` ; `ai.ts`). On ne
   devine pas une route : on lit sa spec (skill `api-plateforme-ii`).
-- **Données** : connexion avec l'application partagée `html` ; chaque document porte
-  `json_data.app_identifier = "clip-v3"` et chaque lecture filtre dessus (`dataApi` le fait). Les
+- **Données** : connexion avec l'application `clip-v2` (`DEFAULT_APP_IDENTIFIER`), cloisonnée par la
+  Gateway ; droits `data:*`, `files:*`, `ai:*`, `assistant:*`, `communication:*`. Avec
+  `NEXT_PUBLIC_APP_IDENTIFIER=html` (l'ancienne application partagée, où restent les données d'avant le
+  2026-11-17), chaque document porte `json_data.app_identifier = "clip-v3"` et chaque lecture filtre
+  dessus (`dataApi` le fait) ; `clip-v3` reste la clé de la branche n8n (`APP_DATA_IDENTIFIER`). Les
   types sont dans `src/lib/model/repo.ts` (`T`). Une modification partielle passe par `PATCH`, et une
   réécriture complète garde les champs qu'on ne connaît pas.
 - **Liens publics** (poste, instruction) : la portée se bâtit côté serveur dans
