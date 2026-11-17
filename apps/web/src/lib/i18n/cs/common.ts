@@ -57,6 +57,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Tato funkce není součástí vašeho tarifu.',
     aiUnavailable: 'AI neodpověděla. Nic nebylo naúčtováno: zkuste to znovu.',
     aiUnreadable: 'AI vrátila nečitelnou odpověď. Zkuste to znovu.',
+    aiTooManyFiles: 'Příliš mnoho souborů pro jeden požadavek na AI (nejvýše 10). Nic nebylo strženo.',
     aiFailed: 'AI nedokázala odpovědět. Zkuste to znovu.',
     serverJobRefused: 'Server generování nepřevzal. Zkuste to znovu: poběží na tomto zařízení.',
     imageRefused: (why: string) => `Obrazová služba odmítla požadavek: ${why}`,

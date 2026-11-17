@@ -57,6 +57,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Ta funkcja nie jest dostępna w Twoim planie.',
     aiUnavailable: 'AI nie odpowiedziało. Nic nie zostało pobrane: spróbuj ponownie.',
     aiUnreadable: 'AI zwróciło nieczytelną odpowiedź. Spróbuj ponownie.',
+    aiTooManyFiles: 'Za dużo plików w jednym zapytaniu do AI (najwyżej 10). Nic nie zostało pobrane.',
     aiFailed: 'AI nie mogło odpowiedzieć. Spróbuj ponownie.',
     serverJobRefused: 'Serwer nie przyjął generowania. Spróbuj ponownie: zostanie wykonane na tym urządzeniu.',
     imageRefused: (why: string) => `Usługa obrazów odmówiła: ${why}`,

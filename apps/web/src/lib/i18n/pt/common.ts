@@ -57,6 +57,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Este recurso não está incluído no seu plano.',
     aiUnavailable: 'A IA não respondeu. Nada foi cobrado: tente novamente.',
     aiUnreadable: 'A IA devolveu uma resposta ilegível. Tente novamente.',
+    aiTooManyFiles: 'Arquivos demais para um único pedido à IA (no máximo 10). Nada foi cobrado.',
     aiFailed: 'A IA não conseguiu responder. Tente novamente.',
     serverJobRefused: 'O servidor não aceitou a geração. Tente novamente: ela será feita neste dispositivo.',
     imageRefused: (why: string) => `O serviço de imagens recusou: ${why}`,

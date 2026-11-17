@@ -55,6 +55,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Această funcție nu este inclusă în planul dumneavoastră.',
     aiUnavailable: 'AI nu a răspuns. Nu s-a facturat nimic: încercați din nou.',
     aiUnreadable: 'AI a dat un răspuns care nu poate fi citit. Încercați din nou.',
+    aiTooManyFiles: 'Prea multe fișiere pentru o singură cerere către AI (cel mult 10). Nu s-a debitat nimic.',
     aiFailed: 'AI nu a putut răspunde. Încercați din nou.',
     serverJobRefused: 'Serverul nu a preluat generarea. Încercați din nou: va rula pe acest dispozitiv.',
     imageRefused: (why: string) => `Serviciul de imagini a refuzat: ${why}`,

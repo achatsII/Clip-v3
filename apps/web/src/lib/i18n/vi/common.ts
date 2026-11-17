@@ -55,6 +55,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Tính năng này không có trong gói của bạn.',
     aiUnavailable: 'AI không phản hồi. Chưa bị trừ khoản nào: hãy thử lại.',
     aiUnreadable: 'AI trả về câu trả lời không đọc được. Hãy thử lại.',
+    aiTooManyFiles: 'Quá nhiều tệp cho một yêu cầu AI (tối đa 10). Không có gì bị trừ.',
     aiFailed: 'AI không trả lời được. Hãy thử lại.',
     serverJobRefused: 'Máy chủ không nhận việc tạo. Hãy thử lại: việc tạo sẽ chạy trên thiết bị này.',
     imageRefused: (why: string) => `Dịch vụ tạo ảnh từ chối: ${why}`,

@@ -26,9 +26,8 @@ export function useLaunchGeneration() {
   const figures = useToggle('documentFigures')
   const records = useToggle('records')
   const serverToggle = useToggle('serverGeneration')
-  const backgroundAi = useToggle('backgroundAi')
-  // Le choix de l'usine ; sans choix, au serveur au téléphone (iOS coupe l'app hors de l'écran).
-  const serverOn = serverToggle && generatesOnServer(session.org.json_data.generation?.server, serverToggle, backgroundAi)
+  // Le choix de l'usine ; sans choix, au serveur (on peut fermer l'écran, au bureau aussi).
+  const serverOn = serverToggle && generatesOnServer(session.org.json_data.generation?.server, serverToggle)
   // L'IA qui apprend des corrections : les préférences de la personne, et la version de l'IA gardée.
   const learn = useToggle('learnFromEdits')
   const personal = usePersonalWriting()

@@ -12,10 +12,11 @@ import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { qk, useStations } from '@/hooks/queries'
 import { useCreations } from '@/hooks/useCreations'
-import { enrichMedia, importDocument } from '@/lib/ai/generate'
+import { enrichMedia, importAsk, importDocument } from '@/lib/ai/generate'
 import { matchStation } from '@/lib/ai/normalize'
 import { startServerImport } from '@/lib/ai/runGeneration'
 import type { Doc } from '@/lib/gateway/data'
+import { MAX_ASK_FILES } from '@/lib/gateway/ai'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { messages, useMessages } from '@/lib/i18n'
 import { generatesOnServer } from '@/lib/ai/durableAsk'
@@ -60,9 +61,8 @@ export default function ImportPage() {
   const toggle = useToggle('bulkImport')
   // L'analyse au serveur (toggle `serverGeneration` et réglage de l'usine) : on peut fermer l'app.
   const serverToggle = useToggle('serverGeneration')
-  const backgroundAi = useToggle('backgroundAi')
-  // Le choix de l'usine ; sans choix, au serveur au téléphone (iOS coupe l'app hors de l'écran).
-  const serverOn = generatesOnServer(org.json_data.generation?.server, serverToggle, backgroundAi)
+  // Le choix de l'usine ; sans choix, au serveur (on peut fermer l'écran, au bureau aussi).
+  const serverOn = generatesOnServer(org.json_data.generation?.server, serverToggle)
   const figures = useToggle('documentFigures')
   // Un PowerPoint se lit dans l'app (la Gateway ne le convertit pas) : son texte et ses images.
   const slides = useToggle('slidesImport') && canReadSlides()
@@ -182,7 +182,9 @@ export default function ImportPage() {
         let next = update(item.id, { status: 'analyzing' })
         await persist(next)
         try {
-          if (serverOn) {
+          // Plus de 10 fichiers (une présentation et ses images) : seule la voie du serveur les lit d'un coup.
+          const many = (importAsk({ org: org.json_data, source: item.source!, sources: item.sources, stationNames: [] }).ask.files?.length ?? 0) > MAX_ASK_FILES
+          if (serverOn || many) {
             // L'instruction est créée tout de suite ; son analyse part au serveur.
             const r = await startServerImport({ data, ai, org: org.json_data, source: item.source!, sources: item.sources, stations: stations.data ?? [], actor, title: item.name.replace(/\.[^.]+$/, ''), figures })
             if (r.jobId) {

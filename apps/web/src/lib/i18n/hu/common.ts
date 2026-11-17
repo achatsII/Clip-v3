@@ -57,6 +57,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Ez a funkció nem része a csomagnak.',
     aiUnavailable: 'Az AI nem válaszolt. Semmi sem lett terhelve: próbálja újra.',
     aiUnreadable: 'Az AI olvashatatlan választ adott. Próbálja újra.',
+    aiTooManyFiles: 'Túl sok fájl egyetlen AI-kéréshez (legfeljebb 10). Semmit sem vontunk le.',
     aiFailed: 'Az AI nem tudott válaszolni. Próbálja újra.',
     serverJobRefused: 'A szerver nem vette át a generálást. Próbálja újra: ezen az eszközön fog futni.',
     imageRefused: (why: string) => `A képszolgáltatás elutasította: ${why}`,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { generationTier, prepareForAi } from '@/lib/ai/generate'
+import { generationTier, MAX_SHOTS_FOR_AI, plannedAskFiles, prepareForAi, shotsToAttach } from '@/lib/ai/generate'
 import type { FilesApi } from '@/lib/gateway/files'
 import type { Source } from '@/lib/model/types'
 
@@ -49,5 +49,43 @@ describe('prepareForAi', () => {
     const r = await prepareForAi([video(60, { sizeBytes: 300_000_000, mimeType: 'video/quicktime' })], files)
     expect(files.processVideo).toHaveBeenCalled()
     expect(r.askFiles[0].mimeType).toBe('video/mov')
+  })
+})
+
+describe('les images nettes d’un enregistrement d’écran', () => {
+  const screen: Source = { id: 'scr', kind: 'video', url: 'https://x/ecran.mp4', screen: true, durationSec: 55, sizeBytes: 8_000_000, createdAt: t }
+  const shots = Array.from({ length: 25 }, (_, i): Source => ({ id: `s${i}`, kind: 'photo', url: `https://x/s${i}.jpg`, shot: { sourceId: 'scr', at: 1 + i * 2 }, createdAt: t }))
+  const files = () =>
+    ({ geminiUpload: vi.fn(async () => ({ uri: 'gemini://ecran', expiresAt: new Date(Date.now() + 40 * 3600_000).toISOString() })) }) as unknown as FilesApi
+
+  it('au plus 6 en fichier, réparties sur l’enregistrement, la première et la dernière comprises', () => {
+    const picked = shotsToAttach([screen, ...shots])
+    expect(picked.size).toBe(MAX_SHOTS_FOR_AI)
+    expect(picked.has('s0')).toBe(true)
+    expect(picked.has('s24')).toBe(true)
+    expect(shotsToAttach([screen, ...shots.slice(0, 4)]).size).toBe(4)
+    // Sans sa vidéo, une image nette n'est pas comptée : elle part en fichier comme une photo.
+    expect(shotsToAttach(shots).size).toBe(0)
+  })
+
+  it('la vidéo et 6 images partent (7 fichiers, sous la limite de 10) ; toutes restent nommées par leur instant', async () => {
+    const r = await prepareForAi([screen, ...shots], files())
+    expect(r.askFiles).toHaveLength(1 + MAX_SHOTS_FOR_AI)
+    expect(r.lines).toHaveLength(26)
+    const kept = r.lines.filter((l) => l.line.includes('pas jointe'))
+    expect(kept).toHaveLength(25 - MAX_SHOTS_FOR_AI)
+    expect(kept[0].line).toMatch(/image nette de l’écran, à \d+:\d\d de S1/)
+  })
+
+  it('le compte d’avance (au serveur au-delà de 10) est celui de prepareForAi, pour chaque sorte de source', async () => {
+    const audio: Source = { id: 'a', kind: 'audio', url: 'https://x/a.m4a', createdAt: t }
+    const said: Source = { id: 'a2', kind: 'audio', url: 'https://x/a2.m4a', text: 'transcrit', createdAt: t }
+    const doc: Source = { id: 'd', kind: 'document', url: 'https://x/d.pdf', createdAt: t }
+    const note: Source = { id: 'n', kind: 'note', text: 'note', createdAt: t }
+    const orphan: Source = { id: 'o', kind: 'photo', url: 'https://x/o.jpg', shot: { sourceId: 'absente', at: 3 }, createdAt: t }
+    for (const set of [[screen, ...shots], [screen, ...shots.slice(0, 3), audio, said, doc, note], [orphan, photo(1), photo(2)], Array.from({ length: 12 }, (_, i) => photo(i))]) {
+      const r = await prepareForAi(set, files())
+      expect(plannedAskFiles(set)).toBe(r.askFiles.length)
+    }
   })
 })

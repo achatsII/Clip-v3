@@ -13,6 +13,7 @@ import { sourceDetail } from './creation'
 import { locateFigures } from './figures'
 import { AiInstruction, normalizeInstruction, type MarkHint } from './normalize'
 import { generationPrompt, generationSystem, importSystem, SourceLine, type WritingContext } from './prompts'
+import { narratedPhotos, shotsToAttach } from './askFiles'
 import { instructionSchema } from './schemas'
 
 export const GEMINI_MAX_BYTES = 100 * 1024 * 1024
@@ -99,20 +100,6 @@ function clockOf(sec: number): string {
 }
 
 /**
- * Les photos prises en parlant, par note de série : seulement celles dont la note fait partie des
- * sources données (une revue de quelques sources peut ne pas l'avoir).
- */
-export function narratedPhotos(sources: Source[]): Map<string, Source[]> {
-  const audio = new Set(sources.filter((s) => s.kind === 'audio').map((s) => s.id))
-  const out = new Map<string, Source[]>()
-  for (const s of sources) {
-    if (s.kind !== 'photo' || !s.voice || !audio.has(s.voice.sourceId)) continue
-    out.set(s.voice.sourceId, [...(out.get(s.voice.sourceId) ?? []), s])
-  }
-  return out
-}
-
-/**
  * Prépare les fichiers pour l'IA : vidéos (et notes vocales sans transcription) téléversées chez
  * Gemini, URI réutilisée tant qu'elle vit. Rend les sources mises à jour, à enregistrer.
  *
@@ -120,6 +107,8 @@ export function narratedPhotos(sources: Source[]): Map<string, Source[]> {
  * à quel instant chaque chose est dite, et chaque photo dit le sien. `ids` : les numéros à donner
  * aux sources (S1, S2… par défaut), pour qu'une revue de quelques sources garde ceux de l'instruction.
  */
+export { MAX_SHOTS_FOR_AI, narratedPhotos, plannedAskFiles, shotsToAttach } from './askFiles'
+
 export async function prepareForAi(
   sources: Source[],
   files: FilesApi,
@@ -132,6 +121,8 @@ export async function prepareForAi(
   const soon = Date.now() + 60 * 60 * 1000
   const idOf = new Map(sources.map((s, i) => [s.id, ids?.[i] ?? `S${i + 1}`]))
   const narrated = narratedPhotos(sources)
+  // Les images nettes d'un enregistrement d'écran : quelques-unes en fichier, les autres par leur instant.
+  const attachedShots = shotsToAttach(sources)
 
   for (let i = 0; i < sources.length; i++) {
     onSource?.(i, sources.length)
@@ -165,6 +156,10 @@ export async function prepareForAi(
       })
     } else if (s.kind === 'audio') {
       lines.push({ id, line: `${id} — note vocale (transcription) : « ${s.text} »` })
+    } else if (s.kind === 'photo' && s.url && s.shot && !attachedShots.has(s.id) && idOf.get(s.shot.sourceId)) {
+      // Une image nette gardée hors des fichiers : l'IA voit le même écran dans la vidéo, à cet instant.
+      const shotOf = idOf.get(s.shot.sourceId)
+      lines.push({ id, line: `${id} — image nette de l’écran, à ${clockOf(s.shot.at)} de ${shotOf}, juste avant une action (pas jointe : c’est l’écran de ${shotOf} à cet instant ; elle peut servir de média à l’étape de cette action)` })
     } else if (s.kind === 'photo' && s.url) {
       askFiles.push({ url: s.url, filename: s.name ?? `${id}.jpg`, mimeType: s.mimeType || 'image/jpeg', sizeBytes: s.sizeBytes })
       const said = s.voice && narrated.has(s.voice.sourceId) ? `, prise à ${clockOf(s.voice.at)} du commentaire ${idOf.get(s.voice.sourceId)}` : ''

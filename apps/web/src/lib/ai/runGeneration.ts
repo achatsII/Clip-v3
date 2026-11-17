@@ -1,6 +1,6 @@
 import { callNative, hasCapability, inNativeShell } from '../bridge/native'
 import { ApiError } from '../gateway/client'
-import { jobDebitKey, type AiApi, type AiOperation } from '../gateway/ai'
+import { jobDebitKey, MAX_ASK_FILES, type AiApi, type AiOperation } from '../gateway/ai'
 import type { DataApi, Doc } from '../gateway/data'
 import type { FilesApi } from '../gateway/files'
 import { messages } from '../i18n'
@@ -11,6 +11,7 @@ import type { GeneratingInfo, Instruction, InstructionContent, OrgSettings, Serv
 import { publishRealtime } from '../realtime/client'
 import { annotateMarks } from './autoAnnotate'
 import { creationReporter, DETAIL_FIGURES, DETAIL_THUMBNAILS, sourceDetail } from './creation'
+import { plannedAskFiles } from './askFiles'
 import { enrichMedia, finishGeneration, generateInstruction, importAsk, prepareGeneration } from './generate'
 import type { WritingContext } from './prompts'
 import { runJob } from './jobs'
@@ -171,7 +172,9 @@ export function startGeneration(input: {
         onStage: stage,
       }
       let out: Awaited<ReturnType<typeof generateInstruction>>
-      if (input.server) {
+      // Plus de 10 fichiers : seule la voie du serveur les lit d'un coup (la route directe les découpe en lots).
+      const many = plannedAskFiles(instr.sources.filter((s) => s.url || s.text)) > MAX_ASK_FILES
+      if (input.server || many) {
         // La même requête que sur l'appareil, préparée ici, puis confiée au serveur.
         const p = await prepareGeneration(common)
         // Les URI Gemini sont gardées : une régénération dans les 48 h ne retéléverse rien.
@@ -208,7 +211,8 @@ export function startGeneration(input: {
           tell('stage', 'analyze')
           return
         }
-        // Le serveur ne l'a pas prise : elle tourne ici, avec la requête déjà prête.
+        // Le serveur ne l'a pas prise : elle tourne ici, avec la requête déjà prête. Plus de 10
+        // fichiers, la route directe refuse sans rien débiter (`MAX_ASK_FILES`).
         stage('analyze')
         const result = await ai.ask<AiInstruction>(p.operation, p.ask, { scope: 'generation', timeoutMs: 300_000 })
         if (!result.json) throw new ApiError(messages().capture.generate.noInstruction, 502)

@@ -63,3 +63,13 @@ describe('l’accord donné à la connexion (toggle aiConsentAtSignIn)', () => {
     }
   })
 })
+
+describe('au plus 10 fichiers par demande', () => {
+  it('au-delà, rien ne part et rien n’est débité (la route découperait la demande en lots facturés)', async () => {
+    const gw = fakeGateway(() => answer)
+    const files = Array.from({ length: 11 }, (_, i) => ({ url: `https://x/${i}.jpg`, filename: `${i}.jpg`, mimeType: 'image/jpeg' }))
+    await expect(aiApi(gw, { billing: true }).ask('generate_s', { prompt: 'x', system_instruction: 's', provider: 'google', level: 'mid', files })).rejects.toMatchObject({ code: 'too_many_files', status: 413 })
+    expect(gw.calls).toHaveLength(0)
+    await expect(aiApi(gw, { billing: false }).ask('generate_s', { prompt: 'x', system_instruction: 's', provider: 'google', level: 'mid', files: files.slice(0, 10) })).resolves.toMatchObject({ text: 'ok' })
+  })
+})

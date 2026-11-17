@@ -188,6 +188,28 @@ describe('lancer au serveur', () => {
     expect(saved.generating).toBeNull()
   })
 
+  it('plus de 10 fichiers : au serveur même si l’usine génère sur l’appareil (la route directe les découperait en lots)', async () => {
+    const photos = Array.from({ length: 11 }, (_, i) => ({ ...photo, id: `p${i}`, url: `https://x/p${i}.jpg` }))
+    const many = { ...baseInstruction, sources: photos } as unknown as Instruction
+    const db = memoryData({ [`${T.instruction}/i1`]: { _id: 'i1', json_data: many } })
+    const startJob = vi.fn(async () => 'job1')
+    const askAi = vi.fn()
+    await startGeneration({ doc: { _id: 'i1', json_data: many }, data: db.api, files: {} as never, ai: { startJob, ask: askAi } as never, org, stations: [], actor: { id: 'u1', name: 'Mélanie' }, server: false })
+    expect(startJob).toHaveBeenCalledTimes(1)
+    expect(askAi).not.toHaveBeenCalled()
+    expect((db.docs.get(`${T.instruction}/i1`)!.json_data as Instruction).generating).toMatchObject({ mode: 'server', jobId: 'job1' })
+  })
+
+  it('jusqu’à 10 fichiers et l’usine sur l’appareil : la génération tourne ici, sans travail au serveur', async () => {
+    const db = memoryData({ [`${T.instruction}/i1`]: { _id: 'i1', json_data: baseInstruction } })
+    const startJob = vi.fn(async () => 'job1')
+    const askAi = vi.fn(async () => ({ json: aiJson, model: 'gemini', text: '', usage: null, charged: null }))
+    await startGeneration({ doc: { _id: 'i1', json_data: baseInstruction }, data: db.api, files: {} as never, ai: { startJob, ask: askAi } as never, org, stations: [], actor: { id: 'u1', name: 'Mélanie' }, server: false })
+    expect(startJob).not.toHaveBeenCalled()
+    expect(askAi).toHaveBeenCalledTimes(1)
+    expect((db.docs.get(`${T.instruction}/i1`)!.json_data as Instruction).draft?.steps[0].title).toBe('Serrer la bride')
+  })
+
   it('un refus de facturation se montre tel quel : pas de génération sur l’appareil', async () => {
     const db = memoryData({ [`${T.instruction}/i1`]: { _id: 'i1', json_data: baseInstruction } })
     const startJob = vi.fn(async () => {

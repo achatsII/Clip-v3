@@ -71,7 +71,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`/api/realtime/token`, `src/lib/realtime`) : l'autre appareil se met à jour aussitôt. Les images
   générées passent par OpenAI, niveau mid (`IMAGE_MODEL`, repli Google si la passerelle refuse).
 - **Génération au serveur** (toggle `serverGeneration`, choix de l'usine `OrgSettings.generation.server`
-  dans Réglages › Usine ; sans choix, sur l'appareil) : la requête AskAI v4 se prépare une seule fois
+  dans Réglages › Usine ; sans choix, au serveur sur tous les appareils, bureau compris, depuis 2.0.11 :
+  avant, un ordinateur générait sur l'appareil et devait rester ouvert) : la requête AskAI v4 se prépare une seule fois
   pour les deux chemins (`prepareGeneration`, `importAsk`) et part à `POST /api/v1/ai/job/start`
   avec `appIdentifier: 'clip-v2'`, jamais de grant dans le corps. Dans n8n, la branche clip-v2 de
   Job_start crée `clip_job` avec les droits de l'appelant, répond et se relance elle-même sans
@@ -88,7 +89,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   serveur ne prend pas la génération, elle tourne sur l'appareil ; après un échec au serveur, la
   relance aussi. « Générer » se touche pendant les envois : la génération part toute seule à leur fin
   (`whenUploaded`). L'import en lot crée chaque instruction et confie son analyse au serveur
-  (`startServerImport`). **Une modification de la façon d'analyser se reporte dans la branche
+  (`startServerImport`). Plus de 10 fichiers (`plannedAskFiles`, `MAX_ASK_FILES`) : toujours au
+  serveur, même si l'usine génère sur l'appareil, car la route directe les découpe en lots (Pièges). **Une modification de la façon d'analyser se reporte dans la branche
   clip-v2** quand elle change ce que n8n fait : un nouveau champ de la requête s'ajoute au nœud
   « Run AskAI V4 » (`JOB_RELAYED_FIELDS`, un test échoue sinon), une passe d'IA de plus, un
   traitement nouveau au serveur ou une autre lecture de la réponse (`aiApi.ask`) se reporte dans
@@ -101,7 +103,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   avec un schéma ; rien à changer dans n8n) : `durableAsk` (`src/lib/ai/durableAsk.ts`) relit `clip_job`
   toutes les 2 s à l'écran et aussitôt au retour, débite le coût réel une fois (`jobDebitKey`) et ferme
   le travail ; pas pris en 45 s ou refusé, la demande part sur l'appareil. Sans choix de l'usine, la
-  génération part au serveur au téléphone (`generatesOnServer`).
+  génération part au serveur, au bureau comme au téléphone (`generatesOnServer`).
 - **Gros fichiers** (toggle `resumableUpload`) : dès 16 Mo, un fichier du navigateur part par
   morceaux de 4 Mo, directement à la Gateway (TUS, `src/lib/gateway/resumable.ts`).
   - Un morceau raté se renvoie seul, à partir de ce que la Gateway a vraiment reçu.
@@ -223,8 +225,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   arrière-plan) et garde une image nette juste avant chaque vrai changement d'un écran calme, mesuré contre
   l'écran de référence (`ShotPicker`, `src/lib/media/screenShots.ts`) : un clic rapide n'échappe pas, sans
   payer plus d'images par seconde à l'IA. Un seul envoi qui reprend où il s'était arrêté (`ingestScreen`) :
-  la vidéo (`Source.screen`) puis ses images (`Source.shot` : la vidéo et l'instant). L'IA reçoit les deux
-  et des consignes d'écran (`SCREEN_RULES`) : une étape par action, l'image nette en média avec
+  la vidéo (`Source.screen`) puis ses images (`Source.shot` : la vidéo et l'instant). L'IA reçoit la vidéo
+  et au plus 6 images nettes, réparties (`shotsToAttach`, `MAX_SHOTS_FOR_AI`, `src/lib/ai/askFiles.ts`).
+  Une image coûte autant qu'une dizaine de secondes de vidéo. Les autres images restent nommées par leur
+  instant, et l'IA peut les choisir comme média. Elle reçoit aussi des consignes d'écran (`SCREEN_RULES`) : une étape par action, l'image nette en média avec
   `focusLabel` (entourée ensuite), jamais un mot de passe recopié. L'image d'une étape sait son instant
   (`frame`) : « Vidéo » et « GIF » en repartent. Aussi dans l'assistant (bouton à côté du trombone).
   Consignes et fichiers passent tels quels au serveur : rien dans n8n.
@@ -454,6 +458,17 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `dataApi` aplatit chaque filtre sans en changer le sens (`flattenFilter`, `src/lib/gateway/data.ts`) ;
   avec `html`, le `$and` du slug le faisait déjà, et le passage à `clip-v2` a fait tomber « À voir » et
   l'accueil (novembre 2026). `tests/filter-depth.test.ts` compte la profondeur comme la Gateway.
+- La route de l'assistant (`/api/v4/assistant/ask`) découpe une demande de plus de 10 fichiers en lots de 10
+  (flux n8n `Route_Ask_AI_V4_Split_Flow`). Elle envoie chaque lot seul à l'IA, puis recolle les réponses en
+  « descriptions » d'images : une instruction s'y perd (« aucune étape ») et chaque lot se paie (un
+  enregistrement d'écran de 55 s et ses 25 images : 3 lots, 139 crédits, novembre 2026). `aiApi.ask`
+  refuse donc au-delà de `MAX_ASK_FILES`, sans rien envoyer ni débiter. Une génération ou un import plus
+  gros passe par Job_start, qui appelle Ask_AI_V4 sans découpe. Cette route ne passe ni `effort` ni
+  `maxOutputTokens`, et Job_start non plus pour `effort` : un niveau de réflexion se donne par `thinking`
+  lui-même (`'low'`, que Ask_AI_V4 accepte).
+- En prod, le stockage refuse l'origine de l'app au PUT présigné (CORS, novembre 2026) : chaque petit
+  fichier faisait deux allers-retours perdus avant l'envoi par la Gateway. Après un premier refus, la séance
+  envoie directement par la Gateway (`presignedBlocked`, `src/lib/gateway/files.ts`).
 - Le prix d'un crédit d'IA en argent ne s'affiche jamais : ni à l'écran, ni dans les textes, ni sur le
   site ; les prix se disent en crédits. Il ne vit qu'à un endroit du code, la constante
   `AI_CREDITS_PER_CAD` (`src/lib/config.ts`), le taux standard de la plateforme.

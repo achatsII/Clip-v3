@@ -130,12 +130,12 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   rédaction), versionnées avec retour en arrière, que l'IA suit pour ses instructions après le standard de
   l'usine ; l'administrateur voit aussi ce que les corrections de toute l'équipe proposent, et « Analyser
   avec l'IA » lit les dernières corrections pour proposer des règles.
-- La génération tourne dans l'appareil qui la lance et se voit sur les autres (« En création ») ; au
-  navigateur, on peut quitter l'écran tant que l'onglet reste ouvert. Si l'appareil s'éteint, la création est
-  « interrompue » et se relance d'un geste ; les médias sont gardés.
-- Au choix de l'usine (Réglages › Usine › « Génération par l'IA » › « Sur le serveur »), l'IA écrit
-  l'instruction sur le serveur : on peut fermer l'app dès que la génération est partie. Au retour, même des
+- Par défaut, l'IA écrit l'instruction sur le serveur : on peut fermer l'app ou l'onglet dès que la
+  génération est partie, et elle se voit sur les autres appareils (« En création »). Au retour, même des
   heures plus tard, l'instruction se termine en quelques secondes sur le premier appareil ouvert.
+- L'usine peut choisir de générer sur l'appareil (Réglages › Usine › « Génération par l'IA ») : l'onglet
+  reste alors ouvert pendant la génération ; si l'appareil s'éteint, la création est « interrompue » et se
+  relance d'un geste, les médias gardés.
 - Rien n'est publié sans un geste humain : l'IA propose, une personne relit et publie.
 
 ## 3. Retoucher, annoter, illustrer

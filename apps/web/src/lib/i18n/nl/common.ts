@@ -57,6 +57,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Deze functie zit niet in je abonnement.',
     aiUnavailable: 'De AI heeft niet gereageerd. Er is niets in rekening gebracht: probeer het opnieuw.',
     aiUnreadable: 'De AI gaf een onleesbaar antwoord. Probeer het opnieuw.',
+    aiTooManyFiles: 'Te veel bestanden voor één AI-verzoek (maximaal 10). Er is niets afgeschreven.',
     aiFailed: 'De AI kon niet antwoorden. Probeer het opnieuw.',
     serverJobRefused: 'De server heeft het genereren niet overgenomen. Probeer het opnieuw: het draait dan op dit apparaat.',
     imageRefused: (why: string) => `De afbeeldingsservice weigerde: ${why}`,

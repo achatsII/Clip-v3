@@ -57,6 +57,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Fitur ini tidak termasuk dalam paket Anda.',
     aiUnavailable: 'AI tidak merespons. Tidak ada biaya yang dikenakan: coba lagi.',
     aiUnreadable: 'AI memberi jawaban yang tidak terbaca. Coba lagi.',
+    aiTooManyFiles: 'Terlalu banyak file untuk satu permintaan AI (maksimal 10). Tidak ada yang ditagih.',
     aiFailed: 'AI tidak dapat menjawab. Coba lagi.',
     serverJobRefused: 'Server tidak mengambil proses pembuatan ini. Coba lagi: proses akan berjalan di perangkat ini.',
     imageRefused: (why: string) => `Layanan gambar menolak: ${why}`,

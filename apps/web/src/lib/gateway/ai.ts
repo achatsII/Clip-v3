@@ -88,6 +88,16 @@ export interface AskResult<T = unknown> {
 export const AI_FEATURE = 'ai_credits'
 
 /**
+ * Au plus 10 fichiers par demande sur la route de l'assistant (`/api/v4/assistant/ask`). Au-delà, la
+ * Gateway découpe la demande en lots de 10 (flux n8n `Route_Ask_AI_V4_Split_Flow`), envoie chaque lot
+ * seul à l'IA et recolle les réponses en une liste de « descriptions » d'images : une instruction s'y
+ * perd (« aucune étape »), et chaque lot se paie (139 crédits pour un enregistrement d'écran de moins
+ * d'une minute, en prod le 2026-11-17). La voie du serveur (Job_start, branche clip-v2) appelle
+ * Ask_AI_V4 directement, sans découpe : une génération de plus de 10 fichiers passe par elle.
+ */
+export const MAX_ASK_FILES = 10
+
+/**
  * Le coût réel d'une réponse de l'assistant, en dollars canadiens : `billing_merged` quand la
  * réponse a fait plusieurs lots de fichiers, sinon `billing`. Null si la réponse n'en porte pas.
  */
@@ -229,6 +239,8 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean; credi
   async function ask<T = unknown>(operation: AiOperation, body: AskBody, opts: { scope?: string; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<AskResult<T>> {
     // Rien ne part vers l'IA sans l'accord de la personne (une fois, au premier usage).
     await requireAiConsent()
+    // Plus de 10 fichiers : la route les découperait en lots facturés qui perdent la réponse. Rien ne part.
+    if ((body.files?.length ?? 0) > MAX_ASK_FILES) throw new ApiError(messages().common.errors.aiTooManyFiles, 413, { files: body.files?.length ?? 0, max: MAX_ASK_FILES }, 'too_many_files')
     const timeoutMs = opts.timeoutMs ?? 180_000
     // Une clé par appel : un nouvel essai est un nouvel appel, débité à nouveau.
     const key = idempotencyKey(operation, opts.scope ?? 'app')

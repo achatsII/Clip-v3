@@ -55,6 +55,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Diese Funktion ist in Ihrem Tarif nicht enthalten.',
     aiUnavailable: 'Die KI hat nicht geantwortet. Es wurde nichts abgebucht: Versuchen Sie es erneut.',
     aiUnreadable: 'Die KI hat eine nicht lesbare Antwort geliefert. Versuchen Sie es erneut.',
+    aiTooManyFiles: 'Zu viele Dateien für eine einzige KI-Anfrage (höchstens 10). Es wurde nichts abgebucht.',
     aiFailed: 'Die KI konnte nicht antworten. Versuchen Sie es erneut.',
     serverJobRefused: 'Der Server hat die Erstellung nicht übernommen. Versuchen Sie es erneut: Sie läuft dann auf diesem Gerät.',
     imageRefused: (why: string) => `Der Bilddienst hat abgelehnt: ${why}`,

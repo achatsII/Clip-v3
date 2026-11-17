@@ -57,6 +57,7 @@ export const common: typeof Fr = {
     aiNotInPlan: '이 기능은 현재 요금제에 포함되어 있지 않습니다.',
     aiUnavailable: 'AI가 응답하지 않았습니다. 차감된 금액은 없습니다. 다시 시도하세요.',
     aiUnreadable: 'AI의 답변을 읽을 수 없습니다. 다시 시도하세요.',
+    aiTooManyFiles: '한 번의 AI 요청에 파일이 너무 많습니다(최대 10개). 차감된 것은 없습니다.',
     aiFailed: 'AI가 답하지 못했습니다. 다시 시도하세요.',
     serverJobRefused: '서버가 생성을 받지 않았습니다. 다시 시도하세요. 이 기기에서 실행됩니다.',
     imageRefused: (why: string) => `이미지 서비스가 거부했습니다: ${why}`,

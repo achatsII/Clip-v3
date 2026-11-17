@@ -55,6 +55,7 @@ export const common: typeof Fr = {
     aiNotInPlan: '你的套餐不包含此功能。',
     aiUnavailable: 'AI 没有响应。未扣除任何额度，请重试。',
     aiUnreadable: 'AI 返回了无法读取的回答。请重试。',
+    aiTooManyFiles: '单次 AI 请求的文件过多（最多 10 个）。未扣除任何额度。',
     aiFailed: 'AI 无法回答。请重试。',
     serverJobRefused: '服务器没有接受此次生成。请重试，将改在此设备上运行。',
     imageRefused: (why: string) => `图像服务拒绝了请求：${why}`,

@@ -41,12 +41,12 @@ export function suspendsInBackground(): boolean {
 
 /**
  * La génération part-elle au serveur ? Le choix de l'usine d'abord (Réglages › Usine) ; sans choix,
- * au serveur sur un appareil que l'arrière-plan suspend (toggle `backgroundAi`), sur l'appareil ailleurs.
+ * au serveur, sur tous les appareils : on peut fermer l'écran, au bureau comme au téléphone (décision
+ * du 2026-11-17 ; avant, un ordinateur générait sur l'appareil et devait rester ouvert).
  */
-export function generatesOnServer(choice: boolean | undefined, serverToggle: boolean, backgroundAi: boolean): boolean {
+export function generatesOnServer(choice: boolean | undefined, serverToggle: boolean): boolean {
   if (!serverToggle) return false
-  if (choice !== undefined) return choice
-  return backgroundAi && suspendsInBackground()
+  return choice ?? true
 }
 
 /** Attend `ms`, ou moins : le retour de l'app à l'écran (ses minuteries ont pu dormir) ou un arrêt. */

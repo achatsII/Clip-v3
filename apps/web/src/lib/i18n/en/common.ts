@@ -57,6 +57,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'This feature isn’t included in your plan.',
     aiUnavailable: 'The AI didn’t respond. Nothing was charged: try again.',
     aiUnreadable: 'The AI returned an unreadable answer. Try again.',
+    aiTooManyFiles: 'Too many files for a single AI request (10 at most). Nothing was charged.',
     aiFailed: 'The AI couldn’t answer. Try again.',
     serverJobRefused: 'The server didn’t take the generation. Try again: it will run on this device.',
     imageRefused: (why: string) => `The image service refused: ${why}`,

@@ -117,6 +117,18 @@ function hms(s: number, tenths: boolean): string {
 /** La route directe d'envoi chez Gemini n'est pas servie par cette Gateway (404 vu dans la séance). */
 let directGeminiMissing = false
 
+/**
+ * Le PUT sur une URL présignée a échoué par le réseau dans cette séance : en prod, le stockage refuse
+ * l'origine de l'app (CORS, vu le 2026-11-17). Chaque fichier faisait alors deux allers-retours pour
+ * rien avant l'envoi par la Gateway : les suivants y vont directement.
+ */
+let presignedBlocked = false
+
+/** Pour les tests : oublier ce que la séance a appris des URL présignées. */
+export function resetUploadRoute(): void {
+  presignedBlocked = false
+}
+
 /** Pour les tests : oublier ce que la séance a appris de la route directe. */
 export function resetGeminiRoute(): void {
   directGeminiMissing = false
@@ -199,18 +211,22 @@ export function filesApi(client: GatewayClient) {
           if (!(e instanceof ApiError && e.code === 'tus_unavailable')) throw e
         }
       }
-      try {
-        const target = await presign(name, type, folder)
-        const { status } = await xhrSend('PUT', target.uploadUrl, file, presignedPutHeaders(target.uploadUrl, type), onProgress)
-        if (status >= 200 && status < 300) {
-          return { url: target.publicUrl, path: target.path, sizeBytes: file.size, mimeType: type, name }
+      if (!presignedBlocked) {
+        try {
+          const target = await presign(name, type, folder)
+          const { status } = await xhrSend('PUT', target.uploadUrl, file, presignedPutHeaders(target.uploadUrl, type), onProgress)
+          if (status >= 200 && status < 300) {
+            return { url: target.publicUrl, path: target.path, sizeBytes: file.size, mimeType: type, name }
+          }
+          throw new ApiError(messages().common.errors.uploadRefused, status)
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 401) throw e
+          // Refus par le réseau (CORS du stockage) : la séance enverra directement par la Gateway.
+          if (e instanceof ApiError && e.code === 'network') presignedBlocked = true
         }
-        throw new ApiError(messages().common.errors.uploadRefused, status)
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 401) throw e
-        // CORS du stockage ou URL refusée : on repasse par la Gateway.
-        return uploadDirect(file, name, folder, onProgress)
       }
+      // CORS du stockage ou URL refusée : on repasse par la Gateway.
+      return uploadDirect(file, name, folder, onProgress)
     },
 
     async transcribe(audio: Blob, fileName: string): Promise<string> {

@@ -149,7 +149,7 @@ function PlantTab() {
             <Label>{t.generationTitle}</Label>
             <Segmented
               size="sm"
-              value={org.json_data.generation?.server ? 'server' : 'device'}
+              value={org.json_data.generation?.server === false ? 'device' : 'server'}
               onChange={(v) => void updateOrg({ generation: { server: v === 'server' } }).then(() => toast.success(t.generationSaved))}
               options={[
                 { value: 'device', label: t.generationDevice },

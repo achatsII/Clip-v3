@@ -7,7 +7,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GatewayClient } from '@/lib/gateway/client'
-import { filesApi, setResumableUploads } from '@/lib/gateway/files'
+import { filesApi, resetUploadRoute, setResumableUploads } from '@/lib/gateway/files'
 import { CHUNK_BYTES, RESUMABLE_MIN_BYTES, sessionUrl, TUS_URL, tusMetadata, uploadResumable, type ChunkRequest, type ChunkResponse, type ResumableDeps } from '@/lib/gateway/resumable'
 
 const MB = 1024 * 1024
@@ -362,6 +362,7 @@ describe('files.upload choisit le bon envoi', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     setResumableUploads(false)
+    resetUploadRoute()
   })
 
   it('un gros fichier, toggle allumé : par morceaux, l’adresse et la clé de la Gateway', async () => {
@@ -382,6 +383,24 @@ describe('files.upload choisit le bon envoi', () => {
     const r = await files.upload(blob(RESUMABLE_MIN_BYTES + MB), 'geste.mp4', 'captures')
     expect(r.url).toBe('https://cdn.test/bloc.mp4')
     expect(puts).toBe(1)
+  })
+
+  it('le stockage refuse l’origine (CORS) : l’envoi passe par la Gateway, et les suivants y vont directement', async () => {
+    let posts = 0
+    FakeXHR.handle = async (method) => {
+      if (method === 'PUT') {
+        puts++
+        return 'error'
+      }
+      posts++
+      return { status: 200, text: JSON.stringify({ files: [{ url: `https://cdn.test/direct${posts}.jpg`, path: 'p' }] }) }
+    }
+    const client = fakeClient()
+    const files = filesApi(client)
+    expect((await files.upload(blob(MB), 'a.jpg', 'captures')).url).toBe('https://cdn.test/direct1.jpg')
+    expect((await files.upload(blob(MB), 'b.jpg', 'captures')).url).toBe('https://cdn.test/direct2.jpg')
+    expect(puts).toBe(1)
+    expect(vi.mocked(client.call).mock.calls.filter(([e]) => e === '/api/v1/files/upload/generate/presigned-url')).toHaveLength(1)
   })
 
   it('toggle éteint, ou petit fichier : un seul envoi, la Gateway TUS n’est pas appelée', async () => {

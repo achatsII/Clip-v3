@@ -57,6 +57,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'この機能は、現在のプランに含まれていません。',
     aiUnavailable: 'AIが応答しませんでした。料金は発生していません。もう一度お試しください。',
     aiUnreadable: 'AIの回答を読み取れませんでした。もう一度お試しください。',
+    aiTooManyFiles: '1回のAIリクエストにはファイルが多すぎます（最大10件）。何も差し引かれていません。',
     aiFailed: 'AIが回答できませんでした。もう一度お試しください。',
     serverJobRefused: 'サーバーが生成を受け付けませんでした。もう一度お試しください。この端末で実行されます。',
     imageRefused: (why: string) => `画像サービスに拒否されました：${why}`,

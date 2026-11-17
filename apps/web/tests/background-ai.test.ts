@@ -111,15 +111,17 @@ describe('qui passe par le serveur', () => {
     expect(suspendsInBackground()).toBe(false)
   })
 
-  it('la génération : le choix de l’usine d’abord ; sans choix, au serveur au téléphone', () => {
+  it('la génération : le choix de l’usine d’abord ; sans choix, au serveur sur tous les appareils', () => {
     shell.native = true
-    expect(generatesOnServer(undefined, true, true)).toBe(true)
-    expect(generatesOnServer(false, true, true)).toBe(false)
-    expect(generatesOnServer(undefined, true, false)).toBe(false)
-    expect(generatesOnServer(true, false, true)).toBe(false)
+    expect(generatesOnServer(undefined, true)).toBe(true)
+    expect(generatesOnServer(false, true)).toBe(false)
+    expect(generatesOnServer(true, false)).toBe(false)
+    // Un ordinateur aussi : on peut fermer l'onglet pendant que l'IA écrit (avant : sur l'appareil).
     shell.native = false
-    expect(generatesOnServer(undefined, true, true)).toBe(false)
-    expect(generatesOnServer(true, true, false)).toBe(true)
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
+    expect(generatesOnServer(undefined, true)).toBe(true)
+    expect(generatesOnServer(false, true)).toBe(false)
+    expect(generatesOnServer(undefined, false)).toBe(false)
   })
 
   it('l’assistant, au téléphone, prépare sa réponse au serveur sous le nom de l’instruction', async () => {

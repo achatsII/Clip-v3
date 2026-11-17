@@ -55,6 +55,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Questa funzione non è inclusa nel tuo piano.',
     aiUnavailable: 'L’IA non ha risposto. Non è stato addebitato nulla: riprova.',
     aiUnreadable: 'L’IA ha dato una risposta illeggibile. Riprova.',
+    aiTooManyFiles: 'Troppi file per una sola richiesta all’IA (10 al massimo). Non è stato addebitato nulla.',
     aiFailed: 'L’IA non è riuscita a rispondere. Riprova.',
     serverJobRefused: 'Il server non ha preso in carico la generazione. Riprova: verrà eseguita su questo dispositivo.',
     imageRefused: (why: string) => `Il servizio immagini ha rifiutato: ${why}`,

@@ -55,6 +55,7 @@ export const common: typeof Fr = {
     aiNotInPlan: 'Bu özellik planınıza dahil değil.',
     aiUnavailable: 'Yapay zekâ yanıt vermedi. Ücret alınmadı: tekrar deneyin.',
     aiUnreadable: 'Yapay zekâ okunamayan bir yanıt verdi. Tekrar deneyin.',
+    aiTooManyFiles: 'Tek bir yapay zekâ isteği için çok fazla dosya var (en fazla 10). Hiçbir ücret alınmadı.',
     aiFailed: 'Yapay zekâ yanıt veremedi. Tekrar deneyin.',
     serverJobRefused: 'Sunucu üretimi almadı. Tekrar deneyin: üretim bu cihazda çalışacak.',
     imageRefused: (why: string) => `Görsel hizmeti reddetti: ${why}`,
