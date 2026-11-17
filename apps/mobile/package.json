@@ -1,8 +1,8 @@
 {
-  "name": "clip-v3-mobile",
+  "name": "clip-v2-mobile",
   "version": "1.0.0",
   "private": true,
-  "description": "Coquille native de CLIP V3 : affiche l'app web et ajoute la capture à poids contrôlé, le scan et l'envoi des fichiers.",
+  "description": "Coquille native de CLIP V2 : affiche l'app web et ajoute la capture à poids contrôlé, le scan et l'envoi des fichiers.",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",

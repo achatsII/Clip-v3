@@ -1,11 +1,12 @@
 /**
- * Routes Data de la Gateway (`/api/v1/data/{dataType}`), avec le cloisonnement de CLIP V3.
+ * Routes Data de la Gateway (`/api/v1/data/{dataType}`), avec le cloisonnement de CLIP V2.
  *
- * Tant que l'app partage l'application `html`, chaque document porte `json_data.app_identifier`
- * = `clip-v3` et chaque lecture filtre dessus (convention du skill api-plateforme-ii, §2.1).
+ * Avec l'ancienne application partagée `html` seulement, chaque document porte
+ * `json_data.app_identifier` (`HTML_DATA_SLUG`, l'étiquette des données d'avant le 2026-11-17) et
+ * chaque lecture filtre dessus (convention du skill api-plateforme-ii, §2.1).
  * Les enveloppes ne sont pas uniformes : chaque fonction lit la bonne clé.
  */
-import { APP_DATA_IDENTIFIER, SHARED_APP } from '../config'
+import { HTML_DATA_SLUG, SHARED_APP } from '../config'
 import { ApiError, GatewayClient } from './client'
 import { messages } from '@/lib/i18n/core'
 
@@ -65,7 +66,7 @@ function scoped(filter?: Record<string, unknown>): Record<string, unknown> | und
 
 function scopedFlat(filter?: Record<string, unknown>): Record<string, unknown> | undefined {
   if (!SHARED_APP) return filter && Object.keys(filter).length ? filter : undefined
-  const slug = { 'json_data.app_identifier': { $eq: APP_DATA_IDENTIFIER } }
+  const slug = { 'json_data.app_identifier': { $eq: HTML_DATA_SLUG } }
   if (!filter || !Object.keys(filter).length) return slug
   // Un filtre déjà en « $and » se met à plat : la profondeur permise (5 niveaux) reste au filtre.
   const keys = Object.keys(filter)
@@ -74,7 +75,7 @@ function scopedFlat(filter?: Record<string, unknown>): Record<string, unknown> |
 }
 
 function stamp<T extends object>(json: T): T {
-  return SHARED_APP ? ({ ...json, app_identifier: APP_DATA_IDENTIFIER } as T) : json
+  return SHARED_APP ? ({ ...json, app_identifier: HTML_DATA_SLUG } as T) : json
 }
 
 /**
@@ -88,7 +89,7 @@ function scopedProjection(p?: Record<string, 0 | 1>): Record<string, 0 | 1> | un
 
 function belongs(json: unknown): boolean {
   if (!SHARED_APP) return true
-  return !!json && typeof json === 'object' && (json as Json).app_identifier === APP_DATA_IDENTIFIER
+  return !!json && typeof json === 'object' && (json as Json).app_identifier === HTML_DATA_SLUG
 }
 
 export function dataApi(client: GatewayClient) {
@@ -144,7 +145,7 @@ export function dataApi(client: GatewayClient) {
       return res.values ?? []
     },
 
-    /** Un document par id ; `null` s'il n'existe pas (404) ou n'appartient pas à CLIP V3. */
+    /** Un document par id ; `null` s'il n'existe pas (404) ou n'appartient pas à CLIP V2. */
     async get<T>(dataType: string, id: string): Promise<Doc<T> | null> {
       try {
         const res = await client.call<{ result?: Doc<T> }>(`${base(dataType)}/one/${encodeURIComponent(id)}`)

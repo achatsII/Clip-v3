@@ -2,7 +2,7 @@
  * Une réponse de l'IA qui continue quand l'app quitte l'écran (toggle `backgroundAi`). Sur un
  * téléphone, iOS suspend l'app quelques secondes après qu'elle passe en arrière-plan, et coupe la
  * requête en cours : la réponse de l'assistant était perdue. La demande part donc au serveur, par
- * le même chemin que la génération au serveur (Job_start, branche clip-v3 : il roule la requête
+ * le même chemin que la génération au serveur (Job_start, branche clip-v2 : il roule la requête
  * AskAI v4 telle quelle et écrit le résultat et son coût dans `clip_job`). L'app relit ce travail
  * toutes les 2 secondes tant qu'elle est à l'écran, et aussitôt qu'elle y revient ; le coût réel se
  * débite avec la clé du travail, une seule fois (`jobDebitKey`).

@@ -20,7 +20,7 @@ import { ingestNative } from '@/lib/media/ingest'
 
 // Forme réelle d'une URL présignée de la Gateway (QA, 2026-11-11) : Content-Disposition signé, ACL en paramètre.
 const PRESIGNED =
-  'https://tor1.digitaloceanspaces.com/ii-file/html/g/clip-v3/captures/video_1.mov?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Expires=3600&X-Amz-Signature=abc&X-Amz-SignedHeaders=content-disposition%3Bhost&x-amz-acl=public-read&x-id=PutObject'
+  'https://tor1.digitaloceanspaces.com/ii-file/html/g/clip-v2/captures/video_1.mov?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Expires=3600&X-Amz-Signature=abc&X-Amz-SignedHeaders=content-disposition%3Bhost&x-amz-acl=public-read&x-id=PutObject'
 
 const video: CapturedMedia = {
   localId: 'loc1',
@@ -35,7 +35,7 @@ const video: CapturedMedia = {
 
 function fakeFiles(): FilesApi {
   return {
-    presign: vi.fn(async () => ({ uploadUrl: PRESIGNED, publicUrl: 'https://cdn.test/public/video_1.mov', path: 'html/g/clip-v3/captures/video_1.mov', contentType: 'video/quicktime' })),
+    presign: vi.fn(async () => ({ uploadUrl: PRESIGNED, publicUrl: 'https://cdn.test/public/video_1.mov', path: 'html/g/clip-v2/captures/video_1.mov', contentType: 'video/quicktime' })),
     processVideo: vi.fn(),
     upload: vi.fn(async () => ({ url: 'https://cdn.test/thumb.jpg', path: 't', sizeBytes: 1, mimeType: 'image/jpeg', name: 't' })),
   } as unknown as FilesApi
@@ -67,10 +67,10 @@ describe('envoi d’un média de la coquille', () => {
 
   it('PUT refusé : repli par l’envoi direct de la Gateway, au lieu d’afficher « refusé »', async () => {
     answers['upload.put'] = [{ status: 400 }]
-    answers['upload.multipart'] = [{ status: 200, bodyText: JSON.stringify({ files: [{ url: 'https://cdn.test/direct/video.mov', path: 'html/g/clip-v3/captures/video.mov' }] }) }]
+    answers['upload.multipart'] = [{ status: 200, bodyText: JSON.stringify({ files: [{ url: 'https://cdn.test/direct/video.mov', path: 'html/g/clip-v2/captures/video.mov' }] }) }]
     const src = await ingestNative(video, fakeFiles())
     const direct = calls.find((c) => c.type === 'upload.multipart')
-    expect(direct?.payload).toMatchObject({ fieldName: 'files', fields: { path: 'clip-v3/captures' } })
+    expect(direct?.payload).toMatchObject({ fieldName: 'files', fields: { path: 'clip-v2/captures' } })
     expect(String(direct?.payload.url)).toMatch(/\/api\/v1\/files\/upload\/direct$/)
     expect(src.url).toBe('https://cdn.test/direct/video.mov')
   })

@@ -234,7 +234,7 @@ export interface PreparedGeneration {
 /**
  * Prépare la génération : les vidéos chez Gemini, puis la requête AskAI v4 (consignes, sources,
  * schéma). Un seul endroit pour les deux chemins : sur l'appareil (`generateInstruction`) et au
- * serveur (Job_start, branche clip-v3, qui roule cette requête telle quelle).
+ * serveur (Job_start, branche clip-v2, qui roule cette requête telle quelle).
  */
 export async function prepareGeneration(input: Omit<GenerateInput, 'ai' | 'signal'>): Promise<PreparedGeneration> {
   const language = input.language ?? contentLanguage()
@@ -304,7 +304,7 @@ function mergeSources(all: Source[], updated: Source[]): Source[] {
 
 /**
  * La requête d'un import (une ancienne instruction en PDF) : la même pour l'appareil et le serveur
- * (Job_start, branche clip-v3). Le document est S1. Une présentation PowerPoint lue dans l'app
+ * (Job_start, branche clip-v2). Le document est S1. Une présentation PowerPoint lue dans l'app
  * (`sources` : sa note, puis ses images) part avec son texte dans la demande et ses images jointes.
  */
 export function importAsk(input: { org: WritingContext & Pick<OrgSettings, 'nomenclature'>; source: Source; sources?: Source[]; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {

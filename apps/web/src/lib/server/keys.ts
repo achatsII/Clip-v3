@@ -9,6 +9,8 @@ export type KeyId = 's1' | 'a1'
 
 export function keyFor(id: KeyId, purpose: string): Buffer | null {
   const secret = id === 's1' ? process.env.CLIP_PIN_SECRET : process.env.ABLY_KEY
+  // Le sel est figé : le changer changerait chaque clé dérivée, et les codes des opérateurs déjà
+  // donnés (empreintes HMAC) comme les liens de service scellés cesseraient de se vérifier.
   return secret ? Buffer.from(hkdfSync('sha256', secret, 'clip-v3', purpose, 32)) : null
 }
 

@@ -1,4 +1,4 @@
-# CLIP V3 — notes pour Claude
+# CLIP V2 — notes pour Claude
 
 Instructions de travail en usine générées par l'IA. Avant de changer ce que le produit montre ou sait
 faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hors de portée) ; le
@@ -46,7 +46,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   Gateway ; droits `data:*`, `files:*`, `ai:*`, `assistant:*`, `communication:*`. Avec
   `NEXT_PUBLIC_APP_IDENTIFIER=html` (l'ancienne application partagée, où restent les données d'avant le
   2026-11-17), chaque document porte `json_data.app_identifier = "clip-v3"` et chaque lecture filtre
-  dessus (`dataApi` le fait) ; `clip-v3` reste la clé de la branche n8n (`APP_DATA_IDENTIFIER`). Les
+  dessus (`dataApi` le fait, `HTML_DATA_SLUG`) ; ailleurs, CLIP s'appelle `clip-v2` (`APP_DATA_IDENTIFIER` : la clé de sa branche n8n, le dossier de ses fichiers ; décision du 2026-11-17, « V2 partout »). Les
   types sont dans `src/lib/model/repo.ts` (`T`). Une modification partielle passe par `PATCH`, et une
   réécriture complète garde les champs qu'on ne connaît pas.
 - **Liens publics** (poste, instruction) : la portée se bâtit côté serveur dans
@@ -73,9 +73,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - **Génération au serveur** (toggle `serverGeneration`, choix de l'usine `OrgSettings.generation.server`
   dans Réglages › Usine ; sans choix, sur l'appareil) : la requête AskAI v4 se prépare une seule fois
   pour les deux chemins (`prepareGeneration`, `importAsk`) et part à `POST /api/v1/ai/job/start`
-  avec `appIdentifier: 'clip-v3'`, jamais de grant dans le corps. Dans n8n, la branche clip-v3 de
+  avec `appIdentifier: 'clip-v2'`, jamais de grant dans le corps. Dans n8n, la branche clip-v2 de
   Job_start crée `clip_job` avec les droits de l'appelant, répond et se relance elle-même sans
-  s'attendre (`data.phase: 'run'`) : ce deuxième passage roule `Job_Generate_CLIP_V3` (Ask_AI_V4 tel
+  s'attendre (`data.phase: 'run'`) : ce deuxième passage roule `Job_Generate_CLIP_V2` (Ask_AI_V4 tel
   quel, la réponse lue comme `aiApi.ask` la lit) et écrit l'état, le résultat et son coût dans
   `clip_job`. L'appareil peut alors se fermer ; le premier
   appareil ouvert qui voit le travail fini termine l'instruction avec le code de l'app
@@ -89,15 +89,15 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   relance aussi. « Générer » se touche pendant les envois : la génération part toute seule à leur fin
   (`whenUploaded`). L'import en lot crée chaque instruction et confie son analyse au serveur
   (`startServerImport`). **Une modification de la façon d'analyser se reporte dans la branche
-  clip-v3** quand elle change ce que n8n fait : un nouveau champ de la requête s'ajoute au nœud
+  clip-v2** quand elle change ce que n8n fait : un nouveau champ de la requête s'ajoute au nœud
   « Run AskAI V4 » (`JOB_RELAYED_FIELDS`, un test échoue sinon), une passe d'IA de plus, un
   traitement nouveau au serveur ou une autre lecture de la réponse (`aiApi.ask`) se reporte dans
-  `Job_Generate_CLIP_V3` (nœud « Shape analysis result »), et ce qui s'écrit de plus dans
+  `Job_Generate_CLIP_V2` (nœud « Shape analysis result »), et ce qui s'écrit de plus dans
   `clip_job`, dans la branche de Job_start. Les consignes, le schéma et les fichiers passent tels
   quels : les changer ne demande rien dans n8n.
 - **L'IA continue hors de l'écran** (toggle `backgroundAi`) : au téléphone (l'app, ou Safari sur iPhone),
   iOS suspend l'app hors de l'écran et coupe la requête en cours. La réponse de l'assistant se prépare
-  donc au serveur, par la même branche clip-v3 de Job_start que la génération (elle roule toute requête
+  donc au serveur, par la même branche clip-v2 de Job_start que la génération (elle roule toute requête
   avec un schéma ; rien à changer dans n8n) : `durableAsk` (`src/lib/ai/durableAsk.ts`) relit `clip_job`
   toutes les 2 s à l'écran et aussitôt au retour, débite le coût réel une fois (`jobDebitKey`) et ferme
   le travail ; pas pris en 45 s ou refusé, la demande part sur l'appareil. Sans choix de l'usine, la
@@ -593,7 +593,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   d'achat dans la coquille (sans capacité `store.*`, la page Abonnement n'y montre qu'une phrase). **Si Apple
   exige l'achat dans l'app** (3.1.3(b), la règle du skill `billing` pour une app grand public), la version
   suivante du manifeste ajoute `ios`/`android`, `providers.revenuecat` (posture `in_app_purchase`, projet
-  `clip-v3`) et les `store_product_id` : le code sait déjà vendre dans le magasin.
+  `clip-v2`) et les `store_product_id` : le code sait déjà vendre dans le magasin.
   - La coquille annonce les capacités `store.connect`, `store.offers`, `store.purchase` et
     `store.restore` seulement à trois conditions : une clé publique RevenueCat
     (`EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `…_ANDROID_KEY`), hors d'Expo Go, et le toggle

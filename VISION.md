@@ -1,4 +1,4 @@
-# Vision — CLIP V3
+# Vision — CLIP V2
 
 > Référence que Claude consulte avant tout changement (skill doctrine-ii).
 > Change rarement : quand un changement contraire à la vision est confirmé, on met ce fichier à jour.
@@ -16,6 +16,9 @@ Je pense au fait, si je te dis le média, mettons, c'est un step-by-step, puis q
 
 Finalement, pour l'instant, on ne va pas appeler ça Clip V2, on va appeler ça Clip V3.
 
+> Décision du 2026-11-17, qui remplace la phrase ci-dessus : le produit s'appelle Clip V2 partout
+> (application `clip-v2` à la Gateway, branche n8n, noms des workflows), en QA comme en prod.
+
 Je pense aussi qu'il y a des fonctionnalités comme annoter les images, pour pouvoir les annoter ou les dessiner ou peut-être même à partir des images générer une image par intelligence artificielle, comme de, tu sais, tu peux les annoter, mais générer par intelligence artificielle. Fait qu'au lieu, puis tu sais, ça peut même être du genre de AR par-dessus l'image qui a été générée avec les routes de génération d'images ou des flèches qui sont mis par-dessus mais de façon automatique, c'est sûr que ça consomme plus de crédits AI là. Puis il faut être sûr que tout, à chaque fois qu'on appelle le AI, t'a bien les coûts qui soient déduits de ton nombre de crédits AI que t'as par mois, mettons. Puis que tu peux acheter d'autres banques de crédits quand t'as plus de usage ou tu peux passer à un plan supérieur. Je sais pas trop là. Encore une fois, c'est peut-être des fonctionnalités plus avancées qui ne sont pas nécessaires pour tout le monde. Faut que tu choisisses bien quelles fonctionnalités. Tu sais, il faut vraiment que tu sois intelligent dans ton abonnement pour que l'outil reste simple au départ dans un produit d'appel. Puis à chaque fois que le client se dit « Ah, c'est dommage qu'il n'y ait pas telle affaire » mais en fait, « Ah oui, il le voit mais il doit le débloquer ou il peut peut-être l'essayer pendant un bout de temps ou peut-être qu'il peut se le faire proposer à des moments stratégiques selon son utilisation ou peut-être qu'il peut débloquer dans un plan supérieur ou juste acheter ce fonc... Moi, je veux juste trouver les stratégies les plus intelligentes, modernes, 2026-2027 avec, tu sais, vraiment d'intelligence, selon l'utilisation pour réussir à convertir le plus de ARR possible pour ce produit-là, d'avoir le plus bas taux des abonnements possibles. On ne veut pas de churn. C'est pour ça qu'on veut bien monitorer l'utilisation, que ce soit pour ceux qui créent des instructions à l'intérieur du département de méthode que ceux qui l'utilisent, etc.
 
 garde les interfaces simples, pas trop de questions en même temps dans la même interface, d'être bien guidé. Si t'as besoin d'une configuration initiale, ben, t'as un outil, t'as une entrevue guidée où tu peux répondre par la voix avec un assistant live ou tu peux répondre par du chat ou tu peux répondre question par question plus par du texte comme un formulaire. Je ne sais pas trop, là, je te donne des idées encore une fois peut-être de merde là, mais je veux que ça soit guidé, je ne veux pas qu'il y ait trop d'informations en même temps, je veux que ça soit intuitif. Je veux qu'il y ait différents modes de vue, tu sais, pour que ça plaise aux différents goûts, mais encore une fois, il faut trouver une manière d'aller chercher du revenu récurrent. Il faut trouver une manière de répondre aux besoins de tout le monde, mais il faut que ça reste simple.
@@ -24,7 +27,7 @@ Il faut que ça soit self-serve. Tu sais que tu t'abonnes, t'es capable de te co
 
 ## Intention
 
-CLIP V3 fait passer le savoir-faire d'un expert, de son téléphone au plancher, en quelques minutes.
+CLIP fait passer le savoir-faire d'un expert, de son téléphone au plancher, en quelques minutes.
 On filme, on parle, on photographie — ou on dépose ses vieux PDF et documents Word — et l'IA rédige
 une instruction de travail claire et visuelle : une action par étape, le bon bout de vidéo, la
 bonne photo, les mises en garde au bon moment. L'humain relit, corrige d'un geste, publie.

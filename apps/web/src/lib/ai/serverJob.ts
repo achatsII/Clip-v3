@@ -2,7 +2,7 @@
  * La génération au serveur (toggle `serverGeneration`, réglage `OrgSettings.generation.server`).
  *
  * L'appareil prépare la requête AskAI v4 (la même que sur l'appareil, `prepareGeneration`) et la
- * confie à `POST /api/v1/ai/job/start`. La branche clip-v3 du workflow n8n Job_start la roule et
+ * confie à `POST /api/v1/ai/job/start`. La branche clip-v2 du workflow n8n Job_start la roule et
  * écrit son état et le résultat dans `clip_job`, avec les droits de la personne qui l'a lancée.
  * L'appareil peut alors se fermer. Le premier appareil ouvert qui voit le travail fini termine
  * l'instruction avec le code de l'app (mise en forme, vignettes, repères, enregistrement) et
@@ -14,8 +14,8 @@ import { T } from '../model/repo'
 import type { GeneratingInfo, ServerJob } from '../model/types'
 
 /**
- * Les champs de la requête AskAI v4 que la branche clip-v3 relaie à Ask_AI_V4 (nœud « Run AskAI V4 »
- * de Job_Generate_CLIP_V3, dans n8n). Une requête de génération qui en emploie un autre doit d'abord
+ * Les champs de la requête AskAI v4 que la branche clip-v2 relaie à Ask_AI_V4 (nœud « Run AskAI V4 »
+ * de Job_Generate_CLIP_V2, dans n8n). Une requête de génération qui en emploie un autre doit d'abord
  * être reportée dans ce nœud : sinon le serveur l'ignorerait en silence (test `server-generation`).
  * `effort` n'est relayé ni par la Gateway ni par la branche : Ask_AI_V4 ne le lit pas.
  */

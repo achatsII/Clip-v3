@@ -1,5 +1,5 @@
 /**
- * Contrat du pont entre l'app web de CLIP V3 et sa coquille native (Expo).
+ * Contrat du pont entre l'app web de CLIP V2 et sa coquille native (Expo).
  *
  * L'interface de CLIP vit dans l'app web ; la coquille native l'affiche dans une WebView et
  * n'ajoute que ce que le navigateur fait mal : la capture à poids contrôlé, le scan, l'envoi

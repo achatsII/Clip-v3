@@ -15,10 +15,18 @@ export const DEFAULT_APP_IDENTIFIER = 'clip-v2'
 export const APP_IDENTIFIER = process.env.NEXT_PUBLIC_APP_IDENTIFIER || DEFAULT_APP_IDENTIFIER
 
 /**
- * Le slug que portent les documents écrits sous `html` (et qu'on y filtre), et la clé de la branche
- * de Clip dans le workflow n8n Job_start. Il ne change pas avec l'identifiant de connexion.
+ * Le nom de Clip auprès des services : la clé de sa branche dans le workflow n8n Job_start (la
+ * génération au serveur) et le dossier de ses fichiers au stockage. `clip-v2`, comme l'application
+ * de connexion, partout (QA et prod, décision du 2026-11-17).
  */
-export const APP_DATA_IDENTIFIER = 'clip-v3'
+export const APP_DATA_IDENTIFIER = 'clip-v2'
+
+/**
+ * L'étiquette des documents écrits dans l'ancienne application partagée `html` (avant le 2026-11-17) :
+ * ces documents la portent déjà, elle ne se renomme pas sans les réécrire. Ne sert qu'avec
+ * `NEXT_PUBLIC_APP_IDENTIFIER=html`, pour relire ces anciennes données.
+ */
+export const HTML_DATA_SLUG = 'clip-v3'
 
 /** Vrai seulement si l'app partage `html` : chaque document porte alors le slug, chaque lecture filtre dessus. */
 export const SHARED_APP = APP_IDENTIFIER === 'html'

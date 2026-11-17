@@ -2,7 +2,7 @@ import type { PrintTemplate } from '../pdf/template'
 import type { Labels, Nomenclature, StationRule } from './nomenclature'
 import type { PreviousVersion, PublishedChanges } from './updates'
 /**
- * Modèle de données de CLIP V3 (contenu de `json_data` sur la Gateway).
+ * Modèle de données de CLIP V2 (contenu de `json_data` sur la Gateway).
  *
  * Ces formes sont partagées par toutes les versions de l'app qui tournent en même temps :
  * on ajoute des champs facultatifs, on ne renomme ni ne retire rien.

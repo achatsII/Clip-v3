@@ -61,7 +61,7 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // La lecture au téléphone : le média à ses vraies proportions, qui laisse au texte la place qu'il
   // lui faut ; côte à côte quand on tourne le téléphone ; « Tout sur une page » depuis le sommaire.
   phoneReader: true,
-  // La génération au serveur (Job_start, branche clip-v3 dans n8n) : le réglage de l'usine paraît,
+  // La génération au serveur (Job_start, branche clip-v2 dans n8n) : le réglage de l'usine paraît,
   // et une fois choisi, on peut fermer l'app pendant que l'IA écrit l'instruction.
   serverGeneration: true,
   // L'envoi par morceaux des gros fichiers (TUS, directement à la Gateway) : un morceau raté se

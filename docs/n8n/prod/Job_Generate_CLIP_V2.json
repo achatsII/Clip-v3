@@ -1,8 +1,8 @@
 {
-  "name": "Job_Generate_CLIP_V3",
+  "name": "Job_Generate_CLIP_V2",
   "nodes": [
     {
-      "name": "Start CLIP V3 job",
+      "name": "Start CLIP V2 job",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -54,28 +54,28 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "app_identifier": "={{ $('Start CLIP V3 job').first().json.data_app }}",
-            "user-email": "={{ $('Start CLIP V3 job').first().json.user_email }}",
-            "organisation": "={{ $('Start CLIP V3 job').first().json.organisation }}",
-            "provider": "={{ $('Start CLIP V3 job').first().json.ask?.provider || 'google' }}",
-            "prompt": "={{ $('Start CLIP V3 job').first().json.ask?.prompt }}",
-            "system_instruction": "={{ $('Start CLIP V3 job').first().json.ask?.system_instruction }}",
-            "json_schema": "={{ $('Start CLIP V3 job').first().json.ask?.json_schema }}",
-            "level": "={{ $('Start CLIP V3 job').first().json.ask?.level || 'mid' }}",
-            "useSearch": "={{ $('Start CLIP V3 job').first().json.ask?.useSearch || false }}",
-            "history": "={{ $('Start CLIP V3 job').first().json.ask?.history || [] }}",
-            "thinking": "={{ $('Start CLIP V3 job').first().json.ask?.thinking }}",
-            "files": "={{ $('Start CLIP V3 job').first().json.ask?.files || [] }}",
-            "fileUrl": "={{ $('Start CLIP V3 job').first().json.ask?.fileUrl }}",
-            "mediaResolution": "={{ $('Start CLIP V3 job').first().json.ask?.mediaResolution }}",
-            "videoMode": "={{ $('Start CLIP V3 job').first().json.ask?.videoMode }}",
-            "fps": "={{ $('Start CLIP V3 job').first().json.ask?.fps || 0 }}",
-            "maxFileProcessingPolls": "={{ $('Start CLIP V3 job').first().json.ask?.maxFileProcessingPolls || 0 }}",
-            "fileProcessingWaitSeconds": "={{ $('Start CLIP V3 job').first().json.ask?.fileProcessingWaitSeconds || 0 }}",
+            "app_identifier": "={{ $('Start CLIP V2 job').first().json.data_app }}",
+            "user-email": "={{ $('Start CLIP V2 job').first().json.user_email }}",
+            "organisation": "={{ $('Start CLIP V2 job').first().json.organisation }}",
+            "provider": "={{ $('Start CLIP V2 job').first().json.ask?.provider || 'google' }}",
+            "prompt": "={{ $('Start CLIP V2 job').first().json.ask?.prompt }}",
+            "system_instruction": "={{ $('Start CLIP V2 job').first().json.ask?.system_instruction }}",
+            "json_schema": "={{ $('Start CLIP V2 job').first().json.ask?.json_schema }}",
+            "level": "={{ $('Start CLIP V2 job').first().json.ask?.level || 'mid' }}",
+            "useSearch": "={{ $('Start CLIP V2 job').first().json.ask?.useSearch || false }}",
+            "history": "={{ $('Start CLIP V2 job').first().json.ask?.history || [] }}",
+            "thinking": "={{ $('Start CLIP V2 job').first().json.ask?.thinking }}",
+            "files": "={{ $('Start CLIP V2 job').first().json.ask?.files || [] }}",
+            "fileUrl": "={{ $('Start CLIP V2 job').first().json.ask?.fileUrl }}",
+            "mediaResolution": "={{ $('Start CLIP V2 job').first().json.ask?.mediaResolution }}",
+            "videoMode": "={{ $('Start CLIP V2 job').first().json.ask?.videoMode }}",
+            "fps": "={{ $('Start CLIP V2 job').first().json.ask?.fps || 0 }}",
+            "maxFileProcessingPolls": "={{ $('Start CLIP V2 job').first().json.ask?.maxFileProcessingPolls || 0 }}",
+            "fileProcessingWaitSeconds": "={{ $('Start CLIP V2 job').first().json.ask?.fileProcessingWaitSeconds || 0 }}",
             "maxGeneratedImages": 0,
             "imageWidth": 0,
             "imageHeight": 0,
-            "maxOutputTokens": "={{ $('Start CLIP V3 job').first().json.ask?.maxOutputTokens || 0 }}"
+            "maxOutputTokens": "={{ $('Start CLIP V2 job').first().json.ask?.maxOutputTokens || 0 }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -370,7 +370,7 @@
         128
       ],
       "parameters": {
-        "jsCode": "const run = $input.first().json || {};\nconst results = run.results || {};\nconst b = run.billing && typeof run.billing === 'object' ? run.billing : {};\nconst cad = Number(b.costs && b.costs.cad);\nconst billing = Number.isFinite(cad) ? { costs: { cad }, model: b.model || results.model || null, usage: b.usage || null } : null;\nconst now = new Date().toISOString();\n// Même lecture que sur l'appareil (aiApi.ask, CLIP V3) : parsed_json, sinon la réponse texte sans\n// ses balises de code quand la requête a un schéma.\nconst ask = $('Start CLIP V3 job').first().json.ask || {};\nlet parsed = results.parsed_json && typeof results.parsed_json === 'object' ? results.parsed_json : null;\nif (!parsed && ask.json_schema && typeof results.assistant_response === 'string') {\n  try { parsed = JSON.parse(results.assistant_response.replace(/^```(?:json)?\\s*|\\s*```$/g, '')); } catch (e) { parsed = null; }\n}\nconst failed = run.success === false || !!results.error;\nif (!failed && parsed && typeof parsed === 'object') {\n  return [{ json: { status: 'completed', stage: 'done', steps: ['started', 'analyze', 'completed'], heartbeatAt: now, finishedAt: now, error: null, result: { json: parsed, model: results.model || null, billing, skippedFiles: Array.isArray(run.skipped_files) ? run.skipped_files : [] } } }];\n}\nconst code = results.error || (run.success === false ? 'ai_error' : 'no_result');\nreturn [{ json: { status: 'failed', stage: 'failed', steps: ['started', 'analyze', 'failed'], heartbeatAt: now, finishedAt: now, result: billing ? { billing } : null, error: { message: String(code).slice(0, 500), details: results.error_details ? String(results.error_details).slice(0, 2000) : null } } }];"
+        "jsCode": "const run = $input.first().json || {};\nconst results = run.results || {};\nconst b = run.billing && typeof run.billing === 'object' ? run.billing : {};\nconst cad = Number(b.costs && b.costs.cad);\nconst billing = Number.isFinite(cad) ? { costs: { cad }, model: b.model || results.model || null, usage: b.usage || null } : null;\nconst now = new Date().toISOString();\n// Même lecture que sur l'appareil (aiApi.ask, CLIP V2) : parsed_json, sinon la réponse texte sans\n// ses balises de code quand la requête a un schéma.\nconst ask = $('Start CLIP V2 job').first().json.ask || {};\nlet parsed = results.parsed_json && typeof results.parsed_json === 'object' ? results.parsed_json : null;\nif (!parsed && ask.json_schema && typeof results.assistant_response === 'string') {\n  try { parsed = JSON.parse(results.assistant_response.replace(/^```(?:json)?\\s*|\\s*```$/g, '')); } catch (e) { parsed = null; }\n}\nconst failed = run.success === false || !!results.error;\nif (!failed && parsed && typeof parsed === 'object') {\n  return [{ json: { status: 'completed', stage: 'done', steps: ['started', 'analyze', 'completed'], heartbeatAt: now, finishedAt: now, error: null, result: { json: parsed, model: results.model || null, billing, skippedFiles: Array.isArray(run.skipped_files) ? run.skipped_files : [] } } }];\n}\nconst code = results.error || (run.success === false ? 'ai_error' : 'no_result');\nreturn [{ json: { status: 'failed', stage: 'failed', steps: ['started', 'analyze', 'failed'], heartbeatAt: now, finishedAt: now, result: billing ? { billing } : null, error: { message: String(code).slice(0, 500), details: results.error_details ? String(results.error_details).slice(0, 2000) : null } } }];"
       }
     },
     {
@@ -382,7 +382,7 @@
         32
       ],
       "parameters": {
-        "content": "## Analyse CLIP V3 (appelée par Job_start)\nRoule la requête AskAI V4 que CLIP V3 a préparée (le même appel que la génération sur l'appareil) et rend le résultat, le modèle et le coût réel à Job_start, qui les écrit dans clip_job. Les écritures restent dans Job_start : les routes Mongo n'acceptent que les workflows de leur propriétaire, comme Job_start et Job_Analyse_CLIP (V1). L'app termine l'instruction (mise en forme, vignettes, repères) et débite le coût.\n\nÀ tenir à jour quand la façon d'analyser de CLIP V3 change (dépôt Clip-v3, src/lib/ai/generate.ts et src/lib/ai/serverJob.ts).",
+        "content": "## Analyse CLIP V2 (appelée par Job_start)\nRoule la requête AskAI V4 que CLIP V2 a préparée (le même appel que la génération sur l'appareil) et rend le résultat, le modèle et le coût réel à Job_start, qui les écrit dans clip_job. Les écritures restent dans Job_start : les routes Mongo n'acceptent que les workflows de leur propriétaire, comme Job_start et Job_Analyse_CLIP (V1). L'app termine l'instruction (mise en forme, vignettes, repères) et débite le coût.\n\nÀ tenir à jour quand la façon d'analyser de CLIP V2 change (dépôt de CLIP, src/lib/ai/generate.ts et src/lib/ai/serverJob.ts).",
         "color": 5,
         "width": 640,
         "height": 320
@@ -408,7 +408,7 @@
         ]
       ]
     },
-    "Start CLIP V3 job": {
+    "Start CLIP V2 job": {
       "main": [
         [
           {

@@ -37,7 +37,7 @@ export interface ResumableTarget {
   /** Le nom du fichier, déjà nettoyé. */
   name: string
   type: string
-  /** Le dossier de stockage (`clip-v3/captures`). */
+  /** Le dossier de stockage (`clip-v2/captures`). */
   path: string
   /** La clé de reprise : le même fichier, au même endroit, reprend sa session. */
   fingerprint: string

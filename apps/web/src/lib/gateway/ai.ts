@@ -263,7 +263,7 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean; credi
     if (billing) emitSettled()
     const usage = (r.usage_normalized ?? env.usage_normalized ?? null) as Record<string, unknown> | null
     usageListeners.forEach((fn) => fn({ operation, model: r.model ?? null, usage, ok: true, credits: cost.charged }))
-    // La génération au serveur lit la réponse de la même façon (n8n, Job_Generate_CLIP_V3, nœud
+    // La génération au serveur lit la réponse de la même façon (n8n, Job_Generate_CLIP_V2, nœud
     // « Shape analysis result ») : changer cette lecture, c'est la changer là aussi.
     let json = (r.parsed_json ?? null) as T | null
     if (!json && body.json_schema && r.assistant_response) {
@@ -277,7 +277,7 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean; credi
   }
 
   /**
-   * Lance une génération au serveur (Job_start, branche clip-v3) : la même requête AskAI v4 que sur
+   * Lance une génération au serveur (Job_start, branche clip-v2) : la même requête AskAI v4 que sur
    * l'appareil, roulée par n8n, qui écrit son résultat dans `clip_job`. Les mêmes vérifications
    * qu'avant un appel : l'accord de la personne, puis le solde des crédits (facturation allumée).
    * Rend l'identifiant du travail ; le coût se débite à la fin, par l'appareil qui termine (`chargeCost`).

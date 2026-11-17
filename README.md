@@ -1,4 +1,4 @@
-# CLIP V3
+# CLIP V2
 
 Des instructions de travail claires et visuelles, faites en quelques minutes : on filme le geste,
 on parle, on ajoute des photos ou un vieux PDF, et l'IA rédige une instruction étape par étape
@@ -133,7 +133,7 @@ Comment ça marche, les gestes pour brancher Clip à Sandboxes et comment ajoute
 
 ## Ce qui reste à faire avant la production
 
-- **Enregistrer l'application `clip-v3` à la Gateway**, puis changer `NEXT_PUBLIC_APP_IDENTIFIER` :
+- **Enregistrer l'application `clip-v2` à la Gateway** (fait le 2026-11-17), puis changer `NEXT_PUBLIC_APP_IDENTIFIER` :
   aujourd'hui l'app se connecte avec l'application partagée `html` et cloisonne ses données par le
   champ `json_data.app_identifier`. Les données écrites sous `html` n'y suivront pas : basculer avant
   d'avoir de vraies données, ou les recopier.

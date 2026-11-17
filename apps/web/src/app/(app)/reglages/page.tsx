@@ -275,7 +275,7 @@ function DataTab() {
       const full = await Promise.all(list.map((d) => data.get(`clip_instruction`, d._id)))
       const versions = await Promise.all(list.map((d) => listVersions(data, d._id).catch(() => [])))
       const payload = {
-        format: 'clip-v3/export',
+        format: 'clip-v2/export',
         exportedAt: new Date().toISOString(),
         organization: org.json_data.name,
         instructions: full.filter(Boolean).map((d, i) => ({ id: d!._id, ...(d!.json_data as object), versions: versions[i].map((v) => v.json_data) })),

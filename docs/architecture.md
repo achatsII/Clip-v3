@@ -1,4 +1,4 @@
-# Architecture de CLIP V3
+# Architecture de CLIP V2
 
 ## 1. Le choix : une seule interface, une coquille native
 
@@ -41,9 +41,10 @@ Clip se connecte par sa propre application, **`clip-v2`** (`DEFAULT_APP_IDENTIFI
 de plus. Avant, elle passait par l'application partagée `html` et cloisonnait par le slug `clip-v3`
 (`json_data.app_identifier`, écrit à chaque document et filtré à chaque lecture) ;
 `NEXT_PUBLIC_APP_IDENTIFIER=html` y ramène. Les données écrites sous `html` y restent : la nouvelle
-application ne les voit pas tant qu'on ne les recopie pas. Le slug `clip-v3` reste aussi la clé de la
-branche de Clip dans le workflow n8n Job_start (`APP_DATA_IDENTIFIER`), qui écrit `clip_job` dans
-l'application de la personne (`dataApp`).
+application ne les voit pas tant qu'on ne les recopie pas (ce slug ne sert plus qu'à les relire :
+`HTML_DATA_SLUG`). Partout ailleurs, Clip s'appelle `clip-v2` (décision du 2026-11-17) : c'est la clé de
+sa branche dans le workflow n8n Job_start (`APP_DATA_IDENTIFIER`), qui écrit `clip_job` dans
+l'application de la personne (`dataApp`), et le dossier de ses fichiers au stockage.
 
 Les droits de l'application `clip-v2` à la Gateway : `data:*`, `files:*`, `ai:*`, `assistant:*`,
 `communication:*` (ou `*`). Un lien public ne reçoit que les droits de la personne qui le crée. Chaque
@@ -399,16 +400,16 @@ l'appareil, comme avant. Au serveur, on peut fermer l'app pendant que l'IA écri
 
 1. **L'appareil prépare** la requête AskAI v4 exactement comme pour lui-même (`prepareGeneration` :
    vidéos chez Gemini par leur adresse, consignes, sources, schéma ; `importAsk` pour un document) et
-   la confie à `POST /api/v1/ai/job/start` (`aiApi.startJob`) : `appIdentifier: 'clip-v3'` choisit la
+   la confie à `POST /api/v1/ai/job/start` (`aiApi.startJob`) : `appIdentifier: 'clip-v2'` choisit la
    branche, `data.dataApp` dit l'application de connexion (`html` tant que CLIP partage `html`), et la
    requête va dans `data.ask`. Avant, comme pour tout appel, l'accord de la personne et le solde des
    crédits (facturation allumée). L'instruction note `generating.mode: 'server'`, l'identifiant du
    travail et ce qu'il faut pour la terminer ailleurs (`generating.job` : les sources dans l'ordre,
    la langue, l'usage).
-2. **n8n roule l'analyse.** La branche clip-v3 de Job_start crée le document `clip_job` (avec le
+2. **n8n roule l'analyse.** La branche clip-v2 de Job_start crée le document `clip_job` (avec le
    grant de l'appelant, que la Gateway pose depuis le jeton), se relance elle-même sans s'attendre
    (`data.phase: 'run'`, `data.jobId`) et rend `record_id`. Ce deuxième passage relit `clip_job`,
-   marque l'étape `analyze` et attend `Job_Generate_CLIP_V3`, qui appelle Ask_AI_V4 directement (pas
+   marque l'étape `analyze` et attend `Job_Generate_CLIP_V2`, qui appelle Ask_AI_V4 directement (pas
    le flux qui coupe les fichiers par lots de dix : une instruction se génère d'un seul appel) et lit
    la réponse comme l'appareil (`aiApi.ask` : `parsed_json`, sinon le texte sans ses balises de code).
    Il écrit ensuite `status: completed` avec `result.json`, le modèle et `result.billing.costs.cad`, ou
@@ -458,7 +459,7 @@ tests jouent contre une fausse Gateway TUS qui se comporte comme la vraie
 **L'IA continue hors de l'écran** (toggle `backgroundAi`, `src/lib/ai/durableAsk.ts`). Au téléphone,
 iOS suspend l'app quelques secondes après qu'elle quitte l'écran et coupe la requête en cours : une
 réponse de l'assistant était perdue. Sur un appareil que l'arrière-plan suspend (l'app, ou Safari sur
-iPhone et iPad : `suspendsInBackground`), la demande part au serveur par la branche clip-v3 de
+iPhone et iPad : `suspendsInBackground`), la demande part au serveur par la branche clip-v2 de
 Job_start, la même que la génération au serveur. Vérifié dans n8n : la branche ne regarde pas
 l'opération, ne touche pas à l'instruction, et rend tout résultat JSON d'une requête avec un schéma.
 `durableAsk` relit le travail toutes les 2 s tant que l'app est à l'écran, et aussitôt qu'elle y

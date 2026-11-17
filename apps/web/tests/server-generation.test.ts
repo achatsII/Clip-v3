@@ -38,12 +38,12 @@ describe('Job_start : le travail au serveur', () => {
     expect(jobRecordId(null)).toBeNull()
   })
 
-  it('part sur la branche clip-v3 avec la requête AskAI telle quelle, sous l’application de connexion', async () => {
+  it('part sur la branche clip-v2 avec la requête AskAI telle quelle, sous l’application de connexion', async () => {
     const gw = fakeGateway(() => ({ success: true, job_status: 'processing', record_id: 'job1' }))
     const id = await aiApi(gw, { billing: false }).startJob({ operation: 'generate_s', instructionId: 'i1', ask })
     expect(id).toBe('job1')
     expect(gw.calls.map((c) => c.endpoint)).toEqual(['/api/v1/ai/job/start'])
-    expect(gw.calls[0].options.body).toEqual({ provider: 'google', level: 'mid', appIdentifier: 'clip-v3', data: { dataApp: APP_IDENTIFIER, instructionId: 'i1', operation: 'generate_s', ask } })
+    expect(gw.calls[0].options.body).toEqual({ provider: 'google', level: 'mid', appIdentifier: 'clip-v2', data: { dataApp: APP_IDENTIFIER, instructionId: 'i1', operation: 'generate_s', ask } })
     // Jamais de grant dans le corps : la Gateway le pose elle-même depuis le jeton.
     expect(JSON.stringify(gw.calls[0].options.body)).not.toContain('grant')
   })
@@ -293,12 +293,12 @@ describe('« Générer » pendant les envois', () => {
   })
 })
 
-describe('la branche clip-v3 de Job_start suit la façon d’analyser', () => {
+describe('la branche clip-v2 de Job_start suit la façon d’analyser', () => {
   it('chaque champ des requêtes de génération et d’import est relayé par la branche n8n (sinon : mettre à jour « Run AskAI V4 »)', async () => {
     const known = new Set<string>([...JOB_RELAYED_FIELDS, ...JOB_IGNORED_FIELDS])
     const video = { id: 'v1', kind: 'video' as const, url: 'https://x/v.mp4', durationSec: 400, sizeBytes: 10, geminiFileUri: 'https://gemini/f', geminiExpiresAt: iso(Date.now() + 40 * 3600_000), createdAt: iso(now) }
     const gen = await prepareGeneration({ files: {} as never, org, sources: [photo, note, video], stationNames: ['Presse 4'] })
     const imp = importAsk({ org, source: { id: 'd1', kind: 'document', url: 'https://x/d.pdf', pageCount: 3, createdAt: iso(now) }, stationNames: [] })
-    for (const ask of [gen.ask, imp.ask]) for (const field of Object.keys(ask)) expect(known.has(field), `champ « ${field} » absent de la branche clip-v3`).toBe(true)
+    for (const ask of [gen.ask, imp.ask]) for (const field of Object.keys(ask)) expect(known.has(field), `champ « ${field} » absent de la branche clip-v2`).toBe(true)
   })
 })

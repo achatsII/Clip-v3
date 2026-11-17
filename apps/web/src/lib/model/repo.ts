@@ -1,5 +1,5 @@
 /**
- * Accès aux données de CLIP V3. Chaque fonction prend un `DataApi` : celui de l'utilisateur
+ * Accès aux données de CLIP V2. Chaque fonction prend un `DataApi` : celui de l'utilisateur
  * connecté, ou celui d'un lien public (jeton guest à portée limitée).
  */
 import type { DataApi, Doc } from '../gateway/data'
@@ -41,7 +41,7 @@ export const T = {
   /** L'Académie : qui doit être formé à quel poste, et pour quand (un journal, le plus récent fait foi). */
   assignment: 'clip_assignment',
   /**
-   * Une génération qui tourne au serveur (branche clip-v3 de Job_start, n8n) : son état et le
+   * Une génération qui tourne au serveur (branche clip-v2 de Job_start, n8n) : son état et le
    * résultat de l'IA. n8n l'écrit avec les droits de la personne qui l'a lancée ; l'app la relit.
    */
   serverJob: 'clip_job',

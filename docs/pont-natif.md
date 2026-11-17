@@ -1,4 +1,4 @@
-# Pont natif de CLIP V3
+# Pont natif de CLIP V2
 
 La coquille Expo (`apps/mobile`) affiche l'app web dans une WebView et n'ajoute que ce que le
 navigateur fait mal. Le contrat des messages est dans `packages/bridge/src/index.ts` ; l'architecture
@@ -186,7 +186,7 @@ configuration, navigation) et `npm run typecheck`.
 |---|---|
 | `EXPO_PUBLIC_BRAND` | La marque de la build (`brands.json`), posée par le profil d'EAS ; sans valeur, CLIP. |
 | `EXPO_PUBLIC_CLIP_WEB_URL` | Adresse de l'app web, figée dans la build (développement, préproduction). Sans elle, l'app web de production de la marque. |
-| `EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` | Clés **publiques** de RevenueCat (projet `clip-v3`), variables d'EAS figées dans la build. Sans elles, aucun achat dans l'app. |
+| `EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` | Clés **publiques** de RevenueCat (projet `clip-v2`), variables d'EAS figées dans la build. Sans elles, aucun achat dans l'app. |
 
 ## Ce qui reste à faire
 

@@ -1,7 +1,8 @@
 {
   "nodes": [
     {
-      "name": "Post Job CLIP V3",
+      "id": "c2fc16b0-562a-4665-917d-471d49fbf330",
+      "name": "Post Job CLIP V2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
@@ -72,15 +73,16 @@
           "value": {
             "app_identifier": "={{ $json.data?.dataApp || $json.appIdentifier }}",
             "data_type": "clip_job",
-            "description": "Génération CLIP V3",
+            "description": "Génération CLIP V2",
             "grant_id": "={{ $json['grant-id'] }}",
-            "json_data": "={{ { app_identifier: 'clip-v3', kind: 'generation', status: 'running', stage: 'start', steps: ['started'], startedAt: $now.toISO(), heartbeatAt: $now.toISO(), instructionId: $json.data?.instructionId ?? null, operation: $json.data?.operation ?? null, result: null, error: null } }}"
+            "json_data": "={{ { app_identifier: $('When Executed by Another Workflow').first().json.appIdentifier, kind: 'generation', status: 'running', stage: 'start', steps: ['started'], startedAt: $now.toISO(), heartbeatAt: $now.toISO(), instructionId: $json.data?.instructionId ?? null, operation: $json.data?.operation ?? null, result: null, error: null } }}"
           }
         }
       }
     },
     {
-      "name": "Run CLIP V3 in background",
+      "id": "18db57bf-f75d-43f9-9ba5-dee1bb1e4b70",
+      "name": "Run CLIP V2 in background",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
@@ -188,7 +190,8 @@
       }
     },
     {
-      "name": "Reply CLIP V3",
+      "id": "497b0edf-4c4a-4bb8-8b97-a196537ac378",
+      "name": "Reply CLIP V2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -196,11 +199,12 @@
         480
       ],
       "parameters": {
-        "jsCode": "// Branche clip-v3 : la réponse immédiate. Le travail continue dans Job_Generate_CLIP_V3.\nlet insertedId = null;\ntry {\n  insertedId = $('Post Job CLIP V3').first().json.results[0].inserted_id;\n} catch (e) {}\n\nreturn {\n  json: insertedId\n    ? { success: true, message: \"L'analyse a démarré en arrière-plan.\", job_status: 'processing', record_id: insertedId }\n    : { success: false, message: \"Le document de suivi n'a pas été créé.\", job_status: 'failed', record_id: null }\n};"
+        "jsCode": "// Branche clip-v2 : la réponse immédiate. Le travail continue dans Job_Generate_CLIP_V2.\nlet insertedId = null;\ntry {\n  insertedId = $('Post Job CLIP V2').first().json.results[0].inserted_id;\n} catch (e) {}\n\nreturn {\n  json: insertedId\n    ? { success: true, message: \"L'analyse a démarré en arrière-plan.\", job_status: 'processing', record_id: insertedId }\n    : { success: false, message: \"Le document de suivi n'a pas été créé.\", job_status: 'failed', record_id: null }\n};"
       }
     },
     {
-      "name": "CLIP V3 phase",
+      "id": "bd521c12-bd96-4f0d-a5d4-80af8f71b70e",
+      "name": "CLIP V2 phase",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
@@ -233,7 +237,8 @@
       }
     },
     {
-      "name": "Read CLIP V3 job",
+      "id": "26ae3fc6-aa9f-4603-a546-ca58703ddb14",
+      "name": "Read CLIP V2 job",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
@@ -309,7 +314,8 @@
       "waitBetweenTries": 2000
     },
     {
-      "name": "CLIP V3 job base",
+      "id": "2fea9852-8ab0-43eb-8598-941fcd78fb99",
+      "name": "CLIP V2 job base",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -317,11 +323,12 @@
         704
       ],
       "parameters": {
-        "jsCode": "// Deuxième passage de la branche clip-v3 : le document clip_job créé au premier passage, lu avec\n// les droits de l'appelant. La route PATCH reçoit tout json_data : chaque écriture repart de ce\n// document, comme Job_Analyse_CLIP (V1).\nconst data = $('When Executed by Another Workflow').first().json.data || {};\nconst read = $input.first().json || {};\nconst prev = read.result && read.result.json_data && typeof read.result.json_data === 'object' ? read.result.json_data : null;\nif (!prev) throw new Error('clip_job introuvable : ' + String(data.jobId || ''));\n// Déjà terminé (un nouvel essai, un double appel) : rien à refaire.\nif (prev.status && prev.status !== 'running') return [];\nconst base = { app_identifier: 'clip-v3', kind: 'generation', instructionId: data.instructionId ?? null, operation: data.operation ?? null, ...prev };\nconst steps = (Array.isArray(base.steps) ? base.steps : ['started']).filter((s) => s !== 'analyze');\nreturn [{ json: { base, analyzing: { ...base, stage: 'analyze', steps: [...steps, 'analyze'], heartbeatAt: new Date().toISOString() } } }];"
+        "jsCode": "// Deuxième passage de la branche clip-v2 : le document clip_job créé au premier passage, lu avec\n// les droits de l'appelant. La route PATCH reçoit tout json_data : chaque écriture repart de ce\n// document, comme Job_Analyse_CLIP (V1).\nconst data = $('When Executed by Another Workflow').first().json.data || {};\nconst read = $input.first().json || {};\nconst prev = read.result && read.result.json_data && typeof read.result.json_data === 'object' ? read.result.json_data : null;\nif (!prev) throw new Error('clip_job introuvable : ' + String(data.jobId || ''));\n// Déjà terminé (un nouvel essai, un double appel) : rien à refaire.\nif (prev.status && prev.status !== 'running') return [];\nconst base = { app_identifier: $('When Executed by Another Workflow').first().json.appIdentifier, kind: 'generation', instructionId: data.instructionId ?? null, operation: data.operation ?? null, ...prev };\nconst steps = (Array.isArray(base.steps) ? base.steps : ['started']).filter((s) => s !== 'analyze');\nreturn [{ json: { base, analyzing: { ...base, stage: 'analyze', steps: [...steps, 'analyze'], heartbeatAt: new Date().toISOString() } } }];"
       }
     },
     {
-      "name": "Mark CLIP V3 started",
+      "id": "46fcd766-7906-4e48-a23e-d0e4edc07d66",
+      "name": "Mark CLIP V2 started",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
@@ -406,7 +413,8 @@
       "onError": "continueRegularOutput"
     },
     {
-      "name": "Analyse CLIP V3",
+      "id": "9be12b0b-6c54-4ad1-967e-106ab070eceb",
+      "name": "Analyse CLIP V2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
@@ -419,8 +427,10 @@
         },
         "workflowId": {
           "__rl": true,
-          "value": "__ID_PROD_JOB_GENERATE_CLIP_V3__",
-          "mode": "id"
+          "cachedResultName": "Job_Generate_CLIP_V2",
+          "cachedResultUrl": "/workflow/Jhgd4KgBBK716vTU",
+          "mode": "list",
+          "value": "Jhgd4KgBBK716vTU"
         },
         "workflowInputs": {
           "attemptToConvertTypes": false,
@@ -502,7 +512,8 @@
       "onError": "continueRegularOutput"
     },
     {
-      "name": "CLIP V3 outcome",
+      "id": "18e3eab0-c9fd-4ac3-9a55-c74b0fe01923",
+      "name": "CLIP V2 outcome",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -510,11 +521,12 @@
         704
       ],
       "parameters": {
-        "jsCode": "// Le résultat de Job_Generate_CLIP_V3 (ou son échec), ajouté au document clip_job.\nconst base = $('CLIP V3 job base').first().json.base;\nconst out = $input.first().json || {};\nconst now = new Date().toISOString();\nconst steps = (Array.isArray(base.steps) ? base.steps : ['started']).filter((s) => !['analyze', 'completed', 'failed'].includes(s));\nif (out.status === 'completed' || out.status === 'failed') {\n  return [{ json: { json_data: { ...base, ...out, steps: [...steps, 'analyze', out.status] } } }];\n}\nconst raw = out.error && typeof out.error === 'object' ? out.error.message : out.error;\nconst message = String(raw || 'analysis_failed').slice(0, 500);\nreturn [{ json: { json_data: { ...base, status: 'failed', stage: 'failed', steps: [...steps, 'analyze', 'failed'], heartbeatAt: now, finishedAt: now, result: null, error: { message, details: null } } } }];"
+        "jsCode": "// Le résultat de Job_Generate_CLIP_V2 (ou son échec), ajouté au document clip_job.\nconst base = $('CLIP V2 job base').first().json.base;\nconst out = $input.first().json || {};\nconst now = new Date().toISOString();\nconst steps = (Array.isArray(base.steps) ? base.steps : ['started']).filter((s) => !['analyze', 'completed', 'failed'].includes(s));\nif (out.status === 'completed' || out.status === 'failed') {\n  return [{ json: { json_data: { ...base, ...out, steps: [...steps, 'analyze', out.status] } } }];\n}\nconst raw = out.error && typeof out.error === 'object' ? out.error.message : out.error;\nconst message = String(raw || 'analysis_failed').slice(0, 500);\nreturn [{ json: { json_data: { ...base, status: 'failed', stage: 'failed', steps: [...steps, 'analyze', 'failed'], heartbeatAt: now, finishedAt: now, result: null, error: { message, details: null } } } }];"
       }
     },
     {
-      "name": "Save CLIP V3 result",
+      "id": "cee0190c-6592-401e-9370-27f2bdec151a",
+      "name": "Save CLIP V2 result",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
@@ -601,7 +613,8 @@
       "waitBetweenTries": 3000
     },
     {
-      "name": "Note CLIP V3",
+      "id": "75cc9164-f6fe-4e1b-afec-6fa4661317a1",
+      "name": "Note CLIP V2",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -610,102 +623,102 @@
       ],
       "parameters": {
         "color": 5,
-        "content": "## Branche CLIP V3 (appIdentifier clip-v3)\n1. Premier passage : crée clip_job avec le grant de l'appelant, relance Job_start lui-même sans attendre (data.phase = run) et répond record_id tout de suite.\n2. Deuxième passage (data.phase = run) : lit clip_job, le marque « analyze », roule Job_Generate_CLIP_V3 (AskAI V4) et écrit le résultat et le coût réel.\nLes écritures se font ici, pas dans Job_Generate_CLIP_V3 : les routes Mongo n'acceptent que les workflows de leur propriétaire, comme Job_start et Job_Analyse_CLIP (V1).",
+        "content": "## Branche CLIP V2 (appIdentifier clip-v2)\n1. Premier passage : crée clip_job avec le grant de l'appelant, relance Job_start lui-même sans attendre (data.phase = run) et répond record_id tout de suite.\n2. Deuxième passage (data.phase = run) : lit clip_job, le marque « analyze », roule Job_Generate_CLIP_V2 (AskAI V4) et écrit le résultat et le coût réel.\nLes écritures se font ici, pas dans Job_Generate_CLIP_V2 : les routes Mongo n'acceptent que les workflows de leur propriétaire, comme Job_start et Job_Analyse_CLIP (V1).",
         "height": 200,
         "width": 1480
       }
     }
   ],
   "connections": {
-    "Post Job CLIP V3": {
+    "Post Job CLIP V2": {
       "main": [
         [
           {
-            "node": "Run CLIP V3 in background",
+            "node": "Run CLIP V2 in background",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "CLIP V3 phase": {
+    "Run CLIP V2 in background": {
       "main": [
         [
           {
-            "node": "Read CLIP V3 job",
+            "node": "Reply CLIP V2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CLIP V2 phase": {
+      "main": [
+        [
+          {
+            "node": "Read CLIP V2 job",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Post Job CLIP V3",
+            "node": "Post Job CLIP V2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Run CLIP V3 in background": {
+    "Read CLIP V2 job": {
       "main": [
         [
           {
-            "node": "Reply CLIP V3",
+            "node": "CLIP V2 job base",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read CLIP V3 job": {
+    "CLIP V2 job base": {
       "main": [
         [
           {
-            "node": "CLIP V3 job base",
+            "node": "Mark CLIP V2 started",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "CLIP V3 job base": {
+    "Mark CLIP V2 started": {
       "main": [
         [
           {
-            "node": "Mark CLIP V3 started",
+            "node": "Analyse CLIP V2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Mark CLIP V3 started": {
+    "Analyse CLIP V2": {
       "main": [
         [
           {
-            "node": "Analyse CLIP V3",
+            "node": "CLIP V2 outcome",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Analyse CLIP V3": {
+    "CLIP V2 outcome": {
       "main": [
         [
           {
-            "node": "CLIP V3 outcome",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "CLIP V3 outcome": {
-      "main": [
-        [
-          {
-            "node": "Save CLIP V3 result",
+            "node": "Save CLIP V2 result",
             "type": "main",
             "index": 0
           }

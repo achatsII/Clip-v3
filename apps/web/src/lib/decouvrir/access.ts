@@ -138,7 +138,7 @@ export async function advisorAsk(body: Record<string, unknown>): Promise<AskResu
 export async function advisorUpload(file: File): Promise<{ url: string; filename: string; mimeType: string; sizeBytes: number }> {
   const fd = new FormData()
   fd.append('files', file, file.name)
-  fd.append('path', 'clip-v3/decouvrir')
+  fd.append('path', 'clip-v2/decouvrir')
   const res = await relayFetch('/api/v1/files/upload/direct', { body: fd }, 60_000)
   const json = (await res.json().catch(() => null)) as { files?: { url?: string; type?: string; size?: number }[] } | null
   const f = json?.files?.[0]
