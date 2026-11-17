@@ -1,0 +1,25 @@
+{
+  "conditions": {
+    "combinator": "and",
+    "conditions": [
+      {
+        "id": "b3c2f1e0-4a5d-4e6f-9a7b-c1d2e3f4a5b6",
+        "leftValue": "={{ $json.appIdentifier }}",
+        "operator": {
+          "name": "filter.operator.equals",
+          "operation": "equals",
+          "type": "string"
+        },
+        "rightValue": "clip-v3"
+      }
+    ],
+    "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose",
+      "version": 3
+    }
+  },
+  "outputKey": "CLIP V3",
+  "renameOutput": true
+}

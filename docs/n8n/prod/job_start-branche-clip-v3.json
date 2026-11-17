@@ -1,0 +1,716 @@
+{
+  "nodes": [
+    {
+      "name": "Post Job CLIP V3",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -320,
+        480
+      ],
+      "parameters": {
+        "options": {},
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Route_MongoDB_POST_insert_one",
+          "cachedResultUrl": "/workflow/SqLiePHovcaUKU9F",
+          "mode": "list",
+          "value": "SqLiePHovcaUKU9F"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "app_identifier",
+              "id": "app_identifier",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "data_type",
+              "id": "data_type",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "description",
+              "id": "description",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "json_data",
+              "id": "json_data",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "grant_id",
+              "id": "grant_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "app_identifier": "={{ $json.data?.dataApp || $json.appIdentifier }}",
+            "data_type": "clip_job",
+            "description": "Génération CLIP V3",
+            "grant_id": "={{ $json['grant-id'] }}",
+            "json_data": "={{ { app_identifier: 'clip-v3', kind: 'generation', status: 'running', stage: 'start', steps: ['started'], startedAt: $now.toISO(), heartbeatAt: $now.toISO(), instructionId: $json.data?.instructionId ?? null, operation: $json.data?.operation ?? null, result: null, error: null } }}"
+          }
+        }
+      }
+    },
+    {
+      "name": "Run CLIP V3 in background",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -96,
+        480
+      ],
+      "parameters": {
+        "options": {
+          "waitForSubWorkflow": false
+        },
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Job_start",
+          "cachedResultUrl": "/workflow/Kwt0SDCxBSoXoh88",
+          "mode": "list",
+          "value": "Kwt0SDCxBSoXoh88"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "appIdentifier",
+              "id": "appIdentifier",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "user-email",
+              "id": "user-email",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "organisation",
+              "id": "organisation",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "provider",
+              "id": "provider",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "level",
+              "id": "level",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "grant-id",
+              "id": "grant-id",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "data",
+              "id": "data",
+              "removed": false,
+              "required": false,
+              "type": "object"
+            }
+          ],
+          "value": {
+            "appIdentifier": "={{ $('When Executed by Another Workflow').first().json.appIdentifier }}",
+            "data": "={{ { dataApp: $('When Executed by Another Workflow').first().json.data?.dataApp ?? null, instructionId: $('When Executed by Another Workflow').first().json.data?.instructionId ?? null, operation: $('When Executed by Another Workflow').first().json.data?.operation ?? null, ask: $('When Executed by Another Workflow').first().json.data?.ask ?? null, phase: 'run', jobId: $json.results[0].inserted_id } }}",
+            "grant-id": "={{ $('When Executed by Another Workflow').first().json['grant-id'] }}",
+            "level": "={{ $('When Executed by Another Workflow').first().json.level }}",
+            "organisation": "={{ $('When Executed by Another Workflow').first().json.organisation }}",
+            "provider": "={{ $('When Executed by Another Workflow').first().json.provider }}",
+            "user-email": "={{ $('When Executed by Another Workflow').first().json['user-email'] }}"
+          }
+        }
+      }
+    },
+    {
+      "name": "Reply CLIP V3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        480
+      ],
+      "parameters": {
+        "jsCode": "// Branche clip-v3 : la réponse immédiate. Le travail continue dans Job_Generate_CLIP_V3.\nlet insertedId = null;\ntry {\n  insertedId = $('Post Job CLIP V3').first().json.results[0].inserted_id;\n} catch (e) {}\n\nreturn {\n  json: insertedId\n    ? { success: true, message: \"L'analyse a démarré en arrière-plan.\", job_status: 'processing', record_id: insertedId }\n    : { success: false, message: \"Le document de suivi n'a pas été créé.\", job_status: 'failed', record_id: null }\n};"
+      }
+    },
+    {
+      "name": "CLIP V3 phase",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -528,
+        560
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5d1f6c2a-8b3e-4f7a-9c0d-2e4b6a8c1f30",
+              "leftValue": "={{ $json.data?.phase === 'run' }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "name": "Read CLIP V3 job",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -320,
+        704
+      ],
+      "parameters": {
+        "options": {},
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Route_MongoDB_GET_one",
+          "cachedResultUrl": "/workflow/xsvJzHAN7eRvWh4c",
+          "mode": "list",
+          "value": "xsvJzHAN7eRvWh4c"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "app_identifier",
+              "id": "app_identifier",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "data_type",
+              "id": "data_type",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "grant_id",
+              "id": "grant_id",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "record_id",
+              "id": "record_id",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "app_identifier": "={{ $('When Executed by Another Workflow').first().json.data?.dataApp || $('When Executed by Another Workflow').first().json.appIdentifier }}",
+            "data_type": "clip_job",
+            "grant_id": "={{ $('When Executed by Another Workflow').first().json['grant-id'] }}",
+            "record_id": "={{ $('When Executed by Another Workflow').first().json.data?.jobId }}"
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "name": "CLIP V3 job base",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        704
+      ],
+      "parameters": {
+        "jsCode": "// Deuxième passage de la branche clip-v3 : le document clip_job créé au premier passage, lu avec\n// les droits de l'appelant. La route PATCH reçoit tout json_data : chaque écriture repart de ce\n// document, comme Job_Analyse_CLIP (V1).\nconst data = $('When Executed by Another Workflow').first().json.data || {};\nconst read = $input.first().json || {};\nconst prev = read.result && read.result.json_data && typeof read.result.json_data === 'object' ? read.result.json_data : null;\nif (!prev) throw new Error('clip_job introuvable : ' + String(data.jobId || ''));\n// Déjà terminé (un nouvel essai, un double appel) : rien à refaire.\nif (prev.status && prev.status !== 'running') return [];\nconst base = { app_identifier: 'clip-v3', kind: 'generation', instructionId: data.instructionId ?? null, operation: data.operation ?? null, ...prev };\nconst steps = (Array.isArray(base.steps) ? base.steps : ['started']).filter((s) => s !== 'analyze');\nreturn [{ json: { base, analyzing: { ...base, stage: 'analyze', steps: [...steps, 'analyze'], heartbeatAt: new Date().toISOString() } } }];"
+      }
+    },
+    {
+      "name": "Mark CLIP V3 started",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        128,
+        704
+      ],
+      "parameters": {
+        "options": {},
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Route_MongoDB_PATCH_update_one",
+          "cachedResultUrl": "/workflow/xbQfhS6Z6YRZZBP4",
+          "mode": "list",
+          "value": "xbQfhS6Z6YRZZBP4"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "app_identifier",
+              "id": "app_identifier",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "data_type",
+              "id": "data_type",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "record_id",
+              "id": "record_id",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "json_data",
+              "id": "json_data",
+              "removed": false,
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "grant_id",
+              "id": "grant_id",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "app_identifier": "={{ $('When Executed by Another Workflow').first().json.data?.dataApp || $('When Executed by Another Workflow').first().json.appIdentifier }}",
+            "data_type": "clip_job",
+            "grant_id": "={{ $('When Executed by Another Workflow').first().json['grant-id'] }}",
+            "json_data": "={{ $json.analyzing }}",
+            "record_id": "={{ $('When Executed by Another Workflow').first().json.data?.jobId }}"
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "name": "Analyse CLIP V3",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        704
+      ],
+      "parameters": {
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "workflowId": {
+          "__rl": true,
+          "value": "__ID_PROD_JOB_GENERATE_CLIP_V3__",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "inserted_id",
+              "id": "inserted_id",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "grant_id",
+              "id": "grant_id",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "data_app",
+              "id": "data_app",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "user_email",
+              "id": "user_email",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "organisation",
+              "id": "organisation",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "ask",
+              "id": "ask",
+              "removed": false,
+              "required": false,
+              "type": "object"
+            }
+          ],
+          "value": {
+            "ask": "={{ $('When Executed by Another Workflow').first().json.data?.ask }}",
+            "data_app": "={{ $('When Executed by Another Workflow').first().json.data?.dataApp || $('When Executed by Another Workflow').first().json.appIdentifier }}",
+            "grant_id": "={{ $('When Executed by Another Workflow').first().json['grant-id'] }}",
+            "inserted_id": "={{ $('When Executed by Another Workflow').first().json.data?.jobId }}",
+            "organisation": "={{ $('When Executed by Another Workflow').first().json.organisation }}",
+            "user_email": "={{ $('When Executed by Another Workflow').first().json['user-email'] }}"
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "name": "CLIP V3 outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        704
+      ],
+      "parameters": {
+        "jsCode": "// Le résultat de Job_Generate_CLIP_V3 (ou son échec), ajouté au document clip_job.\nconst base = $('CLIP V3 job base').first().json.base;\nconst out = $input.first().json || {};\nconst now = new Date().toISOString();\nconst steps = (Array.isArray(base.steps) ? base.steps : ['started']).filter((s) => !['analyze', 'completed', 'failed'].includes(s));\nif (out.status === 'completed' || out.status === 'failed') {\n  return [{ json: { json_data: { ...base, ...out, steps: [...steps, 'analyze', out.status] } } }];\n}\nconst raw = out.error && typeof out.error === 'object' ? out.error.message : out.error;\nconst message = String(raw || 'analysis_failed').slice(0, 500);\nreturn [{ json: { json_data: { ...base, status: 'failed', stage: 'failed', steps: [...steps, 'analyze', 'failed'], heartbeatAt: now, finishedAt: now, result: null, error: { message, details: null } } } }];"
+      }
+    },
+    {
+      "name": "Save CLIP V3 result",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        704
+      ],
+      "parameters": {
+        "options": {},
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "Route_MongoDB_PATCH_update_one",
+          "cachedResultUrl": "/workflow/xbQfhS6Z6YRZZBP4",
+          "mode": "list",
+          "value": "xbQfhS6Z6YRZZBP4"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "app_identifier",
+              "id": "app_identifier",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "data_type",
+              "id": "data_type",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "record_id",
+              "id": "record_id",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "json_data",
+              "id": "json_data",
+              "removed": false,
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "grant_id",
+              "id": "grant_id",
+              "removed": false,
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "app_identifier": "={{ $('When Executed by Another Workflow').first().json.data?.dataApp || $('When Executed by Another Workflow').first().json.appIdentifier }}",
+            "data_type": "clip_job",
+            "grant_id": "={{ $('When Executed by Another Workflow').first().json['grant-id'] }}",
+            "json_data": "={{ $json.json_data }}",
+            "record_id": "={{ $('When Executed by Another Workflow').first().json.data?.jobId }}"
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "name": "Note CLIP V3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        848
+      ],
+      "parameters": {
+        "color": 5,
+        "content": "## Branche CLIP V3 (appIdentifier clip-v3)\n1. Premier passage : crée clip_job avec le grant de l'appelant, relance Job_start lui-même sans attendre (data.phase = run) et répond record_id tout de suite.\n2. Deuxième passage (data.phase = run) : lit clip_job, le marque « analyze », roule Job_Generate_CLIP_V3 (AskAI V4) et écrit le résultat et le coût réel.\nLes écritures se font ici, pas dans Job_Generate_CLIP_V3 : les routes Mongo n'acceptent que les workflows de leur propriétaire, comme Job_start et Job_Analyse_CLIP (V1).",
+        "height": 200,
+        "width": 1480
+      }
+    }
+  ],
+  "connections": {
+    "Post Job CLIP V3": {
+      "main": [
+        [
+          {
+            "node": "Run CLIP V3 in background",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CLIP V3 phase": {
+      "main": [
+        [
+          {
+            "node": "Read CLIP V3 job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post Job CLIP V3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run CLIP V3 in background": {
+      "main": [
+        [
+          {
+            "node": "Reply CLIP V3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CLIP V3 job": {
+      "main": [
+        [
+          {
+            "node": "CLIP V3 job base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CLIP V3 job base": {
+      "main": [
+        [
+          {
+            "node": "Mark CLIP V3 started",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark CLIP V3 started": {
+      "main": [
+        [
+          {
+            "node": "Analyse CLIP V3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse CLIP V3": {
+      "main": [
+        [
+          {
+            "node": "CLIP V3 outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CLIP V3 outcome": {
+      "main": [
+        [
+          {
+            "node": "Save CLIP V3 result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
