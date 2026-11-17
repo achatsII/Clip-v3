@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, Clock, Crop, FileText, Film, Image as ImageIcon, ImagePlay, ImagePlus, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
+import { ChevronDown, Clock, Crop, FileText, Film, Image as ImageIcon, ImagePlay, ImagePlus, Library, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
 import { useState } from 'react'
 import { MediaView, mediaThumb } from '@/components/media/MediaView'
 import { useSession } from '@/components/providers/Session'
@@ -14,7 +14,7 @@ import { createVisual, illustrationPrompt } from '@/lib/ai/assist'
 import { ApiError } from '@/lib/gateway/client'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { toFigure, toWholePage } from '@/lib/media/figures'
-import { LAYOUTS, layoutOf } from '@/lib/model/media'
+import { LAYOUTS, layoutOf, MAX_STEP_MEDIA } from '@/lib/model/media'
 import type { Annotation, InstructionContent, Source, Step, StepMedia } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
@@ -24,8 +24,7 @@ import { GifDialog, type GifClip } from './GifDialog'
 import { MediaPicker } from './MediaPicker'
 import { MediaNav, StepMediaArea } from '@/components/player/StepMediaArea'
 
-/** Assez pour comparer et pour une grille, sans noyer l'étape. */
-const MAX_MEDIA = 6
+const MAX_MEDIA = MAX_STEP_MEDIA
 
 /**
  * Le nom court d'un média, dans la langue de l'outil (`mediaLabel` de model/media reste le nom
@@ -60,6 +59,7 @@ export function StepMediaEditor({
   readOnly,
   onChange,
   onSourceAdded,
+  onShowSource,
   expanded = false,
 }: {
   content: InstructionContent
@@ -68,6 +68,8 @@ export function StepMediaEditor({
   readOnly?: boolean
   onChange: (s: Step) => void
   onSourceAdded: (s: Source) => void
+  /** « Voir l'original » : le média d'origine d'où vient celui-ci, à l'instant de l'extrait (toggle `sourceLibrary`). */
+  onShowSource?: (sourceId: string, at?: number) => void
   /** Tout à découvert : les réglages fins ne se replient pas. */
   expanded?: boolean
 }) {
@@ -87,6 +89,9 @@ export function StepMediaEditor({
   const confirm = useConfirm()
   const [framing, setFraming] = useState(false)
   const gifOn = useToggle('clipGif')
+  // Le média d'origine d'où vient celui-ci (une vidéo à l'instant de l'extrait, une image figée de la vidéo, la photo, le document).
+  const originId = media && 'sourceId' in media && media.sourceId && sources.some((s) => s.id === media.sourceId && (s.url || s.text)) ? media.sourceId : null
+  const originAt = media?.kind === 'video' ? media.start : media?.kind === 'image' && media.frame ? media.frame.at : undefined
   // Plusieurs médias à l'étape : vignettes, « 2 / 3 » et grandes flèches, comme au poste (toggle `mediaNav`).
   const mediaNav = useToggle('mediaNav')
   const [gifClip, setGifClip] = useState<GifClip | null>(null)
@@ -254,6 +259,11 @@ export function StepMediaEditor({
             {media?.kind === 'image' && media.frame && (
               <Button size="sm" onClick={() => setFraming(true)} icon={<Clock className="h-4 w-4" />}>
                 {te.otherMoment}
+              </Button>
+            )}
+            {onShowSource && originId && (
+              <Button size="sm" onClick={() => onShowSource(originId, originAt)} icon={<Library className="h-4 w-4" />}>
+                {t.editorTools.sources.seeOriginal}
               </Button>
             )}
             <button type="button" disabled={!!busy} onClick={() => void illustrate(fromImage)} className={aiButton}>

@@ -9,6 +9,7 @@ export const importer = {
   drop: {
     title: 'Glissez vos fichiers ici, ou touchez pour les choisir',
     formats: 'PDF, Word (.docx, .doc, .odt)',
+    formatsSlides: 'PDF, Word (.docx, .doc, .odt) ou PowerPoint (.pptx)',
   },
   onlyDocuments: 'Seuls les PDF et les documents Word sont importés ici',
   onlyDocumentsText: 'Les vidéos et photos se déposent dans une nouvelle instruction.',

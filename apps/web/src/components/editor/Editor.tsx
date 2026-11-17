@@ -17,6 +17,7 @@ import {
   FileJson,
   GraduationCap,
   History,
+  Images,
   Info,
   Languages,
   MessageSquare,
@@ -75,7 +76,7 @@ import {
   saveSources,
   updatePublishedStations,
 } from '@/lib/model/service'
-import type { ApprovalGroup, Instruction, InstructionContent, Published, Source, Station, Step } from '@/lib/model/types'
+import type { ApprovalGroup, Instruction, InstructionContent, Published, Source, Station, Step, StepMedia } from '@/lib/model/types'
 import { markCreatedSeen } from '@/lib/prefs'
 import { cn, formatDate, formatDateTime, timeAgo } from '@/lib/util/cn'
 import { AgentPanel, type AgentRequest } from './AgentPanel'
@@ -92,6 +93,11 @@ import { StageEditor } from './StageEditor'
 import { markFresh, newAnnotationIds } from '@/lib/annotations/fresh'
 import { attachReel, carryClips } from '@/lib/media/reel'
 import { MediaPlaybackProvider, VideoPool } from '@/lib/media/videoPool'
+import { MAX_STEP_MEDIA } from '@/lib/model/media'
+import { useInstructionName } from '@/lib/ui/naming'
+import { viewableSources } from '@/lib/model/sources'
+import { MediaPicker } from './MediaPicker'
+import { SourceLibrary } from './SourceLibrary'
 import { saveClassification, staleRuleStations } from '@/lib/model/classification'
 import { addValues, hasLabels, mergeLabels, readNomenclature, type Labels } from '@/lib/model/nomenclature'
 import { suggestLabels } from '@/lib/ai/classify'
@@ -126,6 +132,9 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
 
   const [content, setContent] = useState<InstructionContent>(instr.draft!)
   const [sources, setSources] = useState<Source[]>(instr.sources)
+  // Plusieurs médias ajoutés d'un coup (médias d'origine, assistant) : chacun part de la liste à jour.
+  const sourcesRef = useRef(sources)
+  sourcesRef.current = sources
   const [stationIds, setStationIds] = useState<string[]>(instr.stationIds)
   // Le classement de l'usine (toggle `nomenclature`) : il n'est pas du contenu, il s'enregistre à part.
   const [labels, setLabels] = useState<Labels>(instr.labels ?? {})
@@ -143,7 +152,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [renewedAt, setRenewedAt] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(false)
   // `?formation=1` (le parcours d'un poste, dans l'Académie) ouvre tout de suite les questions de formation.
-  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz' | 'makeBlock' | 'insertBlock'>(() => (params.get('formation') ? 'quiz' : null))
+  const [dialog, setDialog] = useState<null | 'info' | 'share' | 'history' | 'translate' | 'changes' | 'review' | 'checks' | 'quiz' | 'makeBlock' | 'insertBlock' | 'sources'>(() => (params.get('formation') ? 'quiz' : null))
   // Où un bloc commun s'insère : après l'étape choisie (menu « … »), ou à la fin (à côté de « Ajouter une étape »).
   const [blockAtEnd, setBlockAtEnd] = useState(false)
   // La formation (toggle `training`) : les questions, et « il faut se re-former » à la publication.
@@ -151,6 +160,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const [retrain, setRetrain] = useState(false)
   // Les blocs communs (toggle `sharedBlocks`) : ce document en est-il un, et combien d'instructions l'utilisent.
   const blocksToggle = useToggle('sharedBlocks')
+  // Les médias d'origine, à revoir et à remettre dans une étape (toggle `sourceLibrary`).
+  const sourceLibraryOn = useToggle('sourceLibrary')
+  // Le nom tiré des familles, devant le titre, dans l'en-tête (toggle `nameTemplate`).
+  const instructionName = useInstructionName()
+  const [sourceFocus, setSourceFocus] = useState<{ sourceId: string; at?: number } | null>(null)
+  const [pickFrom, setPickFrom] = useState<Source | null>(null)
   const isBlock = !!instr.block
   const usedBy = useQuery({ queryKey: ['instructions', 'block-use', doc._id], queryFn: () => countUsing(data, doc._id), enabled: isBlock && blocksToggle })
   const [propagation, setPropagation] = useState<{ done: number; total: number } | null>(null)
@@ -735,6 +750,16 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   // Tout ce qui touche l'instruction entière : rangé dans son « … » ; à découvert dans la fiche.
   const actions: MenuItem[] = [
     { label: tp.menu.share, icon: <Share2 className="h-4 w-4" />, onClick: () => setDialog('share'), hidden: isBlock },
+    // Ce qui a servi à rédiger l'instruction, à revoir, relire et réécouter (toggle `sourceLibrary`).
+    {
+      label: t.editorTools.sources.menu(viewableSources(sources).length),
+      icon: <Images className="h-4 w-4" />,
+      onClick: () => {
+        setSourceFocus(null)
+        setDialog('sources')
+      },
+      hidden: !sourceLibraryOn || !viewableSources(sources).length,
+    },
     { label: tp.menu.translate, icon: <Languages className="h-4 w-4" />, onClick: () => gate(translations, 'translations', () => setDialog('translate')), hidden: readOnly || !translateToggle || isBlock, hint: translations === 'locked' ? <LockBadge /> : undefined },
     // Les blocs communs : faire un bloc de quelques étapes (il se publie tout de suite), ou en insérer un.
     { label: t.blocks.make, icon: <Blocks className="h-4 w-4" />, onClick: () => gate(blocksEnt, 'shared_blocks', () => setDialog('makeBlock')), hidden: !blocksToggle || isBlock || readOnly || approval || !content.steps.some((s) => !s.fromBlock), hint: blocksEnt === 'locked' ? <LockBadge /> : undefined },
@@ -897,10 +922,26 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
 
   const feedbackNote = !step ? null : highlightFeedback && highlightFeedback.json_data.stepId === step.id ? highlightFeedback.json_data.comment || FEEDBACK_KINDS.unclear.label : ((feedback.data ?? []).find((f) => f.json_data.stepId === step.id)?.json_data.comment ?? null)
   const addSource = (src: Source) => {
-    const next = [...sources, src]
+    const next = [...sourcesRef.current, src]
+    sourcesRef.current = next
     setSources(next)
     cacheInstruction(qc, doc._id, { sources: next })
     void saveSources(data, doc._id, next, actor)
+  }
+
+  /** Un média de plus à l'étape ouverte (depuis les médias d'origine) ; une étape pleine le dit. */
+  function addMediaToStep(m: StepMedia) {
+    if (!step) return
+    const ts = t.editorTools.sources
+    if (step.media.length >= MAX_STEP_MEDIA) return toast.error(ts.stepFull(MAX_STEP_MEDIA), ts.stepFullHint)
+    update({ ...content, steps: steps.map((s) => (s.id === step.id ? { ...s, media: [...s.media, m] } : s)) })
+    toast.success(ts.added(idx + 1))
+  }
+  /** Mettre un média d'origine à l'étape ouverte : une photo tout de suite ; une vidéo choisit son extrait, un document sa page. */
+  function putSourceInStep(s: Source) {
+    if (s.kind === 'photo' && s.url) return addMediaToStep({ kind: 'image', url: s.url, sourceId: s.id })
+    setDialog(null)
+    setPickFrom(s)
   }
 
   function duplicateStep() {
@@ -968,7 +1009,7 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     agentWorking: !!step && agentStep === step.id,
     agentOpen,
     top: {
-      title: content.title,
+      title: instructionName(content.title, labels),
       status,
       statusTone: liveLabel ? ('live' as const) : saveState === 'error' ? ('error' as const) : undefined,
       primary,
@@ -1011,6 +1052,12 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     onDuplicate: duplicateStep,
     onDelete: deleteStep,
     onSourceAdded: addSource,
+    onShowSource: sourceLibraryOn
+      ? (sourceId: string, at?: number) => {
+          setSourceFocus({ sourceId, at })
+          setDialog('sources')
+        }
+      : undefined,
   }
   const classification =
     nomenclatureOn && !isBlock
@@ -1087,6 +1134,32 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
         }}
       />
       <UndoPill history={history} />
+      {sourceLibraryOn && (
+        <>
+          <SourceLibrary
+            open={dialog === 'sources'}
+            onClose={() => setDialog(null)}
+            sources={sources}
+            content={content}
+            focus={sourceFocus}
+            stepNumber={!readOnly && step && !step.fromBlock ? idx + 1 : null}
+            onGoToStep={focusStep}
+            onUse={readOnly ? undefined : putSourceInStep}
+            onSourceAdded={readOnly ? undefined : addSource}
+          />
+          <MediaPicker
+            open={!!pickFrom}
+            initial={pickFrom}
+            onClose={() => setPickFrom(null)}
+            sources={sources}
+            onSourceAdded={addSource}
+            onPick={(m) => {
+              setPickFrom(null)
+              addMediaToStep(m)
+            }}
+          />
+        </>
+      )}
       <QuizDialog open={dialog === 'quiz'} onClose={() => setDialog(null)} content={content} ai={session.ai} readOnly={readOnly} published={!!instr.publishedVersion} onChange={(quiz) => update({ ...content, quiz })} />
       {blocksToggle && !isBlock && (
         <>

@@ -4,6 +4,7 @@ import { renewalState } from '@/lib/model/renewal'
 import { useToggle } from '@/lib/toggles'
 import { Blocks, CalendarClock, Loader2, Lock, MapPin, Sparkles } from 'lucide-react'
 import { instructionHref, type LibraryMode } from '@/lib/ui/libraryMode'
+import { useInstructionName } from '@/lib/ui/naming'
 import Link from 'next/link'
 import { CategoryIcon } from '@/components/icons'
 import { useCreations } from '@/hooks/useCreations'
@@ -71,6 +72,8 @@ export function InstructionTile({ doc, stationNames, mode = 'edit' }: { doc: Doc
   const t = useMessages().instructions.card
   const blockLabel = useMessages().blocks.chip
   const i = doc.json_data
+  // Le nom tiré des familles, devant le titre (toggle `nameTemplate`).
+  const name = useInstructionName()(i.title, i.labels)
   const cat = CATEGORIES[i.category] ?? CATEGORIES.autre
   const st = statusOf(i)
   const stage = useRunningStage(doc._id, i)
@@ -97,7 +100,7 @@ export function InstructionTile({ doc, stationNames, mode = 'edit' }: { doc: Doc
         </span>
         {!i.coverUrl && !stage && <CategoryIcon category={i.category} className="absolute top-1/2 right-6 h-16 w-16 -translate-y-1/2 text-white/25" />}
         <span className="absolute inset-x-4 bottom-3">
-          <span className={cn('text-lg leading-tight font-black tracking-tight text-balance', stage ? 'line-clamp-1' : 'line-clamp-2')}>{i.title}</span>
+          <span className={cn('text-lg leading-tight font-black tracking-tight text-balance', stage ? 'line-clamp-1' : 'line-clamp-2')}>{name}</span>
           {!stage && labelLine(i) && <span className="mt-0.5 block truncate text-xs font-bold text-white/85">{labelLine(i)}</span>}
           {stage && (
             <span className="mt-1 flex items-center gap-1.5 text-xs font-bold text-white/90">
@@ -124,6 +127,8 @@ export function InstructionRow({ doc, stationNames, mode = 'edit' }: { doc: Doc<
   const t = useMessages().instructions.card
   const blockLabel = useMessages().blocks.chip
   const i = doc.json_data
+  // Le nom tiré des familles, devant le titre (toggle `nameTemplate`).
+  const name = useInstructionName()(i.title, i.labels)
   const cat = CATEGORIES[i.category] ?? CATEGORIES.autre
   const st = statusOf(i)
   const stage = useRunningStage(doc._id, i)
@@ -133,7 +138,7 @@ export function InstructionRow({ doc, stationNames, mode = 'edit' }: { doc: Doc<
         {stage ? <Loader2 className="h-6 w-6 animate-spin" /> : i.coverUrl ? <img src={i.coverUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <CategoryIcon category={i.category} className="h-6 w-6" />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{i.title}</span>
+        <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{name}</span>
         <span className={cn('block truncate text-xs font-bold', stage ? 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-500')}>
           {stage ?? [i.number, i.block ? blockLabel : cat.label, labelLine(i, 2), i.block ? null : stationNames.length ? stationNames.join(', ') : t.noStation, timeAgo(i.updatedAt)].filter(Boolean).join(' · ')}
         </span>

@@ -6,7 +6,7 @@
  */
 import type { DataApi, Doc } from '../gateway/data'
 import { mapPool } from '../util/pool'
-import { allStationIds, cleanLabels, matchesRule, norm, renameIn, ruleFilter, ruleStationsFor, sameIds, type Labels, type Nomenclature, type StationRule } from './nomenclature'
+import { allStationIds, cleanLabels, matchesRule, namePrefix, norm, renameIn, ruleFilter, ruleStationsFor, sameIds, type Labels, type Nomenclature, type StationRule } from './nomenclature'
 import { nowIso, T } from './repo'
 import { atStations, instructionSearchText } from './search'
 import type { Instruction, Published, Station } from './types'
@@ -35,12 +35,15 @@ export async function saveClassification(
     searchText: instructionSearchText({ number: instr.number, intent: instr.intent, labels }, instr.draft),
     updatedAt: nowIso(),
   })
-  if (instr.publishedId) await syncPublished(data, instr.publishedId, { labels, manual: instr.stationIds, ruleStationIds, number: instr.number })
+  if (instr.publishedId) await syncPublished(data, instr.publishedId, { labels, manual: instr.stationIds, ruleStationIds, number: instr.number, namePrefix: namePrefix(labels, input.nomenclature) })
   return { labels, ruleStationIds }
 }
 
-/** La version publique suit le classement : ses postes (à la main et par règle), ses étiquettes, son index. */
-async function syncPublished(data: DataApi, publishedId: string, c: { labels: Labels; manual: string[]; ruleStationIds: string[]; number?: string | null }) {
+/**
+ * La version publique suit le classement : ses postes (à la main et par règle), ses étiquettes, son
+ * index, et le début de son nom (modèle de nom ; absent : inchangé).
+ */
+async function syncPublished(data: DataApi, publishedId: string, c: { labels: Labels; manual: string[]; ruleStationIds: string[]; number?: string | null; namePrefix?: string }) {
   const pub = await data.get<Published>(T.published, publishedId).catch(() => null)
   if (!pub) return
   await data
@@ -49,8 +52,33 @@ async function syncPublished(data: DataApi, publishedId: string, c: { labels: La
       ruleStationIds: c.ruleStationIds,
       stationIds: allStationIds(c.manual, c.ruleStationIds),
       searchText: instructionSearchText({ number: c.number ?? pub.json_data.card?.number ?? null, labels: c.labels }, pub.json_data.content),
+      ...(c.namePrefix !== undefined ? { namePrefix: c.namePrefix || null } : {}),
     })
     .catch(() => undefined)
+}
+
+/**
+ * Le modèle de nom change (Réglages › Classement) : chaque version publiée reprend le début de son
+ * nom, pour la tablette du poste. Seules celles dont le nom change s'écrivent. Rend leur nombre.
+ */
+export async function renamePublished(data: DataApi, nomenclature: Nomenclature, onProgress?: (done: number, total: number) => void): Promise<number> {
+  const all: Array<Doc<Pick<Published, 'labels' | 'namePrefix'>>> = []
+  // Par pages : une requête rend au plus 10 000 documents.
+  for (let skip = 0; ; skip += 10_000) {
+    const page = await data.filter<Pick<Published, 'labels' | 'namePrefix'>>(T.published, { projection: { 'json_data.labels': 1, 'json_data.namePrefix': 1 }, limit: 10_000, skip })
+    all.push(...page)
+    if (page.length < 10_000) break
+  }
+  const changes = all.flatMap((p) => {
+    const next = namePrefix(p.json_data.labels, nomenclature) || null
+    return next === (p.json_data.namePrefix ?? null) ? [] : [{ id: p._id, next }]
+  })
+  let done = 0
+  await mapPool(changes, 4, async (c) => {
+    await data.patch(T.published, c.id, { namePrefix: c.next }).catch(() => undefined)
+    onProgress?.(++done, changes.length)
+  })
+  return changes.length
 }
 
 /**
@@ -130,7 +158,7 @@ const hasRuleLike = (r: StationRule) => Object.values(r.labels).some((v) => v.le
  * Une valeur change de nom (ou disparaît, `to` null) : les instructions, leurs versions publiques et
  * les règles des postes suivent. Rend le nombre d'instructions touchées.
  */
-export async function relabelValue(data: DataApi, familyId: string, from: string, to: string | null, onProgress?: (done: number, total: number) => void): Promise<number> {
+export async function relabelValue(data: DataApi, familyId: string, from: string, to: string | null, onProgress?: (done: number, total: number) => void, nomenclature?: Nomenclature): Promise<number> {
   const key = `json_data.labels.${familyId}`
   const docs = await data.filter<Instruction>(T.instruction, { filter: { [key]: { $in: [from] } }, projection: { 'json_data.labels': 1, 'json_data.draft': 1, 'json_data.number': 1, 'json_data.intent': 1, 'json_data.publishedId': 1, 'json_data.stationIds': 1, 'json_data.ruleStationIds': 1 }, limit: 10_000 })
   let done = 0
@@ -138,7 +166,7 @@ export async function relabelValue(data: DataApi, familyId: string, from: string
     const labels = renameIn(d.json_data.labels, familyId, from, to)
     if (labels) {
       await data.patch(T.instruction, d._id, { labels, searchText: instructionSearchText({ number: d.json_data.number, intent: d.json_data.intent, labels }, d.json_data.draft) })
-      if (d.json_data.publishedId) await syncPublished(data, d.json_data.publishedId, { labels, manual: d.json_data.stationIds ?? [], ruleStationIds: d.json_data.ruleStationIds ?? [], number: d.json_data.number })
+      if (d.json_data.publishedId) await syncPublished(data, d.json_data.publishedId, { labels, manual: d.json_data.stationIds ?? [], ruleStationIds: d.json_data.ruleStationIds ?? [], number: d.json_data.number, ...(nomenclature ? { namePrefix: namePrefix(labels, nomenclature) } : {}) })
     }
     onProgress?.(++done, docs.length)
   })

@@ -10,6 +10,7 @@ export const importer: typeof Fr = {
   drop: {
     title: 'Drag your files here, or tap to choose them',
     formats: 'PDF or Word (.docx, .doc, .odt)',
+    formatsSlides: 'PDF, Word (.docx, .doc, .odt) or PowerPoint (.pptx)',
   },
   onlyDocuments: 'Only PDFs and Word documents are imported here',
   onlyDocumentsText: 'Videos and photos go into a new instruction.',

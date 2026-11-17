@@ -74,6 +74,8 @@ export interface StageEditorProps {
   /** Insérer un bloc commun à la fin, à côté de « Ajouter une étape » (toggle `sharedBlocks`) ; absent : pas offert. */
   onInsertBlock?: () => void
   onSourceAdded: (s: Source) => void
+  /** Revoir le média d'origine d'où vient celui de l'étape (toggle `sourceLibrary`) ; absent : pas offert. */
+  onShowSource?: (sourceId: string, at?: number) => void
   onMove: (dir: -1 | 1) => void
   onDuplicate: () => void
   onDelete: () => void
@@ -100,7 +102,7 @@ export function StageEditor(props: StageEditorProps) {
       {assist.element}
       {props.step && (
         <Modal open={mediaOpen} onClose={() => setMediaOpen(false)} size="lg" title={t.editor.stage.mediaTitle(props.index + 1)}>
-          <StepMediaEditor content={props.content} step={props.step} sources={props.sources} readOnly={props.readOnly} onChange={props.onChange} onSourceAdded={props.onSourceAdded} />
+          <StepMediaEditor content={props.content} step={props.step} sources={props.sources} readOnly={props.readOnly} onChange={props.onChange} onSourceAdded={props.onSourceAdded} onShowSource={props.onShowSource} />
         </Modal>
       )}
     </>

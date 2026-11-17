@@ -82,6 +82,8 @@ export function CaptureBoard({
   const autoAnnotate = useAutoAnnotate()
   const proposeChecks = useProposeChecks()
   const recordsOn = useToggle('records')
+  // Un PowerPoint se lit dans l'app : sa note et ses images deviennent des sources (toggle `slidesImport`).
+  const slides = useToggle('slidesImport')
   const [kind, setKind] = useState<ForceKind>('auto')
   const [dragging, setDragging] = useState(false)
   const [starting, setStarting] = useState(false)
@@ -255,7 +257,7 @@ export function CaptureBoard({
         e.preventDefault()
         setDragging(false)
         const list = Array.from(e.dataTransfer.files)
-        if (list.length) session.addFiles(list)
+        if (list.length) session.addFiles(list, { slides })
       }}
     >
       {wide ? (
@@ -405,7 +407,7 @@ export function CaptureBoard({
         className="hidden"
         onChange={(e) => {
           const list = Array.from(e.target.files ?? [])
-          if (list.length) session.addFiles(list)
+          if (list.length) session.addFiles(list, { slides })
           e.target.value = ''
         }}
       />

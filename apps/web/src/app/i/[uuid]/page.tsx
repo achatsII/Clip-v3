@@ -1,5 +1,6 @@
 'use client'
 
+import { usePublishedPrefix } from '@/lib/ui/naming'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
@@ -41,6 +42,8 @@ function SharedInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; on
   const instructionId = scopedId(link, T.published, 'json_data.instructionId')
   const published = useQuery({ queryKey: ['shared', instructionId], queryFn: () => findPublished(data, instructionId!), enabled: !!instructionId })
   const [closed, setClosed] = useState(false)
+  // Le nom tiré des familles, gardé dans la version publiée (toggle `nameTemplate`).
+  const prefixOf = usePublishedPrefix()
 
   if (published.isLoading) return <PublicLoading />
   if (!instructionId || !published.data) return <PublicMessage title={t.unavailable} description={t.unavailableHint} />
@@ -49,6 +52,7 @@ function SharedInner({ uuid, link, onDead }: { uuid: string; link: GuestLink; on
   return (
     <Player
       content={p.json_data.content}
+      namePrefix={prefixOf(p.json_data.namePrefix)}
       instructionId={p.json_data.instructionId}
       publishedId={p._id}
       version={p.json_data.version}

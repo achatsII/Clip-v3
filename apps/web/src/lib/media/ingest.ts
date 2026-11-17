@@ -13,6 +13,7 @@ import { messages } from '../i18n'
 import { uid } from '../model/repo'
 import type { Source, SourceKind } from '../model/types'
 import { audioDuration, compressImage, dataUrlToBlob, pdfPageCount, videoInfo } from './image'
+import { canReadSlides, deckText, isPptx, readSlides } from './slides'
 
 export type IngestStage = 'import' | 'prepare' | 'upload' | 'offline' | 'optimize' | 'transcribe' | 'convert'
 export type IngestProgress = (stage: IngestStage, ratio?: number) => void
@@ -39,7 +40,7 @@ export function kindOfFile(file: { type: string; name: string }): SourceKind | n
   return null
 }
 
-export const ACCEPTED_FILES = 'image/*,video/*,audio/*,application/pdf,.pdf,.doc,.docx,.odt,.heic,.mov'
+export const ACCEPTED_FILES = 'image/*,video/*,audio/*,application/pdf,.pdf,.doc,.docx,.odt,.heic,.mov,.pptx,.ppsx'
 
 /**
  * `preset` : ce que la séance sait d'avance d'une source, comme le lien d'une photo à la note de sa
@@ -103,6 +104,42 @@ export async function ingestFile(file: File, files: FilesApi, onProgress?: Inges
   const pageCount = await pdfPageCount(pdf)
   const u = await files.upload(new Blob([pdf], { type: 'application/pdf' }), name, 'documents', (s, t) => up(s / t), wait)
   return { ...base, name, originalName: file.name, url: u.url, path: u.path, mimeType: 'application/pdf', sizeBytes: u.sizeBytes, pageCount }
+}
+
+/**
+ * Une présentation PowerPoint lue dans l'app (toggle `slidesImport`, `slides.ts`) : une note avec son
+ * texte, diapositive par diapositive, puis une photo par image, nommée d'après sa diapositive. La note
+ * vient d'abord : l'IA la lit avant de regarder les images.
+ */
+export async function ingestSlides(file: File, files: FilesApi, onProgress?: IngestProgress, capturedOn: Source['capturedOn'] = 'web'): Promise<Source[]> {
+  onProgress?.('prepare')
+  let deck: Awaited<ReturnType<typeof readSlides>>
+  try {
+    deck = await readSlides(file)
+  } catch {
+    throw new Error(messages().capture.upload.unreadableSlides)
+  }
+  const at = new Date().toISOString()
+  const photos: Source[] = []
+  for (const [i, img] of deck.images.entries()) {
+    onProgress?.('upload', i / Math.max(1, deck.images.length))
+    photos.push(await ingestFile(new File([img.blob], img.name, { type: img.blob.type }), files, undefined, capturedOn))
+  }
+  const note: Source = { id: uid('src_'), kind: 'note', name: file.name, originalName: file.name, text: deckText(file.name, deck), pageCount: deck.slides.length, createdAt: at, capturedOn }
+  return [note, ...photos]
+}
+
+/**
+ * Un fichier, quel qu'il soit, en sources : une seule le plus souvent ; une présentation en donne
+ * plusieurs (sa note et ses images). `slides` : le toggle `slidesImport`. Un .ppt, un Keynote ou un
+ * .odp ne se lit pas : on dit de l'enregistrer en .pptx ou en PDF.
+ */
+export async function ingestAny(file: File, files: FilesApi, opts: { slides?: boolean; onProgress?: IngestProgress; capturedOn?: Source['capturedOn'] } = {}): Promise<Source[]> {
+  if (opts.slides && canReadSlides()) {
+    if (isPptx(file)) return ingestSlides(file, files, opts.onProgress, opts.capturedOn)
+    if (isSlides(file)) throw new Error(messages().capture.upload.oldSlides)
+  }
+  return [await ingestFile(file, files, opts.onProgress, opts.capturedOn)]
 }
 
 /**

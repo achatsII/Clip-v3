@@ -1,7 +1,8 @@
 /**
- * Un PowerPoint ne se convertit pas encore (la route de la Gateway n'accepte que Word et ODT : un
- * .pptx y répond 500, vérifié en QA le 16 novembre 2026). Au lieu de disparaître sans un mot, il
- * dit le geste qui règle tout : l'enregistrer en PDF.
+ * Toggle `slidesImport` coupé (le repli) : un PowerPoint ne se convertit pas (la route de la Gateway
+ * n'accepte que Word et ODT : un .pptx y répond 500, vérifié en QA les 16 et 17 novembre 2026). Au
+ * lieu de disparaître sans un mot, il dit le geste qui règle tout : l'enregistrer en PDF. Toggle
+ * allumé, l'app le lit elle-même (`tests/sources-attach-slides.test.tsx`).
  */
 import { describe, expect, it, vi } from 'vitest'
 

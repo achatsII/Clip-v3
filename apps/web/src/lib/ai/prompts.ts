@@ -142,7 +142,11 @@ export function generationPrompt(input: { intent?: string; stations: string[]; s
   return parts.join('\n')
 }
 
-export function importSystem(org: Pick<OrgSettings, 'standard' | 'learnings'> & { nomenclature?: Nomenclature | null }, language = 'fr'): string {
+export function importSystem(org: Pick<OrgSettings, 'standard' | 'learnings'> & { nomenclature?: Nomenclature | null }, language = 'fr', from: 'pdf' | 'slides' = 'pdf'): string {
+  if (from === 'slides')
+    return `${generationSystem(org, { language })}
+
+CONTEXTE PARTICULIER : la source est une ANCIENNE instruction faite en présentation PowerPoint. S1 en est le texte, diapositive par diapositive (titres, textes, tableaux, notes du présentateur) ; les sources suivantes sont ses images, chacune nommée d’après sa diapositive. Restructure-la fidèlement selon les règles ci-dessus, sans rien perdre d’important et sans rien inventer : chaque consigne, valeur, mise en garde et EPI de la présentation doit se retrouver dans le résultat. Quand une image illustre une étape, mets-la en média de cette étape avec son numéro de source (une image de la même diapositive, en général). Un logo, un en-tête, un pictogramme d’EPI ou de danger n’illustre pas une étape.`
   return `${generationSystem(org, { language })}
 
 CONTEXTE PARTICULIER : la source est une ANCIENNE instruction (PDF). Restructure-la fidèlement selon les règles ci-dessus, sans rien perdre d’important et sans rien inventer : chaque consigne, valeur, mise en garde et EPI du document doit se retrouver dans le résultat. Quand une figure, un plan ou une photo d’une page illustre une étape, mets en média {source: "S1", page: n, figure: "<ce qu’elle montre>"} : l’étape montrera cette figure seule, recadrée. Un logo, un en-tête, un pictogramme d’EPI ou de danger n’illustre pas une étape.`

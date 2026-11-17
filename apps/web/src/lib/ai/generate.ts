@@ -294,10 +294,13 @@ function mergeSources(all: Source[], updated: Source[]): Source[] {
 
 /**
  * La requête d'un import (une ancienne instruction en PDF) : la même pour l'appareil et le serveur
- * (Job_start, branche clip-v3). Le document est S1.
+ * (Job_start, branche clip-v3). Le document est S1. Une présentation PowerPoint lue dans l'app
+ * (`sources` : sa note, puis ses images) part avec son texte dans la demande et ses images jointes.
  */
-export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>; source: Source; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {
+export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>; source: Source; sources?: Source[]; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {
   const language = input.language ?? contentLanguage()
+  // Une présentation lue dans l'app commence par sa note (même sans image).
+  if (input.sources?.[0]?.kind === 'note') return slidesImportAsk(input.org, input.sources, input.stationNames, language)
   const pages = input.source.pageCount ?? 5
   const operation: AiOperation = pages > 12 ? 'import_l' : 'import_s'
   return {
@@ -320,17 +323,48 @@ export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learning
   }
 }
 
-/** Import d'une ancienne instruction (PDF) : même résultat qu'une génération. */
+/**
+ * L'import d'une présentation lue dans l'app : S1 est sa note (le texte de chaque diapositive, dans la
+ * demande), les suivantes ses images (jointes). Sa taille se compte en diapositives, comme les pages.
+ */
+function slidesImportAsk(org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>, sources: Source[], stationNames: string[], language: string): { operation: AiOperation; language: string; ask: AskBody } {
+  const [note, ...images] = sources
+  const photos = images.filter((s) => s.kind === 'photo' && s.url)
+  const slides = note.pageCount ?? 5
+  const lines = [
+    { id: 'S1', line: `S1 — texte de la présentation « ${note.originalName ?? note.name ?? 'presentation.pptx'} » :\n${note.text ?? ''}` },
+    ...images.map((s, i) => ({ id: `S${i + 2}`, line: `S${i + 2} — image « ${s.name ?? ''} »${photos.includes(s) ? ` (fichier joint n° ${photos.indexOf(s) + 1})` : ''}` })),
+  ]
+  return {
+    operation: slides > 12 || photos.length > 20 ? 'import_l' : 'import_s',
+    language,
+    ask: {
+      provider: 'google',
+      level: 'mid',
+      thinking: 'enabled',
+      effort: 'low',
+      maxOutputTokens: 24000,
+      system_instruction: importSystem(org, language, 'slides'),
+      prompt: generationPrompt({ stations: stationNames, sources: lines }),
+      files: photos.map((s) => ({ url: s.url!, filename: s.name ?? 'image.jpg', mimeType: s.mimeType ?? 'image/jpeg', sizeBytes: s.sizeBytes })),
+      json_schema: instructionSchema,
+    },
+  }
+}
+
+/** Import d'une ancienne instruction (PDF, ou présentation lue dans l'app) : même résultat qu'une génération. */
 export async function importDocument(input: {
   ai: AiApi
   org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>
   source: Source
+  /** Une présentation lue dans l'app : sa note, puis ses images (S1, S2…). */
+  sources?: Source[]
   stationNames: string[]
 }): Promise<{ content: InstructionContent; stationGuess: string | null; questions: string[]; choices: Record<string, string[]>; model: string | null; operation: AiOperation; aiLabels: unknown }> {
   const { operation, language, ask } = importAsk(input)
   const result = await input.ai.ask<AiInstruction>(operation, ask, { scope: 'import', timeoutMs: 300_000 })
   if (!result.json) throw new ApiError(messages().capture.generate.unreadableDocument, 502)
-  const n = normalizeInstruction(result.json, [input.source], language)
+  const n = normalizeInstruction(result.json, input.sources?.length ? input.sources : [input.source], language)
   return { ...n, model: result.model, operation }
 }
 

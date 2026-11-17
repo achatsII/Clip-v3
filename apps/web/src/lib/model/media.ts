@@ -50,4 +50,7 @@ export function mediaLabel(m: StepMedia): string {
 }
 
 /** Un schéma HTML trop lourd ne voyage pas avec l'instruction. */
+/** Assez pour comparer et pour une grille, sans noyer l'étape. */
+export const MAX_STEP_MEDIA = 6
+
 export const MAX_HTML_BYTES = 300_000

@@ -37,6 +37,7 @@ export interface StepFormProps extends StepActions {
   namingSection: boolean
   onChange: (s: Step) => void
   onSourceAdded: (s: Source) => void
+  onShowSource?: (sourceId: string, at?: number) => void
   onAssistant: () => void
 }
 
@@ -201,7 +202,7 @@ export function StepForm(p: StepFormProps) {
       <div className="contents xl:flex xl:flex-col xl:gap-4">
       {/* Le média : l'aperçu et tous ses réglages */}
       <FormCard icon={<ImageIcon className="h-4 w-4" />} title={tf.media} className="max-xl:order-2">
-        <StepMediaEditor content={p.content} step={step} sources={p.sources} readOnly={readOnly} onChange={p.onChange} onSourceAdded={p.onSourceAdded} expanded />
+        <StepMediaEditor content={p.content} step={step} sources={p.sources} readOnly={readOnly} onChange={p.onChange} onSourceAdded={p.onSourceAdded} onShowSource={p.onShowSource} expanded />
       </FormCard>
 
 

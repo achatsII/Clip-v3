@@ -19,6 +19,7 @@ import { cn } from '@/lib/util/cn'
 import { useInstruction, useStations, useVersions } from '@/hooks/queries'
 import { callNative, hasCapability } from '@/lib/bridge/native'
 import { useToggle } from '@/lib/toggles'
+import { useInstructionName } from '@/lib/ui/naming'
 import { buildPrintHtml } from '@/lib/pdf/printHtml'
 import { T } from '@/lib/model/repo'
 import type { Published } from '@/lib/model/types'
@@ -30,6 +31,7 @@ export default function PrintPage() {
   const { id } = useParams<{ id: string }>()
   const session = useSession()
   const recordsOn = useToggle('records')
+  const instructionName = useInstructionName()
   // Les outils en images (toggle `toolImages`) : l'emoji devant chaque outil.
   const toolImages = useToggle('toolImages')
   const t = useMessages()
@@ -110,7 +112,8 @@ export default function PrintPage() {
     const content = usePublished ? published.data!.json_data.content : doc.json_data.draft
     if (!content) return ''
     const latest = versions.data?.[0]?.json_data
-    return buildPrintHtml(content, {
+    // Le nom tiré des familles en tête du PDF (toggle `nameTemplate`).
+    return buildPrintHtml({ ...content, title: instructionName(content.title, doc.json_data.labels) }, {
       branding: { orgName: session.org.json_data.name, logoUrl: session.org.json_data.logoUrl, color: session.org.json_data.color },
       number: doc.json_data.number ?? null,
       version: usePublished ? published.data!.json_data.version : null,
@@ -128,7 +131,7 @@ export default function PrintPage() {
       scale: effective?.layout === 'onePage' ? scale : 1,
       toolImages,
     })
-  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn, effective, scale, toolImages])
+  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn, effective, scale, toolImages, instructionName])
 
   // Une autre mise en page, d'autres images connues : « Une page » se règle de nouveau.
   const fitKey = effective?.layout === 'onePage' ? JSON.stringify([effective, Object.keys(ratios).length, doc?._id]) : ''

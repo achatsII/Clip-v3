@@ -188,6 +188,16 @@ export const capture: typeof Fr = {
     failed: 'Couldn’t upload',
     unsupported: 'This file type isn’t supported.',
     slides: 'PowerPoint files can’t be read as is yet: save it as a PDF (File › Export), then drop the PDF.',
+    oldSlides: 'This presentation format can’t be read: save it as .pptx or PDF, then drop it.',
+    unreadableSlides: 'This presentation couldn’t be read. Save it as a PDF (File › Export), then drop the PDF.',
+    deck: {
+      title: (name: string, n: number) => `Presentation “${name}”, ${n} slide${n !== 1 ? 's' : ''}.`,
+      slide: 'Slide',
+      image: 'image',
+      notes: 'Speaker notes',
+      images: 'Images',
+      skipped: (n: number) => `(${n} more images not included.)`,
+    },
     refused: (first: number | string, then: number) => `The upload was refused (${first}, then ${then}). Try again; if it keeps happening, report it.`,
   },
   dictation: {

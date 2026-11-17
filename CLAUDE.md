@@ -103,9 +103,15 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   au serveur), la page se rend à 200 dpi, l'IA y trouve les boîtes en une question par page (usage
   `figures`, `src/lib/ai/figures.ts`) et l'étape reçoit la figure recadrée, qui sait d'où elle vient
   (`fromPage`, `src/lib/media/figures.ts`). Introuvable, minuscule ou presque toute la page : la page
-  reste. Dans l'éditeur, « Figure » et « Page entière » passent de l'une à l'autre. Un PowerPoint ne se
-  convertit pas (la route `convert-to-pdf` répond 500 en QA) : l'app dit de l'enregistrer en PDF
-  (`isSlides`).
+  reste. Dans l'éditeur, « Figure » et « Page entière » passent de l'une à l'autre.
+- **PowerPoint** (toggle `slidesImport`, `src/lib/media/slides.ts`) : la Gateway ne le convertit pas (la
+  route `convert-to-pdf` n'accepte que Word et ODT et répond 500 pour un .pptx, revérifié en QA le 17
+  novembre 2026). L'app lit le .pptx elle-même (une archive zip, `DecompressionStream`) : une note avec le
+  texte de chaque diapositive (titre, texte, tableaux, notes du présentateur), puis une photo par image,
+  nommée d'après sa diapositive (`ingestSlides`, `ingestAny`). Capture, import en lot (`importAsk` : le
+  texte dans la demande, les images jointes, `importSystem(…, 'slides')` ; rien dans n8n), assistant et
+  médias d'origine. Un .ppt, un Keynote ou un .odp : « enregistrez-la en .pptx ou en PDF » ; toggle coupé,
+  le message d'avant (`isSlides`).
 - **Traductions** : rangées dans `translations[langue]` et appliquées par `localized`
   (`src/lib/model/translation.ts`), médias compris : légendes, annotations, texte des schémas, et
   en option les images refaites avec leur texte traduit. Un média traduit nomme l'original (`of`).
@@ -137,6 +143,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   vraies vignettes, « 2 / 3 » et de grandes flèches, au poste et dans les deux vues de l'éditeur ; la
   flèche « suivant » pulse tant qu'on n'a rien regardé d'autre ; leur nombre sur l'étape dans la liste de
   la Fiche. Pas de glisser sur le média : au poste, glisser change d'étape.
+- **Médias d'origine** (toggle `sourceLibrary`, `SourceLibrary`, `src/lib/model/sources.ts`) : ce qui a servi
+  à rédiger l'instruction (`Instruction.sources`), à revoir dans l'éditeur (menu « … », et « Voir l'original »
+  sous le média d'une étape, qui ouvre la vidéo à l'instant de l'extrait) et, pour qui rédige, en lecture :
+  la vidéo entière (`preload="none"`, `stopWhenGone`), les photos en grand (une photo prise en parlant fait
+  réentendre sa note, `voiceOf`), les notes vocales et leur transcription, les notes, les documents. Chaque
+  média dit à quelles étapes il sert (`sourceUses`) et se met à l'étape ouverte (une vidéo choisit son
+  extrait : `MediaPicker` `initial`). Jamais au poste : `clip_published` ne porte pas les sources.
+- **Joindre à l'assistant** (toggle `agentAttach`) : le trombone de la conversation envoie tout de suite le
+  fichier (`ingestAny`) ; il rejoint les sources de l'instruction (S7…), et le tour suivant le donne à l'IA
+  avec la demande, en un seul tour facturé selon sa taille, comme une revue (`agentTurn` `attached`,
+  `look_s/m/l` ; `files` et `mediaResolution` passent déjà au serveur : rien dans n8n). Retiré avant
+  l'envoi, il quitte aussi les sources.
 - **Capturer** (« Nouvelle instruction », `CaptureBoard`) : d'un seul écran au téléphone, qui prend tout
   l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
   ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher. Les sources
@@ -226,7 +244,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`labelsFromAi`). Un poste prend aussi ses instructions par règle (`Station.rule` : OU dans une
   famille, ET entre les familles) ; elle s'écrit dans `ruleStationIds` et dans `stationIds` de la
   version publiée (`applyStationRule`), et toute requête « instructions d'un poste » passe par
-  `atStations`.
+  `atStations`. **Le nom des instructions** (toggle `nameTemplate`) : jusqu'à trois familles devant le titre
+  (`Nomenclature.naming`, « Découpe – Presse P-12 – Changer le filtre », `namePrefix`, `displayName`) ; le
+  titre reste l'action, le nom se compose à l'affichage (`useInstructionName`, bibliothèque, éditeur,
+  lecture, PDF) ; la version publiée en garde le début (`Published.namePrefix`, à la publication, au
+  classement et quand le modèle change, `renamePublished`), que le poste et les liens lisent
+  (`usePublishedPrefix` ; le lecteur le pose devant le titre dans chaque langue).
 - **Académie** (module ; toggle `academy`, feature `academy`), dans Équipe › Compétences, en quatre
   vues : « À faire » (d'entrée : qui former, le plus pressé d'abord, `todoList`), Qualifications,
   Parcours, Couverture ; « Former quelqu'un » (un poste, des personnes, une date) écrit `clip_assignment`

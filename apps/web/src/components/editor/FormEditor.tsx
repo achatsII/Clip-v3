@@ -162,6 +162,7 @@ function OpenPane({ p }: { p: Inner }) {
       namingSection={p.namingSection}
       onChange={p.onChange}
       onSourceAdded={p.onSourceAdded}
+      onShowSource={p.onShowSource}
       onAssistant={p.onAssistant}
     />
   )

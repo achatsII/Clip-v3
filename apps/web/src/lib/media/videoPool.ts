@@ -104,7 +104,7 @@ export class VideoPool {
  * d'une étape à l'autre, ces téléchargements s'additionnaient et privaient la vidéo affichée de
  * réseau, jusqu'à la bloquer (mesuré à 3 Mbit/s : plus rien ne démarrait à la 6e étape).
  */
-export function stopVideo(v: HTMLVideoElement) {
+export function stopVideo(v: HTMLMediaElement) {
   v.pause()
   v.removeAttribute('src')
   try {
@@ -115,7 +115,7 @@ export function stopVideo(v: HTMLVideoElement) {
 }
 
 /** Arrête la vidéo après son démontage, sauf si elle est encore à l'écran (React, en mode strict, démonte puis remonte pour voir). */
-export function stopWhenGone(v: HTMLVideoElement) {
+export function stopWhenGone(v: HTMLMediaElement) {
   setTimeout(() => {
     if (!v.isConnected) stopVideo(v)
   }, 0)

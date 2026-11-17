@@ -259,8 +259,11 @@ export async function askAgent(
   opts: {
     /** Les sources d'origine de l'instruction, dans leur ordre (S1, S2…). */
     sources?: Source[]
-    /** Le deuxième tour : les sources demandées, jointes, et la question posée. */
-    look?: { operation: AiOperation; files: AskFile[]; lines: string[]; question: string }
+    /**
+     * Le deuxième tour : les sources demandées, jointes, et la question posée. `attached` : ce sont
+     * des médias que la personne vient de joindre à sa demande (ils rejoignent les sources).
+     */
+    look?: { operation: AiOperation; files: AskFile[]; lines: string[]; question: string; attached?: boolean }
     /** Faux : la traduction n'est pas offerte (toggle coupé, ou pas dans le plan). */
     canTranslate?: boolean
     /** Au téléphone (toggle `backgroundAi`) : la réponse se prépare au serveur et survit à l'arrière-plan. */
@@ -276,8 +279,12 @@ export async function askAgent(
     level: 'mid',
     thinking: 'enabled',
     effort: 'low',
-    system_instruction: look ? `${system}\n\nLES SOURCES DEMANDÉES SONT JOINTES : appuie-toi sur ce que tu vois et entends pour faire la demande. N’utilise plus look.` : system,
-    prompt: look ? `${agentPrompt(content, focusStepId, request, opts.sources)}\n\nSOURCES JOINTES :\n${look.lines.join('\n')}\nCE QU’IL FAUT Y TROUVER : ${look.question}` : agentPrompt(content, focusStepId, request, opts.sources),
+    system_instruction: look
+      ? look.attached
+        ? `${system}\n\nLA PERSONNE JOINT CES MÉDIAS À SA DEMANDE : ils font maintenant partie des sources d’origine (leurs numéros S sont dans la liste). Regarde-les et écoute-les, puis fais la demande ; pour mettre un de ces médias à une étape, use_media avec son numéro (une vidéo : start et end, l’extrait du geste). N’utilise pas look.`
+        : `${system}\n\nLES SOURCES DEMANDÉES SONT JOINTES : appuie-toi sur ce que tu vois et entends pour faire la demande. N’utilise plus look.`
+      : system,
+    prompt: look ? `${agentPrompt(content, focusStepId, request, opts.sources)}\n\n${look.attached ? 'MÉDIAS JOINTS PAR LA PERSONNE' : 'SOURCES JOINTES'} :\n${look.lines.join('\n')}\n${look.attached ? 'CE QU’IL FAUT EN FAIRE' : 'CE QU’IL FAUT Y TROUVER'} : ${look.question}` : agentPrompt(content, focusStepId, request, opts.sources),
     json_schema: agentSchema(ui),
     history: history.slice(-8),
     maxOutputTokens: 16000,
@@ -331,18 +338,44 @@ export async function agentTurn(input: {
   canTranslate?: boolean
   /** La réponse se prépare au serveur et survit à l'arrière-plan (toggle `backgroundAi`, au téléphone). */
   durable?: { data: Pick<DataApi, 'get' | 'patch'>; instructionId: string }
+  /**
+   * Les médias que la personne joint à sa demande (toggle `agentAttach`), déjà ajoutés aux sources :
+   * l'assistant les reçoit tout de suite, en un seul tour facturé selon leur taille, comme une revue.
+   */
+  attached?: string[]
 }): Promise<AgentTurn> {
   const sources = input.sources ?? []
+  const numbered = sources.map((src, i) => ({ src, id: `S${i + 1}` }))
+  if (input.attached?.length) {
+    const joined = numbered.filter((x) => input.attached!.includes(x.src.id) && (x.src.url || x.src.text))
+    if (joined.length) return lookAt(input, sources, joined, input.request, true, [])
+  }
   const first = await askAgent(input.ai, input.org, input.content, input.focusStepId, input.request, input.history, { sources, canTranslate: input.canTranslate, durable: input.durable })
   const lookOp = first.operations.find((o) => o.op === 'look')
   const operations = first.operations.filter((o) => o.op !== 'look')
   if (!lookOp) return first
   // Les sources demandées, dans l'ordre de l'instruction ; une demande sans source valable ne revoit rien.
   const wanted = new Set((lookOp.sources ?? []).map((x) => String(x).trim().toUpperCase()))
-  const picked = sources.map((src, i) => ({ src, id: `S${i + 1}` })).filter((x) => wanted.has(x.id) && (x.src.url || x.src.text))
+  const picked = numbered.filter((x) => wanted.has(x.id) && (x.src.url || x.src.text))
   if (!picked.length) return { ...first, operations }
+  return lookAt(input, sources, picked, lookOp.question?.trim() || input.request, false, first.suggestions)
+}
+
+/**
+ * Un tour avec des médias joints au modèle : ceux qu'il a demandé à revoir (`look`), ou ceux que la
+ * personne vient de joindre (`attached`). URI Gemini encore valides réutilisées, sinon téléversées de
+ * nouveau ; facturé selon leur taille (`look_s`, `look_m`, `look_l`).
+ */
+async function lookAt(
+  input: Parameters<typeof agentTurn>[0],
+  sources: Source[],
+  picked: Array<{ src: Source; id: string }>,
+  question: string,
+  attached: boolean,
+  suggestions: string[],
+): Promise<AgentTurn> {
   const tier = lookTier(picked.map((x) => x.src))
-  if (tier.tooBig) return { reply: messages().editorTools.agent.lookTooBig, operations: [], suggestions: first.suggestions }
+  if (tier.tooBig) return { reply: messages().editorTools.agent.lookTooBig, operations: [], suggestions }
   input.onLook?.({ sourceIds: picked.map((x) => x.id), operation: tier.op, videoSec: measureSources(picked.map((x) => x.src)).videoSec })
   // Les numéros de l'instruction (S3, S7…), pas ceux du sous-ensemble : une photo nomme sa note par le sien.
   const prepared = await prepareForAi(
@@ -361,7 +394,7 @@ export async function agentTurn(input: {
     sources,
     canTranslate: input.canTranslate,
     durable: input.durable,
-    look: { operation: tier.op, files: prepared.askFiles, lines, question: lookOp.question?.trim() || input.request },
+    look: { operation: tier.op, files: prepared.askFiles, lines, question, attached },
   })
 }
 

@@ -15,6 +15,9 @@ import { useToggle } from '@/lib/toggles'
 import { useEntitlement } from '@/lib/billing/state'
 import { useMessages } from '@/lib/i18n'
 import { BookOpen } from 'lucide-react'
+import { SourceLibrary } from '@/components/editor/SourceLibrary'
+import { useInstructionPrefix } from '@/lib/ui/naming'
+import { viewableSources } from '@/lib/model/sources'
 
 export default function ReadInstructionPage() {
   const { id } = useParams<{ id: string }>()
@@ -28,6 +31,9 @@ export default function ReadInstructionPage() {
   // Toggle coupé : la fonction n'existe pas. Facturation : ouverte si incluse (ou facturation éteinte).
   const voice = voiceToggle && (voiceRight === 'off' || voiceRight === 'open')
   const preview = params.get('apercu') === '1'
+  const sourceLibraryOn = useToggle('sourceLibrary')
+  const instructionPrefix = useInstructionPrefix()
+  const [sourcesOpen, setSourcesOpen] = useState(false)
   // L'aperçu d'un brouillon qu'on peut modifier : l'assistant d'édition, dans une bulle.
   const previewAgent = useToggle('previewAgent')
   const editable = preview && previewAgent && session.can('instructions', 'write')
@@ -77,7 +83,14 @@ export default function ReadInstructionPage() {
     update: preview || !published.data ? null : { publishedAt: published.data.json_data.publishedAt, changes: published.data.json_data.changes, previous: published.data.json_data.previous },
     // On lit la version publiée ; qui rédige passe à l'éditeur d'un toucher.
     onEdit: !preview && session.can('instructions', 'write') ? () => router.push(`/instructions/${id}`) : undefined,
+    // Qui rédige revoit aussi ce qui a servi à rédiger l'instruction (toggle `sourceLibrary`).
+    onSources: sourceLibraryOn && session.can('instructions', 'write') && viewableSources(doc.json_data.sources).length ? () => setSourcesOpen(true) : undefined,
   }
   if (editable) return <PreviewEditing key={id} doc={doc} player={player} />
-  return <Player content={content} {...player} />
+  return (
+    <>
+      <Player content={content} {...player} namePrefix={instructionPrefix(doc.json_data.labels)} />
+      <SourceLibrary open={sourcesOpen} onClose={() => setSourcesOpen(false)} sources={doc.json_data.sources} content={content} />
+    </>
+  )
 }

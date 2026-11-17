@@ -626,6 +626,11 @@ export interface Published {
   searchText?: string
   /** Le classement de l'usine, pour l'afficher et le filtrer au poste. */
   labels?: Labels
+  /**
+   * Le début du nom tiré des familles (« Découpe – Presse P-12 », toggle `nameTemplate`) : un lien
+   * public ne lit pas les réglages de l'usine. Suit le classement et le modèle de nom.
+   */
+  namePrefix?: string | null
   /** Parmi `stationIds`, ceux qui viennent d'une règle de poste (à refaire quand la règle change). */
   ruleStationIds?: string[]
   /** Ce qui a changé depuis la version d'avant, pour l'opérateur (toggle `operatorUpdates`). */

@@ -38,6 +38,35 @@ export interface TagFamily {
 
 export interface Nomenclature {
   families: TagFamily[]
+  /**
+   * Le modèle de nom (toggle `nameTemplate`) : les familles dont les valeurs passent devant le titre,
+   * dans cet ordre (« Découpe – Presse P-12 – Changer le filtre »). Le titre reste l'action ; le nom
+   * se compose à l'affichage, et la version publiée en garde le début (`Published.namePrefix`).
+   */
+  naming?: string[]
+}
+
+/** Au plus trois familles devant le titre : au-delà, le nom ne se lit plus d'un coup d'œil. */
+export const MAX_NAMING = 3
+/** Entre les morceaux du nom ; entre deux valeurs d'une même famille. */
+export const NAME_SEPARATOR = ' – '
+const VALUE_SEPARATOR = ' / '
+
+/** Le début du nom d'une instruction : les valeurs de ses familles du modèle, dans l'ordre ; vide sans modèle. */
+export function namePrefix(labels: Labels | null | undefined, nomenclature: Nomenclature | null | undefined): string {
+  const naming = nomenclature?.naming ?? []
+  if (!naming.length || !labels) return ''
+  return naming
+    .map((id) => (labels[id] ?? []).map((v) => v.trim()).filter(Boolean).join(VALUE_SEPARATOR))
+    .filter(Boolean)
+    .join(NAME_SEPARATOR)
+}
+
+/** Le nom affiché : le début tiré des familles, puis le titre ; un titre qui le porte déjà ne le répète pas. */
+export function displayName(title: string, prefix: string | null | undefined): string {
+  const p = prefix?.trim()
+  if (!p) return title
+  return norm(title).startsWith(norm(p)) ? title : `${p}${NAME_SEPARATOR}${title}`
 }
 
 /** Le classement d'une instruction : par famille, ses valeurs, en texte. */
@@ -217,7 +246,17 @@ export function readNomenclature(raw: unknown): Nomenclature {
         values: (Array.isArray(f.values) ? f.values : []).filter((v) => v && typeof v.label === 'string' && v.label.trim()).map((v) => ({ label: cleanValue(v.label), ...(v.code ? { code: cleanValue(v.code).slice(0, 12) } : {}) })),
         ...(f.hint ? { hint: String(f.hint).slice(0, 200) } : {}),
       })),
+    ...namingOf(raw, families),
   }
+}
+
+/** Le modèle de nom lu des réglages : des familles qui existent encore, une fois chacune. */
+function namingOf(raw: unknown, families: TagFamily[]): { naming?: string[] } {
+  const list = (raw as Nomenclature | null)?.naming
+  if (!Array.isArray(list)) return {}
+  const known = new Set(families.map((f) => f.id))
+  const naming = [...new Set(list.filter((id): id is string => typeof id === 'string' && known.has(id)))].slice(0, MAX_NAMING)
+  return naming.length ? { naming } : {}
 }
 
 /** Ajoute des valeurs à une liste (une par ligne, ou séparées par des virgules), sans doublon. */

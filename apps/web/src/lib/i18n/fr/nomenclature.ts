@@ -56,6 +56,18 @@ export const nomenclature = {
     familiesCount: (n: number) => `${num(n)} ${plural(n, 'famille', 'familles')}`,
     valuesCount: (n: number) => `${num(n)} ${plural(n, 'valeur', 'valeurs')}`,
     adminOnly: 'Seul un administrateur change les façons de classer de l’usine.',
+    /** Le modèle de nom (toggle `nameTemplate`). */
+    naming: {
+      title: 'Le nom des instructions',
+      intro: 'Choisissez les familles qui passent devant le titre, dans cet ordre : la bibliothèque, le poste et le PDF montrent le même nom, et chaque instruction se reconnaît d’un coup d’œil.',
+      example: 'Exemple',
+      exampleTitle: 'Changer le filtre',
+      none: 'Le titre seul, pour l’instant.',
+      pick: (name: string) => `Mettre « ${name} » dans le nom`,
+      unpick: (name: string) => `Retirer « ${name} » du nom`,
+      max: (n: number) => `Au plus ${num(n)} familles dans le nom.`,
+      saved: 'Modèle de nom enregistré',
+    },
   },
   /** La carte « Classement » de l'éditeur. */
   card: {

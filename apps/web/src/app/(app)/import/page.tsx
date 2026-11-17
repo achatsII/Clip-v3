@@ -19,7 +19,8 @@ import type { Doc } from '@/lib/gateway/data'
 import { useEntitlement, useGate } from '@/lib/billing/state'
 import { messages, useMessages } from '@/lib/i18n'
 import { generatesOnServer } from '@/lib/ai/durableAsk'
-import { ingestFile, isSlides } from '@/lib/media/ingest'
+import { ingestFile, ingestSlides, isSlides } from '@/lib/media/ingest'
+import { canReadSlides, isPptx } from '@/lib/media/slides'
 import { nowIso, T } from '@/lib/model/repo'
 import { hasLabels, labelsFromAi, ruleStationsFor } from '@/lib/model/nomenclature'
 import { createInstruction, saveDraft } from '@/lib/model/service'
@@ -35,6 +36,8 @@ interface ImportItem {
   name: string
   status: ItemStatus
   source?: Source
+  /** Une présentation lue dans l'app : sa note, puis ses images (toggle `slidesImport`). */
+  sources?: Source[]
   instructionId?: string
   title?: string
   error?: string
@@ -61,6 +64,8 @@ export default function ImportPage() {
   // Le choix de l'usine ; sans choix, au serveur au téléphone (iOS coupe l'app hors de l'écran).
   const serverOn = generatesOnServer(org.json_data.generation?.server, serverToggle, backgroundAi)
   const figures = useToggle('documentFigures')
+  // Un PowerPoint se lit dans l'app (la Gateway ne le convertit pas) : son texte et ses images.
+  const slides = useToggle('slidesImport') && canReadSlides()
   const creations = useCreations()
   const entitlement = useEntitlement('bulk_import')
   const gate = useGate()
@@ -108,9 +113,9 @@ export default function ImportPage() {
   }
 
   async function addFiles(list: File[]) {
-    const docs = list.filter((f) => /\.(pdf|docx?|odt)$/i.test(f.name) || f.type === 'application/pdf')
-    // Une présentation ne se convertit pas encore : on dit le geste (l'enregistrer en PDF).
-    if (list.some((f) => isSlides(f))) toast.info(t.importer.slides, t.importer.slidesText)
+    const docs = list.filter((f) => /\.(pdf|docx?|odt)$/i.test(f.name) || f.type === 'application/pdf' || (slides && isPptx(f)))
+    // Une présentation qui ne se lit pas : on dit le geste (un .pptx, ou un PDF).
+    if (list.some((f) => isSlides(f) && !(slides && isPptx(f)))) toast.info(t.importer.slides, slides ? t.capture.upload.oldSlides : t.importer.slidesText)
     else if (docs.length < list.length) toast.info(t.importer.onlyDocuments, t.importer.onlyDocumentsText)
     if (!docs.length) return
     const added: ImportItem[] = docs.map((f) => ({ id: `${Date.now()}-${f.name}-${Math.random().toString(36).slice(2, 6)}`, name: f.name, status: 'waiting' }))
@@ -133,6 +138,11 @@ export default function ImportPage() {
     if (!file) return itemsRef.current
     update(itemId, { status: 'uploading', error: undefined })
     try {
+      if (slides && isPptx(file)) {
+        const sources = await ingestSlides(file, files)
+        fileFor.current.delete(itemId)
+        return update(itemId, { status: 'uploaded', source: sources[0], sources })
+      }
       const source = await ingestFile(file, files)
       fileFor.current.delete(itemId)
       return update(itemId, { status: 'uploaded', source })
@@ -148,8 +158,8 @@ export default function ImportPage() {
 
   /** L'analyse sur cet appareil ; `existing` : l'instruction déjà créée (le serveur n'a pas pris l'analyse). */
   async function analyzeHere(item: ImportItem, stationList: Array<{ id: string; name: string; code?: string }>, existing?: Doc<Instruction>) {
-    const r = await importDocument({ ai, org: org.json_data, source: item.source!, stationNames: stationList.map((s) => [s.name, s.code].filter(Boolean).join(' — ')) })
-    const doc = existing ?? (await createInstruction(data, actor, { title: r.content.title, origin: 'import', sources: [item.source!], kind: r.content.kind, category: r.content.category }))
+    const r = await importDocument({ ai, org: org.json_data, source: item.source!, sources: item.sources, stationNames: stationList.map((s) => [s.name, s.code].filter(Boolean).join(' — ')) })
+    const doc = existing ?? (await createInstruction(data, actor, { title: r.content.title, origin: 'import', sources: item.sources?.length ? item.sources : [item.source!], kind: r.content.kind, category: r.content.category }))
     const content = await enrichMedia(r.content, files, async (png, name) => (await files.upload(png, name, 'pages')).url, { figures: figures ? { ai } : null })
     const station = matchStation(r.stationGuess, stationList)
     // Le classement proposé par l'IA, ramené aux familles de l'usine ; ses postes par règle suivent.
@@ -174,7 +184,7 @@ export default function ImportPage() {
         try {
           if (serverOn) {
             // L'instruction est créée tout de suite ; son analyse part au serveur.
-            const r = await startServerImport({ data, ai, org: org.json_data, source: item.source!, stations: stations.data ?? [], actor, title: item.name.replace(/\.[^.]+$/, ''), figures })
+            const r = await startServerImport({ data, ai, org: org.json_data, source: item.source!, sources: item.sources, stations: stations.data ?? [], actor, title: item.name.replace(/\.[^.]+$/, ''), figures })
             if (r.jobId) {
               next = update(item.id, { status: 'server', instructionId: r.doc._id })
               await persist(next)
@@ -224,10 +234,10 @@ export default function ImportPage() {
         </span>
         <span className="text-xl font-black tracking-tight">{t.importer.drop.title} {locked && <LockBadge />}</span>
         <span className="text-sm font-bold text-slate-500">
-          {t.importer.drop.formats}
+          {slides ? t.importer.drop.formatsSlides : t.importer.drop.formats}
         </span>
       </button>
-      <input ref={input} type="file" multiple accept=".pdf,.doc,.docx,.odt,application/pdf" className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files ?? [])); e.target.value = '' }} />
+      <input ref={input} type="file" multiple accept={slides ? '.pdf,.doc,.docx,.odt,.pptx,.ppsx,application/pdf' : '.pdf,.doc,.docx,.odt,application/pdf'} className="hidden" onChange={(e) => { void addFiles(Array.from(e.target.files ?? [])); e.target.value = '' }} />
 
       {items.length > 0 && (
         <Panel className="mt-6">

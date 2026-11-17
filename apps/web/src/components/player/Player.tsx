@@ -1,6 +1,7 @@
 'use client'
 
 import { ToolTiles } from '@/components/ToolTiles'
+import { displayName } from '@/lib/model/nomenclature'
 import {
   ArrowLeft,
   ArrowRight,
@@ -28,6 +29,7 @@ import {
   Volume2,
   Wrench,
   X,
+  Images,
 } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { EnergyIcon, PpeIcon } from '@/components/icons'
@@ -134,6 +136,10 @@ export interface PlayerProps {
   update?: { publishedAt: string | null; changes?: PublishedChanges | null; previous?: PreviousVersion | null } | null
   /** Dans l'app, pour qui rédige : « Modifier » ouvre l'éditeur (on sait toujours si on lit ou si on modifie). */
   onEdit?: () => void
+  /** Dans l'app, pour qui rédige : revoir les médias d'origine (toggle `sourceLibrary`). Jamais au poste. */
+  onSources?: () => void
+  /** Le début du nom tiré des familles (« Découpe – Presse P-12 », toggle `nameTemplate`), devant le titre. */
+  namePrefix?: string | null
 }
 
 function deviceId(): string {
@@ -150,7 +156,7 @@ function deviceId(): string {
 }
 
 export function Player(props: PlayerProps) {
-  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false, update, onEdit } = props
+  const { instructionId, publishedId, version, branding, stationId, source, deps, preview, onExit, exitLabel, allowVoice, allowQuestions, showBranding = true, focus, onStepChange, frameClassName, accessory, operator, canRecord = false, recorder, notifyLink, canTrain = false, update, onEdit, onSources } = props
   const who = { operatorId: operator?.id ?? null, operatorName: operator?.name ?? null }
   const languages = useMemo(() => [props.content.language, ...Object.keys(props.content.translations ?? {})], [props.content])
   const [lang, setLang] = useState(() => {
@@ -161,7 +167,11 @@ export function Player(props: PlayerProps) {
       return props.content.language
     }
   })
-  const content = useMemo(() => localized(props.content, lang), [props.content, lang])
+  // Le nom tiré des familles devant le titre (toggle `nameTemplate`), dans toutes les langues.
+  const content = useMemo(() => {
+    const c = localized(props.content, lang)
+    return props.namePrefix ? { ...c, title: displayName(c.title, props.namePrefix) } : c
+  }, [props.content, props.namePrefix, lang])
   const t = strings(lang)
   const exitText = typeof exitLabel === 'function' ? exitLabel(t) : exitLabel
   const total = content.steps.length
@@ -446,6 +456,11 @@ export function Player(props: PlayerProps) {
           {onEdit && (
             <button type="button" onClick={onEdit} className="btn-press glass-card flex h-12 shrink-0 items-center gap-2 rounded-2xl px-3 text-sm font-black">
               <PenLine className="h-5 w-5" /> <span className="hidden sm:inline">{t.edit}</span>
+            </button>
+          )}
+          {onSources && (
+            <button type="button" onClick={onSources} aria-label={t.sources} title={t.sources} className="btn-press flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-700 hover:bg-slate-900/5 dark:text-slate-200 dark:hover:bg-white/5">
+              <Images className="h-5 w-5" />
             </button>
           )}
           {sectionsOn && index >= 0 && index < total ? (

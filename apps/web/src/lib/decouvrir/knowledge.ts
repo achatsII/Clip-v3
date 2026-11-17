@@ -98,6 +98,9 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   dit et le nom des fichiers, sans inventer de valeur ; on vérifie d'un coup d'œil, on retire ce qui ne va
   pas, ou on demande « Proposer avec l'IA » pour une instruction déjà écrite. La bibliothèque se filtre par
   famille, et la recherche trouve un numéro de produit ou de bon de travail.
+- Le nom des instructions : l'usine choisit jusqu'à trois familles qui passent devant le titre, dans
+  l'ordre voulu (« Découpe – Presse P-12 – Changer le filtre »). La bibliothèque, le poste et le PDF
+  montrent le même nom ; quand le classement change, le nom suit.
 - Ce que les sources ne tranchent pas devient au plus quatre questions (la pastille « à vérifier »), avec des
   réponses proposées ; les réponses corrigent l'instruction.
 - Le standard de rédaction de l'usine guide chaque génération (Réglages › Standard de rédaction : ce par quoi
@@ -129,6 +132,15 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   (réécrire, ajouter une étape, « encercle le bouton vert sur la photo de l'étape 3 », dessiner un schéma,
   montrer à faire / à éviter), écrit ou dicté. Il modifie l'instruction sous les yeux de la personne, et tout
   son passage s'annule d'un geste ; au besoin, il revoit les vidéos et les notes d'origine.
+- Dans la conversation de l'assistant, le trombone joint une photo, une vidéo, une note vocale, un document
+  ou un PowerPoint : l'assistant les reçoit avec la demande (« mets cette photo à l'étape 4 », « ajoute les
+  étapes de cette vidéo »), et ils rejoignent les médias d'origine de l'instruction.
+- « Médias d'origine » : ce qui a servi à rédiger l'instruction, à revoir à tout moment — les vidéos en entier,
+  avec le son, les photos en grand, les notes vocales à réécouter avec leur transcription, les notes écrites
+  et les documents. Chaque média dit à quelles étapes il sert ; « Voir l'original », sous le média d'une
+  étape, ouvre la vidéo d'origine au moment de l'extrait. Une photo prise en parlant fait réentendre ce qui a
+  été dit à cet instant. Dans l'éditeur, un média se met à l'étape ouverte d'un toucher, et on en ajoute
+  d'autres. Qui rédige les revoit aussi en lecture ; l'opérateur au poste, non : il voit l'extrait choisi.
 - « Direct » : parler à l'assistant d'édition à voix haute, en direct (forfait Usine).
 - Au téléphone, on peut quitter l'app pendant que l'assistant prépare sa réponse ou que l'IA génère une
   instruction : le travail continue au serveur, et la réponse attend au retour.
@@ -168,12 +180,14 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Après une modification importante, on retraduit (« Mettre à jour la traduction »).
 
 ## 5. Moderniser les anciennes procédures (import en lot)
-- « Importer vos anciennes instructions » : on dépose des PDF et des documents Word (.docx, .doc, .odt),
-  même par dizaines ; chacun devient un brouillon structuré, prêt à relire (« Brouillon créé »). L'onglet reste
-  ouvert pendant l'analyse ; « Reprendre l'analyse » relance ce qui reste. Forfait Usine.
+- « Importer vos anciennes instructions » : on dépose des PDF, des documents Word (.docx, .doc, .odt) et des
+  PowerPoint (.pptx), même par dizaines ; chacun devient un brouillon structuré, prêt à relire (« Brouillon
+  créé »). L'onglet reste ouvert pendant l'analyse ; « Reprendre l'analyse » relance ce qui reste. Forfait Usine.
 - Les photos et les dessins du document deviennent les médias des étapes, recadrés : chaque étape montre
   sa figure, pas la page entière.
-- Un PowerPoint s'enregistre d'abord en PDF (Fichier › Exporter), puis se dépose comme un PDF.
+- Un PowerPoint (.pptx) se dépose tel quel : CLIP lit le texte de chaque diapositive (titres, textes,
+  tableaux, notes du présentateur) et en reprend les images, qui deviennent les médias des étapes. Un ancien
+  .ppt ou un Keynote s'enregistre d'abord en .pptx ou en PDF.
 - Un seul document se dépose aussi dans une nouvelle instruction, avec des vidéos et des photos.
 
 ## 6. Approuver et publier

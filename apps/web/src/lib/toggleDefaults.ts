@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -115,6 +115,19 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // Plusieurs médias à une étape, impossibles à manquer : leurs vignettes, « 2 / 3 » et de grandes
   // flèches, au poste comme dans l'éditeur, et leur nombre sur l'étape dans la liste de la Fiche.
   mediaNav: true,
+  // Les médias d'origine : ce qui a servi à rédiger l'instruction (vidéos entières, photos, notes
+  // vocales et leur transcription, notes, documents), à revoir dans l'éditeur et, pour qui rédige,
+  // en lecture ; chacun dit à quelles étapes il sert et se met à l'étape ouverte. Jamais au poste.
+  sourceLibrary: true,
+  // Joindre des médias dans l'assistant (photo, vidéo, note vocale, document) : ils rejoignent les
+  // médias d'origine de l'instruction, et l'assistant les reçoit avec la demande pour s'en servir.
+  agentAttach: true,
+  // Un PowerPoint (.pptx) se lit dans l'app, sans la Gateway (qui ne le convertit pas) : le texte de
+  // chaque diapositive en note, ses images en photos ; capture, import en lot, assistant, médias d'origine.
+  slidesImport: true,
+  // Le modèle de nom (Réglages › Classement) : les valeurs des familles choisies devant le titre,
+  // « Découpe – Presse P-12 – Changer le filtre », dans la bibliothèque, au poste et dans le PDF.
+  nameTemplate: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -166,4 +179,8 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   toolImages: false,
   videoSound: false,
   mediaNav: false,
+  sourceLibrary: false,
+  agentAttach: false,
+  slidesImport: false,
+  nameTemplate: false,
 }

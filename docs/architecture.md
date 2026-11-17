@@ -232,6 +232,15 @@ une photo ou une page tirés d'une source.
   mécanique que l'assistant du poste) converse et appelle `modifier(demande)`, qui passe par le même
   moteur que le clavardage (un tour `edit_agent`, visible et annulable), `aller_a_etape`,
   `lire_instruction` et `annuler_dernier_changement`.
+- **Joindre des médias** (toggle `agentAttach`) : le trombone de la conversation (photo, vidéo, note
+  vocale, document, PowerPoint) envoie le fichier tout de suite (`ingestAny`) ; il rejoint les sources
+  de l'instruction (une puce « S7 » le dit, « S7–S12 » pour une présentation) et la demande attend la fin
+  des envois. Le tour qui suit donne ces médias à l'IA avec la demande, en un seul tour (`agentTurn`
+  avec `attached`, sans tour sur le texte d'abord), facturé selon leur taille comme une revue
+  (`look_s`, `look_m`, `look_l`) ; la consigne dit qu'ils sont neufs et qu'`use_media` les met aux
+  étapes. Au téléphone, ce tour part au serveur comme les autres (`files` et `mediaResolution` sont
+  déjà relayés : rien dans n8n). Un média retiré avant l'envoi quitte aussi les sources (et le
+  stockage).
 
 ### Traduire pour les opérateurs (`src/lib/ai/translate.ts`, `src/lib/model/translation.ts`)
 
@@ -456,9 +465,30 @@ d'où elle vient (`fromPage`). Une figure introuvable, plus petite qu'un centiè
 couvre plus des quatre cinquièmes laisse la page entière. Les pages se traitent trois à la fois, et
 le choix voyage avec le travail au serveur (`ServerJobContext.figures`) : l'appareil qui termine fait
 le recadrage, comme les vignettes. Dans l'éditeur, « Figure / Page entière » échange les deux sans
-rien perdre (légende, verdict, annotations : `toWholePage`, `toFigure`). Un PowerPoint ne passe pas
-encore : la route `convert-to-pdf` de la Gateway ne prend que Word et ODT (un .pptx y répond 500) ;
-la carte de la capture et l'import en lot disent de l'enregistrer en PDF (`isSlides`).
+rien perdre (légende, verdict, annotations : `toWholePage`, `toFigure`).
+
+**Les présentations PowerPoint** (toggle `slidesImport`, `src/lib/media/slides.ts`). La route
+`convert-to-pdf` de la Gateway ne prend que Word et ODT : un .pptx y répond 500 (revérifié en QA le
+17 novembre 2026, alors que LibreOffice le convertit sans peine : la limite est du côté de la
+plateforme). L'app le lit donc elle-même : un .pptx est une archive zip ; son répertoire se lit à la
+fin du fichier, chaque pièce se décompresse par `DecompressionStream('deflate-raw')` (iOS 16.4 et plus ;
+sans lui, le message d'avant), et le XML d'Office se parcourt avec `DOMParser`.
+
+- L'ordre des diapositives vient de `presentation.xml` et de ses relations ; de chacune, le titre (son
+  emplacement `title`), le texte de ses formes et de ses tableaux, les notes du présentateur (leur
+  emplacement de texte) et les images posées sur la diapositive (pas son fond ; PNG, JPEG, GIF, BMP,
+  WebP ; un dessin EMF ou WMF ne s'affiche pas dans un navigateur et reste de côté), une fois chacune,
+  au plus 60 (`MAX_DECK_IMAGES`).
+- Les sources (`ingestSlides`) : une **note** avec le texte, diapositive par diapositive, dans la langue
+  de l'outil (« Diapositive 2 — Cadenasser … Images : « Diapositive 2 — image 1.png » »), puis une
+  **photo** par image, réduite et envoyée comme toute photo, nommée d'après sa diapositive : l'IA
+  rapproche ainsi chaque image de son texte, et les vraies images deviennent les médias des étapes.
+- Partout où un fichier entre (`ingestAny`) : la capture (une carte pour la présentation, ses sources
+  ensemble et dans l'ordre), l'import en lot (`importAsk` : la note dans la demande, les images
+  jointes, `importSystem(…, 'slides')`, au serveur comme sur l'appareil ; rien dans n8n), le choix
+  d'un média d'étape, les médias d'origine et l'assistant.
+- Un .ppt (l'ancien format binaire), un Keynote ou un .odp ne se lit pas : la carte dit de l'enregistrer
+  en .pptx ou en PDF. Toggle coupé, comme avant : l'enregistrer en PDF (`isSlides`).
 
 ### Capturer (« Nouvelle instruction », `CaptureBoard`)
 
@@ -847,6 +877,18 @@ BT-7781), une valeur ou plusieurs. Des familles se créent d'un toucher (Départ
 - **La bibliothèque** : une pastille par famille en liste (on coche une ou plusieurs valeurs) ; une
   valeur libre (un numéro de produit) se cherche dans la barre de recherche, qui la trouve dans
   l'index. Les cartes affichent les premières valeurs du classement.
+- **Le nom des instructions** (toggle `nameTemplate`) : dans Réglages › Classement, l'usine choisit
+  jusqu'à trois familles qui passent devant le titre, dans l'ordre où elle les touche
+  (`Nomenclature.naming`), avec un exemple du nom. Le titre reste l'action (« Changer le filtre ») :
+  rien ne change dans le contenu ni dans ses versions ; le nom se compose à l'affichage
+  (`namePrefix` : les valeurs de chaque famille, « / » entre deux valeurs d'une même famille, « – »
+  entre les morceaux ; `displayName` ne répète pas un début déjà dans le titre). Dans l'app, il se lit
+  dans les réglages (`useInstructionName` : cartes, en-tête de l'éditeur, lecture, PDF). Un lien
+  public ne lit pas les réglages : la version publiée garde le début du nom (`Published.namePrefix`),
+  écrit à la publication, à chaque classement (`saveClassification`, `relabelValue`) et pour toutes
+  les versions publiées quand le modèle change (`renamePublished`, seules celles dont le nom change,
+  par pages de 10 000). Le lecteur le pose devant le titre après la traduction (`namePrefix` du
+  `Player`) : le nom suit dans chaque langue.
 
 ### Les blocs communs (toggle `sharedBlocks`, feature `shared_blocks`, `src/lib/model/blocks.ts`)
 
@@ -1029,6 +1071,26 @@ l'intérieur (`keepInside`). Dans l'annotateur, la barre des options garde sa ha
 bouge pas quand une marque se choisit ou se lâche. Il s'ouvre sur la Sélection quand la photo a déjà
 des marques (on vient les ajuster), sinon sur le dernier outil de dessin, avec sa couleur, sa taille
 et son style, retenus sur l'appareil (la flèche la première fois).
+
+### Les médias d'origine (toggle `sourceLibrary`, `SourceLibrary`, `src/lib/model/sources.ts`)
+
+Ce qui a servi à rédiger une instruction (ses sources, S1, S2… dans l'ordre où l'IA les a reçues) ne se
+revoyait qu'à travers les extraits choisis pour les étapes. « Médias d'origine » les montre tous, par
+famille : les vidéos en entier, avec le son et la barre de lecture (rien ne se télécharge avant
+« Lire » : `preload="none"`, et `stopWhenGone` au démontage) ; les photos en grand (une photo prise en
+parlant fait réentendre la note à partir de 3 s avant l'instant de la photo, `voiceOf`) ; les notes
+vocales à réécouter avec leur transcription ; les notes écrites ; les documents à ouvrir.
+
+- Chaque média dit à quelles étapes il sert (`sourceUses`, d'après `sourceId` des médias d'étape) ; un
+  toucher sur le numéro y mène.
+- Dans l'éditeur (menu « … », dans les deux vues) : « Mettre à l'étape 3 » met le média à l'étape ouverte
+  (une photo tout de suite ; une vidéo ouvre le choix de l'extrait, un document celui de la page :
+  `MediaPicker` avec `initial`), sauf à une étape d'un bloc commun ; « Ajouter un média » en ajoute
+  (`ingestAny`, une présentation comprise). Sous le média d'une étape, « Voir l'original » ouvre la
+  source à l'instant de l'extrait (`#t=`, la vidéo seule se prépare).
+- En lecture (`/instructions/[id]/lire`), pour qui rédige : le même écran, sans rien changer. Jamais au
+  poste ni sur un lien : la version publiée ne porte pas les sources, et l'opérateur voit l'extrait
+  choisi, pas les notes vocales ou la vidéo brute.
 
 ### Les médias d'une étape
 

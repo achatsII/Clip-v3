@@ -11,7 +11,7 @@ import { coverOf, emptyContent, findPublished, nowIso, T } from './repo'
 import type { Branding, Instruction, InstructionContent, OrgSettings, Published, Renewal, Signature, Source, Version } from './types'
 import { reuseSource } from './library'
 import { allocateNumbers, instructionSearchText, publishedCard } from './search'
-import { allStationIds } from './nomenclature'
+import { allStationIds, namePrefix } from './nomenclature'
 import { publishedChanges } from './updates'
 
 export interface Actor {
@@ -138,6 +138,8 @@ export async function publishInstruction(
     // La fiche et l'index : la liste d'un poste et sa recherche ne lisent pas le contenu.
     card: publishedCard(content, docNumber),
     searchText: instructionSearchText({ number: docNumber, labels: instr.labels }, content),
+    // Le début du nom tiré des familles (modèle de nom de l'usine) : le poste ne lit pas les réglages.
+    namePrefix: namePrefix(instr.labels, org.nomenclature) || null,
     ...(instr.labels ? { labels: instr.labels } : {}),
     ...(instr.ruleStationIds?.length ? { ruleStationIds: instr.ruleStationIds } : {}),
     // Pour l'opérateur : ce qui a changé depuis la version d'avant, et cette version, à revoir en lecture.

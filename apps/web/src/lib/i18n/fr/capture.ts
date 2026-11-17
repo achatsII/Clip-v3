@@ -206,6 +206,18 @@ export const capture = {
     failed: 'Envoi impossible',
     unsupported: 'Ce type de fichier n’est pas pris en charge.',
     slides: 'Un PowerPoint ne se lit pas encore tel quel : enregistrez-le en PDF (Fichier › Exporter), puis déposez le PDF.',
+    /** Un .ppt, un Keynote ou un .odp (toggle `slidesImport` : un .pptx se lit dans l’app). */
+    oldSlides: 'Ce format de présentation ne se lit pas : enregistrez-la en .pptx ou en PDF, puis déposez-la.',
+    unreadableSlides: 'Cette présentation n’a pas pu être lue. Enregistrez-la en PDF (Fichier › Exporter), puis déposez le PDF.',
+    /** Le texte d’une présentation lue dans l’app : ce que l’IA et l’écran en montrent. */
+    deck: {
+      title: (name: string, n: number) => `Présentation « ${name} », ${n} diapositive${n > 1 ? 's' : ''}.`,
+      slide: 'Diapositive',
+      image: 'image',
+      notes: 'Notes du présentateur',
+      images: 'Images',
+      skipped: (n: number) => `(${n} autres images non reprises.)`,
+    },
     refused: (first: number | string, then: number) => `L’envoi a été refusé (${first} puis ${then}). Réessayez ; si ça revient, signalez-le.`,
   },
   /** La dictée des champs de texte. */

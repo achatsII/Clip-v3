@@ -341,14 +341,17 @@ export async function startServerImport(input: {
   ai: AiApi
   org: OrgSettings
   source: Source
+  /** Une présentation lue dans l'app : sa note, puis ses images (S1, S2…). */
+  sources?: Source[]
   stations: Doc<Station>[]
   actor: Actor
   title: string
   /** Les figures du document, recadrées pour les étapes à la fin (toggle `documentFigures`). */
   figures?: boolean
 }): Promise<{ doc: Doc<Instruction>; jobId: string | null }> {
-  const { operation, language, ask } = importAsk({ org: input.org, source: input.source, stationNames: stationLabels(input.stations) })
-  const doc = await createInstruction(input.data, input.actor, { title: input.title, origin: 'import', sources: [input.source] })
+  const all = input.sources?.length ? input.sources : [input.source]
+  const { operation, language, ask } = importAsk({ org: input.org, source: input.source, sources: all, stationNames: stationLabels(input.stations) })
+  const doc = await createInstruction(input.data, input.actor, { title: input.title, origin: 'import', sources: all })
   let jobId: string | null
   try {
     jobId = await input.ai.startJob({ operation, instructionId: doc._id, ask })
@@ -372,7 +375,7 @@ export async function startServerImport(input: {
     device: inNativeShell() ? 'app' : 'web',
     mode: 'server',
     jobId,
-    job: { sourceIds: [input.source.id], language, operation, forceKind: null, autoAnnotate: false, checkpoints: false, figures: !!input.figures },
+    job: { sourceIds: all.map((s) => s.id), language, operation, forceKind: null, autoAnnotate: false, checkpoints: false, figures: !!input.figures && all[0].kind === 'document' },
     finishing: null,
   }
   await input.data.patch(T.instruction, doc._id, { generating, generationError: null })

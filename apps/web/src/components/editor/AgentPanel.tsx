@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowUp, Check, ChevronDown, ChevronUp, Loader2, Mic, RotateCcw, Sparkles, X } from 'lucide-react'
+import { ArrowUp, Check, ChevronDown, ChevronUp, FileText, Film, Image as ImageIcon, Loader2, Mic, Paperclip, RotateCcw, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
@@ -10,16 +10,35 @@ import { agentBusy, agentTurn, runAgentOps, type AgentLogEntry, type VoiceTurnRe
 import { suggestEdits } from '@/lib/ai/suggest'
 import { useBilling, useEntitlement, useGate } from '@/lib/billing/state'
 import { useMessages } from '@/lib/i18n'
-import type { InstructionContent, Source } from '@/lib/model/types'
+import { ACCEPTED_FILES, ingestAny, kindOfFile } from '@/lib/media/ingest'
+import { uid } from '@/lib/model/repo'
+import { sourceTag } from '@/lib/model/sources'
+import type { InstructionContent, Source, SourceKind } from '@/lib/model/types'
+import { useToast } from '@/components/ui/Toast'
 import { suspendsInBackground } from '@/lib/ai/durableAsk'
 import { useToggle } from '@/lib/toggles'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { LiveEditVoice } from './LiveEditVoice'
 
+/** Un média joint à la demande : envoyé tout de suite, il rejoint les médias d'origine. */
+interface Attachment {
+  key: string
+  name: string
+  kind: SourceKind | null
+  previewUrl?: string
+  /** Ses sources : une le plus souvent ; une présentation donne sa note et ses images. */
+  sourceIds?: string[]
+  /** S7 (ou S7–S12) : le nom que l'assistant lui donne. */
+  tag?: string
+  uploading: boolean
+}
+
 interface Message {
   id: number
   role: 'user' | 'agent'
   text: string
+  /** Les médias joints à cette demande. */
+  attachments?: Attachment[]
   working?: boolean
   /** La réponse se prépare au serveur : on peut quitter l'app, elle attendra. */
   durable?: boolean
@@ -89,6 +108,15 @@ export function AgentPanel({
   open?: boolean
 }) {
   const { ai, org, files, data } = useSession()
+  const toast = useToast()
+  // Joindre des médias (toggle `agentAttach`) : seulement là où l'instruction garde ses sources.
+  const attachOn = useToggle('agentAttach') && !!onSourcesChange
+  const slides = useToggle('slidesImport')
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const attachInput = useRef<HTMLInputElement>(null)
+  // La liste à jour, même entre deux rendus (plusieurs envois qui finissent ensemble).
+  const sourcesRef = useRef<Source[]>(sources ?? [])
+  sourcesRef.current = sources ?? sourcesRef.current
   // Au téléphone, la réponse se prépare au serveur : iOS suspend l'app hors de l'écran (`durableAsk`).
   const backgroundAi = useToggle('backgroundAi')
   const serverJobs = useToggle('serverGeneration')
@@ -144,7 +172,7 @@ export function AgentPanel({
 
   const patch = (id: number, p: Partial<Message> | ((m: Message) => Partial<Message>)) => setMessages((list) => list.map((m) => (m.id === id ? { ...m, ...(typeof p === 'function' ? p(m) : p) } : m)))
 
-  async function runTurn(request: string, via: 'text' | 'voice'): Promise<VoiceTurnResult> {
+  async function runTurn(request: string, via: 'text' | 'voice', attached: Attachment[] = []): Promise<VoiceTurnResult> {
     const ask = request.trim()
     if (!ask) return { reply: '', done: [], failed: [] }
     // Seule la voix peut demander pendant un tour : la réponse est pour le modèle.
@@ -155,7 +183,7 @@ export function AgentPanel({
     const agentId = nextId.current++
     const done: string[] = []
     const failed: string[] = []
-    setMessages((list) => [...list, { id: userId, role: 'user', text: via === 'voice' ? `🎙 ${ask}` : ask }, { id: agentId, role: 'agent', text: '', working: true, durable: !!durable }])
+    setMessages((list) => [...list, { id: userId, role: 'user', text: via === 'voice' ? `🎙 ${ask}` : ask, attachments: attached.length ? attached : undefined }, { id: agentId, role: 'agent', text: '', working: true, durable: !!durable }])
     try {
       const ta = t.editorTools.agent
       let looked: string | null = null
@@ -167,7 +195,9 @@ export function AgentPanel({
         focusStepId,
         request: ask,
         history: history.current,
-        sources,
+        sources: sourcesRef.current,
+        // Les médias joints à la demande : l'assistant les reçoit tout de suite.
+        attached: attached.flatMap((a) => a.sourceIds ?? []),
         // Revoir les sources : une action visible dans la conversation, avec ce qu'on revoit.
         onLook: (info) => {
           looked = info.sourceIds.join(', ')
@@ -193,7 +223,7 @@ export function AgentPanel({
         try {
           await runAgentOps(turn.operations, {
             ai,
-            sources,
+            sources: sourcesRef.current,
             files,
             canTranslate,
             onLocked: (feature) => openPaywall({ feature }),
@@ -230,10 +260,57 @@ export function AgentPanel({
     }
   }
 
+  const uploading = attachments.some((a) => a.uploading)
+  const ready = attachments.filter((a) => a.sourceIds?.length)
   async function send(request = text) {
-    if (!request.trim() || busy) return
+    if (busy || uploading || (!request.trim() && !ready.length)) return
     setText('')
-    await runTurn(request, 'text')
+    setAttachments([])
+    await runTurn(request.trim() || t.editorTools.agent.attachOnly, 'text', ready)
+  }
+
+  /** Les fichiers joints partent tout de suite et rejoignent les médias d'origine, dans l'ordre. */
+  const dropped = useRef(new Set<string>())
+  async function attach(list: File[]) {
+    for (const file of list) {
+      const key = uid('att_')
+      const kind = kindOfFile(file)
+      const blobUrl = kind === 'photo' ? URL.createObjectURL(file) : undefined
+      setAttachments((a) => [...a, { key, name: file.name, kind, previewUrl: blobUrl, uploading: true }])
+      try {
+        const added = await ingestAny(file, files, { slides })
+        if (dropped.current.has(key)) {
+          const paths = added.flatMap((s) => (s.path ? [s.path] : []))
+          if (paths.length) void files.remove(paths).catch(() => undefined)
+          continue
+        }
+        const first = sourcesRef.current.length
+        const next = [...sourcesRef.current, ...added]
+        sourcesRef.current = next
+        onSourcesChange?.(next)
+        const src = added.find((s) => s.kind !== 'note') ?? added[0]
+        const thumb = src.thumbnailUrl ?? (src.kind === 'photo' ? src.url : undefined)
+        if (thumb && blobUrl) URL.revokeObjectURL(blobUrl)
+        const tag = added.length > 1 ? `${sourceTag(first)}–${sourceTag(next.length - 1)}` : sourceTag(first)
+        setAttachments((a) => a.map((x) => (x.key === key ? { ...x, kind: added.length > 1 ? 'document' : src.kind, sourceIds: added.map((s) => s.id), tag, previewUrl: thumb ?? x.previewUrl, uploading: false } : x)))
+      } catch (e) {
+        setAttachments((a) => a.filter((x) => x.key !== key))
+        toast.error(t.editorTools.agent.attachFailed, errorText(e))
+      }
+    }
+  }
+  /** Retiré avant l'envoi : le média quitte aussi les médias d'origine (c'était une erreur de fichier). */
+  function detach(a: Attachment) {
+    setAttachments((list) => list.filter((x) => x.key !== a.key))
+    if (a.uploading) return void dropped.current.add(a.key)
+    const ids = new Set(a.sourceIds ?? [])
+    const victims = sourcesRef.current.filter((x) => ids.has(x.id))
+    if (!victims.length) return
+    const next = sourcesRef.current.filter((x) => !ids.has(x.id))
+    sourcesRef.current = next
+    onSourcesChange?.(next)
+    const paths = victims.flatMap((v) => (v.path ? [v.path] : []))
+    if (paths.length) void files.remove(paths).catch(() => undefined)
   }
 
   /** Pour la voix : annule le dernier tour qui a changé quelque chose ; faux s'il n'y en a pas. */
@@ -312,9 +389,16 @@ export function AgentPanel({
         )}
         {messages.map((m) =>
           m.role === 'user' ? (
-            <p key={m.id} className="ml-10 rounded-2xl rounded-br-md bg-slate-900 px-3.5 py-2.5 text-sm font-bold text-white dark:bg-white dark:text-slate-900">
-              {m.text}
-            </p>
+            <div key={m.id} className="ml-10 space-y-1.5">
+              {!!m.attachments?.length && (
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {m.attachments.map((a) => (
+                    <AttachmentThumb key={a.key} a={a} />
+                  ))}
+                </div>
+              )}
+              <p className="rounded-2xl rounded-br-md bg-slate-900 px-3.5 py-2.5 text-sm font-bold text-white dark:bg-white dark:text-slate-900">{m.text}</p>
+            </div>
           ) : (
             <div key={m.id} className={cn('mr-6 rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm', m.error ? 'bg-rose-50 text-rose-900 dark:bg-rose-500/10 dark:text-rose-200' : 'bg-slate-900/[0.04] dark:bg-white/5')}>
               {m.text ? <p className="font-bold">{m.text}</p> : <p className="flex items-center gap-2 font-bold text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> {t.editorTools.agent.reading}</p>}
@@ -354,19 +438,67 @@ export function AgentPanel({
 
       {liveOn && <LiveEditVoice content={content} onModify={(r) => runTurn(r, 'voice')} onGoTo={onFocus} onUndo={undoLast} onStop={() => setLiveOn(false)} />}
 
+      {attachments.length > 0 && (
+        <div className="no-scrollbar flex shrink-0 gap-2 overflow-x-auto border-t border-slate-900/5 px-3 pt-3 dark:border-white/5">
+          {attachments.map((a) => (
+            <span key={a.key} title={a.uploading ? t.editorTools.agent.attaching(a.name) : t.editorTools.agent.attached} className="flex h-14 shrink-0 items-center gap-1.5 rounded-2xl bg-slate-900/[0.05] p-1 dark:bg-white/10">
+              <AttachmentThumb a={a} />
+              <span className="max-w-28 truncate text-xs font-bold">{a.name}</span>
+              <button type="button" onClick={() => detach(a)} aria-label={t.editorTools.agent.removeAttachment(a.name)} className="btn-press flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10">
+                <X className="h-4 w-4" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <form
-        className="pb-safe flex shrink-0 items-center gap-2 border-t border-slate-900/5 px-3 pt-3 pb-3 dark:border-white/5"
+        className={cn('pb-safe flex shrink-0 items-center gap-2 px-3 pt-3 pb-3', !attachments.length && 'border-t border-slate-900/5 dark:border-white/5')}
         onSubmit={(e) => {
           e.preventDefault()
           void send()
         }}
       >
+        {attachOn && (
+          <>
+            <button type="button" onClick={() => attachInput.current?.click()} disabled={busy} aria-label={t.editorTools.agent.attach} title={t.editorTools.agent.attach} className="btn-press flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-600 hover:bg-slate-900/5 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-white/10">
+              <Paperclip className="h-5 w-5" />
+            </button>
+            <input
+              ref={attachInput}
+              type="file"
+              multiple
+              accept={ACCEPTED_FILES}
+              className="hidden"
+              onChange={(e) => {
+                const list = [...(e.target.files ?? [])]
+                e.target.value = ''
+                if (list.length) void attach(list)
+              }}
+            />
+          </>
+        )}
         <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={t.editorTools.agent.placeholder} aria-label={t.editorTools.agent.inputLabel} className="h-12" wrapperClassName="flex-1" disabled={busy} />
-        <button type="submit" disabled={busy || !text.trim()} aria-label={t.editorTools.agent.send} className="btn-press bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white disabled:opacity-40">
-          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowUp className="h-5 w-5" />}
+        <button type="submit" disabled={busy || uploading || (!text.trim() && !ready.length)} aria-label={t.editorTools.agent.send} className="btn-press bg-gradient-primary shadow-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white disabled:opacity-40">
+          {busy || uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowUp className="h-5 w-5" />}
         </button>
       </form>
     </section>
+  )
+}
+
+/** La vignette d'un média joint : son image, ou l'icône de son genre ; son numéro (S7) une fois envoyé. */
+function AttachmentThumb({ a }: { a: Attachment }) {
+  const Icon = a.kind === 'video' ? Film : a.kind === 'audio' ? Mic : a.kind === 'photo' ? ImageIcon : FileText
+  return (
+    <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+      {a.previewUrl ? <img src={a.previewUrl} alt="" className="h-full w-full object-cover" /> : <Icon className="h-5 w-5" />}
+      {a.uploading && (
+        <span className="absolute inset-0 flex items-center justify-center bg-black/45">
+          <Loader2 className="h-5 w-5 animate-spin text-white" />
+        </span>
+      )}
+      {a.tag && <span className="absolute top-0.5 left-0.5 rounded bg-black/70 px-1 text-[10px] font-black text-white tabular-nums">{a.tag}</span>}
+    </span>
   )
 }
 
