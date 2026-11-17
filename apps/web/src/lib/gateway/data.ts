@@ -27,7 +27,43 @@ export interface FilterOptions {
 
 type Json = Record<string, unknown>
 
+/** La profondeur la plus grande que la Gateway accepte (`mongo_filter exceeds maximum depth of 5`). */
+export const MAX_FILTER_DEPTH = 5
+
+/** La profondeur d'un filtre, comptée comme la Gateway : chaque objet un niveau, la valeur au bout aussi. */
+export function filterDepth(v: unknown): number {
+  if (Array.isArray(v)) return v.reduce<number>((m, x) => Math.max(m, filterDepth(x)), 1)
+  if (v && typeof v === 'object') return 1 + Object.values(v).reduce<number>((m, x) => Math.max(m, filterDepth(x)), 0)
+  return 1
+}
+
+const isPlain = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
+const onlyAnd = (v: unknown): v is { $and: unknown[] } => isPlain(v) && Object.keys(v).length === 1 && Array.isArray(v.$and)
+
+/**
+ * Le même filtre, moins profond (la Gateway refuse au-delà de 5 niveaux, novembre 2026 : « À voir » et
+ * l'accueil tombaient en 400) : un `$and` dans un `$and` se met à plat, et un `$and` dont les conditions
+ * portent sur des champs distincts devient un seul objet. Le sens ne change jamais.
+ */
+export function flattenFilter<T>(v: T): T {
+  if (Array.isArray(v)) return v.map(flattenFilter) as T
+  if (!isPlain(v)) return v
+  const out: Record<string, unknown> = {}
+  for (const [k, x] of Object.entries(v)) out[k] = flattenFilter(x)
+  if (!onlyAnd(out)) return out as T
+  const parts = out.$and.flatMap((x) => (onlyAnd(x) ? x.$and : [x]))
+  const merged: Record<string, unknown> = {}
+  const disjoint = parts.every((x) => isPlain(x) && Object.keys(x).every((k) => !(k in merged) && ((merged[k] = x[k]), true)))
+  if (disjoint && parts.length) return merged as T
+  return { $and: parts } as T
+}
+
 function scoped(filter?: Record<string, unknown>): Record<string, unknown> | undefined {
+  const f = filter && Object.keys(filter).length ? flattenFilter(filter) : undefined
+  return scopedFlat(f)
+}
+
+function scopedFlat(filter?: Record<string, unknown>): Record<string, unknown> | undefined {
   if (!SHARED_APP) return filter && Object.keys(filter).length ? filter : undefined
   const slug = { 'json_data.app_identifier': { $eq: APP_DATA_IDENTIFIER } }
   if (!filter || !Object.keys(filter).length) return slug

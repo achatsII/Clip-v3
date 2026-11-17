@@ -440,6 +440,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   an integer between 0 and 10000 ») et l'écran tombe en erreur. Au-delà, paginer avec `skip`
   (`loadEvents`, `src/lib/reports/load.ts`) ; le test se fait contre une fausse Gateway qui refuse
   comme la vraie (`tests/reports-load.test.ts`).
+- Un `mongo_filter` a au plus 5 niveaux (au-delà : 400, « mongo_filter exceeds maximum depth of 5 »).
+  `dataApi` aplatit chaque filtre sans en changer le sens (`flattenFilter`, `src/lib/gateway/data.ts`) ;
+  avec `html`, le `$and` du slug le faisait déjà, et le passage à `clip-v2` a fait tomber « À voir » et
+  l'accueil (novembre 2026). `tests/filter-depth.test.ts` compte la profondeur comme la Gateway.
 - Le prix d'un crédit d'IA en argent ne s'affiche jamais : ni à l'écran, ni dans les textes, ni sur le
   site ; les prix se disent en crédits. Il ne vit qu'à un endroit du code, la constante
   `AI_CREDITS_PER_CAD` (`src/lib/config.ts`), le taux standard de la plateforme.
