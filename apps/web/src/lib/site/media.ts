@@ -65,6 +65,37 @@ export const LOOPS: Record<LoopKey, LoopVideo> = {
   },
 }
 
+/** Les gestes de la démo du poste, en boucles muettes de 5 s tirées des plans du film (motion/plan.json). */
+export type ClipKey = 'lock' | 'brushing' | 'oiling' | 'unlock'
+
+export const STEP_CLIPS: Record<ClipKey, LoopVideo> = {
+  lock: {
+    webm: `${STORE}/etape-cadenas_1794935724020_064c2930-0374-4da7-9694-9353d14c4c2b.webm`,
+    mp4: `${STORE}/etape-cadenas_1794935724020_455240b9-ca70-49de-aafb-9a32d3d4d3c6.mp4`,
+    poster: '/site/video/etape-cadenas.webp',
+    seconds: 5,
+  },
+  brushing: {
+    webm: `${STORE}/etape-copeaux_1794935724020_80ab6c99-2254-4297-b5a3-a96066a20ef3.webm`,
+    mp4: `${STORE}/etape-copeaux_1794935724020_05768407-7056-40d2-b809-9b42b3984886.mp4`,
+    poster: '/site/video/etape-copeaux.webp',
+    seconds: 5,
+  },
+  oiling: {
+    webm: `${STORE}/etape-huile_1794935724020_aef2b74c-5bad-4785-8727-e569f87b9926.webm`,
+    mp4: `${STORE}/etape-huile_1794935724020_11e16189-f3ba-4bff-9c24-967a5d00fd3c.mp4`,
+    poster: '/site/video/etape-huile.webp',
+    seconds: 5,
+  },
+  // Le plan du cadenas, à l'envers : on le retire.
+  unlock: {
+    webm: `${STORE}/etape-retrait_1794935724020_7a17e538-bdec-419a-850e-ddd3653de3c0.webm`,
+    mp4: `${STORE}/etape-retrait_1794935724020_bd2020ac-b1aa-4335-abe7-f0523cd7c41b.mp4`,
+    poster: '/site/video/etape-retrait.webp',
+    seconds: 5,
+  },
+}
+
 /** Le film (1 min 15 s, narration en français) : avec le son et les sous-titres. */
 export const FILM = {
   mp4_1080: `${STORE}/clip-film-1080_1794841634107_e182fb31-f128-4f36-8b07-f96fd962af8e.mp4`,

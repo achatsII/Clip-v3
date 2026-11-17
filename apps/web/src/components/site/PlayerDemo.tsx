@@ -4,8 +4,9 @@ import { ArrowLeft, ArrowRight, Check, GraduationCap, Info, Languages, MessageCi
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { DemoInstruction, DemoLang, FeedbackKind, WarningLevel } from '@/lib/site/content/demo'
 import { fmt } from '@/lib/site/lang'
-import { PHOTOS } from '@/lib/site/media'
+import { PHOTOS, STEP_CLIPS } from '@/lib/site/media'
 import { cx } from './ui'
+import { LoopVideo } from './LoopVideo'
 
 export interface PlayerDemoText {
   operatorLanguage: string
@@ -14,6 +15,9 @@ export interface PlayerDemoText {
   noVoice: string
   stepPhoto: string
   sent: string
+  /** La boucle du geste : la mettre en pause, la relancer. */
+  pause: string
+  play: string
 }
 
 type Phase = 'steps' | 'done' | 'quiz' | 'result'
@@ -228,15 +232,28 @@ export function PlayerDemo({
             <>
               <div className="grid md:min-h-[430px] md:grid-cols-[1.35fr_1fr]">
                 <div className="relative aspect-video bg-slate-900 md:aspect-auto" dir="ltr">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    key={`${lang}-${index}`}
-                    src={PHOTOS[step.photo].src}
-                    alt={fmt(ui.stepPhoto, { n: index + 1 })}
-                    width={PHOTOS[step.photo].width}
-                    height={PHOTOS[step.photo].height}
-                    className="animate-fade-in absolute inset-0 h-full w-full object-cover"
-                  />
+                  {step.clip ? (
+                    // Le geste en vidéo, comme au poste : une boucle muette, seulement à l'écran, en pause sur demande.
+                    <LoopVideo
+                      key={`${lang}-${index}`}
+                      loop={STEP_CLIPS[step.clip]}
+                      label={fmt(ui.stepPhoto, { n: index + 1 })}
+                      labels={{ pause: ui.pause, play: ui.play }}
+                      className="animate-fade-in absolute inset-0 h-full w-full bg-slate-900"
+                    />
+                  ) : (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        key={`${lang}-${index}`}
+                        src={PHOTOS[step.photo].src}
+                        alt={fmt(ui.stepPhoto, { n: index + 1 })}
+                        width={PHOTOS[step.photo].width}
+                        height={PHOTOS[step.photo].height}
+                        className="animate-fade-in absolute inset-0 h-full w-full object-cover"
+                      />
+                    </>
+                  )}
                 </div>
                 <div key={`${lang}-${index}-text`} className="animate-slide-up flex flex-col gap-4 p-4 sm:p-6">
                   <div className="flex items-start gap-3">

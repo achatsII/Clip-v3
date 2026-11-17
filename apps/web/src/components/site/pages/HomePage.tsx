@@ -43,6 +43,8 @@ export function HomePage({ lang }: { lang: SiteLang }) {
     voiceNote: t.demo.player.voiceNote,
     noVoice: t.demo.player.noVoice,
     stepPhoto: t.demo.player.stepPhoto,
+    pause: t.a11y.pause,
+    play: t.a11y.play,
     sent: t.demo.player.sent,
   }
 

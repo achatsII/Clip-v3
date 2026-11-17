@@ -36,6 +36,8 @@ export function FeaturesPage({ lang }: { lang: SiteLang }) {
     voiceNote: t.demo.player.voiceNote,
     noVoice: t.demo.player.noVoice,
     stepPhoto: t.demo.player.stepPhoto,
+    pause: t.a11y.pause,
+    play: t.a11y.play,
     sent: t.demo.player.sent,
   }
   const annotateUi = { ...t.demo.annotate, badge: t.demo.badge, restart: t.demo.restart }

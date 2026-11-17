@@ -4,7 +4,7 @@
  * données, comme une instruction traduite dans l'app : chaque langue a ses mots du lecteur, repris de
  * `src/components/player/i18n.ts` quand ils y sont. Aucune fonction : tout passe aux composants client.
  */
-import type { PhotoKey } from '../media'
+import type { ClipKey, PhotoKey } from '../media'
 
 export const DEMO_LANGS = ['fr', 'en', 'es', 'ar'] as const
 export type DemoLang = (typeof DEMO_LANGS)[number]
@@ -18,6 +18,8 @@ export interface DemoStep {
   warning: { level: WarningLevel; text: string } | null
   keyPoints: string[]
   photo: PhotoKey
+  /** Le geste en vidéo (boucle muette), quand le film l'a : la photo reste l'image d'attente. */
+  clip?: ClipKey
 }
 
 export interface DemoWords {
@@ -67,7 +69,9 @@ export interface DemoInstruction {
 }
 
 const PHOTOS: PhotoKey[] = ['lock', 'brushing', 'oiling', 'lock', 'panel']
-const withPhotos = (steps: Array<Omit<DemoStep, 'photo'>>): DemoStep[] => steps.map((s, i) => ({ ...s, photo: PHOTOS[i] ?? 'panel' }))
+const CLIPS: Array<ClipKey | undefined> = ['lock', 'brushing', 'oiling', 'unlock', undefined]
+const withPhotos = (steps: Array<Omit<DemoStep, 'photo' | 'clip'>>): DemoStep[] =>
+  steps.map((s, i) => ({ ...s, photo: PHOTOS[i] ?? 'panel', ...(CLIPS[i] ? { clip: CLIPS[i] } : {}) }))
 
 export const DEMO: Record<DemoLang, DemoInstruction> = {
   fr: {
