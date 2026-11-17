@@ -17,10 +17,10 @@ export interface DecouvrirConfig {
   /** La passerelle de la connexion à l'espace (celle des comptes des prospects). */
   gateway: string
   /**
-   * L'application de Clip à la passerelle, pour reconnaître un client ; null tant que Clip se connecte par
-   * l'application partagée `html`, qui ne dit pas « client de Clip » : l'étape est alors sautée, et un client
-   * qui veut voir l'espace reçoit un accès dans Sandboxes, comme un prospect. Le jour où `clip-v3` existe à
-   * la passerelle (`NEXT_PUBLIC_APP_IDENTIFIER=clip-v3`), elle s'allume d'elle-même.
+   * L'application de Clip à la passerelle (`clip-v2`, comme `DEFAULT_APP_IDENTIFIER` de src/lib/config.ts),
+   * pour reconnaître un client. Null si Clip se connecte par l'application partagée `html`
+   * (`NEXT_PUBLIC_APP_IDENTIFIER=html`), qui ne dit pas « client de Clip » : l'étape est alors sautée, et un
+   * client qui veut voir l'espace reçoit un accès dans Sandboxes, comme un prospect.
    */
   productApp: string | null
   /** Un type de données de Clip, compté pour confirmer qu'une personne est cliente (le réglage de l'usine). */
@@ -40,7 +40,7 @@ export function decouvrirConfig(env: Env = process.env): DecouvrirConfig {
   // même quand Clip lui-même tourne encore sur une autre (QA). Sans DECOUVRIR_GATEWAY_URL, celle de Clip.
   const product = httpUrl(trimUrl(env.NEXT_PUBLIC_GATEWAY_URL)) || DEFAULT_GATEWAY
   const gateway = httpUrl(trimUrl(env.DECOUVRIR_GATEWAY_URL)) || product
-  const app = (env.NEXT_PUBLIC_APP_IDENTIFIER ?? '').trim() || 'html'
+  const app = (env.NEXT_PUBLIC_APP_IDENTIFIER ?? '').trim() || 'clip-v2'
   const url = httpUrl(trimUrl(env.SANDBOXES_URL))
   const cle = (env.SANDBOXES_CLE ?? '').trim()
   return {

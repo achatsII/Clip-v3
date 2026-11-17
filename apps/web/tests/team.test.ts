@@ -34,7 +34,7 @@ describe('ajouter l’équipe en collant une liste', () => {
     expect((error as ApiError).message).toBe('refus')
     const first = (gw.calls[0].options.body as { json_data: Operator & { app_identifier: string } }).json_data
     // Sans code au départ ; le code se donne par le serveur, jamais par le navigateur.
-    expect(first).toMatchObject({ shift: 'nuit', active: true, stationIds: [], app_identifier: 'clip-v3' })
+    expect(first).toMatchObject({ shift: 'nuit', active: true, stationIds: [] })
     expect(first).not.toHaveProperty('pinHash')
   })
 })

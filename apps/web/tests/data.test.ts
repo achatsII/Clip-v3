@@ -1,4 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// Ce fichier tient le mode de l'application partagée `html` (NEXT_PUBLIC_APP_IDENTIFIER=html), où Clip
+// cloisonne lui-même ses données ; le mode de l'application de Clip, `clip-v2`, est dans data-own-app.test.ts.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_APP_IDENTIFIER = 'html'
+})
 import { dataApi } from '@/lib/gateway/data'
 import { ApiError } from '@/lib/gateway/client'
 import { fakeGateway } from './fakeClient'

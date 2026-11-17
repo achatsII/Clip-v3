@@ -36,11 +36,37 @@ de l'utilisateur (connexion par formulaire, jetons en `localStorage`, un seul ra
 
 ### Identifiant d'application
 
-CLIP V3 n'est pas encore enregistrée à la Gateway : elle se connecte avec l'application partagée
-`html` et cloisonne ses données par le slug **`clip-v3`** (`json_data.app_identifier`, écrit à chaque
-document et filtré à chaque lecture). Le jour où l'identifiant `clip-v3` existe, on change
-`NEXT_PUBLIC_APP_IDENTIFIER` : le cloisonnement passe au serveur, mais les données écrites sous
-`html` restent sous `html` (à recopier, ou à basculer avant d'avoir de vraies données).
+Clip se connecte par sa propre application, **`clip-v2`** (`DEFAULT_APP_IDENTIFIER`,
+`src/lib/config.ts`, depuis le 2026-11-17) : la Gateway cloisonne ses données toute seule, aucun filtre
+de plus. Avant, elle passait par l'application partagée `html` et cloisonnait par le slug `clip-v3`
+(`json_data.app_identifier`, écrit à chaque document et filtré à chaque lecture) ;
+`NEXT_PUBLIC_APP_IDENTIFIER=html` y ramène. Les données écrites sous `html` y restent : la nouvelle
+application ne les voit pas tant qu'on ne les recopie pas. Le slug `clip-v3` reste aussi la clé de la
+branche de Clip dans le workflow n8n Job_start (`APP_DATA_IDENTIFIER`), qui écrit `clip_job` dans
+l'application de la personne (`dataApp`).
+
+Les droits de l'application `clip-v2` à la Gateway : `data:*`, `files:*`, `ai:*`, `assistant:*`,
+`communication:*` (ou `*`). Un lien public ne reçoit que les droits de la personne qui le crée. Chaque
+personne a besoin d'un grant sur `clip-v2`, sinon sa connexion répond « Unknown application slug ».
+
+### Les environnements : `main` en production, `dev` en QA
+
+Comme les autres outils d'II (Andon), un push déploie tout seul, par la GitHub Action
+`.github/workflows/deploy-vercel.yml`, qui appelle le workflow partagé de l'organisation
+(`intelligence-industrielle/.github`, secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`) :
+
+| Branche | Vercel | Gateway (`NEXT_PUBLIC_GATEWAY_URL`) |
+|---|---|---|
+| `main` | `production` (clip-v3.vercel.app) | `https://gateway.intelligenceindustrielle.com` |
+| `dev` | environnement `qa` (sinon `preview`) | `https://qa.gateway.intelligenceindustrielle.com` |
+| toute autre | `preview` | Gateway QA |
+
+Les variables se règlent par environnement dans Vercel, jamais dans le code : le défaut du code
+(Gateway QA) ne sert qu'au développement local. L'application `clip-v2` et les grants existent dans
+l'admin de chaque Gateway ; les comptes et les données de l'une ne sont pas dans l'autre. Les clés
+(`ABLY_KEY`, `CLIP_PIN_SECRET`, `SANDBOXES_CLE`) se posent aussi par environnement. On travaille sur
+`dev`, on vérifie en QA, puis on fusionne dans `main` pour la production (la version monte d'un chiffre,
+`src/lib/version.ts`).
 
 ### Les types de données (`/api/v1/data/{dataType}`)
 

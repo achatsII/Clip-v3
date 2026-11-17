@@ -7,7 +7,7 @@
  * poste : une tablette peut alors faire avertir les bonnes personnes sans jamais pouvoir l'ouvrir.
  */
 import { NextResponse, type NextRequest } from 'next/server'
-import { SHARED_APP } from '@/lib/config'
+import { APP_DATA_IDENTIFIER, SHARED_APP } from '@/lib/config'
 import { ROLES } from '@/lib/model/catalog'
 import { nowIso, T } from '@/lib/model/repo'
 import type { NotifySettings, Station } from '@/lib/model/types'
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (!caller) return NextResponse.json({ error: 'authRequired' }, { status: 401 })
   if (ROLES[caller.role].permissions.settings !== 'write') return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
-  const slug = SHARED_APP ? { 'json_data.app_identifier': 'clip-v3' } : {}
+  const slug = SHARED_APP ? { 'json_data.app_identifier': APP_DATA_IDENTIFIER } : {}
   const proto = req.headers.get('x-forwarded-proto') ?? 'https'
   const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000'
   const res = await fetch(`${GATEWAY_URL}/api/v1/redirect/create`, {

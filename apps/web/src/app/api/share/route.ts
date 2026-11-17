@@ -7,10 +7,10 @@
  * Un refus rend un code (`error`), que la page traduit dans la langue de l'outil (src/lib/share.ts).
  */
 import { NextResponse, type NextRequest } from 'next/server'
+import { APP_DATA_IDENTIFIER, SHARED_APP } from '@/lib/config'
 import { buildScope, permissionsFor, type LinkType } from '@/lib/server/scope'
 
 const GATEWAY_URL = (process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://qa.gateway.intelligenceindustrielle.com').replace(/\/$/, '')
-const SHARED_APP = (process.env.NEXT_PUBLIC_APP_IDENTIFIER || 'html') === 'html'
 const OBJECT_ID = /^[0-9a-f]{24}$/i
 
 interface Body {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       redirect_url: `${origin}/${path}`,
       permissions: permissionsFor(type, !!body.assistant),
-      scope: buildScope(type, id, { mode: body.mode === 'only' ? 'only' : 'focus', sharedApp: SHARED_APP, slug: 'clip-v3' }),
+      scope: buildScope(type, id, { mode: body.mode === 'only' ? 'only' : 'focus', sharedApp: SHARED_APP, slug: APP_DATA_IDENTIFIER }),
     }),
   }).catch(() => null)
 

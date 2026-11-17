@@ -7,15 +7,20 @@ import { PRODUCT } from './brand/product'
 export const GATEWAY_URL = (process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://qa.gateway.intelligenceindustrielle.com').replace(/\/$/, '')
 
 /**
- * Identifiant de l'application à la Gateway. CLIP V3 n'est pas encore enregistrée : elle se
- * connecte avec l'application partagée `html` (voir docs/architecture.md, §2).
+ * Identifiant de l'application à la Gateway : `clip-v2`, l'application de Clip. Avant, Clip se
+ * connectait par l'application partagée `html` ; `NEXT_PUBLIC_APP_IDENTIFIER=html` y ramène
+ * (voir docs/architecture.md, §2).
  */
-export const APP_IDENTIFIER = process.env.NEXT_PUBLIC_APP_IDENTIFIER || 'html'
+export const DEFAULT_APP_IDENTIFIER = 'clip-v2'
+export const APP_IDENTIFIER = process.env.NEXT_PUBLIC_APP_IDENTIFIER || DEFAULT_APP_IDENTIFIER
 
-/** Slug qui cloisonne les données de CLIP V3 tant qu'elle partage l'application `html`. */
+/**
+ * Le slug que portent les documents écrits sous `html` (et qu'on y filtre), et la clé de la branche
+ * de Clip dans le workflow n8n Job_start. Il ne change pas avec l'identifiant de connexion.
+ */
 export const APP_DATA_IDENTIFIER = 'clip-v3'
 
-/** Vrai tant que l'app partage `html` : chaque document porte le slug, chaque lecture filtre dessus. */
+/** Vrai seulement si l'app partage `html` : chaque document porte alors le slug, chaque lecture filtre dessus. */
 export const SHARED_APP = APP_IDENTIFIER === 'html'
 
 /** L'inscription libre n'existe que sur une application déclarée « self-service » à la Gateway. */
