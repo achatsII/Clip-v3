@@ -186,9 +186,37 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   en une fois (`GENERATION_LIMITS` : 30 min de vidéo, 45 min d'audio, 80 photos, 60 pages, en autant de
   fichiers qu'il faut ; la limite la plus proche se dit dès 80 %, `limitUse`).
 - **GIF d'un extrait** (toggle `clipGif`) : dans l'éditeur, à la demande (`files.gif`, `gifs/generate`,
-  480p, 15 s au plus), téléchargé ou partagé par la feuille du téléphone (`saveFile`). Il sort une étape de
-  CLIP ; le média de l'étape reste l'extrait (au poste, il joue déjà en boucle) : pas de « GIF » à la
-  génération.
+  480p, 15 s au plus), téléchargé ou partagé par la feuille du téléphone (`saveFile`). Pas de « GIF » à la
+  génération. **À l'étape** (toggle `gifInStep`, `GifDialog`) : « Vidéo · Image · GIF » sur le média ; on
+  choisit le début et la fin dans la vidéo (`clampGifRange` : le bout bougé reste, l'autre suit), puis « À
+  la place », « En plus » ou « Seulement le partager ». Le GIF est une image qui sait d'où il vient (`gif` :
+  la vidéo, l'extrait, l'image d'attente) : « Vidéo » y revient sans rien perdre (légende, verdict, marques).
+  L'IA ne lit jamais un GIF (`isAiImage` : ni marques, ni image refaite à la traduction, ni illustration).
+- **Enregistrer l'écran** (toggle `screenCapture`, feature `screen_capture`, dès Solo) : à l'ordinateur
+  seulement (`canRecordScreen`), sans extension, par le partage d'écran du navigateur ; la voix en option
+  (`clip_pref_screen_voice`), dix minutes au plus (`src/lib/media/screenRecorder.ts`). L'app regarde chaque
+  image de l'écran en petit (`MediaStreamTrackProcessor` quand il existe : l'onglet de CLIP est en
+  arrière-plan) et garde une image nette juste avant chaque vrai changement d'un écran calme, mesuré contre
+  l'écran de référence (`ShotPicker`, `src/lib/media/screenShots.ts`) : un clic rapide n'échappe pas, sans
+  payer plus d'images par seconde à l'IA. Un seul envoi qui reprend où il s'était arrêté (`ingestScreen`) :
+  la vidéo (`Source.screen`) puis ses images (`Source.shot` : la vidéo et l'instant). L'IA reçoit les deux
+  et des consignes d'écran (`SCREEN_RULES`) : une étape par action, l'image nette en média avec
+  `focusLabel` (entourée ensuite), jamais un mot de passe recopié. L'image d'une étape sait son instant
+  (`frame`) : « Vidéo » et « GIF » en repartent. Aussi dans l'assistant (bouton à côté du trombone).
+  Consignes et fichiers passent tels quels au serveur : rien dans n8n.
+- **L'IA qui apprend des corrections** (toggle `learnFromEdits`, `src/lib/learning/`) : la génération garde
+  le texte de sa version (`generation.original`) ; à la première publication, ce que la personne a corrigé
+  part dans `clip_edit` (`editSignals` : longueurs, points clés, mises en garde, étapes, mots remplacés,
+  quelques exemples) et la version de l'IA s'efface (`learnedAt`). Quand une habitude revient dans au
+  moins 3 instructions et 60 % des dernières (`proposeRules`, sans IA), la carte `LearningCard` le dit
+  après la publication : « Oui, pour moi », « Pour toute l'usine » (droit `settings` et feature
+  `ai_learning`, dès Équipe), « Non merci » (ne revient pas). Chacun a ses préférences (`clip_writing`,
+  versionnées, dix versions), que l'IA suit après le standard de l'usine (`standardBlock`, aussi pour
+  l'assistant) ; un 👎 commenté va à l'usine si c'est l'administrateur, à la personne sinon. « Prendre
+  comme modèle » (menu « … ») : l'IA en tire des règles de style (`learn_rules`) et l'instruction devient
+  un exemple que la génération imite (`examples`, trois pour l'usine, deux par personne). Réglages ›
+  Standard : « Mes préférences » et, pour l'usine, ce que les corrections de l'équipe proposent et
+  « Analyser avec l'IA ». Tout passe tel quel dans la requête : rien dans n8n.
 - **Gabarits du PDF** (toggle `printTemplates`, `src/lib/pdf/template.ts`, « Mise en page » à côté de
   l'aperçu d'impression) : pour tous, trois dispositions (étapes en grand, tableau, une page) en portrait ou
   en paysage ; avec `brand_kit`, le cartouche, le pied de page de chaque page (numéro, version, page), la
@@ -297,7 +325,7 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - **Rapports** (toggle `reports`, page `/rapports`, à la place de Statistiques dans le menu) : un
   répertoire à la K2 Cadence, des modèles prêts qui répondent chacun à une question (revue de la
   semaine, temps par instruction, qui a fait quoi, par poste, écarts, avant / après une révision,
-  formation, retours, bibliothèque ; l'adoption reste `/statistiques`), sur 7, 30 ou 90 jours de
+  formation, retours, bibliothèque, crédits d'IA ; l'adoption reste `/statistiques`), sur 7, 30 ou 90 jours de
   calendrier comparés à la même fenêtre d'avant, par lieu et par quart. Le code calcule chaque chiffre
   (`src/lib/reports/facts.ts`, `catalog.ts`) : un taux en somme sur somme, un temps en médiane et
   « 9 fois sur 10 », une durée hors de 10 s à 12 h exclue des temps, « peu de données » sous 5
@@ -391,12 +419,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   de `billing-publish` avant d'être publié ; le verrou `billing.manifest.lock.json` dira ce qui est
   publié (rien ne l'est encore). Le slug `clip-v3` doit d'abord être enregistré à la Gateway comme
   application.
-- La grille (manifeste, décision du 2026-11-16) : en libre-service (site par Stripe, magasins par
-  RevenueCat), seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : Gratuit (1 rédacteur,
-  3 publiées, 1 poste, 500 crédits) · Solo 49 $/mois (1, 15, 3, 2 500) · Équipe 199 $/mois, mis en avant
-  (3 rédacteurs, 50 publiées, 10 postes, 10 000). Annuel = 10 mois. Toute l'usine passe par l'équipe de
-  CLIP : **Usine** (15 rédacteurs, illimitées, 100 postes, 40 000) n'a aucun prix, ne s'achète nulle part
-  et s'attribue à l'organisation après la vente ; il remplace l'ancienne carte Entreprise du site.
+- La grille (manifeste, décision du 2026-11-16, volume du 2026-11-17) : en libre-service (site par Stripe,
+  magasins par RevenueCat), seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : Gratuit
+  (1 rédacteur, 3 publiées, 1 poste, 500 crédits) · Solo 49 $/mois (1, 15, 3, 2 500, l'écran) · Équipe
+  199 $/mois, mis en avant (5 rédacteurs, 75 publiées, 15 postes, 12 500, l'IA qui apprend de l'équipe).
+  **Le volume** : Équipe donne 5 fois Solo pour 4 fois le prix, chaque poste, rédacteur, instruction et
+  crédit y revient ~20 % moins cher (un test le tient) ; Usine descend encore, au contrat. **La durée** :
+  annuel = 10 mois ; 3 et 5 ans (jusqu'à 25 %), au contrat d'Usine (`multiYear`, sur le web seulement).
+  Toute l'usine passe par l'équipe de CLIP : **Usine** (15 rédacteurs, illimitées, 100 postes, 40 000) n'a
+  aucun prix, ne s'achète nulle part et s'attribue à l'organisation après la vente ; il remplace l'ancienne
+  carte Entreprise du site. **Recharges de crédits** : pas encore (la plateforme refuse un achat à une
+  usine déjà abonnée, `checkout` en 409, et n'a pas de route de recharge) ; d'ici là, le plan qui en donne
+  plus, ou l'équipe de CLIP (don de crédits par la console).
 - **Sur devis** (`byQuote`, `src/lib/billing/catalog.ts`) : un plan ou un module sans prix, autre que le
   gratuit (`FREE_PLAN`, le `default_plan_code`). La page Abonnement, la fenêtre des refus, la jauge et le
   dossier pour la direction le nomment « Sur devis » ; sur le web, « Parler à l'équipe CLIP » mène à
@@ -412,7 +446,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Ce qui se facture : `ai_credits`, une banque de crédits d'IA par mois · `published_instructions`,
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,
-  `full_export`, `shared_blocks`, oui ou non selon le plan. Les opérateurs et les lecteurs ne se comptent jamais.
+  `full_export`, `shared_blocks`, `screen_capture`, `ai_learning`, oui ou non selon le plan. Les opérateurs et
+  les lecteurs ne se comptent jamais.
 - **L'IA au coût réel** : aucun prix fixe, rien ne se prédit. Pas de section `ai_operations` au
   manifeste, aucun prix sur un bouton : chaque réponse de l'IA est débitée, une fois terminée, de ce
   qu'elle a vraiment coûté (`aiApi.ask`, `src/lib/gateway/ai.ts`, l'askAi du skill `billing`).
@@ -462,7 +497,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   n'y est pas, ou si l'IA retrouve un prix fixe (`ai_operations`).
 - Le branchement, app web : le drapeau public `NEXT_PUBLIC_BILLING_V2` (éteint par défaut) ; la page
   `/reglages/abonnement` (introuvable sans le drapeau ni l'aperçu ; ouverte par « Abonnement et crédits » du
-  menu et par la pastille de crédits), avec le paiement et le portail Stripe ; la fenêtre des
+  menu et par la pastille de crédits), avec le paiement et le portail Stripe, et sous les crédits « à ce
+  rythme, épuisés vers le … » avec le plan qui en donne plus (`creditsForecast`, `src/lib/billing/forecast.ts`) ;
+  le rapport « Crédits d'IA : où ils vont » (`/rapports/ia`, `clip_event` `type: 'ai'`) ; la fenêtre des
   refus `Paywall`, qui ne conseille jamais le plan actuel, seulement le moins cher des plans qui
   donnent vraiment plus (`src/lib/billing/advice.ts`). Pas de route serveur : le navigateur appelle
   la passerelle avec le jeton de l'utilisateur.
@@ -490,7 +527,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Le conseiller d'achat (toggle `salesAdvisor`, `src/lib/billing/advisor.ts`, carte `OfferCard` de
   l'accueil seulement : jamais au poste ni pendant une tâche) : une offre à la fois, tirée de l'usage
   (une limite pleine ou à 80 % dès deux unités, une fonction fermée essayée deux fois en 30 jours, un
-  module que l'usage appelle : 10 formations ou 30 relevés en 30 jours). Une nouvelle au plus par
+  module que l'usage appelle : 10 formations ou 30 relevés en 30 jours ; des crédits qui, à ce rythme,
+  finiront au moins 3 jours avant le renouvellement, `creditsForecast`, une fois par période). Une nouvelle au plus par
   semaine ; « Plus tard » la range 30 jours, et deux semaines sans réponse aussi. La mémoire est
   par personne et par appareil (`advisorStore.ts`) ; chaque offre montrée, ouverte, rangée ou
   demandée se note dans `clip_event` (`type: 'offer'`). Qui ne peut pas acheter « Demande à

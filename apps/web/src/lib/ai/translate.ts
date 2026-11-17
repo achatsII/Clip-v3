@@ -265,10 +265,13 @@ function putImage(t: TranslatedContent, content: InstructionContent, stepId: str
   entry.media = media
 }
 
-/** Les images qu'on peut refaire : les photos et images figées (pas les illustrations de l'IA, sans texte). */
+/**
+ * Les images qu'on peut refaire : les photos et images figées (pas les illustrations de l'IA, sans
+ * texte, ni un GIF : refait, il ne bougerait plus).
+ */
 export function imageCandidates(content: InstructionContent) {
   return content.steps.flatMap((s, stepIndex) =>
-    s.media.flatMap((m, index) => (m.kind === 'image' && m.url && !m.generated ? [{ stepId: s.id, stepIndex, index, media: m }] : [])),
+    s.media.flatMap((m, index) => (m.kind === 'image' && m.url && !m.generated && !m.gif ? [{ stepId: s.id, stepIndex, index, media: m }] : [])),
   )
 }
 

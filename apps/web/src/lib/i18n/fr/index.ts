@@ -25,7 +25,8 @@ import { academy } from './academy'
 import { reports } from './reports'
 import { decouvrir } from './decouvrir'
 import { nomenclature } from './nomenclature'
+import { learning } from './learning'
 
-export const fr = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir, nomenclature }
+export const fr = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir, nomenclature, learning }
 
 export type Messages = typeof fr

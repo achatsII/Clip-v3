@@ -1302,6 +1302,56 @@ imprimé par le navigateur ou par la coquille (`print`). À côté de l'aperçu,
 - La coquille iOS imprime sans les boîtes de marge (pas de numéro de page) ; le pied de page de fin de
   document reste.
 
+### Le GIF à l'étape (toggle `gifInStep`, `GifDialog`)
+
+- « Vidéo · Image · GIF » sur le média d'une étape : trois formes du même moment. « GIF » ouvre le choix du
+  début et de la fin dans la vidéo entière (`VideoTrimmer`, 15 s au plus : `clampGifRange` garde le bout
+  qu'on vient de bouger et fait suivre l'autre), puis trois choix : à la place du média montré, en plus
+  (juste après lui), ou seulement le partager.
+- Le GIF est une image qui porte `gif` (la vidéo, l'extrait, l'image d'attente) : « Vidéo » y revient sans
+  rien perdre ; légende, verdict et marques suivent dans les deux sens. Une image nette de l'écran renvoie
+  à son enregistrement (`videoSourceOf`).
+- L'IA ne lit jamais un GIF (`isAiImage`, `src/lib/model/media.ts`) : ni marques automatiques, ni image
+  refaite à la traduction, ni illustration à partir de lui ; l'annotateur garde ses outils, sans le bouton
+  de l'IA.
+
+### Enregistrer l'écran (toggle `screenCapture`, feature `screen_capture`)
+
+- Le partage d'écran du navigateur (`getDisplayMedia`), sans extension : à l'ordinateur seulement
+  (`canRecordScreen` : pointeur fin et partage d'écran disponibles). La vidéo s'enregistre comme une vidéo
+  filmée (`startRecording`, MP4 si le navigateur le sait) ; la voix en option ; dix minutes au plus.
+- Les images nettes : chaque image de l'écran est regardée en 320 × 180 niveaux de gris, hors de la boucle
+  de l'onglet quand `MediaStreamTrackProcessor` existe (Chrome, Edge : l'onglet de CLIP est en
+  arrière-plan pendant qu'on travaille dans l'autre logiciel), sinon par une minuterie. `ShotPicker` garde
+  l'écran de départ, puis l'image d'avant chaque vrai changement (0,6 % de l'écran au moins, mesuré contre
+  l'écran calme de référence : un fondu compte), si l'écran était calme depuis 300 ms ; jamais deux fois le
+  même écran, 60 images au plus, l'écran d'arrivée à la fin. L'image d'avant reste ouverte (`VideoFrame`)
+  jusqu'à la suivante et ne se dessine en pleine grandeur que si on la garde. Éprouvé dans Chromium avec un
+  écran qui ne change que par à-coups et un écran qui défile sans cesse.
+- Un seul envoi (`ingestScreen`), qui reprend où il s'était arrêté : la vidéo (`Source.screen`), puis ses
+  images (`Source.shot`), quatre à la fois. La capture n'en montre qu'une carte (« 12 images de l'écran ») ;
+  retirer la vidéo retire ses images.
+- Pour l'IA (`prepareForAi`, `SCREEN_RULES`) : la vidéo dite « enregistrement de l'écran », chaque image
+  avec son instant ; une étape par action, l'image nette en média avec `focusLabel`, entourée ensuite.
+  L'image choisie porte `frame` (son instant dans la vidéo) : « Vidéo » et « GIF » en repartent.
+
+### L'IA qui apprend des corrections (toggle `learnFromEdits`, `src/lib/learning/`)
+
+- À la génération, le texte de la version de l'IA (`generation.original`, sans les médias). À la première
+  publication, `recordEdits` compare (`editSignals` : étapes retrouvées par les mots de sens, puis
+  longueurs, points clés, mises en garde, mots remplacés, six exemples), écrit `clip_edit`, et efface la
+  version de l'IA (`learnedAt`).
+- `proposeRules` (sans IA) : une habitude qui revient dans au moins 3 instructions et 60 % des 12
+  dernières devient une règle proposée (la longueur gardée, moins de points clés, le mot de l'usine…) ;
+  une proposition répondue, une règle déjà écrite ou un terme connu ne reviennent pas.
+- Les préférences de chacun (`clip_writing`) : règles, 👎 commentés, modèles, réponses ; versionnées (dix
+  versions, « Reprendre »). L'IA les lit après le standard de l'usine (`standardBlock`), à la génération et
+  dans l'assistant ; l'import en lot reste au seul standard de l'usine.
+- Pour l'usine (droit `settings`, feature `ai_learning`) : une proposition gardée fait une nouvelle version
+  du standard (`nextStandard`) ; « Analyser avec l'IA » lit les exemples des 30 dernières corrections
+  (`rulesFromEdits`, `learn_rules`) ; « Prendre comme modèle » (`rulesFromModel`) garde l'instruction comme
+  exemple de style (`examples`) et ajoute les règles qu'on coche.
+
 ## 5. Compatibilité et pilotage
 
 - **Feature toggles** servis par `GET /api/config` (variables d'environnement du serveur web). Sans

@@ -46,7 +46,7 @@ export const ACCEPTED_FILES = 'image/*,video/*,audio/*,application/pdf,.pdf,.doc
  * `preset` : ce que la séance sait d'avance d'une source, comme le lien d'une photo à la note de sa
  * série (`voice`) ou l'identifiant donné d'avance à cette note.
  */
-export type SourcePreset = Pick<Partial<Source>, 'id' | 'voice'>
+export type SourcePreset = Pick<Partial<Source>, 'id' | 'voice' | 'screen'>
 
 export async function ingestFile(file: File, files: FilesApi, onProgress?: IngestProgress, capturedOn: Source['capturedOn'] = 'web', preset: SourcePreset = {}): Promise<Source> {
   const kind = kindOfFile(file)
@@ -104,6 +104,60 @@ export async function ingestFile(file: File, files: FilesApi, onProgress?: Inges
   const pageCount = await pdfPageCount(pdf)
   const u = await files.upload(new Blob([pdf], { type: 'application/pdf' }), name, 'documents', (s, t) => up(s / t), wait)
   return { ...base, name, originalName: file.name, url: u.url, path: u.path, mimeType: 'application/pdf', sizeBytes: u.sizeBytes, pageCount }
+}
+
+/** Ce qu'un enregistrement de l'écran donne à envoyer (`screenRecorder.ts`). */
+export interface ScreenCapture {
+  video: File
+  durationSec: number
+  shots: Array<{ blob: Blob; at: number; width: number; height: number }>
+}
+
+/**
+ * Ce qui est déjà parti d'un enregistrement de l'écran : « Réessayer » reprend où l'envoi s'était
+ * arrêté, sans renvoyer la vidéo ni les images déjà en ligne.
+ */
+export interface ScreenProgress {
+  video?: Source
+  shots: Array<Source | undefined>
+}
+
+/**
+ * Un enregistrement de l'écran (toggle `screenCapture`) : la vidéo, puis ses images nettes, quatre à
+ * la fois. Rend la vidéo (`screen`) suivie de ses images (`shot` : la vidéo et l'instant), dans
+ * l'ordre du temps. `videoId` : l'identifiant donné d'avance à la vidéo.
+ */
+export async function ingestScreen(capture: ScreenCapture, files: FilesApi, onProgress: IngestProgress | undefined, videoId: string, done: ScreenProgress = { shots: [] }): Promise<Source[]> {
+  const share = capture.shots.length ? 0.8 : 1
+  if (!done.video) {
+    const video = await ingestFile(capture.video, files, (stage, r) => onProgress?.(stage, r === undefined ? undefined : r * share), 'web', { id: videoId, screen: true })
+    // Un enregistrement du navigateur ne dit pas toujours sa durée : on la connaît, on la garde.
+    done.video = video.durationSec && Number.isFinite(video.durationSec) ? video : { ...video, durationSec: Math.round(capture.durationSec * 10) / 10 }
+  }
+  const createdAt = new Date().toISOString()
+  let sent = done.shots.filter(Boolean).length
+  const total = capture.shots.length
+  const queue = capture.shots.map((shot, i) => ({ shot, i })).filter(({ i }) => !done.shots[i])
+  async function worker() {
+    for (let job = queue.shift(); job; job = queue.shift()) {
+      const { shot, i } = job
+      const name = `${capture.video.name.replace(/\.[a-z0-9]+$/i, '')} ${clockName(shot.at)}.jpg`
+      const u = await files.upload(shot.blob, name, 'captures')
+      done.shots[i] = { id: uid('src_'), kind: 'photo', name, url: u.url, path: u.path, mimeType: u.mimeType || 'image/jpeg', sizeBytes: u.sizeBytes, width: shot.width, height: shot.height, thumbnailUrl: u.url, createdAt, capturedOn: 'web', shot: { sourceId: videoId, at: Math.round(shot.at * 10) / 10 } }
+      sent++
+      onProgress?.('upload', share + ((1 - share) * sent) / Math.max(1, total))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker))
+  const shots = done.shots.filter((x): x is Source => !!x)
+  const video = !done.video.thumbnailUrl && shots[0] ? { ...done.video, thumbnailUrl: shots[0].url } : done.video
+  return [video, ...shots]
+}
+
+/** « 1m05s » : l'instant d'une image de l'écran, dans un nom de fichier. */
+const clockName = (sec: number) => {
+  const t = Math.max(0, Math.round(sec))
+  return `${Math.floor(t / 60)}m${String(t % 60).padStart(2, '0')}s`
 }
 
 /**

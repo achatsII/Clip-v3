@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeft, ChevronDown, FileUp, ImagePlus, Library, Mic, PenLine, RotateCcw, Sparkles, Video, Wand2 } from 'lucide-react'
+import { ArrowLeft, ChevronDown, FileUp, ImagePlus, Library, Lock, Mic, MonitorUp, PenLine, RotateCcw, Sparkles, Video, Wand2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
@@ -26,6 +26,10 @@ import { AudioRecorder } from './AudioRecorder'
 import { DictateButton } from './DictateButton'
 import { PendingCard, SourceCard } from './SourceCard'
 import { MediaLibraryDialog } from './MediaLibraryDialog'
+import { ScreenRecorder } from './ScreenRecorder'
+import { canRecordScreen } from '@/lib/media/screenRecorder'
+import { LockBadge } from '@/components/billing/Billing'
+import { useEntitlement, useGate } from '@/lib/billing/state'
 import { WebCamera } from './WebCamera'
 import { useImmersive } from '@/lib/ui/immersive'
 import { useWide } from '@/lib/ui/screen'
@@ -135,6 +139,22 @@ export function CaptureBoard({
   // Parler pendant les photos (toggle `photoVoice`) : dans l'app, si la coquille sait le faire.
   const photoVoice = useToggle('photoVoice')
   const narrated = useMemo(() => narratedPhotos(snap.sources), [snap.sources])
+  // Enregistrer l'écran (toggle `screenCapture`) : seulement à l'ordinateur, le navigateur le permet là.
+  const screenToggle = useToggle('screenCapture')
+  const [screenReady, setScreenReady] = useState(false)
+  useEffect(() => setScreenReady(canRecordScreen()), [])
+  const screenOn = screenToggle && screenReady
+  const [screenOpen, setScreenOpen] = useState(false)
+  // Dès Solo (feature `screen_capture`) : sans le droit, la tuile garde son cadenas et mène au plan qui l'ouvre.
+  const screenRight = useEntitlement('screen_capture')
+  const gate = useGate()
+  // Ses images nettes vont avec la vidéo : une seule carte, qui dit combien.
+  const shotsOf = useMemo(() => {
+    const out = new Map<string, number>()
+    for (const s of snap.sources) if (s.shot) out.set(s.shot.sourceId, (out.get(s.shot.sourceId) ?? 0) + 1)
+    return out
+  }, [snap.sources])
+  const listed = snap.sources.filter((s) => !s.shot || !snap.sources.some((v) => v.id === s.shot!.sourceId))
 
   async function native(type: 'camera.photo' | 'camera.video' | 'audio.record') {
     try {
@@ -186,6 +206,7 @@ export function CaptureBoard({
       color: 'from-slate-500 to-slate-700',
       onClick: () => (hasCapability('media.pick') ? setPickerOpen(true) : fileInput.current?.click()),
     },
+    ...(screenOn ? [{ key: 'screen', label: tb.actions.screen.label, hint: tb.actions.screen.hint, icon: (c: string) => <MonitorUp className={c} />, color: 'from-cyan-600 to-blue-800', locked: screenRight === 'locked', onClick: () => gate(screenRight, 'screen_capture', () => setScreenOpen(true)) }] : []),
   ]
   const [pickerOpen, setPickerOpen] = useState(false)
   const [libraryOpen, setLibraryOpen] = useState(false)
@@ -218,7 +239,7 @@ export function CaptureBoard({
     }
   }
 
-  const captured = snap.sources.length + snap.pending.length
+  const captured = listed.length + snap.pending.length
   // « Générer » paraît dès qu'il y a quelque chose de prêt ou en route ; un envoi raté le dit sur sa carte.
   const showGenerate = hasContent || busy
   // La limite la plus proche : dépassée, elle dit laquelle ; à 80 %, elle prévient avant de bloquer.
@@ -329,12 +350,13 @@ export function CaptureBoard({
             </span>
           </button>
           <p className="label-caps mt-1.5 px-1 text-slate-500 sm:hidden">{tb.others}</p>
-          <div className="grid grid-cols-4 gap-2 sm:col-span-4 sm:gap-3">
+          <div className={cn('grid grid-cols-4 gap-2 sm:col-span-4 sm:gap-3', others.length > 4 && 'sm:grid-cols-5')}>
             {others.map((a) => (
-              <button key={a.key} type="button" onClick={a.onClick} title={a.hint} className="btn-press glass-card flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-[22px] px-1 py-3 text-center sm:min-h-40 sm:rounded-[28px]">
+              <button key={a.key} type="button" onClick={a.onClick} title={a.hint} className="btn-press glass-card relative flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-[22px] px-1 py-3 text-center sm:min-h-40 sm:rounded-[28px]">
                 <span className={cn('flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-[0_8px_18px_rgba(15,23,42,0.15)] sm:h-14 sm:w-14', a.color)}>{a.icon('h-5 w-5 sm:h-7 sm:w-7')}</span>
                 <span className="text-xs leading-tight font-black text-slate-800 sm:text-base dark:text-slate-100">{a.label}</span>
                 <span className="hidden text-xs font-bold text-slate-500 sm:block">{a.hint}</span>
+                {'locked' in a && a.locked && <LockBadge className="absolute top-2 right-2" />}
               </button>
             ))}
           </div>
@@ -347,7 +369,7 @@ export function CaptureBoard({
               {tb.notes} <span className="text-sm font-black text-slate-400 tabular-nums">{captured}</span>
             </h2>
             <div className="grid gap-2.5 md:grid-cols-2">
-              {snap.sources.map((s) => (
+              {listed.map((s) => (
                 <SourceCard
                   key={s.id}
                   source={s}
@@ -355,6 +377,7 @@ export function CaptureBoard({
                   onEditText={(text) => void session.updateText(s.id, text)}
                   narrated={narrated.get(s.id)?.length}
                   voiceAt={s.voice && narrated.has(s.voice.sourceId) ? s.voice.at : undefined}
+                  screenShots={s.screen ? (shotsOf.get(s.id) ?? 0) : undefined}
                 />
               ))}
               {snap.pending.map((p) => (
@@ -364,11 +387,12 @@ export function CaptureBoard({
           </section>
           <div className="mt-4">
             <p className="label-caps mb-2 px-1 text-slate-500">{tb.addMore}</p>
-            <div className="grid grid-cols-5 gap-2">
+            <div className={cn('grid gap-2', actions.length > 5 ? 'grid-cols-6' : 'grid-cols-5')}>
               {actions.map((a) => (
-                <button key={a.key} type="button" onClick={a.onClick} title={a.hint} className="btn-press glass-card flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-[20px] px-1 py-2 text-center">
+                <button key={a.key} type="button" onClick={a.onClick} title={a.hint} className="btn-press glass-card relative flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-[20px] px-1 py-2 text-center">
                   <span className={cn('flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br text-white', a.color)}>{a.icon('h-[18px] w-[18px]')}</span>
                   <span className="text-[11px] leading-tight font-black text-slate-700 sm:text-xs dark:text-slate-200">{a.label}</span>
+                  {'locked' in a && a.locked && <Lock className="absolute top-1.5 right-1.5 h-3.5 w-3.5 text-slate-400" aria-hidden />}
                 </button>
               ))}
             </div>
@@ -477,6 +501,7 @@ export function CaptureBoard({
 
       <WebCamera open={!!camera} mode={camera ?? 'photo'} voice={photoVoice} onClose={() => setCamera(null)} onCaptured={(list, voice) => session.addPhotoSeries(list, voice ?? null)} />
       <AudioRecorder open={audioOpen} onClose={() => setAudioOpen(false)} onCaptured={(f) => session.addFiles([f])} />
+      {screenOn && <ScreenRecorder open={screenOpen} onClose={() => setScreenOpen(false)} onCaptured={(capture) => session.addScreen(capture, capture.shots[0] ? URL.createObjectURL(capture.shots[0].blob) : undefined)} />}
       <Modal
         open={noteOpen}
         onClose={() => setNoteOpen(false)}

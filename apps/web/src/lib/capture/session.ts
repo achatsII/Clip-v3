@@ -7,7 +7,7 @@ import { nativeEnv } from '../bridge/native'
 import type { DataApi } from '../gateway/data'
 import type { FilesApi } from '../gateway/files'
 import { messages } from '../i18n'
-import { ingestFile, ingestNative, ingestSlides, isSlides, kindOfFile, type IngestStage, type SourcePreset } from '../media/ingest'
+import { ingestFile, ingestNative, ingestScreen, ingestSlides, isSlides, kindOfFile, type IngestStage, type ScreenCapture, type ScreenProgress, type SourcePreset } from '../media/ingest'
 import { canReadSlides, isPptx } from '../media/slides'
 import { uid } from '../model/repo'
 import { createInstruction, saveSources, type Actor } from '../model/service'
@@ -194,6 +194,16 @@ export class CaptureSession {
     void this.run({ tempId: uid('tmp_'), kind: 'audio', name: voice.audio.name, stage: 'prepare' }, (p) => ingestFile(voice.audio, this.deps.files, p, 'web', { id: voiceId }))
   }
 
+  /**
+   * Un enregistrement de l'écran (toggle `screenCapture`) : un seul envoi, une seule carte — la vidéo
+   * puis ses images nettes. « Réessayer » reprend où il s'était arrêté.
+   */
+  addScreen(capture: ScreenCapture, previewUrl?: string) {
+    const videoId = uid('src_')
+    const done: ScreenProgress = { shots: [] }
+    void this.run({ tempId: uid('tmp_'), kind: 'video', name: capture.video.name.replace(/\.[a-z0-9]+$/i, ''), previewUrl, stage: 'prepare' }, (p) => ingestScreen(capture, this.deps.files, p, videoId, done))
+  }
+
   addNative(items: CapturedMedia[]) {
     const platform = nativeEnv()?.platform ?? 'ios'
     // Une série de photos commentée : la note reçoit son identifiant d'avance, et chaque photo prise
@@ -239,10 +249,12 @@ export class CaptureSession {
   }
 
   async remove(id: string) {
-    const victim = this.snap.sources.find((s) => s.id === id)
-    this.set({ sources: this.snap.sources.filter((s) => s.id !== id) })
+    // Un enregistrement de l'écran s'en va avec ses images nettes.
+    const victims = this.snap.sources.filter((s) => s.id === id || s.shot?.sourceId === id)
+    this.set({ sources: this.snap.sources.filter((s) => !victims.includes(s)) })
     await this.persist()
-    if (victim?.path) void this.deps.files.remove([victim.path])
+    const paths = victims.flatMap((v) => (v.path ? [v.path] : []))
+    if (paths.length) void this.deps.files.remove(paths)
   }
 
   /**

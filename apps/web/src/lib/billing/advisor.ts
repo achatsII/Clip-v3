@@ -8,6 +8,7 @@
 import { moduleOffer, planFor } from './advice'
 import { byQuote, isLimitFeature, moduleOf, MODULES, type FeatureKey, type LimitFeature, type ModuleKey } from './catalog'
 import type { BillingState, PublicPlan } from './client'
+import { creditsForecast } from './forecast'
 import { usageLevel } from './usage'
 
 const DAY = 86400_000
@@ -29,6 +30,8 @@ export type Offer =
   | { id: string; kind: 'feature'; feature: FeatureKey; tries: number; plan: string | null; addon: string | null }
   /** Un module que l'usage appelle (le plan le reçoit) : 14 jours offerts. */
   | { id: string; kind: 'module'; module: ModuleKey; feature: FeatureKey; evidence: number; addon: string; trialDays: number }
+  /** À ce rythme, les crédits de l'IA finiront avant le renouvellement : le plan qui en donne plus. */
+  | { id: string; kind: 'credits'; feature: 'ai_credits'; runsOutAt: string; daysShort: number; plan: string }
 
 export interface AdvisorInput {
   state: BillingState
@@ -59,6 +62,14 @@ export function candidates(x: AdvisorInput): Offer[] {
       const plan = planFor(x.plans, x.state, feature)
       if (plan && !byQuote(plan)) out.push({ id: `limit:${feature}`, kind: 'limit', feature, used: l.used, limit: l.limit, full, plan: plan.code })
     }
+  }
+
+  // 1 bis. Les crédits de l'IA qui, à ce rythme, finiront au moins trois jours avant le renouvellement
+  // (une fois par période : l'offre porte la date du renouvellement).
+  const forecast = creditsForecast(x.state.credits.find((c) => c.feature_key === 'ai_credits'), x.now)
+  if (forecast && forecast.daysShort >= 3) {
+    const plan = planFor(x.plans, x.state, 'ai_credits')
+    if (plan && !byQuote(plan)) out.push({ id: `credits:${forecast.renewsAt.slice(0, 10)}`, kind: 'credits', feature: 'ai_credits', runsOutAt: forecast.runsOutAt, daysShort: forecast.daysShort, plan: plan.code })
   }
 
   // 2. Une fonction fermée que la personne a essayée plusieurs fois ce mois-ci.

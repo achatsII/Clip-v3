@@ -181,6 +181,7 @@ export const instructions: typeof Fr = {
     image: 'Image',
     illustration: 'Illustration',
     photo: 'Photo',
+    gif: 'GIF',
   },
   changes: {
     first: 'First version.',

@@ -65,6 +65,14 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   ouvert ») le dit et le ferme d'un toucher ; le choix est retenu sur l'appareil. Tout ce qui est dit forme
   un seul « Commentaire des photos », sans couper une phrase au déclic, et chaque photo garde l'instant où
   elle a été prise : l'IA associe à chaque photo ce qui a été dit autour d'elle.
+- À l'ordinateur, « Écran » enregistre un logiciel (un ERP, un MES, une interface de machine), sans rien
+  installer : on choisit la fenêtre ou tout l'écran, on fait la tâche comme d'habitude, la voix en option
+  dit le pourquoi, et « Terminer » (ou « Arrêter le partage » du navigateur) le garde. CLIP prend une image
+  nette juste avant chaque clic, même rapide, le pointeur sur ce qu'on touche ; l'IA en fait une étape par
+  action (« Cliquer sur Enregistrer », « Saisir le numéro de lot dans Lot »), l'image nette en média et
+  l'élément à toucher entouré, sans recopier un mot de passe ni une donnée personnelle visible. Dix minutes
+  au plus. Pas au téléphone ni à la tablette : le navigateur ne partage pas leur écran. L'assistant de
+  l'éditeur l'accepte aussi, pour ajouter quelques étapes d'un logiciel à une instruction.
 - On peut glisser des fichiers : vidéos d'une autre caméra, photos, anciennes instructions en PDF ou Word.
   « Médias déjà pris » reprend les médias des instructions précédentes, sans rien téléverser de nouveau.
 - Des médias légers : l'app mobile filme en 720p (environ 19 Mo la minute) et ramène les photos à 1920 px ;
@@ -88,7 +96,7 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   savoir »), les équipements de protection (EPI), les outils et le matériel, chacun avec son image (une
   clé, un tournevis, un chiffon).
 - Chaque étape reçoit son média : l'extrait de la vidéo d'origine à la seconde près (joué en boucle au
-  poste, pas un GIF), une photo, une image figée tirée de la vidéo, ou une figure d'un PDF : la photo ou
+  poste ; l'auteur peut en faire un GIF), une photo, une image figée tirée de la vidéo, ou une figure d'un PDF : la photo ou
   le dessin de la page qui illustre l'étape, recadré (la page entière reste à un geste dans l'éditeur).
 - L'IA classe l'instruction (production, maintenance, qualité, santé et sécurité, nettoyage, changement de
   format, démarrage et arrêt) et devine son poste, rapproché des postes existants.
@@ -108,7 +116,20 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   mots au plus par étape, ton, règles, vocabulaire de l'usine ; « Décrire à l'IA » le rédige à partir d'une
   description). Les EPI et les mises en garde s'affichent avant la première étape, même sans étape de
   sécurité. Sous une instruction générée, « Le résultat vous convient ? » : ce qui manque guide les
-  générations suivantes (« Ce que l'IA a appris de vos avis »).
+  générations suivantes (« Ce que l'IA a appris de vos avis ») : pour toute l'usine quand c'est
+  l'administrateur qui le dit, pour la personne seulement sinon.
+- L'IA apprend des corrections : à la première publication d'une instruction générée, CLIP compare la
+  version de l'IA à la version publiée (textes raccourcis, points clés retirés, mises en garde ajoutées,
+  étapes découpées, un mot remplacé par celui de l'usine). Quand une même habitude revient dans au moins
+  trois instructions, une carte le dit après la publication (« Vous raccourcissez les textes de l'IA,
+  4 instructions sur 5 ») et propose la règle : « Oui, pour moi », « Pour toute l'usine » (administrateur),
+  ou « Non merci », qui ne revient pas. « Prendre comme modèle » (menu « … » de l'éditeur) : on dit d'un
+  toucher ce qui rend une instruction bonne (textes courts, une action par étape, bons points clés…),
+  l'IA en tire des règles de style, et l'instruction devient un exemple que les générations imitent
+  (le style, jamais le contenu). Chacun a « Mes préférences de rédaction » (Réglages › Standard de
+  rédaction), versionnées avec retour en arrière, que l'IA suit pour ses instructions après le standard de
+  l'usine ; l'administrateur voit aussi ce que les corrections de toute l'équipe proposent, et « Analyser
+  avec l'IA » lit les dernières corrections pour proposer des règles.
 - La génération tourne dans l'appareil qui la lance et se voit sur les autres (« En création ») ; au
   navigateur, on peut quitter l'écran tant que l'onglet reste ouvert. Si l'appareil s'éteint, la création est
   « interrompue » et se relance d'un geste ; les médias sont gardés.
@@ -147,8 +168,11 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - « Annoter l'image » : crayon, surligneur, flèche, ligne, distance (une cote : « 12 mm »), cercle, cadre,
   texte, numéro, icônes (danger, gants, cadenas, sens horaire…) et flou (cacher un visage, un nom, un écran).
   « Annoter par IA » place les flèches et les cercles sur ce qu'il faut voir.
-- « GIF » sur un extrait : un GIF de l'étape (15 secondes au plus) à télécharger ou à partager, pour un
-  courriel, Teams ou une présentation. Au poste, l'étape garde son extrait, qui joue déjà en boucle.
+- « GIF » sur un média vidéo (à côté de « Vidéo » et « Image ») : on choisit le début et la fin dans la
+  vidéo (15 secondes au plus), puis on décide : « À la place de la vidéo » (l'étape montre le GIF ;
+  « Vidéo » y revient d'un geste), « En plus de la vidéo », ou « Seulement le partager » (télécharger,
+  partager, copier le lien) pour un courriel, Teams ou une présentation. Un GIF joue tout seul, partout ;
+  une vidéo reste plus nette et plus légère, avec le son et la pause.
 - Sous le média, les outils de l'IA à découvert : « Illustrer l'étape », une illustration tirée du texte de
   l'étape, même quand elle n'a encore aucune image (« Illustrer cette image » part de la photo affichée), et
   « Schéma de l'étape » (vue de face, de dessus, en coupe ou en 3D, avec très peu de mots).
@@ -294,7 +318,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - Retours : ce que le plancher signale, « À traiter » et « Traités » ; « Corriger » ouvre l'étape.
 - Rapports : des modèles prêts (revue de la semaine, temps par instruction, qui a fait quoi, par poste et
   secteur, écarts et relevés, avant / après une révision, formation et qualification, retours des opérateurs,
-  santé de la bibliothèque), sur 7, 30 ou 90 jours comparés à la période d'avant, par lieu et par quart. Le
+  santé de la bibliothèque, crédits d'IA : où ils vont — par usage, par personne, par jour, et ce que coûte
+  une génération typique), sur 7, 30 ou 90 jours comparés à la période d'avant, par lieu et par quart. Le
   logiciel calcule chaque chiffre ; l'IA les commente et répond aux questions sur le rapport. Les personnes y
   vont par ordre alphabétique : un registre, jamais un palmarès.
 - Statistiques : consultations (tablettes, liens, app), réalisations, retours, les instructions les plus

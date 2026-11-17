@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate' | 'mediaOrder' | 'feedbackMedia' | 'variants' | 'quickMode'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate' | 'mediaOrder' | 'feedbackMedia' | 'variants' | 'quickMode' | 'gifInStep' | 'screenCapture' | 'learnFromEdits'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -137,6 +137,15 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   variants: true,
   // La version courte pour les habitués, si l'auteur l'offre : « L'essentiel » ou « Tout en détail ».
   quickMode: true,
+  // Le GIF d'un extrait : choisir son début et sa fin, puis le mettre à l'étape, à la place de la
+  // vidéo ou en plus ; « Vidéo · Image · GIF » sur le média de l'étape.
+  gifInStep: true,
+  // Enregistrer l'écran d'un ordinateur, sans rien installer : la vidéo, une image nette à chaque
+  // action, la voix en option ; l'IA en fait une étape par clic et entoure où cliquer.
+  screenCapture: true,
+  // L'IA qui apprend des corrections : ce qu'on change après une génération, des règles proposées
+  // (pour moi ou pour l'usine), des instructions modèles, des préférences personnelles versionnées.
+  learnFromEdits: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -196,4 +205,7 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   feedbackMedia: false,
   variants: false,
   quickMode: false,
+  gifInStep: false,
+  screenCapture: false,
+  learnFromEdits: false,
 }

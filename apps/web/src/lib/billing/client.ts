@@ -21,6 +21,8 @@ export type CreditBucket = {
   granted: number
   consumed: number
   reserved: number
+  /** Le début de la période (la plateforme le rend ; une ancienne réponse peut ne pas l'avoir). */
+  period_start?: string | null
   period_end: string | null
   overage_policy?: string
 }

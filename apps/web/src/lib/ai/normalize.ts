@@ -94,7 +94,17 @@ export function warningFrom(level: unknown, text: unknown): Step['warning'] {
 export function resolveMedia(ref: AiMediaRef, sourcesById: Map<string, Source>): StepMedia | null {
   const src = ref.source ? sourcesById.get(ref.source.trim().toUpperCase()) : undefined
   if (!src || !src.url) return null
-  if (src.kind === 'photo') return { kind: 'image', url: src.url, sourceId: src.id }
+  if (src.kind === 'photo') {
+    // Une image nette de l'écran sait d'où elle vient : « Vidéo » ou « GIF » repartent de cet instant.
+    const video = src.shot ? [...sourcesById.values()].find((v) => v.id === src.shot!.sourceId && v.kind === 'video' && v.url) : undefined
+    if (src.shot && video?.url) {
+      const at = src.shot.at
+      const end = video.durationSec && video.durationSec > 0 ? Math.min(video.durationSec, at + 2) : at + 2
+      const round = (v: number) => Math.round(v * 10) / 10
+      return { kind: 'image', url: src.url, sourceId: src.id, frame: { videoUrl: video.url, at: round(at), start: round(Math.max(0, at - 3)), end: round(Math.max(end, at + 0.5)) } }
+    }
+    return { kind: 'image', url: src.url, sourceId: src.id }
+  }
   if (src.kind === 'video') {
     const dur = src.durationSec && src.durationSec > 0 ? src.durationSec : Number.POSITIVE_INFINITY
     if (Number.isFinite(ref.at)) {

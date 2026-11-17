@@ -44,6 +44,17 @@ export interface Source {
    * enregistrement par série, jamais coupé ; l'IA apparie chaque photo avec ce qui est dit autour.
    */
   voice?: { sourceId: string; at: number }
+  /**
+   * Un enregistrement de l'écran (toggle `screenCapture`) : la vidéo d'un logiciel, le pointeur et
+   * chaque clic visibles. Ses images nettes sont des photos qui portent `shot`.
+   */
+  screen?: true
+  /**
+   * Une image nette de l'écran, prise par l'app juste avant une action (`screenShots.ts`) : la vidéo
+   * d'où elle vient (`sourceId`) et son instant, en secondes. L'étape la montre, le pointeur sur ce
+   * qu'on touche ; « Vidéo » ou « GIF » repartent de cet instant.
+   */
+  shot?: { sourceId: string; at: number }
 }
 
 export type AnnotationType = 'pen' | 'highlight' | 'arrow' | 'line' | 'measure' | 'circle' | 'rect' | 'text' | 'number' | 'icon' | 'blur'
@@ -90,6 +101,19 @@ export interface VideoFrame {
 }
 
 /**
+ * Un GIF tiré d'un extrait (toggle `gifInStep`) : l'étape le montre à la place de la vidéo ou en plus.
+ * On sait d'où il vient : « Vidéo » y revient d'un geste, sans rien perdre.
+ */
+export interface GifOrigin {
+  videoUrl: string
+  start: number
+  end: number
+  /** L'image d'attente de la vidéo, reprise au retour à la vidéo. */
+  posterUrl?: string
+  sizeBytes?: number
+}
+
+/**
  * La page d'un document d'où vient une figure recadrée (toggle `documentFigures`) : l'étape montre la
  * figure, et revient à la page entière d'un geste si la figure ne suffit pas.
  */
@@ -118,7 +142,7 @@ interface MediaCommon {
 
 export type StepMedia = MediaCommon &
   (
-    | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame; fromPage?: DocumentPage }
+    | { kind: 'image'; url: string; sourceId?: string; alt?: string; annotations?: Annotation[]; generated?: boolean; frame?: VideoFrame; fromPage?: DocumentPage; gif?: GifOrigin }
     | { kind: 'video'; url: string; sourceId?: string; start: number; end: number; posterUrl?: string; clip?: ReelClip }
     | {
         kind: 'document'
@@ -426,6 +450,12 @@ export interface GenerationInfo {
   stationGuess?: string | null
   /** `server` : l'analyse a tourné au serveur (Job_start). */
   mode?: 'device' | 'server'
+  /**
+   * Le texte de la version de l'IA (toggle `learnFromEdits`), sans les médias : comparé à la première
+   * publication pour voir ce que la personne corrige (`clip_edit`), puis effacé (`learnedAt`).
+   */
+  original?: { title: string; steps: Array<{ title: string; text: string; keyPoints: string[]; warning: string | null }> } | null
+  learnedAt?: string | null
 }
 
 export interface ReviewRequest {
@@ -500,6 +530,8 @@ export interface ServerJobContext {
   figures?: boolean
   /** Des relevés proposés ; false : aucun (la fin retire ceux que l'IA aurait mis). Absent : oui, comme avant. */
   checks?: boolean
+  /** Garder le texte de la version de l'IA pour apprendre des corrections (toggle `learnFromEdits`). */
+  learn?: boolean
 }
 
 /** Le travail au serveur, tel que n8n l'écrit (`clip_job`). */
@@ -935,9 +967,52 @@ export interface WritingStandard {
   tone: 'tu' | 'vous' | 'infinitif'
   /** Vocabulaire propre à l'usine : terme → sens. */
   glossary: Array<{ term: string; meaning: string }>
+  /** Les instructions modèles de l'usine (toggle `learnFromEdits`) : l'IA imite leur style, jamais leur contenu. */
+  examples?: ModelExample[]
   version: number
   updatedAt: string
   updatedByName?: string
+}
+
+/**
+ * Une instruction prise comme modèle (« Prendre comme modèle ») : ce qui la rend bonne, et quelques
+ * étapes, que l'IA lit comme un exemple de style.
+ */
+export interface ModelExample {
+  instructionId: string
+  title: string
+  /** Ce qui la rend bonne, dit par la personne (« Textes courts, bons points clés »). */
+  why: string
+  steps: Array<{ title: string; text: string; keyPoints: string[] }>
+  at: string
+  byName?: string
+}
+
+/**
+ * Les préférences de rédaction d'une personne (`clip_writing`, une par personne) : ses règles, ce
+ * qu'elle a demandé après une génération (👎), ses modèles ; l'IA les suit pour ses instructions, après
+ * le standard de l'usine. Versionnées, comme le standard.
+ */
+export interface PersonalWriting {
+  userId: string
+  rules: string[]
+  learnings: Array<{ text: string; at: string }>
+  examples: ModelExample[]
+  /** Les propositions déjà répondues (clé → oui ou non) : elles ne reviennent pas. */
+  answered: Record<string, 'yes' | 'no'>
+  version: number
+  updatedAt: string
+  /** Les versions d'avant, la plus récente d'abord (10 au plus). */
+  history: Array<{ version: number; rules: string[]; at: string }>
+}
+
+/** Ce qu'une personne a corrigé à la version de l'IA, à la première publication (`clip_edit`). */
+export interface EditRecord {
+  instructionId: string
+  userId: string
+  userName?: string
+  at: string
+  signals: import('../learning/signals').EditSignals
 }
 
 /** La relecture périodique d'une instruction publiée (`src/lib/model/renewal.ts`). */
@@ -975,6 +1050,8 @@ export interface OrgSettings {
   standardHistory: WritingStandard[]
   /** Ce que la génération retient des avis donnés sur ses brouillons. */
   learnings: Array<{ text: string; at: string }>
+  /** Les propositions de règles déjà répondues pour l'usine (clé → oui ou non) : elles ne reviennent pas. */
+  learningAnswered?: Record<string, 'yes' | 'no'>
   members: Record<string, MemberSettings>
   goals: CategoryKey[]
   onboardedAt?: string | null

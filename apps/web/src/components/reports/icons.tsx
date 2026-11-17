@@ -1,6 +1,6 @@
 'use client'
 
-import { BarChart3, CalendarDays, GitCompareArrows, GraduationCap, Library, MapPin, MessageSquareWarning, Timer, TriangleAlert, Users } from 'lucide-react'
+import { BarChart3, CalendarDays, Coins, GitCompareArrows, GraduationCap, Library, MapPin, MessageSquareWarning, Timer, TriangleAlert, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Family, ReportKey } from '@/lib/reports/catalog'
 
@@ -15,6 +15,7 @@ export const REPORT_ICONS: Record<ReportKey | 'adoption', ReactNode> = {
   formation: <GraduationCap className="h-6 w-6" />,
   retours: <MessageSquareWarning className="h-6 w-6" />,
   bibliotheque: <Library className="h-6 w-6" />,
+  ia: <Coins className="h-6 w-6" />,
   adoption: <BarChart3 className="h-6 w-6" />,
 }
 

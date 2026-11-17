@@ -17,6 +17,7 @@ import { nowIso } from '@/lib/model/repo'
 import type { WritingStandard } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
 import { formatDate } from '@/lib/util/cn'
+import { MyWritingPanel, TeamLearningPanel } from '@/components/learning/WritingPanels'
 
 /** Le standard de rédaction : ce que l'IA respecte à chaque génération. Versionné. */
 export function StandardTab() {
@@ -26,6 +27,8 @@ export function StandardTab() {
   const toast = useToast()
   const readOnly = !can('settings', 'write')
   const firstStepChoice = useToggle('firstStepChoice')
+  // L'IA qui apprend des corrections : mes préférences, et ce que l'équipe corrige (toggle `learnFromEdits`).
+  const learnOn = useToggle('learnFromEdits')
   const current = org.json_data.standard
   const [draft, setDraft] = useState<WritingStandard>(current)
   const [agentOpen, setAgentOpen] = useState(false)
@@ -51,6 +54,8 @@ export function StandardTab() {
 
   return (
     <div className="space-y-5">
+      {/* Qui ne règle pas l'usine écrit d'abord ses propres préférences ; qui la règle, son standard d'abord. */}
+      {learnOn && readOnly && <MyWritingPanel />}
       <Panel>
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -155,6 +160,8 @@ export function StandardTab() {
         )}
       </Panel>
 
+      {learnOn && !readOnly && <TeamLearningPanel />}
+      {learnOn && !readOnly && <MyWritingPanel />}
       <Panel>
         <h2 className="text-lg font-black tracking-tight">{t.learningsTitle}</h2>
         <p className="mb-4 text-sm font-medium text-slate-500">{t.learningsIntro}</p>

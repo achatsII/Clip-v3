@@ -7,7 +7,7 @@
  * étapes il sert. Dans l'éditeur, il se met à l'étape ouverte (`onUse`) et on en ajoute d'autres
  * (`onSourceAdded`) ; en lecture, on ne fait que regarder. Jamais au poste.
  */
-import { FileText, Images, Loader2, Maximize2, Mic, Plus, Square, Upload } from 'lucide-react'
+import { FileText, Images, Loader2, Maximize2, Mic, MonitorUp, Plus, Square, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { ZoomViewer } from '@/components/media/ZoomViewer'
 import { useSession } from '@/components/providers/Session'
@@ -155,6 +155,7 @@ export function SourceLibrary({
                         <span className="pointer-events-none absolute top-1.5 left-1.5 flex items-center gap-1">
                           {tag(x)}
                           {s.voice && <Mic className="h-4 w-4 rounded bg-black/60 p-0.5 text-white" aria-hidden />}
+                          {s.shot && <MonitorUp className="h-4 w-4 rounded bg-black/60 p-0.5 text-white" aria-hidden />}
                         </span>
                         {n > 0 && <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-lg bg-[var(--primary)] px-1.5 py-0.5 text-[11px] font-black text-white tabular-nums">{used(s).map((u) => u.n).join(', ')}</span>}
                         {canUse && (

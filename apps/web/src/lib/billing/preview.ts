@@ -28,7 +28,7 @@ export interface PreviewSelection {
 export const DEFAULT_PREVIEW: PreviewSelection = { plan: 'usine', modules: ['academy', 'records'], credits: 'full' }
 
 type Flags = Record<Exclude<FeatureKey, 'ai_credits' | 'published_instructions' | 'stations' | 'editors'>, boolean>
-const NONE: Flags = { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, academy: false, records_plus: false }
+const NONE: Flags = { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, screen_capture: false, ai_learning: false, academy: false, records_plus: false }
 const cad = (monthly: number, yearly: number): PublicPlan['prices'] => [
   { interval: 'monthly', currency: 'CAD', amount_cents: monthly },
   { interval: 'yearly', currency: 'CAD', amount_cents: yearly },
@@ -48,9 +48,9 @@ const addon = (code: string, name: string, feature: 'academy' | 'records_plus'):
  * modules sont sur devis : sans prix, ils ne s'achètent nulle part. */
 export const PREVIEW_PLANS: readonly PublicPlan[] = [
   base('free', 'Gratuit', [], {}, { published_instructions: 3, stations: 1, editors: 1 }, 500),
-  base('solo', 'Solo', cad(4900, 49000), { adoption_stats: true }, { published_instructions: 15, stations: 3, editors: 1 }, 2500),
-  base('equipe', 'Équipe', cad(19900, 199000), { translations: true, adoption_stats: true, approvals: true, brand_kit: true, shared_blocks: true }, { published_instructions: 50, stations: 10, editors: 3 }, 10000),
-  base('usine', 'Usine', [], { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true }, { published_instructions: null, stations: 100, editors: 15 }, 40000),
+  base('solo', 'Solo', cad(4900, 49000), { adoption_stats: true, screen_capture: true }, { published_instructions: 15, stations: 3, editors: 1 }, 2500),
+  base('equipe', 'Équipe', cad(19900, 199000), { translations: true, adoption_stats: true, approvals: true, brand_kit: true, shared_blocks: true, screen_capture: true, ai_learning: true }, { published_instructions: 75, stations: 15, editors: 5 }, 12500),
+  base('usine', 'Usine', [], { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true, screen_capture: true, ai_learning: true }, { published_instructions: null, stations: 100, editors: 15 }, 40000),
   addon('academie-usine', 'Académie', 'academy'),
   addon('releves-usine', 'Relevés', 'records_plus'),
 ]

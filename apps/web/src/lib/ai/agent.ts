@@ -26,17 +26,17 @@ import { durableAsk } from './durableAsk'
 import { ApiError } from '../gateway/client'
 import { getLang, messages } from '../i18n'
 import { LANGUAGES, PPE } from '../model/catalog'
-import { layoutOf, mediaLabel } from '../model/media'
+import { isAiImage, layoutOf, mediaLabel } from '../model/media'
 import { uid } from '../model/repo'
 import { hasVariants, MAX_VARIANTS, newVariant, removeVariant, stepVariantsOfAi, variantNames } from '../model/variants'
 import type { FilesApi } from '../gateway/files'
-import type { Annotation, InstructionContent, OrgSettings, Source, Step, StepLayout, StepMedia, WarningLevel } from '../model/types'
+import type { Annotation, InstructionContent, Source, Step, StepLayout, StepMedia, WarningLevel } from '../model/types'
 import { annotateImage, createVisual, illustrationPrompt } from './assist'
 import { languageCode, translateContent, translateImage, translateMediaTexts } from './translate'
 import { localizeMedia, mediaKey, withMediaTranslation } from '../model/translation'
 import { enrichMedia, generationTier, measureSources, prepareForAi } from './generate'
 import { resolveMedia, warningFrom } from './normalize'
-import { standardBlock } from './prompts'
+import { SCREEN_RULES, standardBlock, type WritingContext } from './prompts'
 import type { LiveTool } from './useLiveVoice'
 
 export const AGENT_OPS = ['set_instruction', 'add_step', 'update_step', 'delete_step', 'move_step', 'set_checks', 'annotate', 'clear_annotations', 'illustrate', 'visual', 'set_layout', 'set_media', 'remove_media', 'use_media', 'look', 'translate', 'translate_media', 'translate_image'] as const
@@ -171,7 +171,7 @@ export const agentSchema = (ui: string) => ({
  * `lang.ui` : la langue de la personne (l'outil) ; `lang.content` : celle de l'instruction.
  * `translate` : faux quand la traduction n'est pas offerte (toggle coupé, ou pas dans le plan).
  */
-export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, lang: { ui: string; content: string }, opts: { translate?: boolean } = {}): string {
+export function agentSystem(org: WritingContext, lang: { ui: string; content: string }, opts: { translate?: boolean } = {}): string {
   return `Tu es l’assistant d’édition de CLIP. Tu modifies une instruction de travail d’usine à la demande de la personne qui la rédige. Tu rends une liste d’opérations que l’app applique une à une, sous ses yeux.
 - Fais exactement ce qui est demandé ; ne touche à rien d’autre et garde le texte existant qu’on ne te demande pas de changer.
 - Une étape = une action. Respecte le standard de l’usine ci-dessous (ton, nombre de mots).
@@ -263,7 +263,7 @@ export function agentPrompt(content: InstructionContent, focusStepId: string | n
 /** Un échange avec l'assistant (opération `edit_agent`). */
 export async function askAgent(
   ai: AiApi,
-  org: Pick<OrgSettings, 'standard' | 'learnings'>,
+  org: WritingContext,
   content: InstructionContent,
   focusStepId: string | null,
   request: string,
@@ -275,7 +275,7 @@ export async function askAgent(
      * Le deuxième tour : les sources demandées, jointes, et la question posée. `attached` : ce sont
      * des médias que la personne vient de joindre à sa demande (ils rejoignent les sources).
      */
-    look?: { operation: AiOperation; files: AskFile[]; lines: string[]; question: string; attached?: boolean }
+    look?: { operation: AiOperation; files: AskFile[]; lines: string[]; question: string; attached?: boolean; screen?: boolean }
     /** Faux : la traduction n'est pas offerte (toggle coupé, ou pas dans le plan). */
     canTranslate?: boolean
     /** Au téléphone (toggle `backgroundAi`) : la réponse se prépare au serveur et survit à l'arrière-plan. */
@@ -292,9 +292,11 @@ export async function askAgent(
     thinking: 'enabled',
     effort: 'low',
     system_instruction: look
-      ? look.attached
-        ? `${system}\n\nLA PERSONNE JOINT CES MÉDIAS À SA DEMANDE : ils font maintenant partie des sources d’origine (leurs numéros S sont dans la liste). Regarde-les et écoute-les, puis fais la demande ; pour mettre un de ces médias à une étape, use_media avec son numéro (une vidéo : start et end, l’extrait du geste). N’utilise pas look.`
-        : `${system}\n\nLES SOURCES DEMANDÉES SONT JOINTES : appuie-toi sur ce que tu vois et entends pour faire la demande. N’utilise plus look.`
+      ? `${
+          look.attached
+            ? `${system}\n\nLA PERSONNE JOINT CES MÉDIAS À SA DEMANDE : ils font maintenant partie des sources d’origine (leurs numéros S sont dans la liste). Regarde-les et écoute-les, puis fais la demande ; pour mettre un de ces médias à une étape, use_media avec son numéro (une vidéo : start et end, l’extrait du geste). N’utilise pas look.`
+            : `${system}\n\nLES SOURCES DEMANDÉES SONT JOINTES : appuie-toi sur ce que tu vois et entends pour faire la demande. N’utilise plus look.`
+        }${look.screen ? `\n\n${SCREEN_RULES}\n- Avec tes opérations : use_media met à l’étape l’image nette de l’écran (son numéro S) ; annotate sur ce média entoure l’élément à toucher.` : ''}`
       : system,
     prompt: look ? `${agentPrompt(content, focusStepId, request, opts.sources)}\n\n${look.attached ? 'MÉDIAS JOINTS PAR LA PERSONNE' : 'SOURCES JOINTES'} :\n${look.lines.join('\n')}\n${look.attached ? 'CE QU’IL FAUT EN FAIRE' : 'CE QU’IL FAUT Y TROUVER'} : ${look.question}` : agentPrompt(content, focusStepId, request, opts.sources),
     json_schema: agentSchema(ui),
@@ -339,7 +341,7 @@ export interface LookInfo {
 export async function agentTurn(input: {
   ai: AiApi
   files: FilesApi
-  org: Pick<OrgSettings, 'standard' | 'learnings'>
+  org: WritingContext
   content: InstructionContent
   focusStepId: string | null
   request: string
@@ -406,7 +408,7 @@ async function lookAt(
     sources,
     canTranslate: input.canTranslate,
     durable: input.durable,
-    look: { operation: tier.op, files: prepared.askFiles, lines, question, attached },
+    look: { operation: tier.op, files: prepared.askFiles, lines, question, attached, screen: picked.some((x) => x.src.screen || x.src.shot) },
   })
 }
 
@@ -435,7 +437,8 @@ const withStep = (content: InstructionContent, index: number, step: Step): Instr
 function mediaIndexOf(step: Step, n: number | undefined, wantImage = false): number {
   if (n && n >= 1 && n <= step.media.length) return n - 1
   if (wantImage) {
-    const i = step.media.findIndex((m) => m.kind === 'image')
+    // Une image que l'IA peut lire : un GIF ne se marque ni ne se refait.
+    const i = step.media.findIndex(isAiImage)
     if (i >= 0) return i
   }
   if (!step.media.length) throw new AgentOpError(messages().editorTools.agent.errors.noMedia)
@@ -643,7 +646,7 @@ async function applyAiOp(ctx: AgentRunContext, op: AgentOp, ids: IdMap): Promise
   if (op.op === 'annotate') {
     const i = mediaIndexOf(step, op.media, true)
     const m = step.media[i]
-    if (m.kind !== 'image') throw new AgentOpError(messages().editorTools.agent.errors.marksOnImage)
+    if (!isAiImage(m)) throw new AgentOpError(messages().editorTools.agent.errors.marksOnImage)
     const marks: Annotation[] = await annotateImage(ctx.ai, m.url, step, op.request || undefined)
     const latest = ctx.get()
     const at = stepOf(latest, ids, op.step)
@@ -657,8 +660,9 @@ async function applyAiOp(ctx: AgentRunContext, op: AgentOp, ids: IdMap): Promise
     return { content: withStep(latest, at.index, { ...at.step, media: [...at.step.media, v].slice(-MAX_MEDIA) }), label: messages().editorTools.agent.done.visualAdded(at.index + 1, v.title ?? ''), stepId: step.id }
   }
   // illustrate : à partir de l'image de l'étape s'il y en a une, sinon de son texte.
-  const imageAt = op.media && op.media >= 1 && op.media <= step.media.length ? op.media - 1 : step.media.findIndex((m) => m.kind === 'image')
-  const ref = imageAt >= 0 && step.media[imageAt]?.kind === 'image' ? step.media[imageAt] : null
+  const imageAt = op.media && op.media >= 1 && op.media <= step.media.length ? op.media - 1 : step.media.findIndex(isAiImage)
+  const pickedRef = imageAt >= 0 ? step.media[imageAt] : null
+  const ref = isAiImage(pickedRef) ? pickedRef : null
   const prompt = await illustrationPrompt(ctx.ai, ref?.url ?? null, step, { title: content.title, equipment: content.equipment })
   const url = await ctx.ai.generateImage(op.request ? `${prompt} ${op.request}` : prompt, ref ? [ref.url] : [])
   const latest = ctx.get()
@@ -737,7 +741,7 @@ async function applyTranslateOp(ctx: AgentRunContext, op: AgentOp, ids: IdMap): 
   const source = code === contentLang(content)
   if (!source && !content.translations?.[code]) throw new AgentOpError(t.errors.translateFirst(label(code)))
   if (op.op === 'translate_image') {
-    if (m.kind !== 'image') throw new AgentOpError(t.errors.imageOnly)
+    if (!isAiImage(m)) throw new AgentOpError(t.errors.imageOnly)
     const url = await translateImage(ctx.ai, m.url, code)
     if (!url) throw new AgentOpError(t.errors.noTextInImage)
     const latest = ctx.get()

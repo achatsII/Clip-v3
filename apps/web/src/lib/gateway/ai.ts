@@ -47,6 +47,8 @@ export const AI_OPERATIONS = [
   'print_template',
   'report_summary',
   'report_question',
+  // Des règles de rédaction tirées d'une instruction modèle ou des corrections de l'équipe (toggle `learnFromEdits`).
+  'learn_rules',
 ] as const
 export type AiOperation = (typeof AI_OPERATIONS)[number]
 

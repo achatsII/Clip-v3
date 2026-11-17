@@ -15,6 +15,7 @@ export const capture = {
       audio: { label: 'Note vocale', hint: 'Expliquez à voix haute' },
       note: { label: 'Note', hint: 'Une précision écrite' },
       file: { label: 'Fichiers', hint: 'PDF, Word, vidéos' },
+      screen: { label: 'Écran', hint: 'Un logiciel, clic par clic' },
     },
     dropHint: 'Vous pouvez aussi glisser des fichiers ici : vidéos d’une autre caméra, photos, anciennes instructions en PDF ou Word.',
     notes: 'Vos notes',
@@ -81,6 +82,37 @@ export const capture = {
     /** Le début du nom du fichier, montré sur la carte de la note. */
     fileName: 'note-vocale',
   },
+  /** Enregistrer l'écran d'un ordinateur (toggle `screenCapture`), sans rien installer. */
+  screen: {
+    title: 'Enregistrer l’écran',
+    steps: [
+      'Choisissez la fenêtre du logiciel, ou tout l’écran.',
+      'Faites la tâche comme d’habitude. CLIP garde une image nette à chaque clic.',
+      'Revenez ici et touchez « Terminer ».',
+    ],
+    voice: 'Avec ma voix',
+    voiceHint: 'Dites ce que vous faites et pourquoi : l’IA s’en sert pour expliquer chaque étape.',
+    privacy: 'Rien à installer. Seul ce que vous choisissez est enregistré : fermez d’abord ce qui est personnel.',
+    choose: 'Choisir l’écran',
+    recording: 'Enregistrement en cours',
+    elapsed: (time: string, max: string) => `${time} sur ${max}`,
+    shots: (n: number) => (n ? `${n.toLocaleString('fr-CA')} image${n > 1 ? 's' : ''} nette${n > 1 ? 's' : ''}` : 'Les images nettes viendront à vos clics'),
+    withVoice: 'Micro ouvert',
+    noVoice: 'Sans la voix',
+    voiceDenied: 'Micro refusé : l’écran s’enregistre sans la voix.',
+    stopHint: 'Le bouton « Arrêter le partage » du navigateur termine aussi.',
+    lastMinute: 'Encore une minute : l’enregistrement s’arrêtera seul.',
+    finish: 'Terminer',
+    discard: 'Recommencer',
+    discardTitle: 'Effacer cet enregistrement ?',
+    discardText: 'La vidéo et ses images seront perdues.',
+    saving: 'Préparation des images…',
+    failed: 'L’écran n’a pas pu être partagé',
+    failedHint: 'Autorisez le partage d’écran dans le navigateur, puis réessayez.',
+    previewLabel: 'Ce qui est enregistré',
+    /** Le nom de l'enregistrement, sur sa carte et dans les médias d'origine. */
+    fileName: (when: string) => `Écran — ${when}`,
+  },
   /** La caméra du navigateur. */
   camera: {
     noCamera: 'La caméra n’est pas accessible. Autorisez-la dans le navigateur, ou importez un fichier.',
@@ -124,6 +156,8 @@ export const capture = {
     percent: (n: number) => `${n.toLocaleString('fr-CA')} %`,
     /** La note dite pendant une série de photos, et l'instant de chaque photo dans cette note. */
     narration: 'Commentaire des photos',
+    /** Un enregistrement de l'écran : ses images nettes, prises à chaque action. */
+    screenShots: (n: number) => `${n.toLocaleString('fr-CA')} image${n > 1 ? 's' : ''} de l’écran`,
     narrated: (n: number) => `${n.toLocaleString('fr-CA')} photo${n > 1 ? 's' : ''} commentée${n > 1 ? 's' : ''}`,
     voiceAt: (time: string) => `Prise à ${time} du commentaire`,
   },

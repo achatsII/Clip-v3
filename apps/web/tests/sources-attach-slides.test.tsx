@@ -162,6 +162,35 @@ describe('joindre des médias à l’assistant', () => {
   })
 })
 
+describe('un enregistrement de l’écran joint à l’assistant', () => {
+  it('la vidéo et ses images nettes partent ensemble, avec les consignes d’écran et comment entourer', async () => {
+    const ask = vi.fn(async (_op: string, _body: Record<string, unknown>) => ({ json: { reply: 'Ajoutées.', operations: [], suggestions: [] }, text: '', model: 'm' }))
+    const screenVideo: Source = { id: 'sv', kind: 'video', url: 'https://x/screen.mp4', durationSec: 40, screen: true, geminiFileUri: 'gemini://sv', geminiExpiresAt: new Date(Date.now() + 40 * 3600_000).toISOString(), createdAt: at }
+    const shot: Source = { id: 'sh1', kind: 'photo', url: 'https://x/sh1.jpg', mimeType: 'image/jpeg', shot: { sourceId: 'sv', at: 4 }, createdAt: at }
+    await agentTurn({
+      ai: { ask } as unknown as AiApi,
+      files: fakeFiles(),
+      org: { standard: defaultStandard(), learnings: [] },
+      content: content(),
+      focusStepId: 's1',
+      request: 'Ajoute ces étapes après l’étape 1',
+      sources: [...sources, screenVideo, shot],
+      attached: ['sv', 'sh1'],
+    })
+    const [, body] = ask.mock.calls[0]
+    expect(String(body.system_instruction)).toContain('ENREGISTREMENT D’ÉCRAN')
+    expect(String(body.system_instruction)).toContain('annotate sur ce média entoure l’élément à toucher')
+    expect(String(body.prompt)).toMatch(/S7 — image nette de l’écran, à 0:04 de S6/)
+  })
+
+  it('une revue sans écran n’a pas ces consignes', async () => {
+    const ask = vi.fn(async (_op: string, _body: Record<string, unknown>) => ({ json: { reply: 'Vu.', operations: [], suggestions: [] }, text: '', model: 'm' }))
+    const joined: Source = { id: 'p9', kind: 'photo', url: 'https://x/p9.jpg', createdAt: at }
+    await agentTurn({ ai: { ask } as unknown as AiApi, files: fakeFiles(), org: { standard: defaultStandard(), learnings: [] }, content: content(), focusStepId: 's1', request: 'Regarde', sources: [...sources, joined], attached: ['p9'] })
+    expect(String(ask.mock.calls[0][1].system_instruction)).not.toContain('ENREGISTREMENT D’ÉCRAN')
+  })
+})
+
 describe('un PowerPoint lu dans l’app', () => {
   it('chaque diapositive : son titre, son texte, ses notes et ses images, dans l’ordre', async () => {
     expect(isPptx({ name: 'Procédure.PPTX', type: '' })).toBe(true)

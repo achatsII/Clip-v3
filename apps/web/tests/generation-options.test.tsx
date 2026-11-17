@@ -32,7 +32,8 @@ vi.mock('@/components/providers/Session', () => ({ useSession: () => ({ files: {
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }))
 vi.mock('@/components/ui/Toast', () => ({ useToast: () => toast }))
 vi.mock('@/components/ui/Confirm', () => ({ useConfirm: () => vi.fn(async () => true) }))
-vi.mock('@/lib/toggles', () => ({ useToggle: () => true }))
+// Le GIF d'avant (sans `gifInStep`) : fait aussitôt, à partager. Le GIF à l'étape : tests/gif-in-step.test.tsx.
+vi.mock('@/lib/toggles', () => ({ useToggle: (name: string) => name !== 'gifInStep' }))
 
 import { GifDialog } from '@/components/editor/GifDialog'
 import { StepMediaEditor } from '@/components/editor/StepMediaEditor'
@@ -130,7 +131,8 @@ describe('le GIF d’un extrait', () => {
     render(<GifDialog clip={{ url: 'https://cdn.test/v.mp4', start: 2, end: 40 }} name="Étape 3 — Serrer les vis" onClose={() => undefined} />)
     expect(screen.getByText('Le GIF se prépare…')).toBeTruthy()
     await waitFor(() => expect(screen.getByRole('img', { name: 'Aperçu du GIF' })).toBeTruthy())
-    expect(gif).toHaveBeenCalledWith('https://cdn.test/v.mp4', 2, 40)
+    // Les 15 premières secondes de l'extrait (la même demande que `files.gif` faisait d'elle-même).
+    expect(gif).toHaveBeenCalledWith('https://cdn.test/v.mp4', 2, 17)
     expect(screen.getByText(/GIF de 15 s · 2,5 Mo/)).toBeTruthy()
     expect(screen.getByText(/Les 15 premières secondes de l’extrait/)).toBeTruthy()
     expect(screen.getByText(/Au poste, l’étape garde son extrait/)).toBeTruthy()

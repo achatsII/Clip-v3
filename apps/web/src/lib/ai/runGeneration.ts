@@ -12,11 +12,13 @@ import { publishRealtime } from '../realtime/client'
 import { annotateMarks } from './autoAnnotate'
 import { creationReporter, DETAIL_FIGURES, DETAIL_THUMBNAILS, sourceDetail } from './creation'
 import { enrichMedia, finishGeneration, generateInstruction, importAsk, prepareGeneration } from './generate'
+import type { WritingContext } from './prompts'
 import { runJob } from './jobs'
 import type { AiInstruction, MarkHint } from './normalize'
 import { matchStation } from './normalize'
 import { hasLabels, labelsFromAi, ruleStationsFor, type Nomenclature } from '../model/nomenclature'
 import { DEVICE_ID, jobOutcome, lockedByOther } from './serverJob'
+import { snapshotOf } from '../learning/signals'
 
 /** Dans la coquille, l'écran reste allumé pendant la génération : un téléphone en veille l'arrêterait. */
 function keepAwake(on: boolean) {
@@ -57,6 +59,8 @@ async function completeGeneration(c: {
   checkpoints: boolean
   /** Les figures des documents cités, recadrées pour les étapes (toggle `documentFigures`). */
   figures?: boolean
+  /** Garder le texte de la version de l'IA, pour apprendre des corrections (toggle `learnFromEdits`). */
+  learn?: boolean
   stage: (key: string, detail?: string) => void
   /** Juste avant l'enregistrement (l'appareil arrête ses signes de vie). */
   beforeSave?: () => Promise<void>
@@ -98,6 +102,8 @@ async function completeGeneration(c: {
       choices: c.choices,
       stationGuess: c.stationGuess,
       ...(c.mode === 'server' ? { mode: 'server' as const } : {}),
+      // Le texte de l'IA, comparé à la première publication (`learning/store.ts`), puis effacé.
+      ...(c.learn ? { original: snapshotOf(content), learnedAt: null } : {}),
     },
   })
   // La version de l'IA, gardée pour y revenir après des modifications.
@@ -109,7 +115,8 @@ export function startGeneration(input: {
   data: DataApi
   files: FilesApi
   ai: AiApi
-  org: OrgSettings
+  /** Avec `personal` (toggle `learnFromEdits`) : les préférences de la personne qui lance. */
+  org: OrgSettings & Pick<WritingContext, 'personal'>
   stations: Doc<Station>[]
   actor: Actor
   forceKind?: 'procedure' | 'lockout'
@@ -124,6 +131,8 @@ export function startGeneration(input: {
   figures?: boolean
   /** Proposer des relevés (module `records` et choix de la personne) ; non : aucun. Oui par défaut. */
   checks?: boolean
+  /** Garder le texte de la version de l'IA, pour apprendre des corrections (toggle `learnFromEdits`). */
+  learn?: boolean
   /**
    * L'analyse au serveur (toggle `serverGeneration` et réglage de l'usine) : une fois la requête
    * confiée à Job_start, l'appareil peut se fermer. Si le serveur ne la prend pas, elle tourne ici.
@@ -183,6 +192,7 @@ export function startGeneration(input: {
             checkpoints: !!input.checkpoints,
             figures: !!input.figures,
             checks: input.checks !== false,
+            ...(input.learn ? { learn: true } : {}),
           }
           // Le relais au serveur : plus de signe de vie à donner, l'appareil peut se fermer.
           report.stop()
@@ -230,6 +240,7 @@ export function startGeneration(input: {
         autoAnnotate: input.autoAnnotate !== false,
         checkpoints: !!input.checkpoints,
         figures: !!input.figures,
+        learn: !!input.learn,
         stage,
         beforeSave: async () => {
           report.stop()
@@ -316,6 +327,7 @@ export function finishServerGeneration(input: {
         autoAnnotate: context.autoAnnotate,
         checkpoints: context.checkpoints,
         figures: context.figures === true,
+        learn: context.learn === true,
         stage: (key, detail) => setStage(key, detail),
       })
       await settleJob()

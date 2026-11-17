@@ -118,6 +118,8 @@ type AnnotatorProps = {
    * voit apparaître sans attendre « Enregistrer ». Quitter sans enregistrer remet les marques d'avant.
    */
   onLive?: (a: Annotation[]) => void
+  /** Un GIF : les marques se posent à la main, l'IA ne lit pas les GIF. */
+  noAi?: boolean
 }
 
 export function Annotator({ open, ...props }: AnnotatorProps & { open: boolean }) {
@@ -137,7 +139,7 @@ function readLastStyle(): LastStyle {
   }
 }
 
-function AnnotatorScreen({ onClose, src, step, value, onSave, onLive }: AnnotatorProps) {
+function AnnotatorScreen({ onClose, src, step, value, onSave, onLive, noAi }: AnnotatorProps) {
   const { ai } = useSession()
   const toast = useToast()
   const t = useMessages()
@@ -850,16 +852,18 @@ function AnnotatorScreen({ onClose, src, step, value, onSave, onLive }: Annotato
         {/* La sélection et l'IA restent visibles ; les outils de dessin défilent à côté. */}
         <div className="flex items-center gap-1 pb-1">
           {toolTile('select', t.editorTools.annotator.tools.select, <MousePointer2 className="h-5 w-5" />, 'v')}
-          <button
-            type="button"
-            onClick={() => void aiAnnotate()}
-            disabled={busy}
-            title={t.editorTools.annotator.ai.hint}
-            className="btn-press bg-gradient-accent shadow-accent flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-3 text-[10px] font-black whitespace-nowrap text-white disabled:opacity-60"
-          >
-            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-            <span>{t.editorTools.annotator.ai.button}</span>
-          </button>
+          {!noAi && (
+            <button
+              type="button"
+              onClick={() => void aiAnnotate()}
+              disabled={busy}
+              title={t.editorTools.annotator.ai.hint}
+              className="btn-press bg-gradient-accent shadow-accent flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-3 text-[10px] font-black whitespace-nowrap text-white disabled:opacity-60"
+            >
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+              <span>{t.editorTools.annotator.ai.button}</span>
+            </button>
+          )}
           <span className="mx-0.5 h-8 w-px shrink-0 bg-white/15" />
           <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" role="toolbar" aria-label={t.editorTools.annotator.drawingTools}>
             {DRAW_TOOLS.map((d) => toolTile(d.value, t.editorTools.annotator.tools[d.value], d.icon, d.key))}

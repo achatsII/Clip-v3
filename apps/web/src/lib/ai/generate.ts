@@ -12,7 +12,7 @@ import type { InstructionContent, OrgSettings, Source, StepMedia } from '../mode
 import { sourceDetail } from './creation'
 import { locateFigures } from './figures'
 import { AiInstruction, normalizeInstruction, type MarkHint } from './normalize'
-import { generationPrompt, generationSystem, importSystem, SourceLine } from './prompts'
+import { generationPrompt, generationSystem, importSystem, SourceLine, type WritingContext } from './prompts'
 import { instructionSchema } from './schemas'
 
 export const GEMINI_MAX_BYTES = 100 * 1024 * 1024
@@ -155,7 +155,9 @@ export async function prepareForAi(
       lines.push({
         id,
         line:
-          s.kind === 'video'
+          s.kind === 'video' && s.screen
+            ? `${id} — enregistrement de l’écran d’un logiciel, ${fmtDuration(s.durationSec)} (fichier joint n° ${askFiles.length}) : on y voit le pointeur et chaque clic ; la voix, s’il y en a une, dit ce que la personne fait et pourquoi.`
+            : s.kind === 'video'
             ? `${id} — vidéo, ${fmtDuration(s.durationSec)}, « ${s.name ?? 'vidéo'} » (fichier joint n° ${askFiles.length})`
             : series
               ? `${id} — commentaire dit à voix haute pendant la prise des photos ${series.map((p) => idOf.get(p.id)).join(', ')}, ${fmtDuration(s.durationSec)} (fichier joint n° ${askFiles.length})${s.text ? ` ; transcription : « ${s.text} »` : ''}. Chaque photo porte l’instant de sa prise dans ce commentaire : ce qui est dit juste avant et juste après cet instant décrit cette photo.`
@@ -166,7 +168,15 @@ export async function prepareForAi(
     } else if (s.kind === 'photo' && s.url) {
       askFiles.push({ url: s.url, filename: s.name ?? `${id}.jpg`, mimeType: s.mimeType || 'image/jpeg', sizeBytes: s.sizeBytes })
       const said = s.voice && narrated.has(s.voice.sourceId) ? `, prise à ${clockOf(s.voice.at)} du commentaire ${idOf.get(s.voice.sourceId)}` : ''
-      lines.push({ id, line: `${id} — photo « ${s.name ?? 'photo'} » (fichier joint n° ${askFiles.length})${said}${s.text ? ` — légende : « ${s.text} »` : ''}` })
+      // Une image nette d'un enregistrement de l'écran : l'instant, dans la vidéo donnée avec elle.
+      const shotOf = s.shot ? idOf.get(s.shot.sourceId) : undefined
+      lines.push({
+        id,
+        line:
+          s.shot && shotOf
+            ? `${id} — image nette de l’écran, à ${clockOf(s.shot.at)} de ${shotOf}, juste avant une action : le pointeur y est sur ce qu’on va toucher (fichier joint n° ${askFiles.length})`
+            : `${id} — photo « ${s.name ?? 'photo'} » (fichier joint n° ${askFiles.length})${said}${s.text ? ` — légende : « ${s.text} »` : ''}`,
+      })
     } else if (s.kind === 'document' && s.url) {
       askFiles.push({ url: s.url, filename: s.name ?? `${id}.pdf`, mimeType: 'application/pdf', sizeBytes: s.sizeBytes })
       lines.push({ id, line: `${id} — document PDF « ${s.originalName ?? s.name ?? 'document'} »${s.pageCount ? `, ${s.pageCount} pages` : ''} (fichier joint n° ${askFiles.length})` })
@@ -181,7 +191,7 @@ export async function prepareForAi(
 export interface GenerateInput {
   ai: AiApi
   files: FilesApi
-  org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>
+  org: WritingContext & Pick<OrgSettings, 'nomenclature'>
   sources: Source[]
   intent?: string
   title?: string
@@ -255,7 +265,7 @@ export async function prepareGeneration(input: Omit<GenerateInput, 'ai' | 'signa
       effort: 'low',
       mediaResolution: m.videoSec > 300 ? 'low' : 'medium',
       maxOutputTokens: 24000,
-      system_instruction: generationSystem(input.org, { language, forceKind: input.forceKind, checks: input.checks !== false }),
+      system_instruction: generationSystem(input.org, { language, forceKind: input.forceKind, checks: input.checks !== false, screen: prepared.sources.some((s) => s.screen) }),
       prompt: generationPrompt({ intent: input.intent, title: input.title, stations: input.stationNames, sources: prepared.lines }),
       files: prepared.askFiles,
       json_schema: instructionSchema,
@@ -297,7 +307,7 @@ function mergeSources(all: Source[], updated: Source[]): Source[] {
  * (Job_start, branche clip-v3). Le document est S1. Une présentation PowerPoint lue dans l'app
  * (`sources` : sa note, puis ses images) part avec son texte dans la demande et ses images jointes.
  */
-export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>; source: Source; sources?: Source[]; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {
+export function importAsk(input: { org: WritingContext & Pick<OrgSettings, 'nomenclature'>; source: Source; sources?: Source[]; stationNames: string[]; language?: string }): { operation: AiOperation; language: string; ask: AskBody } {
   const language = input.language ?? contentLanguage()
   // Une présentation lue dans l'app commence par sa note (même sans image).
   if (input.sources?.[0]?.kind === 'note') return slidesImportAsk(input.org, input.sources, input.stationNames, language)
@@ -327,7 +337,7 @@ export function importAsk(input: { org: Pick<OrgSettings, 'standard' | 'learning
  * L'import d'une présentation lue dans l'app : S1 est sa note (le texte de chaque diapositive, dans la
  * demande), les suivantes ses images (jointes). Sa taille se compte en diapositives, comme les pages.
  */
-function slidesImportAsk(org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>, sources: Source[], stationNames: string[], language: string): { operation: AiOperation; language: string; ask: AskBody } {
+function slidesImportAsk(org: WritingContext & Pick<OrgSettings, 'nomenclature'>, sources: Source[], stationNames: string[], language: string): { operation: AiOperation; language: string; ask: AskBody } {
   const [note, ...images] = sources
   const photos = images.filter((s) => s.kind === 'photo' && s.url)
   const slides = note.pageCount ?? 5
@@ -355,7 +365,7 @@ function slidesImportAsk(org: Pick<OrgSettings, 'standard' | 'learnings' | 'nome
 /** Import d'une ancienne instruction (PDF, ou présentation lue dans l'app) : même résultat qu'une génération. */
 export async function importDocument(input: {
   ai: AiApi
-  org: Pick<OrgSettings, 'standard' | 'learnings' | 'nomenclature'>
+  org: WritingContext & Pick<OrgSettings, 'nomenclature'>
   source: Source
   /** Une présentation lue dans l'app : sa note, puis ses images (S1, S2…). */
   sources?: Source[]

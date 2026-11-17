@@ -203,6 +203,7 @@ export const instructions = {
     image: 'Image',
     illustration: 'Illustration',
     photo: 'Photo',
+    gif: 'GIF',
   },
   /** Le résumé des changements d'une version, écrit à la publication. */
   changes: {

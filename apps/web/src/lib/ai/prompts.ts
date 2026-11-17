@@ -5,7 +5,10 @@
 import { CATEGORIES, ENERGY, PPE } from '../model/catalog'
 import type { Nomenclature } from '../model/nomenclature'
 import { firstStepOf } from '../model/firstStep'
-import type { InstructionContent, OrgSettings, Step, WritingStandard } from '../model/types'
+import type { InstructionContent, OrgSettings, PersonalWriting, Step, WritingStandard } from '../model/types'
+
+/** Ce que l'IA lit de la façon d'écrire : le standard de l'usine et, s'il y en a, les préférences de la personne. */
+export type WritingContext = Pick<OrgSettings, 'standard' | 'learnings'> & { personal?: PersonalWriting | null }
 
 const TONE: Record<WritingStandard['tone'], string> = {
   infinitif: "à l'infinitif (« Retirer le garde »), sans tutoyer ni vouvoyer",
@@ -33,22 +36,43 @@ export function firstStepRule(s: WritingStandard): string {
   return '- Pas d’étape d’introduction pour les EPI ni pour la sécurité générale : ils vont dans la fiche (ppe, safety), affichée avant la première étape. La première étape est le premier geste du travail.'
 }
 
-export function standardBlock(org: Pick<OrgSettings, 'standard' | 'learnings'>): string {
+/**
+ * Ce que la génération et l'assistant savent de la façon d'écrire : le standard de l'usine (ses
+ * règles, son vocabulaire, ses 👎 commentés, ses instructions modèles), puis, avec `learnFromEdits`,
+ * les préférences de la personne qui rédige (`personal`), qui ne passent jamais devant l'usine.
+ */
+export function standardBlock(org: WritingContext): string {
   const s = org.standard
   const lines: string[] = []
   // Une usine plus ancienne peut ne pas avoir de standard enregistré : l'IA suit alors ses règles de base.
-  if (!s) return ''
-  lines.push('STANDARD DE RÉDACTION DE L’USINE (prioritaire) :')
-  s.rules.forEach((r) => lines.push(`- ${r}`))
-  lines.push(`- Au plus ${s.maxWordsPerStep} mots par texte d’étape, ${TONE[s.tone]}.`)
-  lines.push(firstStepRule(s))
-  if (s.glossary.length) {
-    lines.push('VOCABULAIRE DE L’USINE (utilise ces termes) :')
-    s.glossary.forEach((g) => lines.push(`- « ${g.term} » : ${g.meaning}`))
+  if (s) {
+    lines.push('STANDARD DE RÉDACTION DE L’USINE (prioritaire) :')
+    s.rules.forEach((r) => lines.push(`- ${r}`))
+    lines.push(`- Au plus ${s.maxWordsPerStep} mots par texte d’étape, ${TONE[s.tone]}.`)
+    lines.push(firstStepRule(s))
+    if (s.glossary.length) {
+      lines.push('VOCABULAIRE DE L’USINE (utilise ces termes) :')
+      s.glossary.forEach((g) => lines.push(`- « ${g.term} » : ${g.meaning}`))
+    }
+    if (org.learnings?.length) {
+      lines.push('CE QUE L’USINE A DEMANDÉ APRÈS DE PRÉCÉDENTES GÉNÉRATIONS (applique-le) :')
+      org.learnings.slice(-12).forEach((l) => lines.push(`- ${l.text}`))
+    }
   }
-  if (org.learnings?.length) {
-    lines.push('CE QUE L’USINE A DEMANDÉ APRÈS DE PRÉCÉDENTES GÉNÉRATIONS (applique-le) :')
-    org.learnings.slice(-12).forEach((l) => lines.push(`- ${l.text}`))
+  const p = org.personal
+  // Les instructions modèles : un exemple de style, jamais de contenu à recopier.
+  const examples = [...(s?.examples ?? []), ...(p?.examples ?? [])].slice(-3)
+  if (examples.length) {
+    lines.push('INSTRUCTIONS MODÈLES — imite leur style (longueur des textes, ton, découpage, points clés), jamais leur contenu :')
+    for (const ex of examples) {
+      lines.push(`« ${ex.title} »${ex.why ? ` — un modèle pour : ${ex.why}` : ''}`)
+      ex.steps.slice(0, 3).forEach((st, i) => lines.push(`  ${i + 1}. ${st.title}${st.text ? ` — ${st.text}` : ''}${st.keyPoints.length ? ` (points clés : ${st.keyPoints.join(' ; ')})` : ''}`))
+    }
+  }
+  if (p && (p.rules.length || p.learnings.length)) {
+    lines.push('PRÉFÉRENCES DE LA PERSONNE QUI RÉDIGE (suis-les, sauf si elles contredisent le standard de l’usine) :')
+    p.rules.forEach((r) => lines.push(`- ${r}`))
+    p.learnings.slice(-8).forEach((l) => lines.push(`- ${l.text}`))
   }
   return lines.join('\n')
 }
@@ -82,7 +106,17 @@ function checksRule(on: boolean): string {
   return '- Relevés (checks) : seulement là où le travail demande de noter quelque chose pour la trace — lire une valeur (pression, température, couple, dimension, niveau) → "measure" avec son unité ; « vérifier que… », « s’assurer que… » → "yesno" avec la bonne réponse ; un état parmi quelques-uns (propre, sale, à remplacer) → "choice" avec les choix qui sont un écart ; un numéro de lot ou de série → "text" ; une preuve demandée → "photo". Les limites (min, max, target) seulement si les sources les disent : jamais inventées ; une valeur à relever sans limite connue reste sans limite, et tu poses une question. 0 à 2 relevés par étape ; la plupart des étapes n’en ont aucun.'
 }
 
-export function generationSystem(org: Pick<OrgSettings, 'standard' | 'learnings'> & { nomenclature?: Nomenclature | null }, opts: { language: string; forceKind?: 'procedure' | 'lockout'; checks?: boolean }): string {
+/**
+ * Un enregistrement de l'écran parmi les sources (toggle `screenCapture`) : une étape par action à
+ * l'écran, l'image nette d'avant l'action comme média, l'élément à toucher entouré.
+ */
+export const SCREEN_RULES = `ENREGISTREMENT D’ÉCRAN (un logiciel) :
+- Une étape par action à l’écran : un clic, une saisie, un choix dans une liste, un raccourci clavier. Le titre commence par le verbe et nomme l’élément tel qu’il est écrit à l’écran : « Cliquer sur Enregistrer », « Saisir le numéro de lot dans Lot ».
+- Le média d’une étape : l’image nette de l’écran prise juste avant cette action (une source « image nette de l’écran », la plus proche de l’instant de l’action), avec focusLabel = l’élément à toucher, tel qu’il est écrit à l’écran (1 à 4 mots). Sans image nette pour ce moment, une image fixe de la vidéo à l’instant de l’action (at). Un extrait vidéo seulement si le mouvement compte (glisser-déposer, dessiner).
+- Une valeur saisie qui change d’une fois à l’autre (un numéro, une date, une quantité) se dit pour ce qu’elle est (« le numéro du bon de travail ») sans recopier celle de l’enregistrement. Ne recopie jamais un mot de passe ni une donnée personnelle visible à l’écran.
+- Une tâche à l’écran n’a ni EPI ni cadenassage, sauf si les sources en parlent.`
+
+export function generationSystem(org: WritingContext & { nomenclature?: Nomenclature | null }, opts: { language: string; forceKind?: 'procedure' | 'lockout'; checks?: boolean; screen?: boolean }): string {
   return `Tu es un expert en méthodes industrielles et en instructions de travail pour le plancher de production (méthode TWI « Job Instruction », travail standardisé, SST). Tu transformes des notes de terrain — vidéos, photos, notes vocales, notes écrites, anciens documents — en une instruction de travail exacte, claire et visuelle, pour des opérateurs qui lisent peu, debout, parfois avec des gants.
 
 DÉCOUPAGE EN ÉTAPES — le plus important : chaque action est une étape.
@@ -111,7 +145,7 @@ MÉDIAS :
 - Référence uniquement les identifiants de sources fournis (S1, S2…). Pour une vidéo, start < end, et start, end et at restent dans la durée indiquée.
 - Le plus souvent, l’extrait vidéo ; l’image fixe seulement quand le mouvement n’apporte rien (un « appuyer sur le bouton » n’a pas besoin de trois secondes de vidéo).
 - Une étape sans média pertinent garde une liste vide plutôt qu’un média hors sujet.
-
+${opts.screen ? `\n${SCREEN_RULES}\n` : ''}
 CLASSEMENT :
 - category parmi : ${Object.entries(CATEGORIES).map(([k, v]) => `${k} (${v.label})`).join(', ')}.
 - station : le poste, la machine ou l’équipement nommé (« Machine 1234 », « Presse P-12 ») ; vide si rien ne le dit. Utilise de préférence le nom d’un poste existant de l’usine s’il correspond.
@@ -143,7 +177,7 @@ export function generationPrompt(input: { intent?: string; stations: string[]; s
   return parts.join('\n')
 }
 
-export function importSystem(org: Pick<OrgSettings, 'standard' | 'learnings'> & { nomenclature?: Nomenclature | null }, language = 'fr', from: 'pdf' | 'slides' = 'pdf'): string {
+export function importSystem(org: WritingContext & { nomenclature?: Nomenclature | null }, language = 'fr', from: 'pdf' | 'slides' = 'pdf'): string {
   if (from === 'slides')
     return `${generationSystem(org, { language })}
 
@@ -176,7 +210,7 @@ export const STEP_ACTIONS = {
  * de la demande (les retouches en un geste sont écrites en français) ; `explainIn` : celle de
  * l'outil, pour l'explication montrée à la personne.
  */
-export function stepAssistSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, language = 'fr', explainIn = language): string {
+export function stepAssistSystem(org: WritingContext, language = 'fr', explainIn = language): string {
   return `Tu corriges UNE étape d’une instruction de travail d’usine, selon la demande. Tu gardes le sens et les valeurs exactes ; tu n’inventes aucune valeur. Titre : verbe à l’infinitif + objet, 2 à 8 mots. L’étape s’écrit ${writtenIn(language)}, la langue de l’instruction, quelle que soit celle de la demande${explainIn !== language ? ` ; l’explication (explanation), ${writtenIn(explainIn)}` : ''}.
 
 ${standardBlock(org)}`

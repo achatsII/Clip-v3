@@ -47,6 +47,10 @@ export const T = {
   serverJob: 'clip_job',
   /** Une photo prise sur un lien public (relevé, retour) : la Gateway refuse l'envoi de fichiers au rôle guest. */
   photo: 'clip_photo',
+  /** Les préférences de rédaction d'une personne (toggle `learnFromEdits`). */
+  writing: 'clip_writing',
+  /** Ce qu'une personne a corrigé à la version de l'IA, à la première publication. */
+  edit: 'clip_edit',
 } as const
 
 export const nowIso = () => new Date().toISOString()

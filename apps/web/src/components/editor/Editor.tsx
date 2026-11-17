@@ -24,6 +24,7 @@ import {
   Send,
   Share2,
   Sparkles,
+  Star,
   ThumbsDown,
   ThumbsUp,
   RotateCcw,
@@ -99,6 +100,11 @@ import { viewableSources } from '@/lib/model/sources'
 import { photoToStorage } from '@/lib/media/photos'
 import { MediaPicker } from './MediaPicker'
 import { SourceLibrary } from './SourceLibrary'
+import { LearningCard } from '@/components/learning/LearningCard'
+import { ModelDialog } from '@/components/learning/ModelDialog'
+import { useLearning } from '@/hooks/useLearning'
+import type { Proposal } from '@/lib/learning/proposals'
+import { loadPersonal, proposalsFor, recentEdits, recordEdits } from '@/lib/learning/store'
 import { saveClassification, staleRuleStations } from '@/lib/model/classification'
 import { addValues, hasLabels, mergeLabels, readNomenclature, type Labels } from '@/lib/model/nomenclature'
 import { suggestLabels } from '@/lib/ai/classify'
@@ -163,6 +169,11 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const blocksToggle = useToggle('sharedBlocks')
   // Les médias d'origine, à revoir et à remettre dans une étape (toggle `sourceLibrary`).
   const sourceLibraryOn = useToggle('sourceLibrary')
+  // L'IA qui apprend des corrections (toggle `learnFromEdits`) : après une publication, ce qu'elle a remarqué.
+  const learnOn = useToggle('learnFromEdits')
+  const [learningCard, setLearningCard] = useState<Proposal[] | null>(null)
+  const learning = useLearning()
+  const [modelOpen, setModelOpen] = useState(false)
   // La photo d'un retour d'opérateur, mise à l'étape d'un toucher (toggle `feedbackMedia`).
   const feedbackMediaOn = useToggle('feedbackMedia')
   // Le nom tiré des familles, devant le titre, dans l'en-tête (toggle `nameTemplate`).
@@ -598,6 +609,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       // Le numéro de document, tout de suite dans le cache : le prochain enregistrement l'indexe.
       if (docNumber) cacheInstruction(qc, doc._id, { number: docNumber })
       setRetrain(false)
+      // Ce que la personne a corrigé à la version de l'IA : retenu, et une règle proposée si une habitude revient.
+      if (learnOn && !docRef.current.json_data.block) void learnAfterPublish(current, draft)
       if (notifyOn && requester && requester !== actor.id) void notifyEvent({ kind: 'published', instructionId: doc._id, to: [requester] })
       if (reelToggle && publishedId)
         void attachReel(files, data, { publishedId, version: n }, draft).then((ok) => {
@@ -623,6 +636,26 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       toast.error(tp.toasts.publishFailed, e instanceof Error && e.message !== 'save' ? e.message : tp.toasts.tryAgain)
     } finally {
       setPublishing(false)
+    }
+  }
+
+  /**
+   * À la première publication d'une instruction générée : ses corrections dans `clip_edit`, puis, pour
+   * la personne qui l'a écrite, les règles que ses dernières corrections proposent (une carte, pas une fenêtre).
+   */
+  async function learnAfterPublish(published: Doc<Instruction>, draft: InstructionContent) {
+    try {
+      const signals = await recordEdits(data, published, draft, actor)
+      if (!signals || (published.json_data.authorId && published.json_data.authorId !== actor.id)) return
+      const [mine, personal] = await Promise.all([recentEdits(data, { userId: actor.id }), loadPersonal(data, actor.id)])
+      const proposals = proposalsFor(
+        mine.map((d) => d.json_data.signals),
+        org.json_data,
+        personal?.json_data ?? null,
+      )
+      if (proposals.length) setLearningCard(proposals)
+    } catch {
+      /* apprendre est un plus : une publication réussie le reste */
     }
   }
 
@@ -688,8 +721,14 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     setRating(value)
     await data.patch(T.instruction, doc._id, { 'generation.rating': value, 'generation.comment': text ?? null }).catch(() => undefined)
     if (value === 'down' && text?.trim()) {
-      await session.updateOrg({ learnings: [...org.json_data.learnings, { text: text.trim(), at: nowIso() }].slice(-30) }).catch(() => undefined)
-      toast.success(tp.rating.noted, tp.rating.notedDetail)
+      // Qui règle l'usine apprend à toute l'usine ; les autres, pour leurs propres générations (toggle `learnFromEdits`).
+      if (learnOn && !can('settings', 'write')) {
+        await learning.saveMine((m) => ({ learnings: [...m.learnings, { text: text.trim(), at: nowIso() }] })).catch(() => undefined)
+        toast.success(tp.rating.noted, t.learning.rated.mine)
+      } else {
+        await session.updateOrg({ learnings: [...org.json_data.learnings, { text: text.trim(), at: nowIso() }].slice(-30) }).catch(() => undefined)
+        toast.success(tp.rating.noted, learnOn ? t.learning.rated.org : tp.rating.notedDetail)
+      }
     } else if (value === 'up') toast.success(tp.rating.thanks)
   }
 
@@ -779,6 +818,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     },
     // Les questions de formation : préparées par l'IA, retouchées ici (toggle `training`).
     { label: t.training.menu, icon: <GraduationCap className="h-4 w-4" />, onClick: () => setDialog('quiz'), hidden: !trainingToggle || isBlock || (readOnly && !content.quiz?.length), hint: content.quiz?.length ? <span className="text-xs font-black text-slate-400 tabular-nums">{content.quiz.length}</span> : undefined },
+    // Une instruction réussie : l'IA en imite le style pour les prochaines (toggle `learnFromEdits`).
+    { label: t.learning.model.menu, icon: <Star className="h-4 w-4" />, onClick: () => setModelOpen(true), hidden: !learnOn || isBlock || readOnly || !content.steps.some((s) => !s.fromBlock) },
     { label: tp.menu.history, icon: <History className="h-4 w-4" />, onClick: () => setDialog('history'), divider: true },
     // Le travail fait avec cette instruction : ses relevés, ses écarts (toggle `records`).
     { label: t.records.openForInstruction, icon: <ClipboardCheck className="h-4 w-4" />, onClick: () => router.push(`/registre?instruction=${doc._id}`), hidden: !recordsToggle || !hasChecks(content.steps) || !can('feedback') },
@@ -1102,6 +1143,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   return (
     <div>
       <Confetti show={celebrate} />
+      {learnOn && learningCard && <LearningCard proposals={learningCard} onClose={() => setLearningCard(null)} />}
+      {learnOn && <ModelDialog open={modelOpen} onClose={() => setModelOpen(false)} instructionId={doc._id} content={content} />}
       <MediaPlaybackProvider value={playback}>
         {viewsToggle && view === 'form' ? <FormEditor {...viewProps} info={<InstructionFields layout="cards" {...fieldProps} />} tools={tools} focus={formFocus} startOn={switched.current || formFocus ? 'step' : 'list'} stationCount={stationIds.length} block={isBlock} /> : <StageEditor {...viewProps} />}
       </MediaPlaybackProvider>

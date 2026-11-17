@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, ChevronLeft, ChevronRight, Clock, Crop, FileText, Film, Image as ImageIcon, ImagePlay, ImagePlus, Library, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Clock, Crop, FileText, Film, Image as ImageIcon, ImagePlay, ImagePlus, Library, Loader2, Pencil, Plus, Scissors, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
 import { useState } from 'react'
 import { MediaView, mediaThumb } from '@/components/media/MediaView'
 import { useSession } from '@/components/providers/Session'
@@ -14,13 +14,13 @@ import { createVisual, illustrationPrompt } from '@/lib/ai/assist'
 import { ApiError } from '@/lib/gateway/client'
 import { useMessages, type Messages } from '@/lib/i18n'
 import { toFigure, toWholePage } from '@/lib/media/figures'
-import { LAYOUTS, layoutOf, MAX_STEP_MEDIA } from '@/lib/model/media'
+import { isAiImage, isGif, LAYOUTS, layoutOf, MAX_STEP_MEDIA } from '@/lib/model/media'
 import type { Annotation, InstructionContent, Source, Step, StepMedia } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
 import { Annotator } from './Annotator'
 import { FramePicker } from './FramePicker'
-import { GifDialog, type GifClip } from './GifDialog'
+import { GifDialog, type GifClip, type GifTarget, type PlacedGif } from './GifDialog'
 import { MediaPicker } from './MediaPicker'
 import { MediaNav, StepMediaArea } from '@/components/player/StepMediaArea'
 
@@ -34,6 +34,7 @@ function mediaName(m: StepMedia, kinds: Messages['editor']['stepEditor']['mediaK
   if (m.kind === 'video') return kinds.clip
   if (m.kind === 'document') return kinds.page(m.page ?? 1)
   if (m.kind === 'html') return kinds.visual
+  if (m.gif) return kinds.gif
   if (m.frame) return kinds.frame
   if (m.fromPage) return kinds.figure(m.fromPage.page)
   return m.generated ? kinds.illustration : kinds.photo
@@ -43,7 +44,13 @@ function KindIcon({ m }: { m: StepMedia }) {
   if (m.kind === 'video') return <Film className="h-5 w-5" />
   if (m.kind === 'html') return <Shapes className="h-5 w-5" />
   if (m.kind === 'document') return <FileText className="h-5 w-5" />
+  if (m.kind === 'image' && m.gif) return <ImagePlay className="h-5 w-5" />
   return <ImageIcon className="h-5 w-5" />
+}
+
+/** Ce qu'un média garde quand il change de forme (vidéo, image figée, GIF) : sa légende et son verdict. */
+function commonOf(m: StepMedia): Pick<StepMedia, 'caption' | 'verdict'> {
+  return { ...(m.caption ? { caption: m.caption } : {}), ...(m.verdict ? { verdict: m.verdict } : {}) }
 }
 
 /**
@@ -91,17 +98,23 @@ export function StepMediaEditor({
   const gifOn = useToggle('clipGif')
   // Le média d'origine d'où vient celui-ci (une vidéo à l'instant de l'extrait, une image figée de la vidéo, la photo, le document).
   const originId = media && 'sourceId' in media && media.sourceId && sources.some((s) => s.id === media.sourceId && (s.url || s.text)) ? media.sourceId : null
-  const originAt = media?.kind === 'video' ? media.start : media?.kind === 'image' && media.frame ? media.frame.at : undefined
+  const originAt = media?.kind === 'video' ? media.start : media?.kind === 'image' && media.frame ? media.frame.at : media?.kind === 'image' && media.gif ? media.gif.start : undefined
   // Plusieurs médias à l'étape : vignettes, « 2 / 3 » et grandes flèches, comme au poste (toggle `mediaNav`).
   const mediaNav = useToggle('mediaNav')
   const [gifClip, setGifClip] = useState<GifClip | null>(null)
-  // Une vidéo, ou une image figée d'une vidéo : on peut passer de l'une à l'autre.
+  // Le GIF à l'étape (toggle `gifInStep`) : choisir son début et sa fin, puis à la place ou en plus.
+  const gifStudio = useToggle('gifInStep') && gifOn
+  const middle = (start: number, end: number) => Math.round((start + (end - start) / 2) * 10) / 10
+  // Une vidéo, une image figée d'une vidéo ou un GIF d'un extrait : on passe de l'un à l'autre.
   const frameSource =
     media?.kind === 'video'
-      ? { videoUrl: media.url, start: media.start, end: media.end, at: Math.round((media.start + (media.end - media.start) / 2) * 10) / 10 }
+      ? { videoUrl: media.url, start: media.start, end: media.end, at: middle(media.start, media.end) }
       : media?.kind === 'image' && media.frame
         ? { videoUrl: media.frame.videoUrl, start: media.frame.start, end: media.frame.end, at: media.frame.at }
-        : null
+        : media?.kind === 'image' && media.gif
+          ? { videoUrl: media.gif.videoUrl, start: media.gif.start, end: media.gif.end, at: middle(media.gif.start, media.gif.end) }
+          : null
+  const shownAs: GifTarget = media?.kind === 'video' ? 'video' : isGif(media) ? 'gif' : 'image'
 
   const set = (patch: Partial<Step>) => onChange({ ...step, ...patch })
   // L'ordre des médias (toggle `mediaOrder`) : le média choisi passe avant ou après son voisin.
@@ -119,7 +132,7 @@ export function StepMediaEditor({
   function applyFrame(url: string, at: number) {
     if (!frameSource || !media) return
     const keep = media.kind === 'image' && media.annotations?.length ? { annotations: media.annotations } : {}
-    const next: StepMedia = { kind: 'image', url, sourceId: media.sourceId, frame: { videoUrl: frameSource.videoUrl, at, start: frameSource.start, end: frameSource.end }, ...keep }
+    const next: StepMedia = { kind: 'image', url, sourceId: media.sourceId, frame: { videoUrl: frameSource.videoUrl, at, start: frameSource.start, end: frameSource.end }, ...keep, ...commonOf(media) }
     set({ media: step.media.map((m, i) => (i === mediaIndex ? next : m)) })
     toast.success(te.frameTaken, te.frameTakenDetail)
   }
@@ -132,10 +145,42 @@ export function StepMediaEditor({
   }
 
   async function backToVideo() {
-    if (!(media?.kind === 'image' && media.frame)) return
+    if (media?.kind !== 'image') return
+    const f = media.frame ?? media.gif
+    if (!f) return
     if (media.annotations?.length && !(await confirm({ title: te.backToVideo.title, description: te.backToVideo.description, confirmLabel: te.backToVideo.confirm }))) return
-    const f = media.frame
-    set({ media: step.media.map((m, i) => (i === mediaIndex ? { kind: 'video', url: f.videoUrl, sourceId: media.sourceId, start: f.start, end: f.end, posterUrl: media.url } : m)) })
+    // Une image figée sert d'image d'attente ; un GIF rend celle de la vidéo d'où il vient.
+    const poster = media.gif ? media.gif.posterUrl : media.url
+    set({ media: step.media.map((m, i) => (i === mediaIndex ? { kind: 'video', url: f.videoUrl, sourceId: videoSourceOf(media.sourceId), start: f.start, end: f.end, ...(poster ? { posterUrl: poster } : {}), ...commonOf(media) } : m)) })
+  }
+
+  /** La source d'un média qui redevient vidéo : une image nette de l'écran renvoie à son enregistrement. */
+  function videoSourceOf(id: string | undefined): string | undefined {
+    return sources.find((x) => x.id === id)?.shot?.sourceId ?? id
+  }
+
+  /** Faire un GIF du moment montré : l'extrait de la vidéo, de l'image figée ou du GIF à refaire. */
+  function openGif() {
+    if (frameSource) setGifClip({ url: frameSource.videoUrl, start: frameSource.start, end: frameSource.end })
+  }
+
+  /** Le GIF fait : à la place du média montré (ses marques, sa légende et son verdict suivent), ou juste après lui. */
+  function placeGif(g: PlacedGif, how: 'replace' | 'add') {
+    if (!media) return
+    const poster = media.kind === 'video' ? media.posterUrl : media.kind === 'image' ? (media.gif?.posterUrl ?? (media.frame ? media.url : undefined)) : undefined
+    const gif: StepMedia = { kind: 'image', url: g.url, sourceId: videoSourceOf(media.sourceId), gif: { videoUrl: g.videoUrl, start: g.start, end: g.end, ...(poster ? { posterUrl: poster } : {}), ...(g.sizeBytes ? { sizeBytes: g.sizeBytes } : {}) } }
+    if (how === 'replace') {
+      const keep = media.kind === 'image' && media.annotations?.length ? { annotations: media.annotations } : {}
+      set({ media: step.media.map((m, i) => (i === at ? ({ ...gif, ...keep, ...commonOf(m) } as StepMedia) : m)) })
+      toast.success(t.editor.gif.placed, media.kind === 'video' ? t.editor.gif.placedHint : undefined)
+      return
+    }
+    if (step.media.length >= MAX_MEDIA) return
+    const next = [...step.media]
+    next.splice(at + 1, 0, gif)
+    set({ media: next })
+    setMediaIndex(at + 1)
+    toast.success(t.editor.gif.added)
   }
 
   /** L'illustration de l'étape : à partir de l'image affichée si c'en est une, sinon du texte de l'étape. */
@@ -182,7 +227,7 @@ export function StepMediaEditor({
 
   // L'IA, à découvert (un menu se perdait au bas de la feuille, au téléphone) : l'illustration, à
   // partir de l'image affichée ou du texte de l'étape, et le schéma.
-  const fromImage = media?.kind === 'image' ? media : null
+  const fromImage = isAiImage(media) ? media : null
   const aiButton = 'btn-press bg-gradient-accent flex h-11 items-center gap-1.5 rounded-2xl px-3.5 text-sm font-black text-white disabled:opacity-60'
 
   return (
@@ -253,11 +298,12 @@ export function StepMediaEditor({
             {frameSource && (
               <Segmented
                 size="sm"
-                value={media?.kind === 'video' ? 'video' : 'image'}
-                onChange={(v) => (v === 'image' ? setFraming(true) : void backToVideo())}
+                value={shownAs}
+                onChange={(v) => (v === 'image' ? setFraming(true) : v === 'gif' ? openGif() : void backToVideo())}
                 options={[
-                  { value: 'video', label: te.video, icon: <Film className="h-4 w-4" /> },
-                  { value: 'image', label: te.image, icon: <ImageIcon className="h-4 w-4" /> },
+                  { value: 'video' as const, label: te.video, icon: <Film className="h-4 w-4" /> },
+                  { value: 'image' as const, label: te.image, icon: <ImageIcon className="h-4 w-4" /> },
+                  ...(gifStudio || shownAs === 'gif' ? [{ value: 'gif' as const, label: t.editor.gif.open, icon: <ImagePlay className="h-4 w-4" /> }] : []),
                 ]}
               />
             )}
@@ -272,9 +318,14 @@ export function StepMediaEditor({
                 ]}
               />
             )}
-            {gifOn && media?.kind === 'video' && (
+            {gifOn && !gifStudio && media?.kind === 'video' && (
               <Button size="sm" onClick={() => setGifClip({ url: media.url, start: media.start, end: media.end })} icon={<ImagePlay className="h-4 w-4" />} title={t.editor.gif.openHint}>
                 {t.editor.gif.open}
+              </Button>
+            )}
+            {gifStudio && shownAs === 'gif' && (
+              <Button size="sm" onClick={openGif} icon={<Scissors className="h-4 w-4" />}>
+                {t.editor.gif.redo}
               </Button>
             )}
             {media?.kind === 'image' && media.frame && (
@@ -356,7 +407,14 @@ export function StepMediaEditor({
           setMediaIndex(0)
         }}
       />
-      <GifDialog clip={gifClip} name={t.editor.gif.fileName(content.steps.findIndex((s) => s.id === step.id) + 1, step.title)} onClose={() => setGifClip(null)} />
+      <GifDialog
+        clip={gifClip}
+        name={t.editor.gif.fileName(content.steps.findIndex((s) => s.id === step.id) + 1, step.title)}
+        onClose={() => setGifClip(null)}
+        onPlace={gifStudio ? placeGif : undefined}
+        target={shownAs}
+        canAdd={step.media.length < MAX_MEDIA}
+      />
       {frameSource && <FramePicker open={framing} onClose={() => setFraming(false)} videoUrl={frameSource.videoUrl} start={frameSource.start} end={frameSource.end} initialAt={frameSource.at} onPicked={applyFrame} />}
       <Modal
         open={visualOpen}
@@ -383,6 +441,7 @@ export function StepMediaEditor({
           value={(step.media[annotating] as Extract<StepMedia, { kind: 'image' }>).annotations ?? []}
           onSave={setAnnotations}
           onLive={setAnnotations}
+          noAi={isGif(step.media[annotating])}
         />
       )}
     </div>

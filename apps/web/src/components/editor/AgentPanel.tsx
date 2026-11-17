@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowUp, Check, ChevronDown, ChevronUp, FileText, Film, Image as ImageIcon, Loader2, Mic, Paperclip, RotateCcw, Sparkles, X } from 'lucide-react'
+import { ArrowUp, Check, ChevronDown, ChevronUp, FileText, Film, Image as ImageIcon, Loader2, Lock, Mic, MonitorUp, Paperclip, RotateCcw, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LockBadge } from '@/components/billing/Billing'
 import { useSession } from '@/components/providers/Session'
@@ -10,7 +10,9 @@ import { agentBusy, agentTurn, runAgentOps, type AgentLogEntry, type VoiceTurnRe
 import { suggestEdits } from '@/lib/ai/suggest'
 import { useBilling, useEntitlement, useGate } from '@/lib/billing/state'
 import { useMessages } from '@/lib/i18n'
-import { ACCEPTED_FILES, ingestAny, kindOfFile } from '@/lib/media/ingest'
+import { ACCEPTED_FILES, ingestAny, ingestScreen, kindOfFile, type ScreenCapture } from '@/lib/media/ingest'
+import { canRecordScreen } from '@/lib/media/screenRecorder'
+import { ScreenRecorder } from '@/components/capture/ScreenRecorder'
 import { uid } from '@/lib/model/repo'
 import { sourceTag } from '@/lib/model/sources'
 import type { InstructionContent, Source, SourceKind } from '@/lib/model/types'
@@ -19,6 +21,7 @@ import { suspendsInBackground } from '@/lib/ai/durableAsk'
 import { useToggle } from '@/lib/toggles'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { LiveEditVoice } from './LiveEditVoice'
+import { usePersonalWriting } from '@/hooks/useWriting'
 
 /** Un média joint à la demande : envoyé tout de suite, il rejoint les médias d'origine. */
 interface Attachment {
@@ -114,6 +117,16 @@ export function AgentPanel({
   const slides = useToggle('slidesImport')
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const attachInput = useRef<HTMLInputElement>(null)
+  // Enregistrer l'écran pour l'assistant (toggle `screenCapture`) : des étapes d'un logiciel, à l'ordinateur.
+  const screenToggle = useToggle('screenCapture')
+  const [screenReady, setScreenReady] = useState(false)
+  useEffect(() => setScreenReady(canRecordScreen()), [])
+  const screenOn = attachOn && screenToggle && screenReady
+  const screenRight = useEntitlement('screen_capture')
+  // Les préférences de rédaction de la personne (toggle `learnFromEdits`) : l'assistant les suit aussi.
+  const learnOn = useToggle('learnFromEdits')
+  const personal = usePersonalWriting()
+  const [screenOpen, setScreenOpen] = useState(false)
   // La liste à jour, même entre deux rendus (plusieurs envois qui finissent ensemble).
   const sourcesRef = useRef<Source[]>(sources ?? [])
   sourcesRef.current = sources ?? sourcesRef.current
@@ -190,7 +203,7 @@ export function AgentPanel({
       const turn = await agentTurn({
         ai,
         files,
-        org: org.json_data,
+        org: learnOn ? { ...org.json_data, personal: personal.data?.json_data ?? null } : org.json_data,
         content: liveContent.current,
         focusStepId,
         request: ask,
@@ -273,30 +286,39 @@ export function AgentPanel({
   const dropped = useRef(new Set<string>())
   async function attach(list: File[]) {
     for (const file of list) {
-      const key = uid('att_')
       const kind = kindOfFile(file)
-      const blobUrl = kind === 'photo' ? URL.createObjectURL(file) : undefined
-      setAttachments((a) => [...a, { key, name: file.name, kind, previewUrl: blobUrl, uploading: true }])
-      try {
-        const added = await ingestAny(file, files, { slides })
-        if (dropped.current.has(key)) {
-          const paths = added.flatMap((s) => (s.path ? [s.path] : []))
-          if (paths.length) void files.remove(paths).catch(() => undefined)
-          continue
-        }
-        const first = sourcesRef.current.length
-        const next = [...sourcesRef.current, ...added]
-        sourcesRef.current = next
-        onSourcesChange?.(next)
-        const src = added.find((s) => s.kind !== 'note') ?? added[0]
-        const thumb = src.thumbnailUrl ?? (src.kind === 'photo' ? src.url : undefined)
-        if (thumb && blobUrl) URL.revokeObjectURL(blobUrl)
-        const tag = added.length > 1 ? `${sourceTag(first)}–${sourceTag(next.length - 1)}` : sourceTag(first)
-        setAttachments((a) => a.map((x) => (x.key === key ? { ...x, kind: added.length > 1 ? 'document' : src.kind, sourceIds: added.map((s) => s.id), tag, previewUrl: thumb ?? x.previewUrl, uploading: false } : x)))
-      } catch (e) {
-        setAttachments((a) => a.filter((x) => x.key !== key))
-        toast.error(t.editorTools.agent.attachFailed, errorText(e))
+      await attachJob(file.name, kind, kind === 'photo' ? URL.createObjectURL(file) : undefined, () => ingestAny(file, files, { slides }))
+    }
+  }
+  /** Un enregistrement de l'écran : la vidéo et ses images nettes, une seule pièce jointe. */
+  function attachScreen(capture: ScreenCapture) {
+    const preview = capture.shots[0] ? URL.createObjectURL(capture.shots[0].blob) : undefined
+    void attachJob(capture.video.name.replace(/\.[a-z0-9]+$/i, ''), 'video', preview, () => ingestScreen(capture, files, undefined, uid('src_')))
+  }
+  async function attachJob(name: string, kind: SourceKind | null, blobUrl: string | undefined, job: () => Promise<Source[]>) {
+    const key = uid('att_')
+    setAttachments((a) => [...a, { key, name, kind, previewUrl: blobUrl, uploading: true }])
+    try {
+      const added = await job()
+      if (dropped.current.has(key)) {
+        const paths = added.flatMap((s) => (s.path ? [s.path] : []))
+        if (paths.length) void files.remove(paths).catch(() => undefined)
+        return
       }
+      const first = sourcesRef.current.length
+      const next = [...sourcesRef.current, ...added]
+      sourcesRef.current = next
+      onSourcesChange?.(next)
+      const src = added.find((s) => s.kind !== 'note') ?? added[0]
+      const thumb = src.thumbnailUrl ?? (src.kind === 'photo' ? src.url : undefined)
+      if (thumb && blobUrl) URL.revokeObjectURL(blobUrl)
+      const tag = added.length > 1 ? `${sourceTag(first)}–${sourceTag(next.length - 1)}` : sourceTag(first)
+      // Un enregistrement de l'écran reste une vidéo, même avec ses images nettes.
+      const shownKind = added[0]?.screen ? 'video' : added.length > 1 ? 'document' : src.kind
+      setAttachments((a) => a.map((x) => (x.key === key ? { ...x, kind: shownKind, sourceIds: added.map((s) => s.id), tag, previewUrl: thumb ?? x.previewUrl, uploading: false } : x)))
+    } catch (e) {
+      setAttachments((a) => a.filter((x) => x.key !== key))
+      toast.error(t.editorTools.agent.attachFailed, errorText(e))
     }
   }
   /** Retiré avant l'envoi : le média quitte aussi les médias d'origine (c'était une erreur de fichier). */
@@ -436,6 +458,7 @@ export function AgentPanel({
         </div>
       )}
 
+      {screenOn && <ScreenRecorder open={screenOpen} onClose={() => setScreenOpen(false)} onCaptured={attachScreen} />}
       {liveOn && <LiveEditVoice content={content} onModify={(r) => runTurn(r, 'voice')} onGoTo={onFocus} onUndo={undoLast} onStop={() => setLiveOn(false)} />}
 
       {attachments.length > 0 && (
@@ -463,6 +486,12 @@ export function AgentPanel({
             <button type="button" onClick={() => attachInput.current?.click()} disabled={busy} aria-label={t.editorTools.agent.attach} title={t.editorTools.agent.attach} className="btn-press flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-600 hover:bg-slate-900/5 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-white/10">
               <Paperclip className="h-5 w-5" />
             </button>
+            {screenOn && (
+              <button type="button" onClick={() => gate(screenRight, 'screen_capture', () => setScreenOpen(true))} disabled={busy} aria-label={t.capture.screen.title} title={t.capture.screen.title} className="btn-press relative -ml-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-600 hover:bg-slate-900/5 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-white/10">
+                <MonitorUp className="h-5 w-5" />
+                {screenRight === 'locked' && <Lock className="absolute top-1.5 right-1.5 h-3 w-3" aria-hidden />}
+              </button>
+            )}
             <input
               ref={attachInput}
               type="file"
