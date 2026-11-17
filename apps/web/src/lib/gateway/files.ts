@@ -199,10 +199,20 @@ export function filesApi(client: GatewayClient) {
     /** Téléverse chez Gemini un fichier déjà en ligne (≤ 100 Mo). URI valable ~48 h. */
     async geminiUpload(url: string, mimeType: string, sizeBytes: number, filename: string): Promise<{ uri: string; expiresAt: string | null }> {
       await requireAiConsent()
-      const res = await client.call<{ results?: Array<{ geminiFileUri?: string; expirationTime?: string }> }>(
-        '/api/v1/ai/gemini/upload/direct',
-        { method: 'POST', body: { url, mimeType, fileSize: sizeBytes, filename: safeName(filename) }, timeoutMs: 180_000 },
-      )
+      const res = await client
+        .call<{ results?: Array<{ geminiFileUri?: string; expirationTime?: string }> }>('/api/v1/ai/gemini/upload/direct', {
+          method: 'POST',
+          body: { url, mimeType, fileSize: sizeBytes, filename: safeName(filename) },
+          timeoutMs: 180_000,
+        })
+        .catch((e: unknown) => {
+          // Route absente (404 : le service d'envoi de la Gateway prod ne l'avait pas, novembre 2026) ou
+          // en panne : on dit ce qui a échoué, pas « réessayez dans un instant », qui n'y changerait rien.
+          if (e instanceof ApiError && (e.status === 404 || e.status >= 500)) {
+            throw new ApiError(messages().common.errors.videoForAi, e.status, e.detail, 'gemini_upload')
+          }
+          throw e
+        })
       const r = res.results?.[0]
       if (!r?.geminiFileUri) throw new ApiError(messages().common.errors.videoForAi, 500, res)
       return { uri: r.geminiFileUri, expiresAt: r.expirationTime ?? null }
