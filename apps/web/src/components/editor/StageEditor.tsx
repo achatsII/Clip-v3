@@ -376,6 +376,8 @@ function StepStrip({ p }: { p: Inner }) {
 /** Sur ordinateur : le poste en plein écran, à modifier sur place. */
 function StageCanvas(p: Inner) {
   const t = useMessages()
+  // Plusieurs médias à l'étape : vignettes, « 2 / 3 » et grandes flèches (toggle `mediaNav`).
+  const mediaNav = useToggle('mediaNav')
   const { content, step, index, readOnly, top } = p
   const total = content.steps.length
   const hasMedia = !!step?.media.length
@@ -402,7 +404,7 @@ function StageCanvas(p: Inner) {
           {hasMedia && (
             <div className="flex min-w-0 flex-[1.5] flex-col bg-slate-900">
               <div className="relative min-h-0 flex-1">
-                <StepMediaArea step={step} labels={t.editor.mediaArea} />
+                <StepMediaArea step={step} labels={t.editor.mediaArea} nav={mediaNav} />
               </div>
               <MediaBar p={p} />
             </div>
@@ -436,6 +438,7 @@ function StagePhone(p: Inner) {
   const { step, readOnly, top } = p
   // Le média à ses vraies proportions, comme au poste au téléphone (toggle `phoneReader`).
   const phoneReader = useToggle('phoneReader')
+  const mediaNav = useToggle('mediaNav')
   const first = step?.media[0]
   const focus = !!step && layoutOf(step) === 'focus'
   const ratio = useMediaRatio(phoneReader && focus ? ratioKeys(first, false) : [])
@@ -477,7 +480,7 @@ function StagePhone(p: Inner) {
                 className={cn('relative bg-slate-900', mediaBox !== null ? 'transition-[height] duration-300 ease-out' : 'h-[42dvh] sm:h-[50dvh]')}
               >
                 {step.media.length ? (
-                  <StepMediaArea key={step.id} step={step} labels={t.editor.mediaArea} />
+                  <StepMediaArea key={step.id} step={step} labels={t.editor.mediaArea} nav={mediaNav} />
                 ) : (
                   <button type="button" disabled={readOnly || !!step.fromBlock} onClick={p.openMedia} className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/80">
                     <ImagePlus className="h-10 w-10" />

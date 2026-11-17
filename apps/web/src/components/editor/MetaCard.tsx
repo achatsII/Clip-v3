@@ -3,11 +3,14 @@
 import { Check, ChevronDown, Clock, MapPin, Plus, Repeat, Tag, X } from 'lucide-react'
 import { useState } from 'react'
 import { CategoryIcon, PpeIcon } from '@/components/icons'
+import { ToolTiles } from '@/components/ToolTiles'
 import { Input, Label, Select, Textarea } from '@/components/ui/Field'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
 import { CATEGORIES, CATEGORY_KEYS, KINDS, PPE } from '@/lib/model/catalog'
+import { withToolEmoji } from '@/lib/model/tools'
 import type { CategoryKey, InstructionContent, InstructionKind, Station } from '@/lib/model/types'
+import { useToggle } from '@/lib/toggles'
 import { cn } from '@/lib/util/cn'
 
 interface StationProps {
@@ -101,6 +104,8 @@ export function MetaCard({
   noStations?: boolean
 }) {
   const t = useMessages().editor.meta
+  // Les outils en images (toggle `toolImages`) : une tuile par outil, un toucher en change l'image.
+  const toolImages = useToggle('toolImages')
   const [openState, setOpen] = useState(false)
   const open = embedded || openState
   const [tag, setTag] = useState('')
@@ -198,7 +203,17 @@ export function MetaCard({
           </div>
 
           <div>
-            <Label htmlFor="meta-tools">{t.tools}</Label>
+            <Label htmlFor="meta-tools" hint={readOnly || !toolImages ? undefined : t.toolImageHint}>{t.tools}</Label>
+            {toolImages && (
+              <div className="mb-2">
+                <ToolTiles
+                  tools={content.tools}
+                  size="sm"
+                  words={{ change: t.toolImage }}
+                  onChangeEmoji={readOnly ? undefined : (i, emoji) => set({ tools: content.tools.map((x, j) => (j === i ? withToolEmoji(x, emoji) : x)) })}
+                />
+              </div>
+            )}
             <Textarea id="meta-tools" readOnly={readOnly} rows={3} value={content.tools.join('\n')} onChange={(e) => set({ tools: e.target.value.split('\n').map((line) => line.trimStart()) })} placeholder={t.toolsPlaceholder} />
           </div>
           <div>

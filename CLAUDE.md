@@ -124,6 +124,19 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   lecteur par vidéo (jamais la vidéo des étapes) ; chaque étape montre son extrait depuis le début ;
   « Tout voir » ne charge et ne joue que les vidéos à l'écran (`lazy`). Un nouvel élément vidéo passe
   par `VideoSegment` ou appelle `stopWhenGone` à son démontage.
+- **Outils en images** (toggle `toolImages`, `src/lib/model/tools.ts`) : chaque outil a son emoji, en
+  tête de son texte (« 🔧 Clé de 13 mm » : l'IA le met, consigne du schéma, rien dans n8n), sinon tiré
+  de son nom (`toolIcon`, 🧰 à défaut). Au poste, des tuiles (`ToolTiles`) ; dans l'éditeur, un toucher
+  en change l'image (`withToolEmoji`) ; le PDF le montre (`toolImages` du `PrintMeta`) ; une traduction
+  garde l'emoji de l'original (`keepToolEmojis`). Toggle coupé, le texte s'affiche tel qu'écrit.
+- **Son des vidéos** (toggle `videoSound`, `src/lib/media/videoSound.ts`, `sound` du
+  `MediaPlaybackProvider`) : activé une fois, il suit aux autres étapes et se retient sur l'appareil
+  (`clip_pref_video_sound`) ; muet par défaut. Un navigateur qui refuse le son sans un toucher fait partir
+  la vidéo muette, sans oublier le choix.
+- **Plusieurs médias à une étape** (toggle `mediaNav`, `MediaNav` de `StepMediaArea`, prop `nav`) : leurs
+  vraies vignettes, « 2 / 3 » et de grandes flèches, au poste et dans les deux vues de l'éditeur ; la
+  flèche « suivant » pulse tant qu'on n'a rien regardé d'autre ; leur nombre sur l'étape dans la liste de
+  la Fiche. Pas de glisser sur le média : au poste, glisser change d'étape.
 - **Capturer** (« Nouvelle instruction », `CaptureBoard`) : d'un seul écran au téléphone, qui prend tout
   l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
   ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher. Les sources

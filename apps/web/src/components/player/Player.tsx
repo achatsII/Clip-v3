@@ -1,5 +1,6 @@
 'use client'
 
+import { ToolTiles } from '@/components/ToolTiles'
 import {
   ArrowLeft,
   ArrowRight,
@@ -260,7 +261,11 @@ export function Player(props: PlayerProps) {
   const pool = useMemo(() => new VideoPool(3), [])
   useEffect(() => () => pool.dispose(), [pool])
   // Le toggle coupe aussi les lecteurs gardés : chaque étape reprend alors son propre lecteur.
-  const playback = useMemo(() => ({ pool: reel ? pool : null, reel, smooth }), [pool, reel, smooth])
+  // Le son activé sur une étape suit aux autres et se retient sur l'appareil (toggle `videoSound`).
+  const sound = useToggle('videoSound')
+  const playback = useMemo(() => ({ pool: reel ? pool : null, reel, smooth, sound }), [pool, reel, smooth, sound])
+  // Plusieurs médias à une étape : vignettes, « 2 / 3 » et grandes flèches (toggle `mediaNav`).
+  const mediaNav = useToggle('mediaNav')
   useEffect(() => {
     // Toggle coupé : aucun lecteur gardé, donc rien à préparer (il ne servirait à personne).
     if (!reel || slowConnection()) return
@@ -557,7 +562,7 @@ export function Player(props: PlayerProps) {
                 style={mediaBox !== null ? { height: mediaBox } : undefined}
                 className={cn('relative shrink-0 bg-slate-900 lg:h-auto lg:flex-[1.5]', layout === 'row' ? 'min-w-0 flex-[1.2]' : mediaBox !== null ? 'transition-[height] duration-300 ease-out' : 'h-[46dvh] sm:h-[52dvh]')}
               >
-                <StepMediaArea step={step} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} />
+                <StepMediaArea step={step} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid, previousMedia: t.previousMedia, nextMedia: t.nextMedia, mediaOf: t.mediaOf }} nav={mediaNav} />
               </div>
             )}
             <div
@@ -814,6 +819,8 @@ function Intro({
   onGoTo?: (index: number) => void
   onPrevious?: () => void
 }) {
+  // Les outils en images (toggle `toolImages`) : une tuile par outil, son emoji puis son nom.
+  const toolImages = useToggle('toolImages')
   return (
     <div className="mx-auto flex min-h-full max-w-4xl flex-col gap-6 p-5 sm:p-10">
       {update && <UpdateBanner {...update} t={t} previous={previous} onGoTo={onGoTo} onPrevious={onPrevious} />}
@@ -900,13 +907,18 @@ function Intro({
       {!!content.tools.length && (
         <section>
           <p className="label-caps mb-3 text-slate-500">{t.tools}</p>
-          <div className="flex flex-wrap gap-2">
-            {content.tools.filter(Boolean).map((x) => (
-              <span key={x} className="glass-card inline-flex h-12 items-center gap-2 rounded-2xl px-4 font-black">
-                <Wrench className="h-4 w-4 text-slate-400" /> {x}
-              </span>
-            ))}
-          </div>
+          {toolImages ? (
+            // Chaque outil en image : son emoji, puis son nom (tools.ts).
+            <ToolTiles tools={content.tools.filter(Boolean)} />
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {content.tools.filter(Boolean).map((x) => (
+                <span key={x} className="glass-card inline-flex h-12 items-center gap-2 rounded-2xl px-4 font-black">
+                  <Wrench className="h-4 w-4 text-slate-400" /> {x}
+                </span>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -1068,6 +1080,7 @@ function PreviousView({ previous, content, t, sections, onBack }: { previous: Pr
 }
 
 function DocumentView({ content, t, energyById, sections, records }: { content: InstructionContent; t: ReturnType<typeof strings>; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }>; sections: boolean; records: boolean }) {
+  const mediaNav = useToggle('mediaNav')
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-5 sm:p-8">
       <Intro content={content} t={t} onStart={() => document.getElementById('doc-step-0')?.scrollIntoView({ behavior: 'smooth' })} />
@@ -1078,7 +1091,7 @@ function DocumentView({ content, t, energyById, sections, records }: { content: 
           {s.media[0] && (
             <div className={cn('bg-slate-900', layoutOf(s) === 'focus' ? 'aspect-video' : 'aspect-[16/7]')}>
               {/* Toutes les étapes sur une page : seules les vidéos à l'écran se chargent et jouent. */}
-              <StepMediaArea step={s} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid }} lazy />
+              <StepMediaArea step={s} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid, previousMedia: t.previousMedia, nextMedia: t.nextMedia, mediaOf: t.mediaOf }} lazy nav={mediaNav} />
             </div>
           )}
           <div className="p-5 sm:p-7">

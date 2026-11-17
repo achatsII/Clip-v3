@@ -126,11 +126,14 @@ export function stopWhenGone(v: HTMLVideoElement) {
  * toggle `stepReel`, au poste seulement) et la lecture fluide (`smooth`, toggle `smoothVideos`) :
  * une vidéo qui quitte l'écran arrête de télécharger, un lecteur repris d'une autre étape repart au
  * début de son extrait, et une liste de vidéos (« Tout voir ») ne charge et ne joue que celles qu'on voit.
+ * `sound` (toggle `videoSound`) : le son activé sur une vidéo suit aux autres et se retient sur
+ * l'appareil (`videoSound.ts`) ; sans lui, chaque extrait repart muet.
  */
 export interface MediaPlayback {
   pool: VideoPool | null
   reel: boolean
   smooth?: boolean
+  sound?: boolean
 }
 const PlaybackContext = createContext<MediaPlayback>({ pool: null, reel: false, smooth: false })
 export const MediaPlaybackProvider = PlaybackContext.Provider

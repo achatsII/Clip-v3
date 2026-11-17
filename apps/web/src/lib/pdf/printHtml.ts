@@ -12,6 +12,7 @@ import { LANGS, messagesIn, type Messages } from '../i18n'
 import { annotationsMarkup } from '../annotations/markup'
 import { layoutOf } from '../model/media'
 import type { Branding, InstructionContent, Step, StepMedia } from '../model/types'
+import { toolIcon } from '../model/tools'
 import { BOTTOM_MM, MARGIN_MM, pageBox, shows, type HeaderField, type PrintTemplate } from './template'
 
 /** Les mots du document : ceux du lecteur (`player`), ceux de l'impression (`print`) et ceux du métier (`catalog`). */
@@ -83,6 +84,15 @@ export interface PrintMeta {
   template?: PrintTemplate
   /** « Une page » : l'échelle qui fait tenir la feuille sur une page (mesurée dans l'aperçu). */
   scale?: number
+  /** Les outils en images (toggle `toolImages`) : l'emoji devant chaque outil ; absent : le texte tel quel. */
+  toolImages?: boolean
+}
+
+/** Un outil du PDF : son emoji puis son nom, ou le texte tel qu'écrit. */
+function toolChip(tool: string, images: boolean): string {
+  if (!images) return esc(tool)
+  const { emoji, label } = toolIcon(tool)
+  return `<span class="emoji">${esc(emoji)}</span> ${esc(label)}`
 }
 
 /** Une chaîne pour `content:` d'une règle CSS (le pied de page de chaque page). */
@@ -195,7 +205,7 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .block{border:1px solid #e2e8f0;border-radius:14px;padding:12px 14px;break-inside:avoid;margin-bottom:12px}
 .block h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px;color:#334155}
-.chip{display:inline-block;background:color-mix(in srgb,${esc(color)} 12%,white);color:color-mix(in srgb,${esc(color)} 75%,black);border-radius:8px;padding:4px 8px;margin:0 6px 6px 0;font-size:12px;font-weight:800}
+.chip .emoji{font-size:15px;line-height:1;vertical-align:-2px}.chip{display:inline-block;background:color-mix(in srgb,${esc(color)} 12%,white);color:color-mix(in srgb,${esc(color)} 75%,black);border-radius:8px;padding:4px 8px;margin:0 6px 6px 0;font-size:12px;font-weight:800}
 .safety{background:#fff1f2;border-color:#fecdd3}.safety li{font-weight:700}
 .steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .steps .section{grid-column:1/-1;margin:10px 0 0;font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:color-mix(in srgb,${esc(color)} 85%,black);break-after:avoid;page-break-after:avoid}
@@ -240,7 +250,7 @@ ${meta.draft ? `<div class="draft">${t.draft}</div>` : ''}
 </header>
 <div class="grid">
   ${ppe ? `<section class="block"><h2>${esc(p.ppe)}</h2>${ppe}</section>` : ''}
-  ${content.tools.filter(Boolean).length ? `<section class="block"><h2>${esc(p.tools)}</h2>${content.tools.filter(Boolean).map((tool) => `<span class="chip" style="background:#f1f5f9;color:#334155">${esc(tool)}</span>`).join('')}</section>` : ''}
+  ${content.tools.filter(Boolean).length ? `<section class="block"><h2>${esc(p.tools)}</h2>${content.tools.filter(Boolean).map((tool) => `<span class="chip" style="background:#f1f5f9;color:#334155">${toolChip(tool, meta.toolImages === true)}</span>`).join('')}</section>` : ''}
 </div>
 ${content.safety.filter(Boolean).length ? `<section class="block safety"><h2>${esc(p.safety)}</h2><ul>${content.safety.filter(Boolean).map((s) => `<li>${esc(s)}</li>`).join('')}</ul></section>` : ''}
 ${lockout}

@@ -414,7 +414,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const smoothVideos = useToggle('smoothVideos')
   const videoPool = useMemo(() => new VideoPool(3), [])
   useEffect(() => () => videoPool.dispose(), [videoPool])
-  const playback = useMemo(() => ({ pool: smoothVideos ? videoPool : null, reel: false, smooth: smoothVideos }), [smoothVideos, videoPool])
+  const sound = useToggle('videoSound')
+  const playback = useMemo(() => ({ pool: smoothVideos ? videoPool : null, reel: false, smooth: smoothVideos, sound }), [smoothVideos, videoPool, sound])
   const switched = useRef(false)
   const chooseView = (v: EditorView) => {
     switched.current = true

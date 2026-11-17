@@ -1041,6 +1041,40 @@ dessin seul, lisible d'un coup d'œil (`visualSystem`, `src/lib/ai/prompts.ts`) 
 le geste de l'étape), ni en-tête ni texte d'explication, au plus 4 libellés de 1 à 3 mots, le bleu pour
 le geste et les couleurs de sécurité seulement quand l'étape porte un risque.
 
+### Plusieurs médias à une étape, bien visibles (toggle `mediaNav`, repli éteint)
+
+Avant, une étape à plusieurs médias ne le montrait que par de petites pastilles numérotées en haut à
+gauche : l'opérateur, comme l'auteur, passait à côté. Maintenant (`MediaNav`, `StepMediaArea`) :
+
+- **Les vraies vignettes** des médias en haut du média (celle qu'on regarde bordée de blanc ; une vidéo
+  porte ▶, un verdict sa couleur), précédées de « 2 / 3 ».
+- **De grandes flèches** (56 px) de chaque côté ; on fait le tour (après le dernier, le premier). Tant
+  qu'on n'a pas regardé un autre média, la flèche « suivant » pulse.
+- Pas de glisser sur le média : au poste (et dans l'éditeur au téléphone), glisser change d'étape.
+- Partout où le média se montre « un à la fois » : au poste, dans « Tout voir », dans les deux vues de
+  l'éditeur ; et dans la liste des étapes de la Fiche, leur nombre sur la vignette de l'étape.
+- Toggle coupé, les pastilles d'avant (`nav` absent).
+
+### Les outils en images (toggle `toolImages`, `src/lib/model/tools.ts`)
+
+« Outils et matériel » était une liste de noms. Chaque outil a maintenant une image, un emoji : il se
+reconnaît d'un coup d'œil, en couleur, partout (tablette, téléphone, PDF), sans image à charger, à
+générer ni à payer.
+
+- **L'emoji voyage en tête du texte** (« 🔧 Clé de 13 mm ») : la forme des données ne change pas, il
+  suit l'ordre, les modifications et l'historique. L'IA le met à la génération (la description du
+  champ `tools` du schéma, qui passe tel quel au serveur : rien dans n8n). Sans emoji (une ancienne
+  instruction, un outil tapé à la main), le nom le donne (`toolIcon` : clé → 🔧, tournevis → 🪛,
+  chiffon → 🧻, en français comme en anglais, sans accents) ; rien de reconnu, 🧰. Une marque (©, ®, ™)
+  n'est pas un emoji.
+- **Au poste**, « Avant de commencer » : une tuile par outil, le grand emoji puis le nom (`ToolTiles`).
+- **Dans l'éditeur** (infos de l'instruction) : les mêmes tuiles en petit ; un toucher ouvre la palette
+  (`TOOL_PALETTE`) et l'emoji choisi remplace celui en tête (`withToolEmoji`). Une ligne vide (l'outil
+  qu'on tape) n'a pas de tuile.
+- **Le PDF** met l'emoji devant chaque outil (`toolImages` du `PrintMeta`).
+- **Une traduction** qui perd l'emoji le reprend de l'original, au même rang (`keepToolEmojis`).
+- Toggle coupé : le texte s'affiche tel qu'écrit (avec l'emoji si l'IA l'a mis), comme avant.
+
 ### La lecture au téléphone (toggle `phoneReader`, repli éteint)
 
 Au téléphone tenu droit, le média prenait toujours près de la moitié de l'écran : une vidéo couchée y
@@ -1067,6 +1101,19 @@ laissait des bandes noires, et le texte se lisait en défilant. Maintenant (`src
 - **Glisser change d'étape** (`useStepSwipe`, partagé avec l'éditeur) : plus de 70 px, nettement plus de
   côté que vers le bas, en moins de 0,8 s ; jamais depuis un relevé qu'on remplit, une vidéo ou une
   rangée qui défile de côté (les gestes de l'étape).
+
+### Le son des vidéos se retient (toggle `videoSound`, `src/lib/media/videoSound.ts`)
+
+Chaque extrait repartait muet : un opérateur qui avait besoin du son le réactivait à chaque étape.
+Maintenant, le son activé une fois suit aux autres étapes et se retient sur l'appareil
+(`clip_pref_video_sound`), au poste comme dans l'éditeur ; coupé, il le reste aussi. Muet par défaut.
+
+- Le choix passe par le `MediaPlaybackProvider` (`sound`) du lecteur et de l'éditeur ; `VideoSegment` le
+  lit (`useVideoSound`) pour le lecteur gardé comme pour une vidéo à elle.
+- Un navigateur qui refuse le son sans un toucher (iOS, Chrome à l'ouverture) rejette `play()`
+  (`NotAllowedError`) : la vidéo repart muette (`blocked`), le choix n'est pas oublié, et un toucher sur
+  le bouton du son le redonne.
+- Toggle coupé : le son vaut pour l'extrait, et le suivant repart muet, comme avant.
 
 ### Les vidéos au poste, sur un réseau faible (toggle `stepReel`, repli éteint)
 

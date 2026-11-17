@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -106,6 +106,15 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // Au téléphone, l'IA continue quand l'app quitte l'écran : les réponses de l'assistant passent par
   // le serveur (le même chemin que la génération au serveur) et la génération y va par défaut.
   backgroundAi: true,
+  // Les outils et le matériel en images : au poste, une tuile par outil (un grand emoji, puis son
+  // nom) ; dans l'éditeur, un toucher change l'image ; dans le PDF, l'emoji devant chaque outil.
+  toolImages: true,
+  // Le son des vidéos se retient sur l'appareil : activé sur une étape, il suit aux autres étapes et
+  // à la prochaine ouverture. Éteint : chaque extrait repart muet.
+  videoSound: true,
+  // Plusieurs médias à une étape, impossibles à manquer : leurs vignettes, « 2 / 3 » et de grandes
+  // flèches, au poste comme dans l'éditeur, et leur nombre sur l'étape dans la liste de la Fiche.
+  mediaNav: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -154,4 +163,7 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   clipGif: false,
   printTemplates: false,
   backgroundAi: false,
+  toolImages: false,
+  videoSound: false,
+  mediaNav: false,
 }

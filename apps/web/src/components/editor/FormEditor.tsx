@@ -1,6 +1,6 @@
 'use client'
 
-import { Blocks, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, GripVertical, ImageOff, Plus, TriangleAlert, Wrench } from 'lucide-react'
+import { Blocks, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, GripVertical, ImageOff, Images, Plus, TriangleAlert, Wrench } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { CategoryIcon } from '@/components/icons'
 import { mediaThumb } from '@/components/media/MediaView'
@@ -189,6 +189,7 @@ function InstructionItem({ p, active }: { p: Inner; active: boolean }) {
 /** Une étape dans la liste : sa vignette, son action, et ce qui la distingue ; sa poignée pour la glisser. */
 function StepItem({ p, step, index, active, drag }: { p: Inner; step: Step; index: number; active: boolean; drag: Drag }) {
   const t = useMessages()
+  const mediaNav = useToggle('mediaNav')
   const thumb = mediaThumb(step.media[0])
   const change = p.changes?.[step.id]
   const fb = p.feedbackByStep?.[step.id] ?? 0
@@ -219,6 +220,12 @@ function StepItem({ p, step, index, active, drag }: { p: Inner; step: Step; inde
         <span className="relative h-14 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-200 dark:bg-slate-700">
           {thumb ? <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" draggable={false} /> : <span className="flex h-full w-full items-center justify-center text-slate-400" title={t.editor.form.noMedia}><ImageOff className="h-5 w-5" /></span>}
           <span className="absolute top-1 left-1 flex h-6 min-w-6 items-center justify-center rounded-lg bg-black/60 px-1 text-xs font-black text-white tabular-nums">{index + 1}</span>
+          {/* Plusieurs médias : ça se voit dès la liste (toggle `mediaNav`). */}
+          {mediaNav && step.media.length > 1 && (
+            <span className="absolute right-1 bottom-1 flex h-6 items-center gap-0.5 rounded-lg bg-[var(--primary)] px-1.5 text-[11px] font-black text-white" title={t.editor.form.mediaCount(step.media.length)}>
+              <Images className="h-3 w-3" /> {step.media.length}
+            </span>
+          )}
         </span>
         <span className="min-w-0 flex-1">
           <span className={cn('line-clamp-2 text-sm leading-snug font-black', step.title.trim() ? 'text-slate-900 dark:text-white' : 'text-rose-600 dark:text-rose-400')}>{step.title.trim() || t.editor.form.untitled}</span>

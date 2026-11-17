@@ -79,7 +79,7 @@ describe('la lecture fluide des vidéos', () => {
     const pool = new VideoPool(3)
     const clip = (start: number, end: number): StepMedia => ({ kind: 'video', url: SRC, start, end, clip: { url: 'https://x/etapes.mp4', at: 0, src: SRC, start, end } })
     const step = (id: string, media: StepMedia): Step => ({ id, title: id, text: '', keyPoints: [], warning: null, media: [media] })
-    const labels = { zoom: 'Agrandir', doIt: 'À faire', avoid: 'À éviter' }
+    const labels = { zoom: 'Agrandir', doIt: 'À faire', avoid: 'À éviter', previousMedia: 'Média précédent', nextMedia: 'Média suivant', mediaOf: (i: number, n: number) => `${i} / ${n}` }
     // Comme « Comme au poste » : l'étape choisie seulement, remontée à chaque étape.
     const stage = (s: Step) => smooth(<StepMediaArea key={s.id} step={s} labels={labels} />, pool)
     const { container, rerender } = render(stage(step('s1', clip(4, 9))))

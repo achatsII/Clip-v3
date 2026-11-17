@@ -21,6 +21,9 @@ export const editor: typeof Fr = {
     zoom: 'Enlarge',
     doIt: 'Do',
     avoid: 'Avoid',
+    previousMedia: 'Previous media',
+    nextMedia: 'Next media',
+    mediaOf: (i: number, n: number) => `${num(i)} / ${num(n)}`,
   },
   page: {
     saveState: {
@@ -270,6 +273,7 @@ export const editor: typeof Fr = {
     instruction: 'The instruction',
     instructionLine: (steps: number, stations: number) => `${num(steps)} step${steps === 1 ? '' : 's'} · ${stations ? `${num(stations)} station${stations === 1 ? '' : 's'}` : 'no station'}`,
     blockLine: (steps: number) => `${num(steps)} step${steps === 1 ? '' : 's'} · shared block`,
+    mediaCount: (n: number) => `${num(n)} media in this step`,
     untitled: 'Step with no action',
     noMedia: 'No media',
     checksCount: (n: number) => `${num(n)} reading${n === 1 ? '' : 's'}`,
@@ -462,6 +466,8 @@ export const editor: typeof Fr = {
     ppe: 'Personal protective equipment (PPE)',
     tools: 'Tools and materials',
     toolsPlaceholder: '13 mm wrench\nClean rag',
+    toolImage: (name: string) => `Picture for “${name}”`,
+    toolImageHint: 'Tap a tool to change its picture.',
     safety: 'Warnings before starting',
     safetyPlaceholder: 'Machine locked out before any work',
     tags: 'Search tags',

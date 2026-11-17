@@ -113,7 +113,7 @@ export const instructionSchema = {
     frequency: str('Fréquence si dite (« une fois par mois ») ; vide sinon'),
     durationMin: num('Durée totale estimée en minutes ; 0 si inconnue'),
     ppe: { type: 'array', items: { type: 'string', enum: Object.keys(PPE) } },
-    tools: strList('Outils et matériel nécessaires'),
+    tools: strList('Outils et matériel nécessaires, chacun précédé de l’emoji qui le montre le mieux (🔧 clé, 🪛 tournevis, 🔨 marteau, 🗜️ pince, 📏 règle ou ruban, 🔦 lampe, 🧻 chiffon, 🧴 nettoyant, 🛢️ graisse ou huile, 🔩 vis ou boulon, ⚙️ pièce, 🔒 cadenas, 🧰 sinon) : « 🔧 Clé de 13 mm »'),
     safety: strList('Mises en garde générales, avant de commencer'),
     steps: { type: 'array', items: stepSchema },
     lockout: lockoutSchema,

@@ -22,7 +22,7 @@ import { Annotator } from './Annotator'
 import { FramePicker } from './FramePicker'
 import { GifDialog, type GifClip } from './GifDialog'
 import { MediaPicker } from './MediaPicker'
-import { StepMediaArea } from '@/components/player/StepMediaArea'
+import { MediaNav, StepMediaArea } from '@/components/player/StepMediaArea'
 
 /** Assez pour comparer et pour une grille, sans noyer l'étape. */
 const MAX_MEDIA = 6
@@ -87,6 +87,8 @@ export function StepMediaEditor({
   const confirm = useConfirm()
   const [framing, setFraming] = useState(false)
   const gifOn = useToggle('clipGif')
+  // Plusieurs médias à l'étape : vignettes, « 2 / 3 » et grandes flèches, comme au poste (toggle `mediaNav`).
+  const mediaNav = useToggle('mediaNav')
   const [gifClip, setGifClip] = useState<GifClip | null>(null)
   // Une vidéo, ou une image figée d'une vidéo : on peut passer de l'une à l'autre.
   const frameSource =
@@ -172,9 +174,13 @@ export function StepMediaEditor({
       {/* L'aperçu, comme au poste */}
       <div className="relative aspect-video overflow-hidden rounded-[24px] bg-slate-900">
         {media && layoutOf(step) !== 'focus' ? (
-          <StepMediaArea step={step} labels={t.editor.mediaArea} />
+          <StepMediaArea step={step} labels={t.editor.mediaArea} nav={mediaNav} />
         ) : media ? (
-          <MediaView key={`${media.url}-${media.kind === 'video' ? media.start : ''}-${media.kind === 'html' ? media.html.length : ''}`} media={media} autoPlay={false} />
+          <>
+            <MediaView key={`${media.url}-${media.kind === 'video' ? media.start : ''}-${media.kind === 'html' ? media.html.length : ''}`} media={media} autoPlay={false} />
+            {/* Plusieurs médias : leurs vignettes, « 2 / 3 » et les flèches, comme au poste. */}
+            {mediaNav && step.media.length > 1 && <MediaNav media={step.media} current={Math.min(mediaIndex, step.media.length - 1)} onPick={setMediaIndex} labels={t.editor.mediaArea} />}
+          </>
         ) : (
           <button type="button" disabled={readOnly} onClick={() => setPickerOpen(true)} className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/80">
             <ImagePlus className="h-10 w-10" />

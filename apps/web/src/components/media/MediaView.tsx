@@ -9,6 +9,7 @@ import { reportRatio } from '@/lib/media/ratio'
 import { playable } from '@/lib/media/reel'
 import { stopWhenGone, useMediaPlayback } from '@/lib/media/videoPool'
 import { VIDEO_MODES, setVideoMode, type VideoMode } from '@/lib/media/videoMode'
+import { setVideoSound, useVideoSound } from '@/lib/media/videoSound'
 import type { Annotation, StepMedia } from '@/lib/model/types'
 import { cn, formatClock } from '@/lib/util/cn'
 
@@ -158,7 +159,7 @@ export function VideoSegment({
   // Un lecteur gardé d'une étape à l'autre (videoPool.ts), au lecteur d'instruction et, avec la
   // lecture fluide, dans l'éditeur : il saute au bon moment sans rien recharger. Ailleurs (une tuile,
   // une vidéo de la liste « Tout voir »), le sien.
-  const { pool, smooth } = useMediaPlayback()
+  const { pool, smooth, sound: rememberSound } = useMediaPlayback()
   const lazyOn = !!lazy && !!smooth
   const pooled = !!pool && !bare && !lazyOn
   const host = useRef<HTMLDivElement>(null)
@@ -211,7 +212,18 @@ export function VideoSegment({
   const visible = !observed || seen.visible
   const [playing, setPlaying] = useState(false)
   const [ended, setEnded] = useState(false)
-  const [muted, setMuted] = useState(true)
+  // Le son (toggle `videoSound`) se retient sur l'appareil (videoSound.ts) : activé une fois, il suit
+  // d'une étape à l'autre. Sans le toggle, il vaut pour cet extrait seulement, qui repart muet.
+  // Un navigateur qui refuse le son sans un toucher fait partir la vidéo muette (`blocked`).
+  const storedSound = useVideoSound()
+  const [localSound, setLocalSound] = useState(false)
+  const soundOn = rememberSound ? storedSound : localSound
+  const [blocked, setBlocked] = useState(false)
+  const muted = !soundOn || blocked
+  const mutedRef = useRef(muted)
+  mutedRef.current = muted
+  const rememberRef = useRef(!!rememberSound)
+  rememberRef.current = !!rememberSound
   const [t, setT] = useState(start)
   const [menu, setMenu] = useState(false)
   const effective: VideoMode = mode ?? (autoPlay ? 'loop' : 'tap')
@@ -225,12 +237,23 @@ export function VideoSegment({
   useEffect(() => {
     const v = ref.current
     if (!v) return
-    v.muted = true
+    // Un autre extrait : le son retenu le suit ; sans mémoire, il repart muet.
+    if (!rememberRef.current) setLocalSound(false)
+    v.muted = rememberRef.current ? mutedRef.current : true
     setEnded(false)
     // « En lecture » suit les événements de la vidéo, pas la promesse de play() : une fin d'extrait
     // arrivée avant la promesse ne doit pas relancer l'affichage « en lecture ».
     const play = () => {
-      v.play()?.catch(() => setPlaying(false))
+      v.play()?.catch((e: unknown) => {
+        // Le son sans un toucher est refusé : la vidéo repart muette, le bouton du son le redonnera.
+        if (!v.muted && e instanceof DOMException && e.name === 'NotAllowedError') {
+          v.muted = true
+          setBlocked(true)
+          v.play()?.catch(() => setPlaying(false))
+          return
+        }
+        setPlaying(false)
+      })
     }
     // Un extrait trop court pour boucler (début et fin confondus) se joue une fois, sans sauter sans fin.
     const loops = () => modeRef.current === 'loop' && end - start > 0.2
@@ -338,8 +361,10 @@ export function VideoSegment({
     if (poster) v.poster = poster
     else v.removeAttribute('poster')
   }, [pooled, auto, poster, url])
+  // Le son suit le choix de l'appareil, pour le lecteur gardé comme pour une vidéo à elle (React ne
+  // remet pas toujours l'attribut `muted` à jour sur l'élément).
   useEffect(() => {
-    if (pooled && ref.current) ref.current.muted = muted
+    if (ref.current) ref.current.muted = muted
   }, [pooled, muted])
 
   const len = Math.max(0.1, end - start)
@@ -399,7 +424,16 @@ export function VideoSegment({
             <ModeIcon mode={effective} className="h-5 w-5" />
           </button>
         )}
-        <button type="button" onClick={() => setMuted((m) => !m)} aria-label={muted ? labels.unmute : labels.mute} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
+        <button
+          type="button"
+          onClick={() => {
+            // Un toucher : le son est permis ; retenu, le choix vaut pour les autres vidéos.
+            setBlocked(false)
+            if (rememberSound) setVideoSound(muted)
+            else setLocalSound(muted)
+            if (ref.current) ref.current.muted = !muted
+          }}
+          aria-label={muted ? labels.unmute : labels.mute} className={cn('btn-press flex items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-md', btn)}>
           {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
         </button>
       </div>

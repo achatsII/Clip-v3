@@ -21,6 +21,9 @@ export const editor = {
     zoom: 'Agrandir',
     doIt: 'À faire',
     avoid: 'À éviter',
+    previousMedia: 'Média précédent',
+    nextMedia: 'Média suivant',
+    mediaOf: (i: number, n: number) => `${num(i)} / ${num(n)}`,
   },
   /** La page de l’éditeur : en-tête, enregistrement, publication, approbation, avis sur la génération. */
   page: {
@@ -291,6 +294,7 @@ export const editor = {
     instruction: 'L’instruction',
     instructionLine: (steps: number, stations: number) => `${num(steps)} étape${steps > 1 ? 's' : ''} · ${stations ? `${num(stations)} poste${stations > 1 ? 's' : ''}` : 'aucun poste'}`,
     blockLine: (steps: number) => `${num(steps)} étape${steps > 1 ? 's' : ''} · bloc commun`,
+    mediaCount: (n: number) => `${num(n)} médias à cette étape`,
     untitled: 'Étape sans action',
     noMedia: 'Sans média',
     checksCount: (n: number) => `${num(n)} relevé${n > 1 ? 's' : ''}`,
@@ -497,6 +501,9 @@ export const editor = {
     ppe: 'Équipements de protection (EPI)',
     tools: 'Outils et matériel',
     toolsPlaceholder: 'Clé de 13 mm\nChiffon propre',
+    /** Chaque outil en image : un toucher sur une tuile en change l’emoji. */
+    toolImage: (name: string) => `L’image de « ${name} »`,
+    toolImageHint: 'Touchez un outil pour changer son image.',
     safety: 'Mises en garde avant de commencer',
     safetyPlaceholder: 'Machine cadenassée avant toute intervention',
     tags: 'Étiquettes de recherche',

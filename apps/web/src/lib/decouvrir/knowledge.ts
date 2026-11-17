@@ -85,7 +85,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   vidéo montre ce geste-là, sans déborder sur le suivant.
 - Une action par étape, le moins de texte possible (un titre de quelques mots, une ou deux phrases), 0 à 2
   points clés, une mise en garde à l'étape où le risque se présente (« Danger », « Attention », « Bon à
-  savoir »), les équipements de protection (EPI), les outils et le matériel.
+  savoir »), les équipements de protection (EPI), les outils et le matériel, chacun avec son image (une
+  clé, un tournevis, un chiffon).
 - Chaque étape reçoit son média : l'extrait de la vidéo d'origine à la seconde près (joué en boucle au
   poste, pas un GIF), une photo, une image figée tirée de la vidéo, ou une figure d'un PDF : la photo ou
   le dessin de la page qui illustre l'étape, recadré (la page entière reste à un geste dans l'éditeur).
@@ -140,6 +141,10 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   l'étape, même quand elle n'a encore aucune image (« Illustrer cette image » part de la photo affichée), et
   « Schéma de l'étape » (vue de face, de dessus, en coupe ou en 3D, avec très peu de mots).
 - Jusqu'à six médias par étape, disposés « Un à la fois », « À faire / À éviter » côte à côte, ou en « Grille ».
+  Plusieurs médias à une étape se voient d'un coup d'œil : leurs vignettes, « 2 / 3 » et de grandes flèches
+  sur le média, et leur nombre sur l'étape dans la liste des étapes.
+- Les outils et le matériel en images : un grand emoji par outil, puis son nom ; un toucher en change
+  l'image. Le PDF les montre aussi.
 - Annuler et rétablir (Ctrl+Z) ; l'historique (versions publiées et points de retour du brouillon) pour
   revenir en arrière ; l'édition en direct entre appareils (ce qui change sur le téléphone s'affiche sur
   l'ordinateur) ; les sections d'une longue instruction (« Démontage », « Remontage »).
@@ -199,9 +204,13 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   va d'elle-même, les nouvelles aussi ; la page montre, avant d'enregistrer, combien d'instructions y
   répondent et lesquelles.
 - Le lecteur pas à pas : une étape à la fois, un grand média, de gros boutons (« Suivant », « Précédent »),
-  les EPI, les outils et les mises en garde « Avant de commencer », l'extrait vidéo en boucle, une fois ou au
-  toucher, le zoom sur les images, « Tout voir » pour toute l'instruction d'un coup, « Toutes les étapes »
-  (le sommaire, par section).
+  les EPI, les outils en images (un grand emoji par outil) et les mises en garde « Avant de commencer »,
+  l'extrait vidéo en boucle, une fois ou au toucher, le zoom sur les images, « Tout voir » pour toute
+  l'instruction d'un coup, « Toutes les étapes » (le sommaire, par section).
+- Une étape qui a plusieurs médias le montre : leurs vignettes en haut, « 2 / 3 », et de grandes flèches de
+  chaque côté ; la flèche « suivant » attire l'œil tant qu'on n'a pas regardé les autres.
+- Le son d'une vidéo, activé une fois, reste activé pour les étapes suivantes et à la prochaine ouverture,
+  sur cet appareil ; coupé, il le reste aussi.
 - Au téléphone, le média prend ses vraies proportions et laisse au texte la place de se lire sans
   défiler : une photo cède un peu de place, jamais sous un peu plus du tiers de l'écran, et une vidéo garde
   toute sa largeur. Tourné à l'horizontale, l'image et le texte vont côte à côte. « Tout voir » s'ouvre

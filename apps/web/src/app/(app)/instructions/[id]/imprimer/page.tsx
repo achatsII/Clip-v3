@@ -30,6 +30,8 @@ export default function PrintPage() {
   const { id } = useParams<{ id: string }>()
   const session = useSession()
   const recordsOn = useToggle('records')
+  // Les outils en images (toggle `toolImages`) : l'emoji devant chaque outil.
+  const toolImages = useToggle('toolImages')
   const t = useMessages()
   const instruction = useInstruction(id)
   const stations = useStations()
@@ -124,8 +126,9 @@ export default function PrintPage() {
       records: recordsOn,
       template: effective,
       scale: effective?.layout === 'onePage' ? scale : 1,
+      toolImages,
     })
-  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn, effective, scale])
+  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn, effective, scale, toolImages])
 
   // Une autre mise en page, d'autres images connues : « Une page » se règle de nouveau.
   const fitKey = effective?.layout === 'onePage' ? JSON.stringify([effective, Object.keys(ratios).length, doc?._id]) : ''
