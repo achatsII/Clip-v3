@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Az iparági szavak: kategóriák, lapok típusai, EVE, energiák, figyelmeztetések, visszajelzések, szerepkörök, állapotok, témák. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Termelés', short: 'Termelés' },
+    maintenance: { label: 'Karbantartás', short: 'Karbantart.' },
+    qualite: { label: 'Minőségügy', short: 'Minőség' },
+    sst: { label: 'Munkavédelem', short: 'Munkavéd.' },
+    nettoyage: { label: 'Tisztítás', short: 'Tisztítás' },
+    changement: { label: 'Átállás', short: 'Átállás' },
+    demarrage: { label: 'Indítás és leállítás', short: 'Indítás' },
+    autre: { label: 'Egyéb', short: 'Egyéb' },
+  },
+  kinds: {
+    procedure: { label: 'Munkautasítás', description: 'Lépésről lépésre, fotókkal és videókkal.' },
+    lockout: { label: 'LOTO-lap', description: 'Energiaforrások, leválasztási pontok, ellenőrzés.' },
+  },
+  ppe: {
+    casque: 'Védősisak',
+    lunettes: 'Védőszemüveg',
+    gants: 'Kesztyű',
+    'gants-coupure': 'Vágásálló kesztyű',
+    'protection-auditive': 'Hallásvédő',
+    bottes: 'Védőcipő',
+    visiere: 'Arcvédő',
+    masque: 'Maszk',
+    harnais: 'Védőhám',
+    'vetements-ignifuges': 'Lángálló ruházat',
+    dossard: 'Jól láthatósági mellény',
+    tablier: 'Kötény',
+  },
+  energy: {
+    electrique: 'Elektromos',
+    pneumatique: 'Pneumatikus',
+    hydraulique: 'Hidraulikus',
+    mecanique: 'Mechanikus',
+    gravite: 'Gravitációs',
+    thermique: 'Hő',
+    chimique: 'Vegyi',
+    vapeur: 'Gőz',
+    eau: 'Víz',
+    autre: 'Egyéb',
+  },
+  warnings: { danger: 'Veszély', caution: 'Vigyázat', info: 'Jó tudni' },
+  feedbackKinds: {
+    unclear: { label: 'Nem világos', question: 'Nem érthető' },
+    error: { label: 'Hiba', question: 'Hiba van benne' },
+    danger: { label: 'Veszély', question: 'Veszélyes' },
+    idea: { label: 'Ötlet', question: 'Van jobb módszer' },
+    praise: { label: 'Köszönet', question: 'Segített nekem' },
+  },
+  roles: {
+    admin: { label: 'Adminisztrátor', summary: 'Beállítja az üzemet, a munkaállomásokat és a tagokat; létrehoz, jóváhagy és közzétesz.' },
+    approver: { label: 'Jóváhagyó', summary: 'Létrehoz és szerkeszt; jóváhagyja, amit mások közzétesznek.' },
+    author: { label: 'Szerkesztő', summary: 'Utasításokat hoz létre és szerkeszt; közzéteszi őket, vagy jóváhagyást kér, ha az üzem előírja.' },
+    reader: { label: 'Olvasó', summary: 'Megtekinti a közzétett utasításokat, és jelzi, ami nem érthető.' },
+  },
+  status: { draft: 'Piszkozat', review: 'Jóváhagyásra vár', published: 'Közzétéve', archived: 'Archiválva' },
+  themes: { ocean: 'Indigó', bleu: 'Óceán', nature: 'Természet', crepuscule: 'Alkonyat', royal: 'Királykék', monochrome: 'Egyszínű' },
+}

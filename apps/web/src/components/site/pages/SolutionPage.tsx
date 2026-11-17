@@ -5,7 +5,7 @@
 import { ArrowRight, ShieldCheck, TriangleAlert } from 'lucide-react'
 import Link from 'next/link'
 import { content } from '@/lib/site/content'
-import { DEMO, demoLangsFor } from '@/lib/site/content/demo'
+import { DEMO, demoLangOf, demoLangsFor } from '@/lib/site/content/demo'
 import { breadcrumbLd, faqLd, graph } from '@/lib/site/jsonld'
 import type { SiteLang } from '@/lib/site/lang'
 import type { PhotoKey } from '@/lib/site/media'
@@ -112,7 +112,7 @@ export function SolutionPage({ lang, page }: { lang: SiteLang; page: SolutionKey
           <SectionHeading eyebrow={common.demoEyebrow} title={s.demo.title} text={s.demo.text} center />
           <div className="site-reveal mx-auto mt-10 max-w-6xl">
             {s.demo.kind === 'generate' && (
-              <GenerateDemo t={{ ...t.demo.generate, badge: t.demo.badge, accelerated: t.demo.accelerated, restart: t.demo.restart }} title={DEMO[lang].title} steps={DEMO[lang].steps} />
+              <GenerateDemo t={{ ...t.demo.generate, badge: t.demo.badge, accelerated: t.demo.accelerated, restart: t.demo.restart }} title={DEMO[demoLangOf(lang)].title} steps={DEMO[demoLangOf(lang)].steps} />
             )}
             {s.demo.kind === 'player' && <PlayerDemo instructions={DEMO} langs={demoLangsFor(lang)} ui={playerUi} siteLang={lang} training={page === 'training'} />}
             {s.demo.kind === 'annotate' && <AnnotateDemo t={{ ...t.demo.annotate, badge: t.demo.badge, restart: t.demo.restart }} />}

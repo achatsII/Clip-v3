@@ -4,19 +4,37 @@
  * une fonction, jours d'essai, mois offerts). L'IA n'a pas de prix fixe : aucun coût d'opération ne
  * s'annonce. Au serveur seulement : le manifeste se lit au build.
  *
- * Jetons remplis ici : `{languages}`, `{trialDays}`, `{freeMonths}`, `{paidMonths}`, `{freePlan}`,
+ * Jetons remplis ici : `{languages}`, `{uiLanguages}`, `{trialDays}`, `{trialPlans}`, `{trialPlansOr}`, `{freeMonths}`, `{paidMonths}`, `{freePlan}`,
  * `{modulePlans}` et `{plans:<feature>}` (les forfaits qui donnent cette fonction). Les autres (`{count}`,
  * `{plan}`…) se remplissent au rendu, avec `fmt`.
  */
 import { LANGUAGES } from '@/lib/model/catalog'
-import { SITE_LOCALE, siteNum, type SiteLang } from '../lang'
+import { SITE_LANGS, SITE_LOCALE, siteNum, type SiteLang } from '../lang'
 import { plansWith, siteCatalog, type SiteCatalog } from '../pricing'
+import { brandText } from '@/lib/brand/product'
+import { cs } from './cs'
+import { de } from './de'
 import { en } from './en'
+import { es } from './es'
 import { fr, type SiteContent } from './fr'
+import { hu } from './hu'
+import { id } from './id'
+import { it } from './it'
+import { ja } from './ja'
+import { ko } from './ko'
+import { nl } from './nl'
+import { pl } from './pl'
+import { pt } from './pt'
+import { ro } from './ro'
+import { th } from './th'
+import { tr } from './tr'
+import { vi } from './vi'
+import { zh } from './zh'
 
 export type { SiteContent }
 
-export const SITE_DICTS: Record<SiteLang, SiteContent> = { fr, en }
+/** Les textes du site dans ses dix-huit langues (au serveur seulement : rien de ceci ne part au navigateur). */
+export const SITE_DICTS: Record<SiteLang, SiteContent> = { fr, en, es, pt, de, it, pl, nl, cs, ro, hu, tr, zh, ja, ko, vi, id, th }
 
 /** Le nombre de langues que les opérateurs peuvent choisir (la liste de l'app). */
 export const OPERATOR_LANGUAGE_COUNT = Object.keys(LANGUAGES).length
@@ -36,10 +54,15 @@ export function siteFacts(lang: SiteLang, c: SiteCatalog = siteCatalog()): Recor
   const moduleBases = [...new Set(c.modules.map((m) => m.basePlan))]
   return {
     languages: siteNum(OPERATOR_LANGUAGE_COUNT, lang),
+    // Les langues de l'outil lui-même (et du site) : les dix-huit de `SITE_LANGS`.
+    uiLanguages: siteNum(SITE_LANGS.length, lang),
     trialDays: siteNum(c.trialDays, lang),
     freeMonths: siteNum(c.freeMonths, lang),
     paidMonths: siteNum(c.paidMonths, lang),
     freePlan: planName(c.defaultPlan, lang, c),
+    // Les forfaits qui s'essaient (`trial_days` du manifeste), liés par « et » ou par « ou ».
+    trialPlans: listOf(c.plans.filter((p) => p.trialDays > 0).map((p) => planName(p.code, lang, c)), lang),
+    trialPlansOr: listOf(c.plans.filter((p) => p.trialDays > 0).map((p) => planName(p.code, lang, c)), lang, 'disjunction'),
     modulePlans: listOf(
       moduleBases.map((code) => planName(code, lang, c)),
       lang,
@@ -75,7 +98,8 @@ export function content(lang: SiteLang): SiteContent {
   if (!t) {
     const c = siteCatalog()
     const facts = siteFacts(lang, c)
-    t = deepFill(SITE_DICTS[lang], (s) => fillFacts(s, lang, facts, c))
+    // Les faits du catalogue, puis le nom de la marque de la build (`Clip` → « Gesto » ; CLIP : tel quel).
+    t = deepFill(SITE_DICTS[lang], (s) => brandText(fillFacts(s, lang, facts, c)))
     filled.set(lang, t)
   }
   return t

@@ -1,0 +1,48 @@
+import type { training as Fr } from '../fr/training'
+
+const num = (n: number) => n.toLocaleString('ro-RO')
+const de = (n: number) => (new Intl.PluralRules('ro-RO').select(n) === 'other' ? 'de ' : '')
+
+export const training: typeof Fr = {
+  menu: 'Întrebări de instruire',
+  title: 'Întrebări de instruire',
+  intro: 'După instrucțiune, persoana de la post răspunde la câteva întrebări: știți cine este instruit și la ce post.',
+  make: 'Pregătește întrebările cu AI',
+  remake: 'Refă cu AI',
+  remakeConfirm: { title: 'Refaceți întrebările?', description: 'AI înlocuiește întrebările actuale, inclusiv modificările dumneavoastră.', confirm: 'Refă' },
+  making: 'AI pregătește întrebările…',
+  empty: 'Încă nicio întrebare',
+  count: (n: number) => (n > 1 ? `${num(n)} ${de(n)}întrebări` : n === 1 ? '1 întrebare' : 'Nicio întrebare'),
+  question: (n: number) => `Întrebarea ${num(n)}`,
+  choice: (n: number) => `Varianta ${num(n)}`,
+  markCorrect: 'Acesta este răspunsul corect',
+  correct: 'Răspuns corect',
+  why: 'De ce (afișat după răspuns)',
+  addQuestion: 'Adaugă o întrebare',
+  removeQuestion: 'Elimină întrebarea',
+  addChoice: 'Adaugă o variantă',
+  removeChoice: 'Elimină această variantă',
+  done: 'Gata',
+  publishHint: 'Întrebările ajung la post la următoarea publicare.',
+  incomplete: (n: number) => (n > 1 ? `${num(n)} ${de(n)}întrebări de instruire sunt incomplete: nu vor fi puse.` : 'O întrebare de instruire este incompletă: nu va fi pusă.'),
+  retrain: 'Persoanele trebuie reinstruite',
+  retrainHint: 'O modificare importantă: instruirile dinaintea acestei versiuni nu mai contează.',
+  retrainAsked: 'Modificare importantă: persoanele vor trebui reinstruite.',
+  matrix: 'Competențe',
+  people: 'Persoane',
+  gaps: (n: number) => (n ? `${num(n)} ${n === 1 ? 'instruire' : `${de(n)}instruiri`} de făcut` : 'Toți sunt instruiți'),
+  emptyTitle: 'Nimic de învățat încă',
+  emptyHint: 'Adăugați întrebări de instruire la o instrucțiune publicată la un post: matricea apare aici.',
+  noPeople: 'Adăugați mai întâi membrii echipei.',
+  onlyGaps: 'Doar lipsurile',
+  howTo: 'La post, persoana își spune numele („Cine sunteți?”), citește instrucțiunea, apoi își validează instruirea în câteva întrebări.',
+  open: 'Deschide instrucțiunea',
+  legend: { done: 'Instruit', partial: 'Parțial', none: 'Neinstruit', outdated: 'De refăcut' },
+  states: { done: 'Instruit', missing: 'De făcut', outdated: 'De refăcut (schimbat de atunci)' },
+  cellTitle: (person: string, station: string) => `${person} · ${station}`,
+  cellLabel: (person: string, station: string, done: number, total: number) => `${person}, ${station}: ${num(done)} din ${num(total)}`,
+  errors: {
+    empty: 'AI nu a putut pregăti întrebări. Încercați din nou.',
+    makeFailed: 'Întrebările nu au fost pregătite',
+  },
+}

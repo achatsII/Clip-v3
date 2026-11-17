@@ -7,11 +7,14 @@
  * qui vérifient elles-mêmes la session. Les fichiers (vidéos, affiches, sous-titres) restent publics.
  */
 import { NextResponse, type NextRequest } from 'next/server'
+import { PRODUCT } from '@/lib/brand/product'
 import { gate } from '@/lib/decouvrir/server/access'
 import { accessMode } from '@/lib/decouvrir/server/config'
 import { DECOUVRIR_COOKIE, openSession } from '@/lib/decouvrir/server/session'
 
 export function proxy(req: NextRequest) {
+  // Découvrir sert les prospects de l'équipe de vente de CLIP : la marque publique (Gesto) ne l'a pas.
+  if (!PRODUCT.decouvrir) return new NextResponse(null, { status: 404 })
   const mode = accessMode()
   const page = !req.nextUrl.pathname.startsWith('/api/')
   const session = mode === 'sandboxes' && page ? openSession(req.cookies.get(DECOUVRIR_COOKIE)?.value) : null

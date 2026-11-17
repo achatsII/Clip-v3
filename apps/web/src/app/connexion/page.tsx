@@ -2,7 +2,7 @@
 
 import { ArrowRight, Factory, Mail, QrCode, Sparkles, Video } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { Fragment, useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/Button'
 import { FieldError, Input, Label } from '@/components/ui/Field'
@@ -11,8 +11,8 @@ import { login, requestPasswordReset, signup } from '@/lib/gateway/auth'
 import { hasSession } from '@/lib/gateway/client'
 import { parsePlanIntent, savePlanIntent, subscriptionPathFor } from '@/lib/billing/intent'
 import { BILLING_V2, SELF_SERVICE } from '@/lib/config'
-import { LANG_NAMES, LANGS, setLang, useLang, useMessages } from '@/lib/i18n'
-import { cn } from '@/lib/util/cn'
+import { LanguageSelect } from '@/components/ui/LanguageSelect'
+import { setLang, useLang, useMessages } from '@/lib/i18n'
 import { PRIVACY_URL } from '@/lib/billing/store'
 import { useToggle } from '@/lib/toggles'
 
@@ -194,15 +194,8 @@ export default function ConnexionPage() {
         </div>
 
         {/* La langue, avant même d'avoir un compte : chaque langue s'écrit dans sa propre langue. */}
-        <div role="group" aria-label={t.language} className="mt-4 flex items-center justify-center gap-1 text-xs font-bold text-slate-400 dark:text-slate-500">
-          {LANGS.map((l, i) => (
-            <Fragment key={l}>
-              {i > 0 && <span aria-hidden>·</span>}
-              <button type="button" lang={l} aria-pressed={lang === l} onClick={() => setLang(l)} className={cn('btn-press flex h-11 min-w-11 items-center justify-center rounded-xl px-3', lang === l ? 'text-slate-700 dark:text-slate-200' : 'hover:text-slate-600 dark:hover:text-slate-300')}>
-                {LANG_NAMES[l]}
-              </button>
-            </Fragment>
-          ))}
+        <div className="mt-4 flex justify-center">
+          <LanguageSelect compact value={lang} onChange={setLang} label={t.language} />
         </div>
       </section>
     </main>

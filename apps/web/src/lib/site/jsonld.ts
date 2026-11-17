@@ -6,7 +6,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { content, planName } from './content'
-import { HREFLANG, type SiteLang } from './lang'
+import { PRODUCT } from '@/lib/brand/product'
+import { HREFLANG, SITE_LANGS, type SiteLang } from './lang'
 import { FILM, II_LOGO } from './media'
 import { siteCatalog } from './pricing'
 import { crumbsFor } from './crumbs'
@@ -20,6 +21,8 @@ const APP_ID = `${SITE_URL}/#logiciel`
 
 export function organizationLd(lang: SiteLang): Node {
   const t = content(lang)
+  // La marque publique se présente seule (son nom, son site, son icône) ; CLIP, avec son entreprise.
+  if (!PRODUCT.company) return { '@type': 'Organization', '@id': ORG_ID, name: PRODUCT.name, url: SITE_URL, logo: { '@type': 'ImageObject', url: absoluteUrl(`/brands/${PRODUCT.id}/icon-512.png`), width: 512, height: 512 } }
   return {
     '@type': 'Organization',
     '@id': ORG_ID,
@@ -31,7 +34,7 @@ export function organizationLd(lang: SiteLang): Node {
 
 export function websiteLd(): Node {
   const t = content('fr')
-  return { '@type': 'WebSite', '@id': SITE_ID, url: SITE_URL, name: t.brand.name, inLanguage: [HREFLANG.fr, HREFLANG.en], publisher: { '@id': ORG_ID } }
+  return { '@type': 'WebSite', '@id': SITE_ID, url: SITE_URL, name: t.brand.name, inLanguage: SITE_LANGS.map((l) => HREFLANG[l]), publisher: { '@id': ORG_ID } }
 }
 
 /** Le logiciel et ses offres : chaque forfait du manifeste, à chaque intervalle, en dollars canadiens. */
@@ -66,7 +69,7 @@ export function softwareLd(lang: SiteLang): Node {
     description: t.meta.home.description,
     url: absoluteUrl(pathOf('home', lang)),
     image: absoluteUrl(FILM.poster),
-    inLanguage: [HREFLANG.fr, HREFLANG.en],
+    inLanguage: SITE_LANGS.map((l) => HREFLANG[l]),
     publisher: { '@id': ORG_ID },
     offers,
   }
@@ -85,7 +88,8 @@ export function transcriptOf(vtt: string): string {
 /** Le film : narration en français ; la page anglaise donne ses sous-titres anglais. */
 export function videoLd(lang: SiteLang): Node {
   const t = content(lang)
-  const caption = FILM.subtitles[lang]
+  // Les sous-titres du film : français ou anglais (les autres langues prennent l'anglais).
+  const caption = FILM.subtitles[lang === 'fr' ? 'fr' : 'en']
   const node: Node = {
     '@type': 'VideoObject',
     name: t.film.title,

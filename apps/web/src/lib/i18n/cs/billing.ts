@@ -1,0 +1,313 @@
+import type { billing as Fr } from '../fr/billing'
+
+/** Les formes d’un nom qu’on compte (tchèque) : « 1 pracoviště », « 3 pracoviště », « 5 pracovišť ». */
+type Noun = { one: string; many: string }
+
+const fmt = (n: number) => n.toLocaleString('cs-CZ')
+const pl = (n: number, one: string, few: string, other: string) => (n === 1 ? one : n >= 2 && n <= 4 ? few : other)
+/** Les autres cas des noms comptés, par leur forme « one » (accusatif singulier) : 2 à 4, génitif singulier, nominatif pluriel. */
+const CASES: Record<string, { few: string; gen1: string; nom: string }> = {
+  pracoviště: { few: 'pracoviště', gen1: 'pracoviště', nom: 'pracoviště' },
+  autora: { few: 'autory', gen1: 'autora', nom: 'autoři' },
+  'publikovanou instrukci': { few: 'publikované instrukce', gen1: 'publikované instrukce', nom: 'publikované instrukce' },
+}
+/** Après un nombre, au cas direct (accusatif). */
+const form = (n: number, noun: Noun) => (n === 1 ? noun.one : n >= 2 && n <= 4 ? (CASES[noun.one]?.few ?? noun.many) : noun.many)
+/** « 150 kreditů ». */
+const credits = (n: number) => `${fmt(n)} ${pl(n, 'kredit', 'kredity', 'kreditů')}`
+/** « do 23. listopadu 2026 », ou rien sans date. */
+const until = (date: string | null) => (date ? ` do ${date}` : '')
+/** Les durées de l’offre de bienvenue, par unité du magasin (le mois à défaut). */
+const PERIODS: Record<string, [string, string, string]> = {
+  DAY: ['den', 'dny', 'dní'],
+  WEEK: ['týden', 'týdny', 'týdnů'],
+  MONTH: ['měsíc', 'měsíce', 'měsíců'],
+  YEAR: ['rok', 'roky', 'let'],
+}
+
+/** L’abonnement, les crédits, les plans, la fenêtre des refus, l’achat dans le magasin. */
+export const billing: typeof Fr = {
+  credits,
+  aiCredits: 'Kredity AI',
+  free: 'Zdarma',
+  quote: 'Cena na míru',
+  contactSales: 'Promluvit si s týmem CLIP',
+  quoteInApp: 'Pro celý závod vše nastaví tým CLIP s vaší organizací.',
+  multiYear: 'Závazek na 3 nebo 5 let: sleva až 25 %.',
+  perMonth: '/ měsíc',
+  perYear: '/ rok',
+  renewsOn: (date: string) => `Obnovuje se ${date}.`,
+  forecastLine: (date: string, days: number) => `Při tomto tempu se vyčerpají kolem ${date}, ${fmt(days)} ${pl(days, 'den', 'dny', 'dní')} před obnovením.`,
+  forecastOffer: (plan: string, amount: string) => `${plan}: ${amount} měsíčně.`,
+  managedByAdmin: 'Váš tarif spravuje správce vašeho závodu.',
+  retrySoon: 'Zkuste to za chvíli znovu.',
+  interval: {
+    monthly: 'Měsíčně',
+    yearly: 'Ročně',
+    yearlySaving: (pct: number) => `Ročně · −${fmt(pct)} %`,
+    yearlyTwoMonthsFree: 'Ročně · 2 měsíce zdarma',
+  },
+  plans: {
+    names: { free: 'Bez předplatného', solo: 'Solo', equipe: 'Tým', usine: 'Závod' },
+    trialNote: (days: number) => `Zkušební doba ${fmt(days)} ${pl(days, 'den', 'dny', 'dní')} zdarma při prvním předplatném`,
+    tryPlan: (plan: string, days: number) => `Vyzkoušet ${plan} na ${fmt(days)} ${pl(days, 'den', 'dny', 'dní')}`,
+    pitch: {
+      free: 'Bez předplatného: AI je součástí tarifů Solo a Tým, 7 dní zdarma na vyzkoušení.',
+      solo: 'Pro toho, kdo dokumentuje svou práci a sdílí ji pomocí QR kódu.',
+      equipe: 'Pro několik lidí, kteří to zkoušejí na lince: tým píše, schvaluje a překládá.',
+      usine: 'Pro celý závod nebo několik: cena na míru, s řízeným zavedením.',
+    },
+    perMonth: (amount: string) => `${amount} měsíčně`,
+    unlimited: (label: string, _feature: string) => `${label}: bez omezení`,
+  },
+  spent: {
+    amount: (n: number) => `AI · ${pl(n, 'použit', 'použity', 'použito')} ${fmt(n)} ${pl(n, 'kredit', 'kredity', 'kreditů')}`,
+    preview: 'Náhled: nic se neúčtuje',
+  },
+  pill: {
+    available: 'dostupných kreditů',
+    thisMonth: 'Tento měsíc',
+    granted: (n: number) => `${fmt(n)} přiděleno`,
+    used: 'Použito',
+    howItWorks: 'Každá odpověď AI se po dokončení účtuje tak, kolik skutečně stála: počet kreditů se zobrazí až poté, nikdy předem. Pokud AI v půlce selže, počítá se jen to, co už udělala.',
+    viewSubscription: 'Zobrazit mé předplatné',
+  },
+  lockBadge: 'Vyšší tarif',
+  lowBalance: {
+    text: (n: number, date: string | null) => `Zbývá vám ${credits(n)}${until(date)}.`,
+    more: 'Více kreditů',
+  },
+  balance: {
+    refused: 'Pro tuto akci nemáte dost kreditů AI. Nic nebylo naúčtováno.',
+    monthly: 'Vaše kredity AI na tento měsíc.',
+    exhausted: (date: string | null, refused: boolean) => `Došly vám kredity AI${until(date)}.${refused ? ' Za odmítnutou akci nebylo nic naúčtováno.' : ''}`,
+    notEnough: (left: number) => `Zbývá vám ${credits(left)}: na tuto akci to nestačí. Nic nebylo naúčtováno.`,
+    left: (left: number, date: string | null) => `Zbývá vám ${credits(left)}${until(date)}.`,
+    renewal: (date: string | null) => `Žádný tarif nenabízí víc.${date ? ` Vaše kredity se obnoví ${date}.` : ''}`,
+  },
+  limits: {
+    nouns: {
+      stations: { one: 'pracoviště', many: 'pracovišť' },
+      editors: { one: 'autora', many: 'autorů' },
+      published_instructions: { one: 'publikovanou instrukci', many: 'publikovaných instrukcí' },
+    },
+    count: (n: number, noun: Noun) => `${fmt(n)} ${form(n, noun)}`,
+    /** « 21 z 25 pracovišť » : le nom suit le total, au génitif. */
+    outOf: (used: number, limit: number, noun: Noun) => `${fmt(used)} z ${fmt(limit)} ${limit === 1 ? (CASES[noun.one]?.gen1 ?? noun.one) : noun.many}`,
+    title: {
+      stations: 'Více pracovišť',
+      editors: 'Více autorů',
+      published_instructions: 'Více publikovaných instrukcí',
+    },
+    noLimit: 'Váš tarif zde nemá žádný limit.',
+    notIncluded: 'Váš současný tarif žádné nezahrnuje.',
+    allows: (count: string) => `Váš tarif umožňuje ${count}.`,
+    reached: (count: string) => `Váš tarif umožňuje ${count} a limit je vyčerpán.`,
+    at: (outOf: string) => `Využito: ${outOf}.`,
+    notCounted: 'Čtenáři a operátoři se nikdy nepočítají.',
+    offer: (plan: string, count: string) => `${plan}: ${count}`,
+    offerUnlimited: (plan: string, noun: Noun) => `${plan}: ${CASES[noun.one]?.nom ?? noun.many} bez omezení`,
+  },
+  usage: {
+    inPlan: (outOf: string) => `${outOf} ve vašem tarifu`,
+    full: 'Limit dosažen',
+    near: 'Téměř plné',
+    view: (plan: string) => `Zobrazit ${plan}`,
+  },
+  paywall: {
+    moreCredits: 'Více kreditů tento měsíc',
+    unlockMore: 'Odemknout více',
+    suspended: 'Vaše předplatné je pozastaveno: zaplaťte fakturu, aby se vám funkce vrátily.',
+    notInPlan: 'Tato funkce není součástí vašeho současného tarifu.',
+    recommended: 'Doporučený tarif',
+    seePlansPage: 'Tarify najdete na stránce Předplatné.',
+    managedByAdmin: 'Tento tarif spravuje správce vašeho závodu.',
+    upgradeTo: (plan: string) => `Přejít na ${plan}`,
+    askAdmin: (plan: string) => `Požádejte správce svého závodu o přechod na tarif ${plan}.`,
+    valueReport: 'Připravit zprávu pro vedení',
+    allPlans: 'Zobrazit všechny tarify',
+    manageFromPage: 'Své předplatné spravujte na stránce Předplatné',
+  },
+  checkout: {
+    adminOnly: 'Nakupovat může pouze správce',
+    askToUpgrade: 'Požádejte ho o přechod na vyšší tarif.',
+    failed: 'Platba se neotevřela',
+    notOnSale: 'Tento tarif zatím nelze koupit',
+    noPayment: 'Zatím žádné platby',
+    choosePlan: 'Začněte výběrem tarifu.',
+    portalFailed: 'Fakturační portál se neotevřel',
+  },
+  store: {
+    privacy: 'Zásady ochrany osobních údajů',
+    appleTerms: 'Podmínky použití (Apple)',
+    comingSoon: 'Předplatné v aplikaci brzy přijde.',
+    planComingSoon: (store: string) => `Tento tarif brzy přijde do ${store}.`,
+    intro: (price: string, n: number, unit: string) => {
+      const [one, few, many] = PERIODS[unit] ?? PERIODS.MONTH
+      return `Úvodní nabídka: ${price} na ${fmt(n)} ${pl(n, one, few, many)}`
+    },
+    subscribeTo: (plan: string) => `Předplatit ${plan}`,
+    /** La formulation standard d’Apple et de Google. */
+    disclosure: (plan: string, price: string, yearly: boolean, store: string) =>
+      `Předplatné ${plan}: ${price} za ${yearly ? 'rok' : 'měsíc'}. Platba bude stržena z vašeho účtu ${store} při potvrzení nákupu. Předplatné se automaticky obnovuje, pokud ho nezrušíte alespoň 24 hodin před koncem aktuálního období. Spravovat nebo zrušit ho můžete v nastavení účtu ${store}.`,
+    welcome: (plan: string) => `Vítejte v tarifu ${plan}`,
+    planOpen: 'Váš tarif je aktivní.',
+    pending: 'Nákup čeká na vyřízení',
+    pendingBody: (store: string) => `Váš tarif se odemkne, jakmile ho ${store} potvrdí.`,
+    failed: 'Nákup se nezdařil',
+    unresolved: 'Nákup se nepodařilo propojit s vaším závodem',
+    unresolvedBody: 'Kontaktujte podporu CLIP: s účtem si poradíme.',
+    manageIn: (store: string) => `Spravovat mé předplatné v ${store}`,
+    managedWhereBought: 'Vaše předplatné se spravuje tam, kde bylo zakoupeno.',
+    managedIn: (store: string) => `Vaše předplatné se spravuje v ${store}.`,
+    restore: 'Obnovit nákupy',
+    restored: 'Nákupy obnoveny',
+    nothingToRestore: 'Žádné nákupy k obnovení',
+    nothingToRestoreBody: (store: string) => `Žádné předplatné na tomto účtu ${store} nepatří k tomuto závodu.`,
+    restoreFailed: 'Obnovení se nezdařilo',
+    failure: {
+      notReady: 'Obchod se připravuje: zkuste to za chvíli znovu.',
+      productMissing: (store: string) => `Tento tarif zatím není v ${store} nabízen.`,
+      otherAccount: (store: string) => `Tento nákup v ${store} už patří jinému účtu CLIP: přihlaste se účtem, který ho zaplatil.`,
+      network: 'Bez připojení: zkuste to znovu, až se síť vrátí.',
+      notAllowed: 'Nákupy jsou na tomto zařízení zablokovány (rodičovská kontrola nebo nastavení zařízení).',
+      other: (store: string) => `${store} nákup nedokázal dokončit. Nic nebylo naúčtováno.`,
+    },
+    blocked: {
+      team: 'V aplikaci jsou předplatná osobní: kupují se z účtu jedné osoby. Tarif vašeho závodu spravuje jeho správce.',
+      elsewhere: (store: string) => `Už máte předplatné: spravuje se v ${store}.`,
+      elsewhereUnknown: 'Už máte předplatné: spravuje se tam, kde bylo zakoupeno.',
+      unresolved: 'Pro tento účet nejsou nákupy možné. Kontaktujte podporu CLIP.',
+    },
+  },
+  modules: {
+    title: 'Moduly',
+    subtitle: 'Přidejte je k tarifu Tým nebo Závod, když je závod potřebuje.',
+    eyebrow: 'Modul',
+    trial: (days: number) => `${fmt(days)} ${pl(days, 'den', 'dny', 'dní')} zdarma`,
+    tryFree: (days: number) => `Vyzkoušet ${fmt(days)} ${pl(days, 'den', 'dny', 'dní')} zdarma`,
+    add: (name: string) => `Přidat ${name}`,
+    after: (price: string) => `Poté ${price}`,
+    active: 'Aktivní',
+    /** An active module: go where it lives in the app. */
+    open: 'Otevřít',
+    withPlans: 'Přidává se k tarifu Závod, cena na míru',
+    needsPlan: (name: string, plan: string) => `Modul ${name} se přidává k tarifu ${plan}.`,
+    notOnSale: 'Tento modul zatím není v prodeji.',
+    academy: {
+      name: 'Akademie',
+      pitch: 'Proškolte každého a udržujte jeho kvalifikaci, pracoviště po pracovišti.',
+      points: ['Hotová školicí cesta pro každé pracoviště', 'Opětovné ověření a připomínky před termínem', 'Praktické potvrzení vedoucím', 'Pokrytí podle směn a registr připravený k auditu'],
+    },
+    records: {
+      name: 'Záznamy',
+      pitch: 'Spolehlivá data z provozu, bez papíru.',
+      points: ['Kontrolní seznamy a opakovaná měření', 'Trendy a meze každého měření', 'Export pro kvalitu a audity', 'Číslo šarže, fotky a povolená odchylka'],
+    },
+  },
+  /** The billing preview (payment not open yet): see the app as a subscribed plant. */
+  preview: {
+    eyebrow: 'Náhled',
+    title: 'Podívejte se na CLIP jako na závod s předplatným',
+    text: 'Platba zatím není otevřená. Zvolte, co by závod měl: celá aplikace se tomu přizpůsobí a nic se nekupuje.',
+    plan: 'Tarif',
+    modules: 'Moduly',
+    modulesNeed: 'Moduly se přidávají k tarifu Tým nebo Závod.',
+    credits: 'Kredity AI',
+    creditLevels: { full: 'Plné', low: 'Málo', empty: 'Vyčerpané' },
+    deviceOnly: 'Jen na tomto zařízení.',
+    reset: 'Znovu otevřít vše',
+    /** Back from a preview "purchase". */
+    taken: (name: string) => `Náhled: ${name} je nyní aktivní`,
+    takenHint: 'Až se platba otevře, nákup proběhne tady.',
+    appHint: 'V tomto náhledu se nic nekupuje: změňte tarif, moduly nebo kredity nahoře na stránce a celá aplikace se přizpůsobí.',
+    moduleOff: 'Není v tomto náhledu: přidejte ho nahoře na stránce.',
+    seeWith: (name: string) => `Zobrazit CLIP s: ${name}`,
+  },
+  advisor: {
+    eyebrow: 'Pro váš závod',
+    see: 'Zobrazit nabídku',
+    later: 'Později',
+    limitTitle: {
+      stations: 'Vaše pracoviště se zaplňují',
+      editors: 'Váš tým roste',
+      published_instructions: 'Vaše knihovna roste',
+    },
+    limitFull: (outOf: string, offer: string) => `${outOf}: limit je dosažen. ${offer}.`,
+    limitNear: (outOf: string, offer: string) => `${outOf}. ${offer}.`,
+    tried: (n: number, plan: string) => `Tento měsíc jste to zkusili ${fmt(n)}×: je to součástí tarifu ${plan}.`,
+    triedModule: (n: number, module: string, trial: string) => `Tento měsíc jste to zkusili ${fmt(n)}×: je to modul ${module}${trial ? `, ${trial}` : ''}.`,
+    triedModulePlan: (n: number, module: string, plan: string) => `Tento měsíc jste to zkusili ${fmt(n)}×: modul ${module} se přidává k tarifu ${plan}.`,
+    creditsTitle: 'Dochází vám kredity AI',
+    credits: (n: number, offer: string) => `Tento měsíc vám došly ${fmt(n)}×. ${offer}.`,
+    forecastTitle: 'Kredity vám dojdou před obnovením',
+    forecast: (date: string, days: number, offer: string) => `Při tomto tempu kolem ${date}, ${fmt(days)} ${pl(days, 'den', 'dny', 'dní')} před obnovením. ${offer}.`,
+    academyTitle: 'Vaše školení nabírá na síle',
+    academy: (n: number, trial: string) => `Tento měsíc bylo absolvováno ${fmt(n)} školení. Akademie sleduje opětovná ověření a pokrytí každé směny${trial ? `: ${trial}` : ''}.`,
+    recordsTitle: 'Vaše záznamy se hromadí',
+    records: (n: number, trial: string) => `Tento měsíc ${fmt(n)} ${pl(n, 'záznam', 'záznamy', 'záznamů')}. Modul Záznamy ukazuje jejich trendy a exportuje je pro kvalitu${trial ? `: ${trial}` : ''}.`,
+  },
+  request: {
+    ask: 'Požádat správce',
+    sent: 'Žádost odeslána',
+    sentHint: 'Váš správce ji uvidí v části „K pozornosti“.',
+    already: 'Už požádáno: váš správce ji vidí v části „K pozornosti“.',
+    failed: 'Žádost se nezdařila',
+  },
+  subscription: {
+    title: 'Předplatné',
+    subtitle: 'Operátoři se nikdy nepočítají: platíte za tvorbu, pracoviště a AI.',
+    currentPlan: 'Současný tarif',
+    states: {
+      none: 'Bez předplatného',
+      trialing: 'Probíhá zkušební doba',
+      active: 'Aktivní',
+      grace: 'Platba po splatnosti — vaše funkce zůstávají dostupné',
+      suspended: 'Pozastaveno — zaplaťte fakturu',
+      canceled: 'Zrušeno',
+      expired: 'Vypršelo',
+    },
+    endsOn: (date: string) => `končí ${date}`,
+    manage: 'Spravovat předplatné a faktury',
+    unreadable: 'Stav předplatného se nepodařilo načíst',
+    usage: 'Co využíváte',
+    plans: 'Tarify',
+    current: 'Současný',
+    beforeTax: 'bez daně',
+    choose: (plan: string) => `Zvolit ${plan}`,
+    askAdmin: 'Požádejte svého správce',
+    enterprise: 'Více závodů, jednotné přihlášení nebo smlouva na míru? Tým CLIP s vámi připraví tarif Závod.',
+    intent: {
+      label: 'Tarif, který jste zvolili na našem webu',
+      continue: 'Pokračovat k platbě',
+    },
+  },
+  feature: {
+    ai_credits: 'Kredity AI měsíčně',
+    published_instructions: 'Publikované instrukce',
+    stations: 'Pracoviště s QR kódem a tabletem',
+    editors: 'Autoři a schvalovatelé',
+    approvals: 'Schválení před publikací',
+    bulk_import: 'Hromadný import starých souborů PDF a Word',
+    translations: 'Překlad pro operátory',
+    voice_assistant: 'Hlasový asistent na pracovišti',
+    adoption_stats: 'Statistiky využití a návratnost investice',
+    brand_kit: 'Logo a barvy závodu, PDF bez označení CLIP',
+    full_export: 'Úplný export všech instrukcí',
+    shared_blocks: 'Sdílené bloky: kroky napsané jednou, všude aktuální',
+    screen_capture: 'Nahrávání obrazovky softwaru: jeden krok na kliknutí',
+    ai_learning: 'AI se učí z úprav celého týmu',
+    academy: 'Akademie',
+    records_plus: 'Pokročilé záznamy',
+  },
+  count: {
+    ai_credits: (n: number) => `${fmt(n)} ${pl(n, 'kredit', 'kredity', 'kreditů')}`,
+    published_instructions: (n: number) => `${fmt(n)} ${pl(n, 'instrukce', 'instrukce', 'instrukcí')}`,
+    stations: (n: number) => `${fmt(n)} ${pl(n, 'pracoviště', 'pracoviště', 'pracovišť')}`,
+    editors: (n: number) => `${fmt(n)} ${pl(n, 'autor', 'autoři', 'autorů')}`,
+  },
+  errors: {
+    signedOut: 'Není přihlášen žádný uživatel',
+    status: (status: number) => `Chyba ${status}`,
+  },
+}

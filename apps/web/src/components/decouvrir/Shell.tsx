@@ -14,7 +14,10 @@ import { IconButton } from '@/components/ui/Button'
 import { AccessContext, loadAccess, signOut, useAccess, type AccessSetup } from '@/lib/decouvrir/access'
 import { ADVISOR_PATH, LIBRARY_PATH, LOGIN_PATH } from '@/lib/decouvrir/catalog'
 import { startVisit, track } from '@/lib/decouvrir/tracker'
-import { LANG_NAMES, LANGS, messagesIn, setLang, useLang, useMessages } from '@/lib/i18n'
+import { LANG_NAMES, messagesIn, setLang, useLang, useMessages, type Lang } from '@/lib/i18n'
+
+/** Découvrir parle français et anglais : ses textes ne se traduisent pas dans les autres langues. */
+const DECOUVRIR_LANGS: readonly Lang[] = ['fr', 'en']
 import { cn } from '@/lib/util/cn'
 
 /** Le libellé d'une page pour le suivi : en français, la langue des rapports de Sandboxes. */
@@ -109,7 +112,7 @@ export function DecouvrirShell({ setup, children }: { setup: AccessSetup; childr
           {!entering && <span className="max-sm:order-last max-sm:w-full">{t.fictional}</span>}
           {/* La langue, avant même d'entrer : chaque langue s'écrit dans sa propre langue. */}
           <span role="group" aria-label={t.language} className="flex items-center">
-            {LANGS.map((l, i) => (
+            {DECOUVRIR_LANGS.map((l, i) => (
               <Fragment key={l}>
                 {i > 0 && <span aria-hidden>·</span>}
                 <button

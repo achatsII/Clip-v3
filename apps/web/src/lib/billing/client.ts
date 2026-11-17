@@ -11,6 +11,7 @@ import { messages } from '@/lib/i18n'
 import { GATEWAY_URL, PRODUCT_SLUG } from '../config'
 import { getAccessToken, refreshSession } from '../gateway/client'
 import { emitRefusal, refusalFrom } from './bus'
+import { presentOffer } from './catalog'
 
 export type CreditBucket = {
   feature_key: string
@@ -173,7 +174,8 @@ export function createBillingClient(config: BillingClientConfig = {}) {
   return {
     context: () => call<BillingState>('GET', '/api/v2/billing/context'),
     check: (featureKey: string, options: { quantity?: number; intent?: 'use' | 'add' } = {}) => call<CheckResult>('POST', '/api/v2/billing/check', { feature_key: featureKey, ...options }),
-    plans: () => call<PlansOffer>('GET', `/api/v2/billing/plans?channel=${channel()}`),
+    // Les plans tels que la marque les montre (noms traduits ; sur devis selon la marque : `presentOffer`).
+    plans: () => call<PlansOffer>('GET', `/api/v2/billing/plans?channel=${channel()}`).then((offer) => presentOffer(offer)),
     /**
      * Après un achat ou une restauration dans le magasin : la plateforme relit l'achat chez
      * RevenueCat et rend l'état à jour, sans attendre le webhook. Corps vide : le client ne déclare

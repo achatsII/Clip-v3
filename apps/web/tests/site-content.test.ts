@@ -7,7 +7,7 @@ import { LANGUAGES } from '@/lib/model/catalog'
 import { content, OPERATOR_LANGUAGE_COUNT, SITE_DICTS } from '@/lib/site/content'
 import { DEMO, DEMO_LANGS } from '@/lib/site/content/demo'
 import { breadcrumbLd, faqLd, graph, organizationLd, softwareLd, transcriptOf, videoLd, websiteLd } from '@/lib/site/jsonld'
-import { SITE_LANGS } from '@/lib/site/lang'
+import { HREFLANG, SITE_LANGS } from '@/lib/site/lang'
 import { pageMetadata } from '@/lib/site/metadata'
 import { siteCatalog } from '@/lib/site/pricing'
 import { APP_PATHS, PAGES, ROUTES } from '@/lib/site/routes'
@@ -65,7 +65,8 @@ describe('les dictionnaires du site', () => {
         const { title, description } = content(lang).meta[page]
         expect(title.length, `${lang} ${page} : ${title}`).toBeLessThanOrEqual(60)
         expect(description.length, `${lang} ${page} : ${description}`).toBeLessThanOrEqual(155)
-        expect(description.length, `${lang} ${page}`).toBeGreaterThan(70)
+        // Le chinois, le japonais et le coréen disent en 40 caractères ce que les autres langues disent en 150.
+        expect(description.length, `${lang} ${page}`).toBeGreaterThan(lang === 'zh' || lang === 'ja' || lang === 'ko' ? 30 : 70)
       }
     }
     const titles = SITE_LANGS.flatMap((l) => PAGES.map((p) => content(l).meta[p].title))
@@ -124,12 +125,12 @@ describe('les adresses et le référencement', () => {
     for (const page of PAGES) for (const lang of SITE_LANGS) for (const prefix of APP_PATHS) expect(ROUTES[page][lang].startsWith(prefix), `${ROUTES[page][lang]} ${prefix}`).toBe(false)
   })
 
-  it('canonique, hreflang (fr-CA, en, x-default → français), Open Graph et Twitter sur chaque page', () => {
+  it('canonique, hreflang (les dix-huit langues, x-default → la langue de la marque), Open Graph et Twitter sur chaque page', () => {
     for (const lang of SITE_LANGS) {
       for (const page of PAGES) {
         const m = pageMetadata(page, lang)
         expect(m.alternates?.canonical).toBe(ROUTES[page][lang])
-        expect(m.alternates?.languages).toEqual({ 'fr-CA': ROUTES[page].fr, en: ROUTES[page].en, 'x-default': ROUTES[page].fr })
+        expect(m.alternates?.languages).toEqual({ ...Object.fromEntries(SITE_LANGS.map((l) => [HREFLANG[l], ROUTES[page][l]])), 'x-default': ROUTES[page].fr })
         expect(m.openGraph?.url).toBe(ROUTES[page][lang])
         expect((m.twitter as { card?: string })?.card).toBe('summary_large_image')
         expect(m.title).toEqual({ absolute: content(lang).meta[page].title })

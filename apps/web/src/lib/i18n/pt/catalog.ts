@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** As palavras do ofício: categorias, tipos de ficha, EPI, energias, avisos, retornos, perfis, status, temas. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Produção', short: 'Prod.' },
+    maintenance: { label: 'Manutenção', short: 'Manut.' },
+    qualite: { label: 'Qualidade', short: 'Qualid.' },
+    sst: { label: 'Saúde e segurança', short: 'SST' },
+    nettoyage: { label: 'Limpeza', short: 'Limpeza' },
+    changement: { label: 'Troca de produto', short: 'Troca' },
+    demarrage: { label: 'Partida e parada', short: 'Partida' },
+    autre: { label: 'Outro', short: 'Outro' },
+  },
+  kinds: {
+    procedure: { label: 'Instrução de trabalho', description: 'Etapa por etapa, com fotos e vídeos.' },
+    lockout: { label: 'Ficha de bloqueio', description: 'Fontes de energia, pontos de isolamento, verificação.' },
+  },
+  ppe: {
+    casque: 'Capacete',
+    lunettes: 'Óculos de segurança',
+    gants: 'Luvas',
+    'gants-coupure': 'Luvas anticorte',
+    'protection-auditive': 'Protetor auricular',
+    bottes: 'Botas de segurança',
+    visiere: 'Protetor facial',
+    masque: 'Máscara',
+    harnais: 'Cinto de segurança',
+    'vetements-ignifuges': 'Roupa retardante de chamas',
+    dossard: 'Colete refletivo',
+    tablier: 'Avental',
+  },
+  energy: {
+    electrique: 'Elétrica',
+    pneumatique: 'Pneumática',
+    hydraulique: 'Hidráulica',
+    mecanique: 'Mecânica',
+    gravite: 'Gravidade',
+    thermique: 'Térmica',
+    chimique: 'Química',
+    vapeur: 'Vapor',
+    eau: 'Água',
+    autre: 'Outra',
+  },
+  warnings: { danger: 'Perigo', caution: 'Atenção', info: 'Bom saber' },
+  feedbackKinds: {
+    unclear: { label: 'Pouco claro', question: 'Não está claro' },
+    error: { label: 'Erro', question: 'Há um erro' },
+    danger: { label: 'Perigo', question: 'É perigoso' },
+    idea: { label: 'Ideia', question: 'Tenho um jeito melhor' },
+    praise: { label: 'Obrigado', question: 'Me ajudou' },
+  },
+  roles: {
+    admin: { label: 'Administrador', summary: 'Configura a fábrica, os postos e os membros; cria, aprova e publica.' },
+    approver: { label: 'Aprovador', summary: 'Cria e edita; aprova o que os outros publicam.' },
+    author: { label: 'Redator', summary: 'Cria e edita instruções; publica ou pede aprovação, se a fábrica exigir.' },
+    reader: { label: 'Leitor', summary: 'Vê as instruções publicadas e sinaliza o que não está claro.' },
+  },
+  status: { draft: 'Rascunho', review: 'Aguardando aprovação', published: 'Publicada', archived: 'Arquivada' },
+  themes: { ocean: 'Índigo', bleu: 'Oceano', nature: 'Natureza', crepuscule: 'Crepúsculo', royal: 'Royal', monochrome: 'Monocromático' },
+}

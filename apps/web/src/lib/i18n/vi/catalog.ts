@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Tiếng Việt : các từ chuyên ngành. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Sản xuất', short: 'SX' },
+    maintenance: { label: 'Bảo trì', short: 'Bảo trì' },
+    qualite: { label: 'Chất lượng', short: 'CL' },
+    sst: { label: 'An toàn và sức khỏe', short: 'ATSK' },
+    nettoyage: { label: 'Vệ sinh', short: 'Vệ sinh' },
+    changement: { label: 'Chuyển đổi sản phẩm', short: 'Chuyển đổi' },
+    demarrage: { label: 'Khởi động và dừng máy', short: 'Khởi động' },
+    autre: { label: 'Khác', short: 'Khác' },
+  },
+  kinds: {
+    procedure: { label: 'Hướng dẫn công việc', description: 'Từng bước, kèm ảnh và video.' },
+    lockout: { label: 'Phiếu khóa – gắn thẻ', description: 'Nguồn năng lượng, điểm cô lập, kiểm tra xác nhận.' },
+  },
+  ppe: {
+    casque: 'Mũ bảo hộ',
+    lunettes: 'Kính bảo hộ',
+    gants: 'Găng tay',
+    'gants-coupure': 'Găng tay chống cắt',
+    'protection-auditive': 'Bảo vệ thính giác',
+    bottes: 'Giày bảo hộ',
+    visiere: 'Tấm che mặt',
+    masque: 'Khẩu trang',
+    harnais: 'Dây đai an toàn',
+    'vetements-ignifuges': 'Quần áo chống cháy',
+    dossard: 'Áo phản quang',
+    tablier: 'Tạp dề',
+  },
+  energy: {
+    electrique: 'Điện',
+    pneumatique: 'Khí nén',
+    hydraulique: 'Thủy lực',
+    mecanique: 'Cơ khí',
+    gravite: 'Trọng lực',
+    thermique: 'Nhiệt',
+    chimique: 'Hóa chất',
+    vapeur: 'Hơi nước',
+    eau: 'Nước',
+    autre: 'Khác',
+  },
+  warnings: { danger: 'Nguy hiểm', caution: 'Thận trọng', info: 'Nên biết' },
+  feedbackKinds: {
+    unclear: { label: 'Chưa rõ', question: 'Chỗ này chưa rõ' },
+    error: { label: 'Sai sót', question: 'Chỗ này có sai sót' },
+    danger: { label: 'Nguy hiểm', question: 'Chỗ này nguy hiểm' },
+    idea: { label: 'Ý tưởng', question: 'Tôi có cách tốt hơn' },
+    praise: { label: 'Cảm ơn', question: 'Nó giúp được tôi' },
+  },
+  roles: {
+    admin: { label: 'Quản trị viên', summary: 'Thiết lập nhà máy, trạm và thành viên; soạn, phê duyệt và ban hành.' },
+    approver: { label: 'Người phê duyệt', summary: 'Soạn và sửa; phê duyệt những gì người khác ban hành.' },
+    author: { label: 'Người soạn', summary: 'Soạn và sửa hướng dẫn; ban hành, hoặc xin phê duyệt nếu nhà máy yêu cầu.' },
+    reader: { label: 'Người xem', summary: 'Xem các hướng dẫn đã ban hành và báo chỗ chưa rõ.' },
+  },
+  status: { draft: 'Bản nháp', review: 'Chờ phê duyệt', published: 'Đã ban hành', archived: 'Đã lưu trữ' },
+  themes: { ocean: 'Chàm', bleu: 'Đại dương', nature: 'Thiên nhiên', crepuscule: 'Hoàng hôn', royal: 'Hoàng gia', monochrome: 'Đơn sắc' },
+}

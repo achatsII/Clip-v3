@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Le parole del mestiere: categorie, tipi di scheda, DPI, energie, avvertenze, riscontri, ruoli, stati, temi. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Produzione', short: 'Prod.' },
+    maintenance: { label: 'Manutenzione', short: 'Manut.' },
+    qualite: { label: 'Qualità', short: 'Qualità' },
+    sst: { label: 'Salute e sicurezza', short: 'SSL' },
+    nettoyage: { label: 'Pulizia', short: 'Pulizia' },
+    changement: { label: 'Cambio formato', short: 'Cambio' },
+    demarrage: { label: 'Avvio e arresto', short: 'Avvio' },
+    autre: { label: 'Altro', short: 'Altro' },
+  },
+  kinds: {
+    procedure: { label: 'Istruzione di lavoro', description: 'Passo dopo passo, con foto e video.' },
+    lockout: { label: 'Scheda di lockout', description: 'Fonti di energia, punti di isolamento, verifica.' },
+  },
+  ppe: {
+    casque: 'Casco',
+    lunettes: 'Occhiali di protezione',
+    gants: 'Guanti',
+    'gants-coupure': 'Guanti antitaglio',
+    'protection-auditive': 'Protezione dell’udito',
+    bottes: 'Scarpe antinfortunistiche',
+    visiere: 'Visiera',
+    masque: 'Mascherina',
+    harnais: 'Imbracatura',
+    'vetements-ignifuges': 'Abbigliamento ignifugo',
+    dossard: 'Gilet ad alta visibilità',
+    tablier: 'Grembiule',
+  },
+  energy: {
+    electrique: 'Elettrica',
+    pneumatique: 'Pneumatica',
+    hydraulique: 'Idraulica',
+    mecanique: 'Meccanica',
+    gravite: 'Gravità',
+    thermique: 'Termica',
+    chimique: 'Chimica',
+    vapeur: 'Vapore',
+    eau: 'Acqua',
+    autre: 'Altra',
+  },
+  warnings: { danger: 'Pericolo', caution: 'Attenzione', info: 'Da sapere' },
+  feedbackKinds: {
+    unclear: { label: 'Poco chiaro', question: 'Non è chiaro' },
+    error: { label: 'Errore', question: 'C’è un errore' },
+    danger: { label: 'Pericolo', question: 'È pericoloso' },
+    idea: { label: 'Idea', question: 'Ho un modo migliore' },
+    praise: { label: 'Grazie', question: 'Mi è stato utile' },
+  },
+  roles: {
+    admin: { label: 'Amministratore', summary: 'Configura lo stabilimento, le postazioni e i membri; crea, approva e pubblica.' },
+    approver: { label: 'Approvatore', summary: 'Crea e modifica; approva ciò che gli altri pubblicano.' },
+    author: { label: 'Redattore', summary: 'Crea e modifica le istruzioni; le pubblica, o chiede l’approvazione se lo stabilimento lo richiede.' },
+    reader: { label: 'Lettore', summary: 'Consulta le istruzioni pubblicate e segnala ciò che non è chiaro.' },
+  },
+  status: { draft: 'Bozza', review: 'In attesa di approvazione', published: 'Pubblicata', archived: 'Archiviata' },
+  themes: { ocean: 'Indaco', bleu: 'Oceano', nature: 'Natura', crepuscule: 'Crepuscolo', royal: 'Royal', monochrome: 'Monocromatico' },
+}

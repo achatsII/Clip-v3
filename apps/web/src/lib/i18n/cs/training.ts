@@ -1,0 +1,48 @@
+import type { training as Fr } from '../fr/training'
+
+const num = (n: number) => n.toLocaleString('cs-CZ')
+const pl = (n: number, one: string, few: string, other: string) => (n === 1 ? one : n >= 2 && n <= 4 ? few : other)
+
+export const training: typeof Fr = {
+  menu: 'Školicí otázky',
+  title: 'Školicí otázky',
+  intro: 'Po instrukci odpoví osoba na pracovišti na několik otázek: víte, kdo je proškolený a na kterém pracovišti.',
+  make: 'Připravit otázky pomocí AI',
+  remake: 'Udělat znovu pomocí AI',
+  remakeConfirm: { title: 'Udělat otázky znovu?', description: 'AI nahradí současné otázky, včetně vašich úprav.', confirm: 'Udělat znovu' },
+  making: 'AI připravuje otázky…',
+  empty: 'Zatím žádné otázky',
+  count: (n: number) => (n > 1 ? `${num(n)} ${pl(n, 'otázka', 'otázky', 'otázek')}` : n === 1 ? '1 otázka' : 'Žádné otázky'),
+  question: (n: number) => `Otázka ${num(n)}`,
+  choice: (n: number) => `Možnost ${num(n)}`,
+  markCorrect: 'Toto je správná odpověď',
+  correct: 'Správná odpověď',
+  why: 'Proč (zobrazí se po odpovědi)',
+  addQuestion: 'Přidat otázku',
+  removeQuestion: 'Odebrat otázku',
+  addChoice: 'Přidat možnost',
+  removeChoice: 'Odebrat tuto možnost',
+  done: 'Hotovo',
+  publishHint: 'Otázky se na pracoviště dostanou při příští publikaci.',
+  incomplete: (n: number) => (n > 1 ? `${pl(n, 'Školicí otázka je nekompletní', `${num(n)} školicí otázky jsou nekompletní`, `${num(n)} školicích otázek je nekompletních`)}: nebudou položeny.` : 'Jedna školicí otázka je nekompletní: nebude položena.'),
+  retrain: 'Lidé se musí znovu proškolit',
+  retrainHint: 'Důležitá změna: školení před touto verzí se už nepočítají.',
+  retrainAsked: 'Důležitá změna: lidé se budou muset znovu proškolit.',
+  matrix: 'Kompetence',
+  people: 'Lidé',
+  gaps: (n: number) => (n ? `${num(n)} školení k absolvování` : 'Všichni jsou proškoleni'),
+  emptyTitle: 'Zatím není co se učit',
+  emptyHint: 'Přidejte školicí otázky k instrukci publikované na pracovišti: zde se zobrazí matice.',
+  noPeople: 'Nejdřív přidejte členy týmu.',
+  onlyGaps: 'Jen mezery',
+  howTo: 'Na pracovišti osoba uvede své jméno („Kdo jste?“), přečte si instrukci a poté potvrdí své školení odpovědí na několik otázek.',
+  open: 'Otevřít instrukci',
+  legend: { done: 'Proškoleno', partial: 'Částečně', none: 'Neproškoleno', outdated: 'K zopakování' },
+  states: { done: 'Proškoleno', missing: 'K absolvování', outdated: 'K zopakování (od té doby změněno)' },
+  cellTitle: (person: string, station: string) => `${person} · ${station}`,
+  cellLabel: (person: string, station: string, done: number, total: number) => `${person}, ${station}: ${num(done)} z ${num(total)}`,
+  errors: {
+    empty: 'AI nedokázala připravit otázky. Zkuste to znovu.',
+    makeFailed: 'Otázky nebyly připraveny',
+  },
+}

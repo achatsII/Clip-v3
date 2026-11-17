@@ -149,7 +149,7 @@ describe('l’indigo par défaut', () => {
     expect(theme).toContain(`gradientPrimary: ['${BRAND.from}', '${BRAND.to}']`)
     const app = read('../mobile/app.json')
     for (const old of FORMER_DEFAULT_COLORS) expect(app).not.toContain(old)
-    expect(read('public/manifest.webmanifest')).toContain(`"theme_color": "${BRAND.primary}"`)
+    expect(read('src/app/manifest.ts')).toContain('theme_color: BRAND.primary')
   })
 })
 

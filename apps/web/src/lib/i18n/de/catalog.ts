@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+// Fachwörter: Kategorien, Dokumenttypen, PSA, Energiearten, Warnhinweise, Rückmeldungen, Rollen, Status, Designs.
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Produktion', short: 'Prod.' },
+    maintenance: { label: 'Instandhaltung', short: 'Instandh.' },
+    qualite: { label: 'Qualität', short: 'Qualität' },
+    sst: { label: 'Arbeitssicherheit', short: 'AS' },
+    nettoyage: { label: 'Reinigung', short: 'Reinigung' },
+    changement: { label: 'Umrüstung', short: 'Umrüstung' },
+    demarrage: { label: 'Anfahren und Abfahren', short: 'Anfahren' },
+    autre: { label: 'Sonstiges', short: 'Sonst.' },
+  },
+  kinds: {
+    procedure: { label: 'Arbeitsanweisung', description: 'Schritt für Schritt, mit Fotos und Videos.' },
+    lockout: { label: 'Freischaltblatt', description: 'Energiequellen, Trennstellen, Prüfung.' },
+  },
+  ppe: {
+    casque: 'Schutzhelm',
+    lunettes: 'Schutzbrille',
+    gants: 'Handschuhe',
+    'gants-coupure': 'Schnittschutzhandschuhe',
+    'protection-auditive': 'Gehörschutz',
+    bottes: 'Sicherheitsschuhe',
+    visiere: 'Gesichtsschutz',
+    masque: 'Maske',
+    harnais: 'Auffanggurt',
+    'vetements-ignifuges': 'Flammschutzkleidung',
+    dossard: 'Warnweste',
+    tablier: 'Schürze',
+  },
+  energy: {
+    electrique: 'Elektrisch',
+    pneumatique: 'Pneumatisch',
+    hydraulique: 'Hydraulisch',
+    mecanique: 'Mechanisch',
+    gravite: 'Schwerkraft',
+    thermique: 'Thermisch',
+    chimique: 'Chemisch',
+    vapeur: 'Dampf',
+    eau: 'Wasser',
+    autre: 'Sonstige',
+  },
+  warnings: { danger: 'Gefahr', caution: 'Vorsicht', info: 'Gut zu wissen' },
+  feedbackKinds: {
+    unclear: { label: 'Unklar', question: 'Das ist unklar' },
+    error: { label: 'Fehler', question: 'Hier ist ein Fehler' },
+    danger: { label: 'Gefahr', question: 'Das ist gefährlich' },
+    idea: { label: 'Idee', question: 'Ich kenne einen besseren Weg' },
+    praise: { label: 'Danke', question: 'Das hat mir geholfen' },
+  },
+  roles: {
+    admin: { label: 'Administration', summary: 'Richtet Werk, Arbeitsplätze und Mitglieder ein; erstellt, gibt frei und veröffentlicht.' },
+    approver: { label: 'Freigabe', summary: 'Erstellt und bearbeitet; gibt frei, was andere veröffentlichen wollen.' },
+    author: { label: 'Autor', summary: 'Erstellt und bearbeitet Anweisungen; veröffentlicht sie oder beantragt die Freigabe, wenn das Werk sie verlangt.' },
+    reader: { label: 'Leser', summary: 'Liest veröffentlichte Anweisungen und meldet, was unklar ist.' },
+  },
+  status: { draft: 'Entwurf', review: 'Wartet auf Freigabe', published: 'Veröffentlicht', archived: 'Archiviert' },
+  themes: { ocean: 'Indigo', bleu: 'Ozean', nature: 'Natur', crepuscule: 'Dämmerung', royal: 'Royal', monochrome: 'Monochrom' },
+}

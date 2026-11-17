@@ -208,8 +208,11 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   schémas se traduisent avec le reste ; l'arabe, le persan, l'hébreu et l'ourdou s'affichent de droite à gauche.
 - En option, « Refaire aussi les images où il y a du texte » : l'IA redessine ces images avec leur texte
   traduit, à vérifier avant de publier.
-- Au poste, l'opérateur choisit sa langue dans le lecteur. Les boutons du lecteur existent en français, en
-  anglais et en espagnol ; pour une autre langue, ils sont en anglais et le contenu, traduit.
+- Au poste, l'opérateur choisit sa langue dans le lecteur. Les boutons du lecteur existent dans les 18 langues de
+  l'outil (français, anglais, espagnol, portugais, allemand, italien, polonais, néerlandais, tchèque, roumain,
+  hongrois, turc, chinois, japonais, coréen, vietnamien, indonésien, thaï) ; pour une autre langue, ils sont en
+  anglais et le contenu, traduit.
+- L'outil lui-même (rédaction, réglages, rapports) se choisit dans ces mêmes 18 langues.
 - Après une modification importante, on retraduit (« Mettre à jour la traduction »).
 
 ## 5. Moderniser les anciennes procédures (import en lot)
@@ -355,14 +358,14 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 
 ## Forfaits (sans les prix)
 - Les prix : un conseiller d'Intelligence Industrielle vous les donnera.
-- Gratuit : une personne, pour essayer (1 rédacteur, 3 instructions publiées, 1 poste).
-- Solo : une personne qui documente ses tâches (1 rédacteur, 30 instructions publiées, 5 postes), avec les
-  statistiques d'adoption.
-- Équipe : 5 rédacteurs, instructions illimitées, 25 postes, avec l'approbation, la traduction pour les
-  opérateurs, les blocs communs, le logo et les couleurs de l'usine.
-- Usine : 15 rédacteurs, 100 postes, avec en plus l'import en lot, l'assistant vocal au poste et l'export complet.
-- Entreprise : sur mesure.
-- Modules en option, avec Équipe ou Usine : Académie et Relevés avancés, 14 jours d'essai.
+- Sans abonnement : pas d'IA ; ce qui est publié reste lisible au poste (1 rédacteur, 3 instructions publiées, 1 poste).
+- Solo : une personne qui documente ses tâches (1 rédacteur, 15 instructions publiées, 3 postes), avec les
+  statistiques d'adoption et l'enregistrement de l'écran ; 7 jours d'essai.
+- Équipe : 5 rédacteurs, 75 instructions publiées, 15 postes, avec l'approbation, la traduction pour les
+  opérateurs, les blocs communs, le logo et les couleurs de l'usine et l'IA qui apprend de toute l'équipe ; 7 jours d'essai.
+- Usine : toute l'usine, sur devis (15 rédacteurs, instructions illimitées, 100 postes), avec en plus l'import en lot,
+  l'assistant vocal au poste et l'export complet.
+- Modules en option, avec Usine, sur devis : Académie et Relevés avancés.
 - Chaque forfait a sa banque mensuelle de crédits d'IA. Les lecteurs et les opérateurs ne se comptent jamais.
 - L'offre peut encore changer : un conseiller d'Intelligence Industrielle la confirme.
 

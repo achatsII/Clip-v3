@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+// ศัพท์งานโรงงาน: หมวดหมู่ ประเภทเอกสาร PPE พลังงาน ข้อควรระวัง ข้อเสนอแนะ บทบาท สถานะ ธีม
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'การผลิต', short: 'ผลิต' },
+    maintenance: { label: 'การบำรุงรักษา', short: 'ซ่อมบำรุง' },
+    qualite: { label: 'คุณภาพ', short: 'คุณภาพ' },
+    sst: { label: 'ความปลอดภัยและอาชีวอนามัย', short: 'ความปลอดภัย' },
+    nettoyage: { label: 'การทำความสะอาด', short: 'ทำความสะอาด' },
+    changement: { label: 'การเปลี่ยนรุ่นการผลิต', short: 'เปลี่ยนรุ่น' },
+    demarrage: { label: 'การเริ่มและหยุดเครื่อง', short: 'เริ่มเครื่อง' },
+    autre: { label: 'อื่นๆ', short: 'อื่นๆ' },
+  },
+  kinds: {
+    procedure: { label: 'วิธีปฏิบัติงาน', description: 'ทีละขั้นตอน พร้อมรูปภาพและวิดีโอ' },
+    lockout: { label: 'ใบล็อกเอาต์', description: 'แหล่งพลังงาน จุดแยกพลังงาน และการตรวจสอบ' },
+  },
+  ppe: {
+    casque: 'หมวกนิรภัย',
+    lunettes: 'แว่นตานิรภัย',
+    gants: 'ถุงมือ',
+    'gants-coupure': 'ถุงมือกันบาด',
+    'protection-auditive': 'อุปกรณ์ป้องกันเสียง',
+    bottes: 'รองเท้านิรภัย',
+    visiere: 'หน้ากากป้องกันใบหน้า',
+    masque: 'หน้ากากอนามัย',
+    harnais: 'สายรัดนิรภัย',
+    'vetements-ignifuges': 'ชุดทนไฟ',
+    dossard: 'เสื้อสะท้อนแสง',
+    tablier: 'ผ้ากันเปื้อน',
+  },
+  energy: {
+    electrique: 'ไฟฟ้า',
+    pneumatique: 'ลมอัด',
+    hydraulique: 'ไฮดรอลิก',
+    mecanique: 'กลไก',
+    gravite: 'แรงโน้มถ่วง',
+    thermique: 'ความร้อน',
+    chimique: 'สารเคมี',
+    vapeur: 'ไอน้ำ',
+    eau: 'น้ำ',
+    autre: 'อื่นๆ',
+  },
+  warnings: { danger: 'อันตราย', caution: 'ระวัง', info: 'ควรรู้' },
+  feedbackKinds: {
+    unclear: { label: 'ไม่ชัดเจน', question: 'ไม่ชัดเจน' },
+    error: { label: 'ผิดพลาด', question: 'มีข้อผิดพลาด' },
+    danger: { label: 'อันตราย', question: 'อันตราย' },
+    idea: { label: 'ไอเดีย', question: 'มีวิธีที่ดีกว่า' },
+    praise: { label: 'ขอบคุณ', question: 'ช่วยฉันได้มาก' },
+  },
+  roles: {
+    admin: { label: 'ผู้ดูแลระบบ', summary: 'ตั้งค่าโรงงาน สถานีงาน และสมาชิก สร้าง อนุมัติ และเผยแพร่ได้' },
+    approver: { label: 'ผู้อนุมัติ', summary: 'สร้างและแก้ไขได้ และอนุมัติสิ่งที่คนอื่นจะเผยแพร่' },
+    author: { label: 'ผู้เขียน', summary: 'สร้างและแก้ไขวิธีปฏิบัติงาน เผยแพร่ได้เอง หรือส่งขออนุมัติหากโรงงานกำหนด' },
+    reader: { label: 'ผู้อ่าน', summary: 'ดูวิธีปฏิบัติงานที่เผยแพร่แล้ว และแจ้งจุดที่ไม่ชัดเจน' },
+  },
+  status: { draft: 'ฉบับร่าง', review: 'รออนุมัติ', published: 'เผยแพร่แล้ว', archived: 'เก็บถาวร' },
+  themes: { ocean: 'น้ำเงินคราม', bleu: 'มหาสมุทร', nature: 'ธรรมชาติ', crepuscule: 'ยามพลบค่ำ', royal: 'ราชวงศ์', monochrome: 'ขาวดำ' },
+}

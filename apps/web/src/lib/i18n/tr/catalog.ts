@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Sektör sözcükleri: kategoriler, föy türleri, KKD, enerjiler, uyarılar, geri bildirimler, roller, durumlar, temalar. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Üretim', short: 'Üretim' },
+    maintenance: { label: 'Bakım', short: 'Bakım' },
+    qualite: { label: 'Kalite', short: 'Kalite' },
+    sst: { label: 'İş sağlığı ve güvenliği', short: 'İSG' },
+    nettoyage: { label: 'Temizlik', short: 'Temizlik' },
+    changement: { label: 'Format değişimi', short: 'Değişim' },
+    demarrage: { label: 'Başlatma ve durdurma', short: 'Başlatma' },
+    autre: { label: 'Diğer', short: 'Diğer' },
+  },
+  kinds: {
+    procedure: { label: 'İş talimatı', description: 'Adım adım, fotoğraf ve videolarla.' },
+    lockout: { label: 'Kilitleme föyü', description: 'Enerji kaynakları, izolasyon noktaları, doğrulama.' },
+  },
+  ppe: {
+    casque: 'Baret',
+    lunettes: 'Koruyucu gözlük',
+    gants: 'Eldiven',
+    'gants-coupure': 'Kesilmeye dayanıklı eldiven',
+    'protection-auditive': 'Kulak koruyucu',
+    bottes: 'İş ayakkabısı',
+    visiere: 'Yüz siperliği',
+    masque: 'Maske',
+    harnais: 'Emniyet kemeri',
+    'vetements-ignifuges': 'Alev almaz kıyafet',
+    dossard: 'Reflektörlü yelek',
+    tablier: 'Önlük',
+  },
+  energy: {
+    electrique: 'Elektrik',
+    pneumatique: 'Pnömatik',
+    hydraulique: 'Hidrolik',
+    mecanique: 'Mekanik',
+    gravite: 'Yerçekimi',
+    thermique: 'Isıl',
+    chimique: 'Kimyasal',
+    vapeur: 'Buhar',
+    eau: 'Su',
+    autre: 'Diğer',
+  },
+  warnings: { danger: 'Tehlike', caution: 'Dikkat', info: 'Bilmekte fayda var' },
+  feedbackKinds: {
+    unclear: { label: 'Belirsiz', question: 'Anlaşılmıyor' },
+    error: { label: 'Hata', question: 'Bir hata var' },
+    danger: { label: 'Tehlike', question: 'Tehlikeli' },
+    idea: { label: 'Fikir', question: 'Daha iyi bir yolu var' },
+    praise: { label: 'Teşekkür', question: 'Bana yardımcı oldu' },
+  },
+  roles: {
+    admin: { label: 'Yönetici', summary: 'Tesisi, istasyonları ve üyeleri ayarlar; oluşturur, onaylar ve yayınlar.' },
+    approver: { label: 'Onaylayan', summary: 'Oluşturur ve düzenler; başkalarının yayınladıklarını onaylar.' },
+    author: { label: 'Yazar', summary: 'Talimat oluşturur ve düzenler; yayınlar, tesis istiyorsa onaya sunar.' },
+    reader: { label: 'Okuyucu', summary: 'Yayınlanmış talimatları görür ve anlaşılmayanları bildirir.' },
+  },
+  status: { draft: 'Taslak', review: 'Onay bekliyor', published: 'Yayında', archived: 'Arşivde' },
+  themes: { ocean: 'Çivit', bleu: 'Okyanus', nature: 'Doğa', crepuscule: 'Alacakaranlık', royal: 'Kraliyet', monochrome: 'Tek renk' },
+}

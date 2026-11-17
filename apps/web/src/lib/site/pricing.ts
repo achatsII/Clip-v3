@@ -3,6 +3,7 @@
  * statiques). Le manifeste est la seule source des prix, des forfaits, des quantités et du prix en
  * crédits de chaque opération d'IA : rien de tout cela n'est écrit dans le code du site.
  */
+import { PRODUCT, type Product } from '@/lib/brand/product'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { parse } from 'yaml'
@@ -54,6 +55,8 @@ export interface SitePlan {
   paid: boolean
   /** Sur devis : sans prix et pas le forfait gratuit. Il ne s'achète pas : on en parle. */
   quote: boolean
+  /** Les jours d'essai (0 : pas d'essai), offerts une fois par organisation. */
+  trialDays: number
   prices: SitePrice[]
   /** La banque de crédits d'IA par mois. */
   credits: number
@@ -79,7 +82,7 @@ export interface SiteCatalog {
   /** Le forfait annuel : combien de mois payés, combien offerts (annuel = 10 mois → 10 et 2). */
   paidMonths: number
   freeMonths: number
-  /** Les jours d'essai des modules. */
+  /** Les jours d'essai : ceux des forfaits payants qui s'essaient, sinon ceux des modules. */
   trialDays: number
 }
 
@@ -97,6 +100,7 @@ export function catalogFromManifest(m: RawManifest): SiteCatalog {
     featured: p.code === FEATURED_PLAN,
     paid: (p.prices ?? []).length > 0,
     quote: (p.prices ?? []).length === 0 && p.code !== m.product.default_plan_code,
+    trialDays: p.trial_days ?? 0,
     prices: prices(p.prices),
     credits: (p.entitlements.credits ?? []).filter((c) => c.feature === 'ai_credits').reduce((n, c) => n + c.amount, 0),
     limits: Object.fromEntries(LIMIT_KEYS.map((k) => [k, p.entitlements.limits?.[k] ?? null])) as Record<LimitKey, number | null>,
@@ -122,7 +126,7 @@ export function catalogFromManifest(m: RawManifest): SiteCatalog {
     modules,
     paidMonths,
     freeMonths: Math.max(0, 12 - paidMonths),
-    trialDays: Math.max(0, ...modules.map((x) => x.trialDays)),
+    trialDays: Math.max(0, ...plans.map((x) => x.trialDays), ...modules.map((x) => x.trialDays)),
   }
 }
 
@@ -139,11 +143,22 @@ export function findManifest(start = process.cwd()): string {
   throw new Error('billing.manifest.yaml introuvable : le site lit ses forfaits dans le manifeste.')
 }
 
+/**
+ * Ce que la marque de la build montre du catalogue. La marque publique (Gesto) : le libre-service seulement,
+ * sans les forfaits sur devis ni leurs modules (ils se vendent par l'équipe de CLIP). CLIP : tout, mais sans un seul
+ * prix du libre-service (« sur devis ») : la version publique coûte bien moins cher que les contrats en cours.
+ */
+export function forBrand(c: SiteCatalog, p: Product = PRODUCT): SiteCatalog {
+  if (!p.enterprise) return { ...c, plans: c.plans.filter((x) => !x.quote), modules: [] }
+  if (!p.selfServePrices) return { ...c, plans: c.plans.map((x) => (x.paid ? { ...x, paid: false, quote: true, prices: [] } : x)), modules: c.modules.map((m) => ({ ...m, prices: [] })) }
+  return c
+}
+
 let cached: SiteCatalog | null = null
 
-/** Le catalogue, lu une fois par build. */
+/** Le catalogue, lu une fois par build, tel que la marque le montre. */
 export function siteCatalog(): SiteCatalog {
-  if (!cached) cached = catalogFromManifest(parse(readFileSync(findManifest(), 'utf8')) as RawManifest)
+  if (!cached) cached = forBrand(catalogFromManifest(parse(readFileSync(findManifest(), 'utf8')) as RawManifest))
   return cached
 }
 

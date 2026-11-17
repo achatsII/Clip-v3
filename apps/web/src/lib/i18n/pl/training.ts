@@ -1,0 +1,48 @@
+import type { training as Fr } from '../fr/training'
+
+const num = (n: number) => n.toLocaleString('pl-PL')
+const plural = (n: number, one: string, few: string, many: string) => (n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many)
+
+export const training: typeof Fr = {
+  menu: 'Pytania szkoleniowe',
+  title: 'Pytania szkoleniowe',
+  intro: 'Po instrukcji osoba na stanowisku odpowiada na kilka pytań: wiesz, kto jest przeszkolony i na którym stanowisku.',
+  make: 'Przygotuj pytania z pomocą AI',
+  remake: 'Zrób ponownie z AI',
+  remakeConfirm: { title: 'Zrobić pytania ponownie?', description: 'AI zastąpi obecne pytania, razem z Twoimi zmianami.', confirm: 'Zrób ponownie' },
+  making: 'AI przygotowuje pytania…',
+  empty: 'Brak pytań',
+  count: (n: number) => (n ? `${num(n)} ${plural(n, 'pytanie', 'pytania', 'pytań')}` : 'Brak pytań'),
+  question: (n: number) => `Pytanie ${num(n)}`,
+  choice: (n: number) => `Odpowiedź ${num(n)}`,
+  markCorrect: 'To jest dobra odpowiedź',
+  correct: 'Dobra odpowiedź',
+  why: 'Dlaczego (pokazywane po odpowiedzi)',
+  addQuestion: 'Dodaj pytanie',
+  removeQuestion: 'Usuń pytanie',
+  addChoice: 'Dodaj odpowiedź',
+  removeChoice: 'Usuń tę odpowiedź',
+  done: 'Gotowe',
+  publishHint: 'Pytania trafią na stanowisko przy następnej publikacji.',
+  incomplete: (n: number) => (n > 1 ? `${num(n)} ${plural(n, 'pytanie szkoleniowe jest niekompletne', 'pytania szkoleniowe są niekompletne', 'pytań szkoleniowych jest niekompletnych')}: nie zostaną zadane.` : 'Pytanie szkoleniowe jest niekompletne: nie zostanie zadane.'),
+  retrain: 'Osoby muszą się przeszkolić ponownie',
+  retrainHint: 'Ważna zmiana: szkolenia sprzed tej wersji już się nie liczą.',
+  retrainAsked: 'Ważna zmiana: osoby będą musiały się przeszkolić ponownie.',
+  matrix: 'Kompetencje',
+  people: 'Osoby',
+  gaps: (n: number) => (n ? `${num(n)} ${plural(n, 'szkolenie', 'szkolenia', 'szkoleń')} do wykonania` : 'Wszyscy są przeszkoleni'),
+  emptyTitle: 'Nie ma jeszcze czego się uczyć',
+  emptyHint: 'Dodaj pytania szkoleniowe do instrukcji opublikowanej na stanowisku: tutaj pojawi się macierz.',
+  noPeople: 'Najpierw dodaj członków zespołu.',
+  onlyGaps: 'Tylko braki',
+  howTo: 'Na stanowisku osoba podaje swoje imię („Kim jesteś?”), czyta instrukcję, a potem zalicza szkolenie w kilku pytaniach.',
+  open: 'Otwórz instrukcję',
+  legend: { done: 'Przeszkolony', partial: 'Częściowo', none: 'Nieprzeszkolony', outdated: 'Do powtórzenia' },
+  states: { done: 'Przeszkolony', missing: 'Do zrobienia', outdated: 'Do powtórzenia (zmiana od tego czasu)' },
+  cellTitle: (person: string, station: string) => `${person} · ${station}`,
+  cellLabel: (person: string, station: string, done: number, total: number) => `${person}, ${station}: ${num(done)} z ${num(total)}`,
+  errors: {
+    empty: 'AI nie mogło przygotować pytań. Spróbuj ponownie.',
+    makeFailed: 'Pytania nie zostały przygotowane',
+  },
+}

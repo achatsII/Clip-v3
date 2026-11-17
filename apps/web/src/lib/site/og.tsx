@@ -1,10 +1,11 @@
 /**
  * Les images Open Graph et Twitter du site (1200 × 630), générées au build par `next/og` : la marque
- * Clip, le titre court de la page, la mention d'Intelligence Industrielle, une photo. Dans `src/lib/site/og/` :
+ * la marque, le titre court de la page, la mention de l'entreprise (CLIP seulement), une photo. Dans `src/lib/site/og/` :
  * Inter (sous-ensemble latin, licence OFL) et la photo en JPEG, copie de `public/site/photos/filmer.webp`
  * (le rendu de `next/og` ne lit pas le WebP).
  */
 import { readFile } from 'node:fs/promises'
+import { PRODUCT } from '@/lib/brand/product'
 import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
 import { BRAND } from '../brand/colors'
@@ -26,8 +27,8 @@ const loadPhoto = () => (photo ??= readFile(join(ASSET_DIR, 'filmer.jpg')).then(
 /** Le texte de remplacement de l'image d'une page. */
 export const ogAlt = (lang: SiteLang, page: PageKey) => `${content(lang).og.alt} — ${content(lang).og[page]}`
 
-// Le logo de CLIP (banque `src/lib/brand/marks.ts`), dans la couleur par défaut.
-const MARK = `data:image/svg+xml;base64,${Buffer.from(iconSvg({ from: BRAND.from, to: BRAND.to, shape: 'rounded' })).toString('base64')}`
+// Le logo de la marque de la build (banque `src/lib/brand/marks.ts`), dans la couleur par défaut.
+const MARK = `data:image/svg+xml;base64,${Buffer.from(iconSvg({ from: BRAND.from, to: BRAND.to, shape: 'rounded', id: PRODUCT.mark })).toString('base64')}`
 
 export async function siteOgImage(lang: SiteLang, page: PageKey): Promise<ImageResponse> {
   const t = content(lang)
@@ -76,9 +77,16 @@ export async function siteOgImage(lang: SiteLang, page: PageKey): Promise<ImageR
           <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', color: BRAND.strong }}>{t.og.kicker}</span>
           <span style={{ fontSize: title.length > 44 ? 60 : 72, fontWeight: 900, lineHeight: 1.03, letterSpacing: -3 }}>{title}</span>
         </div>
+        {/* L'entreprise, seulement pour la marque qui la nomme (CLIP) ; la marque publique se présente seule. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 24, fontWeight: 700, color: '#475569' }}>
-          <span>{t.brand.poweredBy}</span>
-          <span style={{ fontWeight: 900, color: '#0f172a' }}>{t.brand.company}</span>
+          {PRODUCT.company ? (
+            <>
+              <span>{t.brand.poweredBy}</span>
+              <span style={{ fontWeight: 900, color: '#0f172a' }}>{t.brand.company}</span>
+            </>
+          ) : (
+            <span>{t.brand.tagline}</span>
+          )}
         </div>
       </div>
     </div>,

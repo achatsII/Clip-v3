@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Les mots du métier : catégories, types de fiche, EPI, énergies, mises en garde, retours, rôles, statuts, thèmes. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Produkcja', short: 'Prod.' },
+    maintenance: { label: 'Utrzymanie ruchu', short: 'UR' },
+    qualite: { label: 'Jakość', short: 'Jakość' },
+    sst: { label: 'BHP', short: 'BHP' },
+    nettoyage: { label: 'Czyszczenie', short: 'Czyszcz.' },
+    changement: { label: 'Przezbrojenie', short: 'Przezbr.' },
+    demarrage: { label: 'Uruchomienie i wyłączenie', short: 'Start' },
+    autre: { label: 'Inne', short: 'Inne' },
+  },
+  kinds: {
+    procedure: { label: 'Instrukcja stanowiskowa', description: 'Krok po kroku, ze zdjęciami i wideo.' },
+    lockout: { label: 'Karta blokady (LOTO)', description: 'Źródła energii, punkty odcięcia, weryfikacja.' },
+  },
+  ppe: {
+    casque: 'Kask',
+    lunettes: 'Okulary ochronne',
+    gants: 'Rękawice',
+    'gants-coupure': 'Rękawice antyprzecięciowe',
+    'protection-auditive': 'Ochrona słuchu',
+    bottes: 'Obuwie ochronne',
+    visiere: 'Osłona twarzy',
+    masque: 'Maska',
+    harnais: 'Szelki',
+    'vetements-ignifuges': 'Odzież trudnopalna',
+    dossard: 'Kamizelka odblaskowa',
+    tablier: 'Fartuch',
+  },
+  energy: {
+    electrique: 'Elektryczna',
+    pneumatique: 'Pneumatyczna',
+    hydraulique: 'Hydrauliczna',
+    mecanique: 'Mechaniczna',
+    gravite: 'Grawitacyjna',
+    thermique: 'Cieplna',
+    chimique: 'Chemiczna',
+    vapeur: 'Para',
+    eau: 'Woda',
+    autre: 'Inna',
+  },
+  warnings: { danger: 'Niebezpieczeństwo', caution: 'Uwaga', info: 'Warto wiedzieć' },
+  feedbackKinds: {
+    unclear: { label: 'Niejasne', question: 'To jest niejasne' },
+    error: { label: 'Błąd', question: 'Jest tu błąd' },
+    danger: { label: 'Zagrożenie', question: 'To jest niebezpieczne' },
+    idea: { label: 'Pomysł', question: 'Mam lepszy sposób' },
+    praise: { label: 'Dzięki', question: 'To mi pomogło' },
+  },
+  roles: {
+    admin: { label: 'Administrator', summary: 'Konfiguruje zakład, stanowiska i członków; tworzy, zatwierdza i publikuje.' },
+    approver: { label: 'Zatwierdzający', summary: 'Tworzy i edytuje; zatwierdza to, co publikują inni.' },
+    author: { label: 'Autor', summary: 'Tworzy i edytuje instrukcje; publikuje je lub prosi o zatwierdzenie, jeśli zakład tego wymaga.' },
+    reader: { label: 'Czytelnik', summary: 'Czyta opublikowane instrukcje i zgłasza to, co jest niejasne.' },
+  },
+  status: { draft: 'Wersja robocza', review: 'Czeka na zatwierdzenie', published: 'Opublikowana', archived: 'Zarchiwizowana' },
+  themes: { ocean: 'Indygo', bleu: 'Ocean', nature: 'Natura', crepuscule: 'Zmierzch', royal: 'Królewski', monochrome: 'Monochromatyczny' },
+}

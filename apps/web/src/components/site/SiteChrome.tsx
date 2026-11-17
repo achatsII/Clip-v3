@@ -3,14 +3,15 @@
  * de page, bannière des témoins. Les menus sont des « popover » natifs : ils s'ouvrent, se ferment au
  * clic dehors et à Échap sans script ; `PopoverCloser` les referme quand on change de page.
  */
-import { ArrowRight, ChevronDown, Menu, X } from 'lucide-react'
+import { ArrowRight, ChevronDown, Globe, Menu, X } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { content } from '@/lib/site/content'
-import { fmt, type SiteLang } from '@/lib/site/lang'
+import { content, listOf } from '@/lib/site/content'
+import { PRODUCT } from '@/lib/brand/product'
+import { fmt, HREFLANG, SITE_LANG_NAMES, type SiteLang } from '@/lib/site/lang'
 import { II_LOGO } from '@/lib/site/media'
-import { HUBSPOT_ID, LOGIN_PATH, primaryCta, ROUTES, SOLUTIONS, type SolutionKey } from '@/lib/site/routes'
-import { LangLink, NavLink, PopoverCloser, SiteLanguage } from './client'
+import { GA_ID, HUBSPOT_ID, LOGIN_PATH, primaryCta, ROUTES, SOLUTIONS, type SolutionKey } from '@/lib/site/routes'
+import { LangMenu, NavLink, PopoverCloser, SiteAnalytics, SiteLanguage } from './client'
 import { ConsentBanner, CookieSettingsButton } from './Consent'
 import { Container, cx, PrimaryCta, SiteIcon, Wordmark } from './ui'
 
@@ -25,7 +26,7 @@ const SOLUTION_TILES: Record<SolutionKey, string> = {
 export function SiteShell({ lang, children }: { lang: SiteLang; children: ReactNode }) {
   const t = content(lang)
   return (
-    <div className="site-root min-h-dvh" data-site={lang} lang={lang === 'en' ? 'en' : undefined}>
+    <div className="site-root min-h-dvh" data-site={lang} lang={HREFLANG[lang]}>
       <a href="#contenu" className="sr-only z-[60] rounded-full bg-slate-900 px-5 py-3 font-black text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
         {t.a11y.skip}
       </a>
@@ -34,7 +35,8 @@ export function SiteShell({ lang, children }: { lang: SiteLang; children: ReactN
         {children}
       </main>
       <SiteFooter lang={lang} />
-      <ConsentBanner hubId={HUBSPOT_ID} t={t.consent} privacyUrl={t.brand.privacyUrl} />
+      <ConsentBanner hubId={HUBSPOT_ID} gaId={GA_ID} tools={listOf([GA_ID && 'Google Analytics', HUBSPOT_ID && 'HubSpot'].filter((x): x is string => !!x), lang)} t={t.consent} privacyUrl={t.brand.privacyUrl} />
+      <SiteAnalytics lang={lang} offer={PRODUCT.id} />
       <SiteLanguage lang={lang} />
     </div>
   )
@@ -89,13 +91,15 @@ export function SiteHeader({ lang }: { lang: SiteLang }) {
           </NavLink>
         </nav>
         <div className="ml-auto flex items-center gap-1.5">
-          <LangLink
+          <LangMenu
             lang={lang}
-            label={t.a11y.switchLang}
-            className="hidden h-11 min-w-11 items-center justify-center rounded-full px-3 text-sm font-black text-slate-600 hover:bg-slate-900/5 sm:inline-flex dark:text-slate-300 dark:hover:bg-white/10"
+            id="site-langs"
+            label={t.footer.language}
+            className="btn-press hidden h-11 min-w-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-black text-slate-600 hover:bg-slate-900/5 sm:inline-flex dark:text-slate-300 dark:hover:bg-white/10"
           >
-            {t.nav.langShort}
-          </LangLink>
+            <Globe className="h-4 w-4" aria-hidden />
+            {lang.toUpperCase()}
+          </LangMenu>
           <a
             href={LOGIN_PATH}
             className="hidden h-11 items-center rounded-full px-4 text-[15px] font-bold text-slate-700 hover:bg-slate-900/5 md:inline-flex dark:text-slate-200 dark:hover:bg-white/10"
@@ -154,9 +158,10 @@ export function SiteHeader({ lang }: { lang: SiteLang }) {
             <a href={LOGIN_PATH} className="btn-press glass-card inline-flex h-14 items-center justify-center rounded-full text-base font-black text-slate-900 dark:text-white">
               {t.nav.login}
             </a>
-            <LangLink lang={lang} className="inline-flex h-12 items-center justify-center text-sm font-black text-slate-600 dark:text-slate-300">
-              {t.nav.langName}
-            </LangLink>
+<LangMenu lang={lang} id="site-langs-sheet" label={t.footer.language} className="btn-press inline-flex h-12 items-center justify-center gap-2 text-sm font-black text-slate-600 dark:text-slate-300">
+              <Globe className="h-4 w-4" aria-hidden />
+              {SITE_LANG_NAMES[lang]}
+            </LangMenu>
           </div>
         </div>
       </div>
@@ -179,16 +184,18 @@ export function SiteFooter({ lang }: { lang: SiteLang }) {
               <Wordmark name={t.brand.wordmark} />
             </Link>
             <p className="mt-3 max-w-xs text-[15px] font-medium text-slate-600 dark:text-slate-300">{t.footer.tagline}</p>
-            <a
-              href={t.brand.companyUrl}
-              className="mt-6 inline-flex min-h-11 items-center gap-3 rounded-2xl text-sm font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-            >
-              {t.brand.poweredBy}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={II_LOGO.onLight} alt={t.brand.company} width={130} height={40} loading="lazy" className="h-10 w-auto dark:hidden" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={II_LOGO.onDark} alt={t.brand.company} width={130} height={40} loading="lazy" className="hidden h-10 w-auto dark:block" />
-            </a>
+            {PRODUCT.company && (
+              <a
+                href={t.brand.companyUrl}
+                className="mt-6 inline-flex min-h-11 items-center gap-3 rounded-2xl text-sm font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+              >
+                {t.brand.poweredBy}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={II_LOGO.onLight} alt={t.brand.company} width={130} height={40} loading="lazy" className="h-10 w-auto dark:hidden" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={II_LOGO.onDark} alt={t.brand.company} width={130} height={40} loading="lazy" className="hidden h-10 w-auto dark:block" />
+              </a>
+            )}
           </div>
           <nav aria-label={t.footer.product}>
             <p className="label-caps text-slate-500 dark:text-slate-400">{t.footer.product}</p>
@@ -210,11 +217,13 @@ export function SiteFooter({ lang }: { lang: SiteLang }) {
                   </a>
                 </li>
               )}
-              <li>
-                <Link href={ROUTES.book[lang]} className={link}>
-                  {t.cta.book}
-                </Link>
-              </li>
+              {PRODUCT.enterprise && (
+                <li>
+                  <Link href={ROUTES.book[lang]} className={link}>
+                    {t.cta.book}
+                  </Link>
+                </li>
+              )}
               <li>
                 <a href={LOGIN_PATH} className={link}>
                   {t.nav.login}
@@ -247,9 +256,10 @@ export function SiteFooter({ lang }: { lang: SiteLang }) {
               </li>
             </ul>
             <p className="label-caps mt-6 text-slate-500 dark:text-slate-400">{t.footer.language}</p>
-            <LangLink lang={lang} className={link}>
-              {t.nav.langName}
-            </LangLink>
+<LangMenu lang={lang} id="site-langs-footer" label={t.footer.language} className={cx(link, 'inline-flex items-center gap-2')}>
+              <Globe className="h-4 w-4" aria-hidden />
+              {SITE_LANG_NAMES[lang]}
+            </LangMenu>
           </div>
         </div>
         <div className="mt-12 flex flex-col gap-2 border-t border-slate-900/5 pt-6 text-sm font-medium text-slate-500 sm:flex-row sm:justify-between dark:border-white/5 dark:text-slate-400">

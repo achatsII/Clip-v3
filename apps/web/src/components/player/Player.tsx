@@ -59,7 +59,7 @@ import { cn, formatDuration } from '@/lib/util/cn'
 import { FeedbackSheet } from './FeedbackSheet'
 import { StepChecks } from './StepChecks'
 import { QuizRunner } from './QuizRunner'
-import { rangeText, strings, type PlayerStrings } from './i18n'
+import { rangeText, usePlayerStrings, type PlayerStrings } from './i18n'
 import { StepMediaArea } from './StepMediaArea'
 import { layoutOf } from '@/lib/model/media'
 import { VoiceAssistant } from './VoiceAssistant'
@@ -187,7 +187,7 @@ export function Player(props: PlayerProps) {
   const variantName = scope.variant ? (full.variants?.find((v) => v.id === scope.variant)?.name ?? null) : null
   // Une variante touchée au départ : on commence dès que ses étapes sont là.
   const [startPending, setStartPending] = useState(false)
-  const t = strings(lang)
+  const t = usePlayerStrings(lang)
   const exitText = typeof exitLabel === 'function' ? exitLabel(t) : exitLabel
   const total = content.steps.length
   // -1 = avant de commencer ; total = terminé
@@ -868,7 +868,7 @@ function Intro({
   quick,
 }: {
   content: InstructionContent
-  t: ReturnType<typeof strings>
+  t: PlayerStrings
   onStart: () => void
   /** Plusieurs variantes : une grande tuile par variante, qui la choisit et commence. */
   variants?: { label?: string; options: Array<{ id: string; name: string; count: number }>; onPick: (id: string) => void } | null
@@ -1030,7 +1030,7 @@ function Intro({
   )
 }
 
-function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, preview, record, training, onTrain }: { t: ReturnType<typeof strings>; rated: 'up' | 'down' | null; onRate: (v: 'up' | 'down') => void; onRestart: () => void; onReport: () => void; onExit?: () => void; exitLabel?: string; preview?: boolean; record?: { state: 'saved' | 'queued'; deviations: number } | null; training?: { count: number; done: boolean } | null; onTrain: () => void }) {
+function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, preview, record, training, onTrain }: { t: PlayerStrings; rated: 'up' | 'down' | null; onRate: (v: 'up' | 'down') => void; onRestart: () => void; onReport: () => void; onExit?: () => void; exitLabel?: string; preview?: boolean; record?: { state: 'saved' | 'queued'; deviations: number } | null; training?: { count: number; done: boolean } | null; onTrain: () => void }) {
   return (
     <div className="mx-auto flex min-h-full max-w-xl flex-col items-center justify-center gap-6 p-8 text-center">
       <span className="animate-pop-in flex h-28 w-28 items-center justify-center rounded-[36px] bg-gradient-to-br from-[#2EE59D] to-[#18c480] text-white shadow-[0_20px_40px_rgba(24,196,128,0.35)]">
@@ -1110,7 +1110,7 @@ function Done({ t, rated, onRate, onRestart, onReport, onExit, exitLabel, previe
  * liste des étapes nouvelles et modifiées (chacune ouvre son étape), les retirées, et la version
  * précédente à revoir.
  */
-export function UpdateBanner({ changes, publishedAt, steps, t, previous, onGoTo, onPrevious }: { changes: PublishedChanges; publishedAt: string | null; steps: Step[]; t: ReturnType<typeof strings>; previous?: number | null; onGoTo?: (index: number) => void; onPrevious?: () => void }) {
+export function UpdateBanner({ changes, publishedAt, steps, t, previous, onGoTo, onPrevious }: { changes: PublishedChanges; publishedAt: string | null; steps: Step[]; t: PlayerStrings; previous?: number | null; onGoTo?: (index: number) => void; onPrevious?: () => void }) {
   const [open, setOpen] = useState(false)
   const touched = steps.map((s, i) => ({ s, i })).filter(({ s }) => changes.added.includes(s.id) || changes.modified.includes(s.id))
   return (
@@ -1157,7 +1157,7 @@ export function UpdateBanner({ changes, publishedAt, steps, t, previous, onGoTo,
 }
 
 /** La version précédente, en lecture : toute l'instruction d'un coup, un bandeau qui dit laquelle, et le retour. */
-function PreviousView({ previous, content, t, sections, onBack }: { previous: PreviousVersion; content: InstructionContent; t: ReturnType<typeof strings>; sections: boolean; onBack: () => void }) {
+function PreviousView({ previous, content, t, sections, onBack }: { previous: PreviousVersion; content: InstructionContent; t: PlayerStrings; sections: boolean; onBack: () => void }) {
   const energyById = new Map((content.lockout?.energyPoints ?? []).map((e) => [e.id, e]))
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-slate-100 dark:bg-slate-950" role="dialog" aria-modal="true" aria-label={t.update.previousTitle(previous.version, previous.publishedAt ? t.update.date(previous.publishedAt) : null)}>
@@ -1178,7 +1178,7 @@ function PreviousView({ previous, content, t, sections, onBack }: { previous: Pr
   )
 }
 
-function DocumentView({ content, t, energyById, sections, records }: { content: InstructionContent; t: ReturnType<typeof strings>; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }>; sections: boolean; records: boolean }) {
+function DocumentView({ content, t, energyById, sections, records }: { content: InstructionContent; t: PlayerStrings; energyById: Map<string, { tag: string; type: keyof typeof ENERGY; isolationDevice: string; location: string }>; sections: boolean; records: boolean }) {
   const mediaNav = useToggle('mediaNav')
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-5 sm:p-8">

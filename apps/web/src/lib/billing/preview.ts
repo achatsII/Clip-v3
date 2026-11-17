@@ -10,7 +10,7 @@
  * - Rien ne s'achète et rien n'est débité : « choisir » un plan ou « essayer » un module change
  *   seulement l'aperçu. L'IA garde sa route d'avant ; le serveur ne vérifie rien de plus.
  */
-import { addonFor, MODULES, type FeatureKey, type ModuleKey } from './catalog'
+import { addonFor, MODULES, presentOffer, type FeatureKey, type ModuleKey } from './catalog'
 import type { BillingClient, BillingState, CheckResult, PlansOffer, PublicPlan } from './client'
 
 export const PREVIEW_BASE_PLANS = ['free', 'solo', 'equipe', 'usine'] as const
@@ -33,23 +33,26 @@ const cad = (monthly: number, yearly: number): PublicPlan['prices'] => [
   { interval: 'monthly', currency: 'CAD', amount_cents: monthly },
   { interval: 'yearly', currency: 'CAD', amount_cents: yearly },
 ]
-const base = (code: PreviewPlan, name: string, prices: PublicPlan['prices'], features: Partial<Flags>, limits: Record<string, number | null>, credits: number): PublicPlan => ({
+/** Un plan de base ; `credits` null : pas d'IA (le plan sans abonnement). `trial` : les jours d'essai. */
+const base = (code: PreviewPlan, name: string, prices: PublicPlan['prices'], features: Partial<Flags>, limits: Record<string, number | null>, credits: number | null, trial?: number): PublicPlan => ({
   code,
   name,
   kind: 'base',
   version: 1,
+  ...(trial ? { trial_days: trial } : {}),
   prices,
-  entitlements: { features: { ...NONE, ...features }, limits, credits: [{ feature_key: 'ai_credits', amount: credits, period: 'monthly', unit: 'credit' }] },
+  entitlements: { features: { ...NONE, ...features }, limits, ...(credits === null ? {} : { credits: [{ feature_key: 'ai_credits', amount: credits, period: 'monthly', unit: 'credit' }] }) },
 })
 /** Un module sur devis, comme Usine : sans prix ni essai, l'équipe de CLIP l'attribue. */
 const addon = (code: string, name: string, feature: 'academy' | 'records_plus'): PublicPlan => ({ code, name, kind: 'addon', version: 1, prices: [], entitlements: { features: { [feature]: true } } })
 
-/** Les plans du catalogue (versions actives du manifeste), dans l'ordre de la page. Usine et ses
- * modules sont sur devis : sans prix, ils ne s'achètent nulle part. */
+/** Les plans du catalogue (versions actives du manifeste), dans l'ordre de la page. Sans abonnement :
+ * pas d'IA ; Solo et Équipe s'essaient 7 jours. Usine et ses modules sont sur devis : sans prix, ils ne
+ * s'achètent nulle part. */
 export const PREVIEW_PLANS: readonly PublicPlan[] = [
-  base('free', 'Gratuit', [], {}, { published_instructions: 3, stations: 1, editors: 1 }, 500),
-  base('solo', 'Solo', cad(4900, 49000), { adoption_stats: true, screen_capture: true }, { published_instructions: 15, stations: 3, editors: 1 }, 2500),
-  base('equipe', 'Équipe', cad(19900, 199000), { translations: true, adoption_stats: true, approvals: true, brand_kit: true, shared_blocks: true, screen_capture: true, ai_learning: true }, { published_instructions: 75, stations: 15, editors: 5 }, 12500),
+  base('free', 'Sans abonnement', [], {}, { published_instructions: 3, stations: 1, editors: 1 }, null),
+  base('solo', 'Solo', cad(4900, 49000), { adoption_stats: true, screen_capture: true }, { published_instructions: 15, stations: 3, editors: 1 }, 2500, 7),
+  base('equipe', 'Équipe', cad(19900, 199000), { translations: true, adoption_stats: true, approvals: true, brand_kit: true, shared_blocks: true, screen_capture: true, ai_learning: true }, { published_instructions: 75, stations: 15, editors: 5 }, 12500, 7),
   base('usine', 'Usine', [], { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true, screen_capture: true, ai_learning: true }, { published_instructions: null, stations: 100, editors: 15 }, 40000),
   addon('academie-usine', 'Académie', 'academy'),
   addon('releves-usine', 'Relevés', 'records_plus'),
@@ -97,6 +100,8 @@ export function previewState(sel: PreviewSelection, now = new Date()): BillingSt
   const plan = PREVIEW_PLANS.find((p) => p.code === s.plan)!
   const features: Record<string, boolean> = { ...plan.entitlements.features }
   for (const key of s.modules) features[MODULES.find((m) => m.key === key)!.feature] = true
+  // Le plan sans abonnement n'a pas d'IA : pas de banque de crédits.
+  const ai = !!plan.entitlements.credits?.length
   const granted = plan.entitlements.credits?.[0]?.amount ?? 0
   const available = Math.round(granted * REMAINING[s.credits])
   const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString()
@@ -107,7 +112,7 @@ export function previewState(sel: PreviewSelection, now = new Date()): BillingSt
     plan_version: 1,
     features,
     limits: Object.entries(plan.entitlements.limits ?? {}).map(([feature_key, limit]) => ({ feature_key, used: 0, limit })),
-    credits: [{ feature_key: 'ai_credits', unit: 'credit', unit_scale: 1, balance: available, available, granted, consumed: granted - available, reserved: 0, period_end: periodEnd, overage_policy: 'block' }],
+    credits: ai ? [{ feature_key: 'ai_credits', unit: 'credit', unit_scale: 1, balance: available, available, granted, consumed: granted - available, reserved: 0, period_end: periodEnd, overage_policy: 'block' }] : [],
     currency: 'CAD',
     current_period_end: s.plan === 'free' ? null : periodEnd,
     grace_until: null,
@@ -141,7 +146,7 @@ export function createPreviewClient(store: { read: () => PreviewSelection; write
     },
     plans: async (): Promise<PlansOffer> => {
       const current = store.read().plan
-      return { product: 'clip-v3', channel: 'web', currency: 'CAD', plans: PREVIEW_PLANS.map((p) => ({ ...p, is_current: p.code === current })) }
+      return presentOffer({ product: 'clip-v3', channel: 'web', currency: 'CAD', plans: PREVIEW_PLANS.map((p) => ({ ...p, is_current: p.code === current })) })
     },
     mobileSync: context,
     // Pas de paiement : l'aperçu prend le plan ou le module, et on revient là où on était.

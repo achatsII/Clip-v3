@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Les mots du métier : catégories, types de fiche, EPI, énergies, mises en garde, retours, rôles, statuts, thèmes. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Producție', short: 'Prod.' },
+    maintenance: { label: 'Mentenanță', short: 'Ment.' },
+    qualite: { label: 'Calitate', short: 'Calitate' },
+    sst: { label: 'Sănătate și securitate', short: 'SSM' },
+    nettoyage: { label: 'Curățare', short: 'Curățare' },
+    changement: { label: 'Schimbare de produs', short: 'Schimbare' },
+    demarrage: { label: 'Pornire și oprire', short: 'Pornire' },
+    autre: { label: 'Altele', short: 'Altele' },
+  },
+  kinds: {
+    procedure: { label: 'Instrucțiune de lucru', description: 'Pas cu pas, cu fotografii și videoclipuri.' },
+    lockout: { label: 'Fișă de blocare', description: 'Surse de energie, puncte de izolare, verificare.' },
+  },
+  ppe: {
+    casque: 'Cască de protecție',
+    lunettes: 'Ochelari de protecție',
+    gants: 'Mănuși',
+    'gants-coupure': 'Mănuși anti-tăiere',
+    'protection-auditive': 'Protecție auditivă',
+    bottes: 'Bocanci de protecție',
+    visiere: 'Vizieră',
+    masque: 'Mască',
+    harnais: 'Ham de siguranță',
+    'vetements-ignifuges': 'Îmbrăcăminte ignifugă',
+    dossard: 'Vestă reflectorizantă',
+    tablier: 'Șorț',
+  },
+  energy: {
+    electrique: 'Electrică',
+    pneumatique: 'Pneumatică',
+    hydraulique: 'Hidraulică',
+    mecanique: 'Mecanică',
+    gravite: 'Gravitațională',
+    thermique: 'Termică',
+    chimique: 'Chimică',
+    vapeur: 'Abur',
+    eau: 'Apă',
+    autre: 'Alta',
+  },
+  warnings: { danger: 'Pericol', caution: 'Atenție', info: 'Bine de știut' },
+  feedbackKinds: {
+    unclear: { label: 'Neclar', question: 'Nu este clar' },
+    error: { label: 'Greșeală', question: 'Este o greșeală' },
+    danger: { label: 'Pericol', question: 'Este periculos' },
+    idea: { label: 'Idee', question: 'Am o metodă mai bună' },
+    praise: { label: 'Mulțumesc', question: 'M-a ajutat' },
+  },
+  roles: {
+    admin: { label: 'Administrator', summary: 'Configurează fabrica, posturile și membrii; creează, aprobă și publică.' },
+    approver: { label: 'Aprobator', summary: 'Creează și editează; aprobă ce publică ceilalți.' },
+    author: { label: 'Redactor', summary: 'Creează și editează instrucțiuni; le publică sau cere aprobare dacă fabrica o impune.' },
+    reader: { label: 'Cititor', summary: 'Vede instrucțiunile publicate și semnalează ce nu este clar.' },
+  },
+  status: { draft: 'Ciornă', review: 'În așteptarea aprobării', published: 'Publicată', archived: 'Arhivată' },
+  themes: { ocean: 'Indigo', bleu: 'Ocean', nature: 'Natură', crepuscule: 'Amurg', royal: 'Royal', monochrome: 'Monocrom' },
+}

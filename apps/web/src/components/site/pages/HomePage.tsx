@@ -3,10 +3,11 @@
  * les fonctions en vitrine (dont le poste, en démo), pour qui, ce qui est vrai, les tarifs, la FAQ et
  * l'appel final. Une seule action principale : essayer ou réserver une démo (`primaryCta`).
  */
+import { SITE_LANG_NAMES } from '@/lib/site/lang'
 import { Brain, Check, Clock, Languages, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { content, SITE_DICTS } from '@/lib/site/content'
-import { DEMO, demoLangsFor } from '@/lib/site/content/demo'
+import { DEMO, demoLangOf, demoLangsFor } from '@/lib/site/content/demo'
 import { faqLd, graph, organizationLd, softwareLd, videoLd, websiteLd } from '@/lib/site/jsonld'
 import type { SiteLang } from '@/lib/site/lang'
 import type { LoopKey } from '@/lib/site/media'
@@ -76,7 +77,7 @@ export function HomePage({ lang }: { lang: SiteLang }) {
                 note: t.film.note,
                 close: t.a11y.close,
                 poster: t.film.poster,
-                tracks: { fr: SITE_DICTS.en.nav.langName, en: SITE_DICTS.fr.nav.langName },
+                tracks: { fr: SITE_LANG_NAMES.fr, en: SITE_LANG_NAMES.en },
               }}
             />
           </div>
@@ -118,7 +119,7 @@ export function HomePage({ lang }: { lang: SiteLang }) {
               <Eyebrow>{h.problem.eyebrow}</Eyebrow>
               <h2 className="mt-4 font-black tracking-tighter text-slate-900 dark:text-white">
                 <span className="block text-2xl sm:text-3xl">{h.problem.lead}</span>
-                <span className="site-danger-text block py-1 text-[2.6rem] leading-[0.95] whitespace-nowrap sm:text-7xl xl:text-[5.25rem]">{h.problem.stat}</span>
+                <span className="site-danger-text block py-1 text-[2.4rem] leading-[0.95] text-balance sm:text-6xl xl:text-7xl">{h.problem.stat}</span>
                 <span className="mt-1 block text-[1.7rem] leading-[1.1] text-balance sm:text-4xl">{h.problem.statLine}</span>
               </h2>
               <div className="mt-7 max-w-md" aria-hidden>
@@ -188,8 +189,8 @@ export function HomePage({ lang }: { lang: SiteLang }) {
           <div className="site-reveal mx-auto mt-10 max-w-6xl">
             <GenerateDemo
               t={{ ...t.demo.generate, badge: t.demo.badge, accelerated: t.demo.accelerated, restart: t.demo.restart }}
-              title={DEMO[lang].title}
-              steps={DEMO[lang].steps}
+              title={DEMO[demoLangOf(lang)].title}
+              steps={DEMO[demoLangOf(lang)].steps}
               stationHref={`#${STATION_DEMO}`}
             />
           </div>

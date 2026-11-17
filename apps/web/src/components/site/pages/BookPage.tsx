@@ -2,6 +2,8 @@
  * Réserver une démo : le calendrier HubSpot intégré (sa hauteur suit ses étapes) et ce qu'on regarde
  * ensemble. Avec le libre-service ouvert, la voie « essayer seul » reste à un clic.
  */
+import { notFound } from 'next/navigation'
+import { PRODUCT } from '@/lib/brand/product'
 import { content } from '@/lib/site/content'
 import { breadcrumbLd, graph } from '@/lib/site/jsonld'
 import type { SiteLang } from '@/lib/site/lang'
@@ -11,6 +13,8 @@ import { MeetingsCalendar } from '../MeetingsCalendar'
 import { ButtonLink, CheckList, Container, Eyebrow } from '../ui'
 
 export function BookPage({ lang }: { lang: SiteLang }) {
+  // La démo avec l'équipe : seulement pour la marque qui se vend par l'équipe (CLIP). Gesto s'essaie seul.
+  if (!PRODUCT.enterprise) notFound()
   const t = content(lang)
   const b = t.book
   const cta = primaryCta(lang)

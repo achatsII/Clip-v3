@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
 import { creditsReason, moduleOffer, planFor, renewalText } from '@/lib/billing/advice'
-import { byQuote, FEATURE_LABELS, FEATURE_ORDER, type FeatureKey, featureLabel, featureUnit, isLimitFeature, moduleOf, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
+import { byQuote, FREE_PLAN, FEATURE_LABELS, FEATURE_ORDER, type FeatureKey, featureCount, featureLabel, isLimitFeature, moduleOf, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
 import { formatPrice } from '@/lib/billing/format'
 import { BillingError, creditsOf, limitOf, type BillingClient, type PublicPlan } from '@/lib/billing/client'
 import { limitReason } from '@/lib/billing/usage'
@@ -19,7 +19,7 @@ import { messages, num, useMessages } from '@/lib/i18n'
 import { useToggle } from '@/lib/toggles'
 import { AskAdmin, MODULE_ICONS, useModules } from './Modules'
 import { devicePlatform, StoreBuy } from './Store'
-import { cn, formatDate, plural } from '@/lib/util/cn'
+import { cn, formatDate } from '@/lib/util/cn'
 
 export { formatPrice } from '@/lib/billing/format'
 
@@ -31,17 +31,16 @@ export function entitlementLines(plan: PublicPlan): string[] {
   for (const key of FEATURE_ORDER) {
     if (!FEATURE_LABELS[key]) continue
     const label = featureLabel(key)
-    const unit = featureUnit(key)
     const credit = e.credits?.find((c) => c.feature_key === key)
     if (credit) {
-      out.push(t.perMonth(unit ? plural(credit.amount, unit[0], unit[1]) : num(credit.amount)))
+      out.push(t.perMonth(featureCount(key, credit.amount) ?? num(credit.amount)))
       continue
     }
     if (e.limits && key in e.limits) {
       const v = e.limits[key]
       if (v === null) out.push(t.unlimited(label, key))
       // Sans unité, le libellé sert de nom.
-      else if (v > 0) out.push(unit ? plural(v, unit[0], unit[1]) : plural(v, label.toLowerCase(), label.toLowerCase()))
+      else if (v > 0) out.push(featureCount(key, v) ?? `${num(v)} ${label.toLowerCase()}`)
       continue
     }
     if (e.features?.[key]) out.push(label)
@@ -352,7 +351,7 @@ export function Paywall({ client }: { client: BillingClient }) {
           <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{w.managedByAdmin}</p>
         ) : isAdmin ? (
           <Button variant="primary" size="lg" block loading={busy} onClick={buy}>
-            {previewInApp ? t.billing.preview.seeWith(plan.name) : w.upgradeTo(plan.name)}
+            {previewInApp ? t.billing.preview.seeWith(plan.name) : state?.plan_code === FREE_PLAN && plan.trial_days ? t.billing.plans.tryPlan(plan.name, plan.trial_days) : w.upgradeTo(plan.name)}
           </Button>
         ) : (
           <>

@@ -25,7 +25,8 @@ import { T } from '@/lib/model/repo'
 import type { Published } from '@/lib/model/types'
 import { linkUrl } from '@/lib/share'
 import { useEntitlement } from '@/lib/billing/state'
-import { useMessages } from '@/lib/i18n'
+import { loadMessages, useMessages } from '@/lib/i18n'
+import { loadPlayerStrings } from '@/components/player/i18n'
 
 export default function PrintPage() {
   const { id } = useParams<{ id: string }>()
@@ -108,6 +109,18 @@ export default function PrintPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageUrls])
 
+  // Les mots du PDF, dans la langue de l'instruction : chargés avant de composer (hors du français et de
+  // l'anglais, une langue se charge à la demande).
+  const printLang = contentForRatios?.language || 'fr'
+  const [wordsReady, setWordsReady] = useState(0)
+  useEffect(() => {
+    let alive = true
+    void Promise.all([loadMessages(printLang), loadPlayerStrings(printLang)]).then(() => alive && setWordsReady((n) => n + 1))
+    return () => {
+      alive = false
+    }
+  }, [printLang])
+
   const html = useMemo(() => {
     if (!doc) return ''
     // La version publiée si elle existe et que le brouillon ne diffère pas ; sinon le brouillon, marqué comme tel.
@@ -136,7 +149,7 @@ export default function PrintPage() {
       variants: variantsOn,
       quick: quickOn,
     })
-  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn, effective, scale, toolImages, instructionName, variantsOn, quickOn])
+  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn, effective, scale, toolImages, instructionName, variantsOn, quickOn, wordsReady])
 
   // Une autre mise en page, d'autres images connues : « Une page » se règle de nouveau.
   const fitKey = effective?.layout === 'onePage' ? JSON.stringify([effective, Object.keys(ratios).length, doc?._id]) : ''

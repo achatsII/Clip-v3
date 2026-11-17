@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** 行业词汇：类别、文档类型、PPE、能源、警示、反馈、角色、状态、主题。 */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: '生产', short: '生产' },
+    maintenance: { label: '维护', short: '维护' },
+    qualite: { label: '质量', short: '质量' },
+    sst: { label: '健康与安全', short: 'EHS' },
+    nettoyage: { label: '清洁', short: '清洁' },
+    changement: { label: '换型', short: '换型' },
+    demarrage: { label: '启动与停机', short: '启停' },
+    autre: { label: '其他', short: '其他' },
+  },
+  kinds: {
+    procedure: { label: '作业指导书', description: '分步说明，配有照片和视频。' },
+    lockout: { label: '上锁挂牌卡', description: '能源、隔离点、验证。' },
+  },
+  ppe: {
+    casque: '安全帽',
+    lunettes: '护目镜',
+    gants: '手套',
+    'gants-coupure': '防割手套',
+    'protection-auditive': '听力防护',
+    bottes: '安全鞋',
+    visiere: '面屏',
+    masque: '口罩',
+    harnais: '安全带',
+    'vetements-ignifuges': '阻燃服',
+    dossard: '反光背心',
+    tablier: '围裙',
+  },
+  energy: {
+    electrique: '电能',
+    pneumatique: '气动',
+    hydraulique: '液压',
+    mecanique: '机械能',
+    gravite: '重力',
+    thermique: '热能',
+    chimique: '化学能',
+    vapeur: '蒸汽',
+    eau: '水',
+    autre: '其他',
+  },
+  warnings: { danger: '危险', caution: '注意', info: '提示' },
+  feedbackKinds: {
+    unclear: { label: '不清楚', question: '看不明白' },
+    error: { label: '错误', question: '有错误' },
+    danger: { label: '危险', question: '这样做有危险' },
+    idea: { label: '建议', question: '我有更好的做法' },
+    praise: { label: '感谢', question: '对我有帮助' },
+  },
+  roles: {
+    admin: { label: '管理员', summary: '设置工厂、工位和成员；创建、审批并发布。' },
+    approver: { label: '审批人', summary: '创建和编辑；审批他人提交发布的内容。' },
+    author: { label: '编写人', summary: '创建和编辑作业指导书；发布，或在工厂要求时提交审批。' },
+    reader: { label: '读者', summary: '查看已发布的作业指导书，并反馈不清楚的地方。' },
+  },
+  status: { draft: '草稿', review: '待审批', published: '已发布', archived: '已归档' },
+  themes: { ocean: '靛蓝', bleu: '海洋', nature: '自然', crepuscule: '暮色', royal: '皇家', monochrome: '单色' },
+}

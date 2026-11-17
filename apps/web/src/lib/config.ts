@@ -1,6 +1,7 @@
 /**
  * Configuration publique de l'app web. Aucune de ces valeurs n'est un secret.
  */
+import { PRODUCT } from './brand/product'
 
 /** Adresse de la Gateway Octopus (QA par défaut ; la production est le même hôte sans `qa.`). */
 export const GATEWAY_URL = (process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://qa.gateway.intelligenceindustrielle.com').replace(/\/$/, '')
@@ -32,4 +33,5 @@ export const AI_CREDITS_PER_CAD = 1000
 /** Slug du produit pour la facturation (`X-Product`) : l'identifiant à enregistrer. */
 export const PRODUCT_SLUG = 'clip-v3'
 
-export const APP_NAME = 'CLIP'
+/** Le nom du produit, celui de la marque de cette build (`src/lib/brand/product.ts`). */
+export const APP_NAME = PRODUCT.name

@@ -10,9 +10,13 @@ product:
   # À enregistrer à la Gateway avant la publication : l'app se connecte encore avec « html ».
   slug: clip-v3
   name: CLIP
-  # Le web (Stripe) et l'app mobile (App Store et Google Play, par RevenueCat) : le champion découvre
-  # CLIP dans le magasin et s'y abonne seul (VISION.md) ; l'usine peut toujours payer sur le web.
-  channels: [web, ios, android]
+  # Le web seulement (Stripe), décision du 2026-11-17 : on s'abonne sur le site, une seule facturation.
+  # L'app mobile est une app compagnon : elle ne vend rien (ni prix, ni bouton, ni lien d'achat) et ouvre
+  # ce que l'organisation a acheté sur le web. Si Apple exige l'achat dans l'app (règle 3.1.3(b)),
+  # la version suivante du manifeste ajoutera ios et android, providers.revenuecat (posture
+  # in_app_purchase, projet clip-v3, apps com.intelligenceindustrielle.clip) et les store_product_id
+  # des prix : le code de l'app sait déjà vendre dans le magasin (toggle storePurchases).
+  channels: [web]
   acquisition: [self_serve]
   is_self_service: true
   application:
@@ -25,27 +29,12 @@ product:
   # crédits du produit (CLIP n'en a qu'une, ai_credits).
   enforce_denial: false
   org_model: { on_signup: personal, team_join: none }
+  # Sans abonnement : pas d'IA (pas de crédits offerts sans fin). On essaie Solo ou Équipe 7 jours.
   default_plan_code: free
   default_overage_policy: block
   providers:
     stripe:
       enabled: true
-    # Sur iPhone et Android, on vend dans le magasin (jamais par Stripe). L'acheteur, pour RevenueCat,
-    # est l'organisation. La publication crée les droits et les produits chez RevenueCat (sync).
-    revenuecat:
-      enabled: true
-      # Projet à créer à la mise en route des magasins s'il n'existe pas.
-      project: clip-v3
-      app_user_id_scope: organization
-      posture: in_app_purchase
-      store_catalog: sync
-      apps:
-        ios: { bundle_id: com.intelligenceindustrielle.clip }
-        android: { package_name: com.intelligenceindustrielle.clip }
-      iap_justification:
-        reason: "Le champion découvre CLIP dans l'App Store ou Google Play et s'abonne seul (Solo) avant de convaincre son usine : une vente à une personne, donc dans le magasin (Apple 3.1.1 et 3.1.3(b), facturation de Google Play)."
-        approved_by: "skill billing"
-        approved_on: "2026-11-11"
 
 features:
   # Une banque commune pour toute l'IA : chaque réponse est débitée de son coût réel, converti en
@@ -118,11 +107,6 @@ features:
     name: Relevés avancés
 
 plans:
-  # Un produit de magasin par prix, store_product_id = clip_v3_<plan>_<intervalle>_v<version> : les
-  # magasins n'acceptent que minuscules, chiffres, « _ » et « . », d'où clip_v3 pour le slug clip-v3.
-  # Un produit ne se réécrit pas : chaque nouvelle version vendue en prend de nouveaux. Le droit
-  # RevenueCat du plan (store_entitlement) reste le même pour toutes ses versions.
-  #
   # La grille suit la valeur : les postes (la couverture du plancher), les rédacteurs (la capacité de
   # création) et les instructions publiées. Les opérateurs et les lecteurs ne se comptent jamais.
   #
@@ -131,31 +115,31 @@ plans:
   # instruction et crédit y revient environ 20 % moins cher, en plus des fonctions d'équipe. Usine
   # descend encore, au contrat. La durée : l'annuel vaut 10 mois ; 3 et 5 ans, au contrat d'Usine.
   #
-  # En libre-service (site et magasins), seulement des forfaits d'entrée, tous plafonnés : rien
-  # d'illimité, rien qu'une usine entière pourrait utiliser. Toute l'usine passe par l'équipe de
-  # CLIP : Usine n'a aucun prix, ne s'achète nulle part et s'attribue à l'organisation après la vente.
+  # En libre-service (le site), seulement des forfaits d'entrée, tous plafonnés : rien d'illimité,
+  # rien qu'une usine entière pourrait utiliser. Toute l'usine passe par l'équipe de CLIP : Usine n'a
+  # aucun prix, ne s'achète nulle part et s'attribue à l'organisation après la vente.
+  #
+  # L'ESSAI (décision du 2026-11-17) : plus de forfait gratuit avec des crédits (l'IA a un coût réel) ;
+  # Solo et Équipe s'essaient 7 jours, une fois par organisation (Stripe l'applique au paiement).
   #
   # Crédits et limites concordent : une génération coûte en réalité 16 à 55 crédits (mesuré en QA,
   # novembre 2026, vidéo courte ou moyenne), environ 150 pour 30 minutes de vidéo. Chaque banque
   # permet d'atteindre la limite d'instructions du plan même avec de longues vidéos, retouches comprises :
   # c'est la limite d'instructions qui arrête, pas les crédits.
-
-  # Gratuit : goûter la boucle (capture, génération, poste, retours), pas vivre dessus.
-  # 500 crédits : de quoi faire ses 3 instructions, même à partir de longues vidéos, et les retoucher.
+  # Sans abonnement : le plan d'une organisation qui n'a pas (ou plus) d'abonnement. Aucune IA (la
+  # feature ai_credits n'y est pas : la génération ouvre la fenêtre des forfaits et leur essai). Ce qui
+  # est publié reste lisible au poste ; on ne peut pas dépasser ses petites limites.
   - code: free
     kind: base
-    name: Gratuit
+    name: Sans abonnement
     version: 1
     status: active
     sort_order: 10
     # Montré comme plan courant dans l'app ; rien à acheter.
-    availability: { channels: [web, ios, android], audience: personal }
+    availability: { channels: [web], audience: personal }
     entitlements:
       features: { translations: false, adoption_stats: false, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, screen_capture: false, ai_learning: false, academy: false, records_plus: false }
       limits: { published_instructions: 3, stations: 1, editors: 1 }
-      credits:
-        - { feature: ai_credits, amount: 500, period: monthly, rollover: none }
-
   # Solo : le champion qui documente son propre travail ; ses statistiques l'aident à convaincre
   # son usine. 15 instructions et 3 postes : un poste ou une cellule, pas une ligne entière.
   # 49 $ : sous les outils de documentation par créateur (Guidde, Scribe, Tango : 13 à 59 $ US par
@@ -166,10 +150,11 @@ plans:
     version: 1
     status: active
     sort_order: 20
-    availability: { channels: [web, ios, android], audience: personal, store_entitlement: clip-v3.solo }
+    trial_days: 7
+    availability: { channels: [web], audience: personal }
     prices:
-      - { interval: monthly, currency: CAD, amount_cents: 4900, store_product_id: clip_v3_solo_monthly_v1 }
-      - { interval: yearly, currency: CAD, amount_cents: 49000, store_product_id: clip_v3_solo_yearly_v1 }
+      - { interval: monthly, currency: CAD, amount_cents: 4900 }
+      - { interval: yearly, currency: CAD, amount_cents: 49000 }
     entitlements:
       features: { translations: false, adoption_stats: true, approvals: false, bulk_import: false, voice_assistant: false, brand_kit: false, full_export: false, shared_blocks: false, screen_capture: true, ai_learning: false, academy: false, records_plus: false }
       limits: { published_instructions: 15, stations: 3, editors: 1 }
@@ -187,18 +172,18 @@ plans:
     version: 1
     status: active
     sort_order: 30
-    availability: { channels: [web, ios, android], audience: personal, store_entitlement: clip-v3.equipe }
+    trial_days: 7
+    availability: { channels: [web], audience: personal }
     prices:
-      - { interval: monthly, currency: CAD, amount_cents: 19900, store_product_id: clip_v3_equipe_monthly_v1 }
-      - { interval: yearly, currency: CAD, amount_cents: 199000, store_product_id: clip_v3_equipe_yearly_v1 }
+      - { interval: monthly, currency: CAD, amount_cents: 19900 }
+      - { interval: yearly, currency: CAD, amount_cents: 199000 }
     entitlements:
       features: { translations: true, adoption_stats: true, approvals: true, bulk_import: false, voice_assistant: false, brand_kit: true, full_export: false, shared_blocks: true, screen_capture: true, ai_learning: true, academy: false, records_plus: false }
       limits: { published_instructions: 75, stations: 15, editors: 5 }
       credits:
         - { feature: ai_credits, amount: 12500, period: monthly, rollover: none }
 
-  # Usine : toute l'usine, sur devis. Aucun prix : il ne s'achète ni sur le site ni dans les
-  # magasins ; l'équipe de CLIP l'attribue à l'organisation une fois la vente faite (prix au contrat).
+  # Usine : toute l'usine, sur devis. Aucun prix : il ne s'achète nulle part ; l'équipe de CLIP l'attribue à l'organisation une fois la vente faite (prix au contrat).
   # Ses droits sont ceux d'une usine : l'app les ouvre dès qu'il est attribué.
   - code: usine
     kind: base

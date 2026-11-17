@@ -3,17 +3,19 @@ import { Providers } from '@/components/providers/Providers'
 import { THEME_SCRIPT } from '@/lib/theme'
 import './globals.css'
 import { ShellSplash } from '@/components/ShellSplash'
+import { PRODUCT, SERVER_META } from '@/lib/brand/product'
 
 /**
  * Les métadonnées se rendent au serveur, qui ne connaît pas la langue de l'outil (choisie dans le
- * navigateur, `clip_pref_ui_lang`) : elles restent en français, la langue source.
+ * navigateur, `clip_pref_ui_lang`) : elles restent dans la langue par défaut de la marque (`SERVER_META`).
+ * Les icônes et le manifeste sont ceux de la marque de la build (`public/brands/<marque>/`).
  */
 export const metadata: Metadata = {
-  title: { default: 'CLIP — Instructions de travail', template: '%s · CLIP' },
-  description: "Filmez, parlez, l'IA rédige l'instruction de travail. Vos opérateurs la trouvent au bon poste, au bon moment.", // i18n-ignore : rendu au serveur
-  applicationName: 'CLIP',
-  appleWebApp: { capable: true, title: 'CLIP', statusBarStyle: 'default' },
-  icons: { icon: '/icon.svg', apple: '/apple-touch-icon.png' },
+  title: { default: SERVER_META.title, template: `%s · ${PRODUCT.name}` },
+  description: SERVER_META.description,
+  applicationName: PRODUCT.name,
+  appleWebApp: { capable: true, title: PRODUCT.name, statusBarStyle: 'default' },
+  icons: { icon: `/brands/${PRODUCT.id}/icon.svg`, apple: `/brands/${PRODUCT.id}/apple-touch-icon.png` },
   manifest: '/manifest.webmanifest',
 }
 
@@ -32,7 +34,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr-CA" suppressHydrationWarning data-preset="ocean">
+    <html lang={SERVER_META.lang} suppressHydrationWarning data-preset="ocean">
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

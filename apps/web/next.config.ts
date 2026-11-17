@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_SHA: buildSha(),
     NEXT_PUBLIC_BUILD_DATE: new Date().toISOString(),
   },
+  // Le favicon de la marque de la build (`NEXT_PUBLIC_BRAND`, src/lib/brand/product.ts) : les navigateurs
+  // le demandent à la racine, même quand la page en déclare un autre.
+  async rewrites() {
+    const brand = process.env.NEXT_PUBLIC_BRAND?.trim().toLowerCase() === 'gesto' ? 'gesto' : 'clip'
+    return { beforeFiles: [{ source: '/favicon.ico', destination: `/brands/${brand}/favicon.ico` }], afterFiles: [], fallback: [] }
+  },
 }
 
 export default nextConfig

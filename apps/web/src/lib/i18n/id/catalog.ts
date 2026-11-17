@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Les mots du métier : catégories, types de fiche, EPI, énergies, mises en garde, retours, rôles, statuts, thèmes. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Produksi', short: 'Prod.' },
+    maintenance: { label: 'Perawatan', short: 'Rawat' },
+    qualite: { label: 'Mutu', short: 'Mutu' },
+    sst: { label: 'Keselamatan dan kesehatan kerja', short: 'K3' },
+    nettoyage: { label: 'Pembersihan', short: 'Bersih' },
+    changement: { label: 'Pergantian produk', short: 'Ganti' },
+    demarrage: { label: 'Penyalaan dan pemadaman', short: 'Nyala' },
+    autre: { label: 'Lainnya', short: 'Lain' },
+  },
+  kinds: {
+    procedure: { label: 'Instruksi kerja', description: 'Langkah demi langkah, dengan foto dan video.' },
+    lockout: { label: 'Lembar LOTO', description: 'Sumber energi, titik isolasi, verifikasi.' },
+  },
+  ppe: {
+    casque: 'Helm pengaman',
+    lunettes: 'Kacamata pengaman',
+    gants: 'Sarung tangan',
+    'gants-coupure': 'Sarung tangan anti sayat',
+    'protection-auditive': 'Pelindung telinga',
+    bottes: 'Sepatu pengaman',
+    visiere: 'Pelindung wajah',
+    masque: 'Masker',
+    harnais: 'Sabuk pengaman',
+    'vetements-ignifuges': 'Pakaian tahan api',
+    dossard: 'Rompi reflektif',
+    tablier: 'Celemek',
+  },
+  energy: {
+    electrique: 'Listrik',
+    pneumatique: 'Pneumatik',
+    hydraulique: 'Hidrolik',
+    mecanique: 'Mekanik',
+    gravite: 'Gravitasi',
+    thermique: 'Panas',
+    chimique: 'Kimia',
+    vapeur: 'Uap',
+    eau: 'Air',
+    autre: 'Lainnya',
+  },
+  warnings: { danger: 'Bahaya', caution: 'Hati-hati', info: 'Perlu diketahui' },
+  feedbackKinds: {
+    unclear: { label: 'Kurang jelas', question: 'Ini kurang jelas' },
+    error: { label: 'Kesalahan', question: 'Ada yang salah' },
+    danger: { label: 'Bahaya', question: 'Ini berbahaya' },
+    idea: { label: 'Usul', question: 'Ada cara yang lebih baik' },
+    praise: { label: 'Terima kasih', question: 'Ini membantu saya' },
+  },
+  roles: {
+    admin: { label: 'Administrator', summary: 'Menyiapkan pabrik, stasiun, dan anggota; membuat, menyetujui, dan menerbitkan.' },
+    approver: { label: 'Penyetuju', summary: 'Membuat dan mengedit; menyetujui yang diterbitkan orang lain.' },
+    author: { label: 'Editor', summary: 'Membuat dan mengedit instruksi; menerbitkannya, atau meminta persetujuan jika pabrik mewajibkannya.' },
+    reader: { label: 'Pembaca', summary: 'Melihat instruksi yang diterbitkan dan menandai yang kurang jelas.' },
+  },
+  status: { draft: 'Draf', review: 'Menunggu persetujuan', published: 'Diterbitkan', archived: 'Diarsipkan' },
+  themes: { ocean: 'Indigo', bleu: 'Samudra', nature: 'Alam', crepuscule: 'Senja', royal: 'Royal', monochrome: 'Monokrom' },
+}

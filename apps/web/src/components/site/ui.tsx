@@ -69,7 +69,7 @@ export function SectionHeading({ eyebrow, title, text, center, id }: { eyebrow?:
   )
 }
 
-/** Le logo de Clip : le même que `LogoMark` de l'app (banque `src/lib/brand/marks.ts`). */
+/** Le logo de la marque : le même que `LogoMark` de l'app (banque `src/lib/brand/marks.ts`). */
 export function ClipMark({ className }: { className?: string }) {
   return <LogoMark className={className || 'h-9 w-9'} />
 }
@@ -78,7 +78,7 @@ export function Wordmark({ name, className }: { name: string; className?: string
   return (
     <span className={cx('inline-flex items-center gap-2.5', className)}>
       <ClipMark />
-      <ClipWordmark label={name} className="h-6 w-[39px] text-slate-900 dark:text-white" />
+      <ClipWordmark label={name} className="h-6 w-auto text-slate-900 dark:text-white" />
     </span>
   )
 }

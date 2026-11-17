@@ -46,7 +46,7 @@ export function PlayerDemo({
   instructions: Record<DemoLang, DemoInstruction>
   langs: DemoLang[]
   ui: PlayerDemoText
-  siteLang: 'fr' | 'en'
+  siteLang: string
   training?: boolean
   id?: string
 }) {

@@ -17,6 +17,7 @@
  * le contenu dans celle de l'instruction (`content.language`). Les consignes données au modèle
  * restent en français ; ce que l'app montre (actions, erreurs) se lit dans le dictionnaire.
  */
+import { APP_NAME } from '@/lib/config'
 import { cleanChecks, describeCheck } from '../model/checks'
 import { inheritSection } from '../model/sections'
 import { checkSchema } from './schemas'
@@ -172,7 +173,7 @@ export const agentSchema = (ui: string) => ({
  * `translate` : faux quand la traduction n'est pas offerte (toggle coupé, ou pas dans le plan).
  */
 export function agentSystem(org: WritingContext, lang: { ui: string; content: string }, opts: { translate?: boolean } = {}): string {
-  return `Tu es l’assistant d’édition de CLIP. Tu modifies une instruction de travail d’usine à la demande de la personne qui la rédige. Tu rends une liste d’opérations que l’app applique une à une, sous ses yeux.
+  return `Tu es l’assistant d’édition de ${APP_NAME}. Tu modifies une instruction de travail d’usine à la demande de la personne qui la rédige. Tu rends une liste d’opérations que l’app applique une à une, sous ses yeux.
 - Fais exactement ce qui est demandé ; ne touche à rien d’autre et garde le texte existant qu’on ne te demande pas de changer.
 - Une étape = une action. Respecte le standard de l’usine ci-dessous (ton, nombre de mots).
 - Désigne une étape par son identifiant entre crochets. Une étape que tu ajoutes reçoit un id (n1, n2…) que tu réutilises plus bas. Les opérations s’appliquent dans l’ordre donné.
@@ -826,7 +827,7 @@ export function liveEditOutline(content: InstructionContent) {
 /** La consigne de la voix ; `ui` : la langue de la personne, celle de l'outil. */
 export function liveEditSystem(content: InstructionContent, ui: string = getLang()): string {
   const steps = content.steps.map((s, i) => `${i + 1}. ${s.title} — ${s.text}`).join('\n')
-  return `Tu es l’assistant vocal d’édition de CLIP. La personne modifie une instruction de travail d’usine en te parlant, souvent les mains occupées. Parle ${languageName(ui)}, phrases très courtes, ton calme.
+  return `Tu es l’assistant vocal d’édition de ${APP_NAME}. La personne modifie une instruction de travail d’usine en te parlant, souvent les mains occupées. Parle ${languageName(ui)}, phrases très courtes, ton calme.
 - Pour TOUT changement, appelle VRAIMENT la fonction modifier, avec une demande complète et précise (étape visée par son numéro et son titre, ce qu’il faut faire, les textes exacts). Ne dis jamais qu’un changement est fait avant la réponse de modifier ; ensuite, résume en une phrase ce qui a été fait.
 - Tu ne vois pas les photos : décris précisément ce qu’il faut marquer (objet, forme, couleur, texte) ; l’outil s’en charge.
 - Pour montrer une étape, appelle aller_a_etape. Après plusieurs changements, appelle lire_instruction avant de citer un numéro d’étape.

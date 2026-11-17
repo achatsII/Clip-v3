@@ -4,7 +4,9 @@
  * pas de prix fixe (chaque réponse est débitée de son coût réel, `aiApi`).
  * Le site public le lit au serveur (`src/lib/site/pricing.ts`) : d'où le cœur des langues, sans React.
  */
+import { PRODUCT, type Product } from '@/lib/brand/product'
 import { getLang, messages } from '@/lib/i18n/core'
+import type { PlansOffer } from './client'
 import type { ToggleName } from '../toggleDefaults'
 
 export type FeatureKey =
@@ -57,16 +59,15 @@ export const FEATURE_LABELS: Record<FeatureKey, FeatureLabel> = {
   records_plus: { fr: 'Relevés avancés', en: 'Advanced records' },
 }
 
-/** Le libellé d'une feature dans la langue de l'outil ; l'anglais pour une langue que le catalogue n'a pas encore. */
+/** Le libellé d'une feature dans la langue de l'outil (son dictionnaire, `billing.feature`). */
 export function featureLabel(key: FeatureKey): string {
-  const label = FEATURE_LABELS[key]
-  return getLang() === 'fr' ? label.fr : label.en
+  return messages().billing.feature[key] ?? FEATURE_LABELS[key].en
 }
 
-/** Les deux formes de l'unité d'une feature (« poste », « postes »), dans la langue de l'outil. */
-export function featureUnit(key: FeatureKey): [string, string] | undefined {
-  const unit = FEATURE_LABELS[key].unit
-  return unit && (getLang() === 'fr' ? unit.fr : unit.en)
+/** La quantité d'une limite, dans la langue de l'outil (« 10 postes ») ; rien pour une feature sans unité. */
+export function featureCount(key: FeatureKey, n: number): string | null {
+  const count = (messages().billing.count as Partial<Record<FeatureKey, (n: number) => string>>)[key]
+  return count ? count(n) : null
 }
 
 /** Ordre d'affichage dans les cartes de plans. */
@@ -110,6 +111,19 @@ export const FREE_PLAN = 'free'
  */
 export function byQuote(p: { code: string; prices: readonly unknown[] } | null | undefined): boolean {
   return !!p && p.prices.length === 0 && p.code !== FREE_PLAN
+}
+
+/**
+ * Les plans tels que la marque de la build les présente, nommés dans la langue de l'outil :
+ * - la marque publique (Gesto) : sans ce qui est sur devis (Usine et ses modules se vendent par l'équipe) ;
+ * - CLIP : sans un seul prix du libre-service (ses clients passent par l'équipe : tout y est sur devis).
+ */
+export function presentOffer(offer: PlansOffer, p: Product = PRODUCT): PlansOffer {
+  const names = messages().billing.plans.names as Partial<Record<string, string>>
+  let plans = offer.plans.map((x) => ({ ...x, name: names[x.code] ?? x.name }))
+  if (!p.enterprise) plans = plans.filter((x) => !byQuote(x))
+  else if (!p.selfServePrices) plans = plans.map((x) => (x.code === FREE_PLAN ? x : { ...x, prices: [] }))
+  return { ...offer, plans }
 }
 
 /** Où l'on parle à l'équipe de CLIP : la prise de rendez-vous du site, dans la langue de l'outil. */

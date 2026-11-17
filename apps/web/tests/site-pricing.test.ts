@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
 import { FEATURED_PLAN, MODULES } from '@/lib/billing/catalog'
-import { catalogFromManifest, findManifest, formatPrice, plansWith, priceOf, siteCatalog, type RawManifest } from '@/lib/site/pricing'
+import { forBrand, catalogFromManifest, findManifest, formatPrice, plansWith, priceOf, siteCatalog, type RawManifest } from '@/lib/site/pricing'
 
 const raw = parse(readFileSync(resolve(__dirname, '../../../billing.manifest.yaml'), 'utf8')) as RawManifest & {
   plans: Array<RawManifest['plans'][number] & { sort_order?: number }>
@@ -15,7 +15,8 @@ const activeBase = raw.plans.filter((p) => p.kind === 'base' && p.status === 'ac
 describe('les forfaits du site, tirés du manifeste', () => {
   it('le site lit le vrai manifeste, depuis le dossier du build', () => {
     expect(findManifest()).toMatch(/billing\.manifest\.yaml$/)
-    expect(siteCatalog()).toEqual(catalog)
+    // Le site montre le catalogue tel que la marque de la build le présente (CLIP : tout sur devis).
+    expect(siteCatalog()).toEqual(forBrand(catalog))
   })
 
   it('montre chaque forfait de base actif, dans l’ordre du manifeste, avec ses prix, crédits et limites', () => {
@@ -38,7 +39,9 @@ describe('les forfaits du site, tirés du manifeste', () => {
     expect(catalog.modules.map((m) => ({ code: m.code, base: m.basePlan, feature: m.feature })).sort((a, b) => a.code!.localeCompare(b.code!))).toEqual(
       expected.sort((a, b) => a.code!.localeCompare(b.code!)),
     )
-    for (const m of catalog.modules) expect(m.trialDays).toBe(catalog.trialDays)
+    // Les modules sont sur devis (sans essai) ; l'essai du site est celui de Solo et d'Équipe.
+    for (const m of catalog.modules) expect(m.trialDays).toBe(0)
+    expect(catalog.trialDays).toBe(7)
   })
 
   it('l’annuel vaut le même nombre de mois pour chaque forfait payant et chaque module en vente (« 2 mois offerts »)', () => {
@@ -55,7 +58,8 @@ describe('les forfaits du site, tirés du manifeste', () => {
     expect((raw as unknown as Record<string, unknown>).ai_operations).toBeUndefined()
     expect('operations' in catalog).toBe(false)
     // Chaque forfait garde sa banque de crédits du mois.
-    for (const p of catalog.plans) expect(p.credits, p.code).toBeGreaterThan(0)
+    // Chaque forfait garde sa banque de crédits du mois ; sans abonnement, pas d'IA.
+    for (const p of catalog.plans) if (p.code !== catalog.defaultPlan) expect(p.credits, p.code).toBeGreaterThan(0)
   })
 
   it('dit quels forfaits donnent une fonction', () => {

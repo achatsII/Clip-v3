@@ -17,7 +17,7 @@ import { ErrorState, Skeleton } from '@/components/ui/States'
 import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
-import { byQuote, FEATURED_PLAN, LIMIT_FEATURES, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
+import { byQuote, FEATURED_PLAN, FREE_PLAN, LIMIT_FEATURES, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
 import { BILLING_INTERVAL, parsePlanIntent, type PlanIntent } from '@/lib/billing/intent'
 import { BillingError, creditsOf } from '@/lib/billing/client'
 import { amountOf, planFor } from '@/lib/billing/advice'
@@ -218,6 +218,8 @@ function Subscription() {
                         </p>
                       )}
                       {price?.tax_behavior === 'exclusive' && <p className={cn('text-xs font-bold', highlight ? 'text-white/70' : 'text-slate-400')}>{w.beforeTax}</p>}
+                      {/* L'essai : offert une fois par organisation, au premier abonnement (Stripe l'applique). */}
+                      {!inShell && !current && !!p.trial_days && price && <p className={cn('mt-1 text-sm font-black', highlight ? 'text-white' : 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]')}>{t.billing.plans.trialNote(p.trial_days)}</p>}
                       <ul className="mt-5 space-y-2">
                         {entitlementLines(p).map((l) => (
                           <li key={l} className="flex items-start gap-2 text-sm font-bold">
@@ -251,7 +253,7 @@ function Subscription() {
                       <div className="relative mt-6">
                         {isAdmin ? (
                           <Button variant={highlight ? 'dark' : intentPlan ? 'glass' : 'primary'} block size="lg" loading={busy === p.code} icon={<Sparkles className="h-4 w-4" />} onClick={() => buy(p.code)}>
-                            {w.choose(p.name)}
+                            {state?.plan_code === FREE_PLAN && p.trial_days ? t.billing.plans.tryPlan(p.name, p.trial_days) : w.choose(p.name)}
                           </Button>
                         ) : (
                           <p className={cn('rounded-2xl p-3 text-center text-sm font-bold', highlight ? 'bg-white/15' : 'bg-slate-900/5')}>{w.askAdmin}</p>

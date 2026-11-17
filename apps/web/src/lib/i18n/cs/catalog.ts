@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Les mots du métier : catégories, types de fiche, EPI, énergies, mises en garde, retours, rôles, statuts, thèmes. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Výroba', short: 'Výroba' },
+    maintenance: { label: 'Údržba', short: 'Údržba' },
+    qualite: { label: 'Kvalita', short: 'Kvalita' },
+    sst: { label: 'BOZP', short: 'BOZP' },
+    nettoyage: { label: 'Čištění', short: 'Čištění' },
+    changement: { label: 'Přestavba', short: 'Přestavba' },
+    demarrage: { label: 'Spuštění a odstavení', short: 'Spuštění' },
+    autre: { label: 'Ostatní', short: 'Ostatní' },
+  },
+  kinds: {
+    procedure: { label: 'Pracovní instrukce', description: 'Krok za krokem, s fotkami a videi.' },
+    lockout: { label: 'List blokování', description: 'Zdroje energie, místa odpojení, ověření.' },
+  },
+  ppe: {
+    casque: 'Ochranná přilba',
+    lunettes: 'Ochranné brýle',
+    gants: 'Rukavice',
+    'gants-coupure': 'Rukavice proti pořezání',
+    'protection-auditive': 'Chrániče sluchu',
+    bottes: 'Pracovní obuv',
+    visiere: 'Ochranný štít',
+    masque: 'Respirátor',
+    harnais: 'Záchytný postroj',
+    'vetements-ignifuges': 'Nehořlavý oděv',
+    dossard: 'Reflexní vesta',
+    tablier: 'Zástěra',
+  },
+  energy: {
+    electrique: 'Elektrická',
+    pneumatique: 'Pneumatická',
+    hydraulique: 'Hydraulická',
+    mecanique: 'Mechanická',
+    gravite: 'Gravitační',
+    thermique: 'Tepelná',
+    chimique: 'Chemická',
+    vapeur: 'Pára',
+    eau: 'Voda',
+    autre: 'Jiná',
+  },
+  warnings: { danger: 'Nebezpečí', caution: 'Pozor', info: 'Dobré vědět' },
+  feedbackKinds: {
+    unclear: { label: 'Nejasné', question: 'Není to jasné' },
+    error: { label: 'Chyba', question: 'Je tu chyba' },
+    danger: { label: 'Nebezpečí', question: 'Je to nebezpečné' },
+    idea: { label: 'Nápad', question: 'Znám lepší postup' },
+    praise: { label: 'Díky', question: 'Pomohlo mi to' },
+  },
+  roles: {
+    admin: { label: 'Správce', summary: 'Nastavuje závod, pracoviště a členy; vytváří, schvaluje a publikuje.' },
+    approver: { label: 'Schvalovatel', summary: 'Vytváří a upravuje; schvaluje to, co ostatní předkládají k publikaci.' },
+    author: { label: 'Autor', summary: 'Vytváří a upravuje instrukce; publikuje je, nebo žádá o schválení, pokud to závod vyžaduje.' },
+    reader: { label: 'Čtenář', summary: 'Čte publikované instrukce a hlásí, co není jasné.' },
+  },
+  status: { draft: 'Koncept', review: 'Čeká na schválení', published: 'Publikováno', archived: 'Archivováno' },
+  themes: { ocean: 'Indigo', bleu: 'Oceán', nature: 'Příroda', crepuscule: 'Soumrak', royal: 'Královská', monochrome: 'Monochromní' },
+}

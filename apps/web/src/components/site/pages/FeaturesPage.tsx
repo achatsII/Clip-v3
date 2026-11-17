@@ -5,7 +5,7 @@
 import Link from 'next/link'
 import type { FeatureKey } from '@/lib/billing/catalog'
 import { content, listOf, planName } from '@/lib/site/content'
-import { DEMO, demoLangsFor } from '@/lib/site/content/demo'
+import { DEMO, demoLangOf, demoLangsFor } from '@/lib/site/content/demo'
 import { breadcrumbLd, graph } from '@/lib/site/jsonld'
 import { fmt, type SiteLang } from '@/lib/site/lang'
 import type { LoopKey } from '@/lib/site/media'
@@ -42,7 +42,7 @@ export function FeaturesPage({ lang }: { lang: SiteLang }) {
 
   function media(kind: string, label: string) {
     if (kind === 'generateDemo')
-      return <GenerateDemo t={{ ...t.demo.generate, badge: t.demo.badge, accelerated: t.demo.accelerated, restart: t.demo.restart }} title={DEMO[lang].title} steps={DEMO[lang].steps} />
+      return <GenerateDemo t={{ ...t.demo.generate, badge: t.demo.badge, accelerated: t.demo.accelerated, restart: t.demo.restart }} title={DEMO[demoLangOf(lang)].title} steps={DEMO[demoLangOf(lang)].steps} />
     if (kind === 'playerDemo') return <PlayerDemo instructions={DEMO} langs={demoLangsFor(lang)} ui={playerUi} siteLang={lang} />
     if (kind === 'annotateDemo') return <AnnotateDemo t={annotateUi} />
     if (kind === 'plantPhoto') return <PhotoCard photo="plant" alt={t.solutionPages.translation.photoAlt} className="aspect-[4/3]" />

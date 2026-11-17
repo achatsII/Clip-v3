@@ -5,6 +5,7 @@
  * Sans IA (pas d'accord, plus de crédits, pas de réponse), l'analyse automatique dit les plus grands
  * changements. Opérations `report_summary` et `report_question`.
  */
+import { APP_NAME } from '@/lib/config'
 import type { AiApi } from '../gateway/ai'
 import { messages } from '../i18n'
 import type { Block, Kpi } from './catalog'
@@ -108,7 +109,7 @@ export interface Turn {
 }
 
 export function questionSystem(lang: string): string {
-  return `Tu réponds à une question sur un rapport d'usine. Réponds seulement à partir des chiffres du rapport, sans rien recalculer ni inventer ; si la réponse n'y est pas, dis-le en une phrase et dis quel rapport ou quel écran de CLIP la donnerait (Registre, Équipe, Retours, un autre rapport). 2 à 4 phrases, des mots simples, sans repère technique ([k:…]). Langue : ${inLanguage(lang)}.`
+  return `Tu réponds à une question sur un rapport d'usine. Réponds seulement à partir des chiffres du rapport, sans rien recalculer ni inventer ; si la réponse n'y est pas, dis-le en une phrase et dis quel rapport ou quel écran de ${APP_NAME} la donnerait (Registre, Équipe, Retours, un autre rapport). 2 à 4 phrases, des mots simples, sans repère technique ([k:…]). Langue : ${inLanguage(lang)}.`
 }
 
 /** Une question sur le rapport (`report_question`), avec les derniers échanges. */

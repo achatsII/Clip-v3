@@ -7,7 +7,7 @@ import { useLiveVoice } from '@/lib/ai/useLiveVoice'
 import type { AiApi } from '@/lib/gateway/ai'
 import type { InstructionContent } from '@/lib/model/types'
 import { cn } from '@/lib/util/cn'
-import { strings } from './i18n'
+import { usePlayerStrings } from './i18n'
 
 /**
  * Assistant vocal en direct (Gemini Live, `/api/v1/ai/live/session`) : l'opérateur parle, les
@@ -16,7 +16,7 @@ import { strings } from './i18n'
  * d'irréversible ne part à la voix. Sa consigne et ses fonctions sont dans src/lib/ai/voice.ts.
  */
 export function VoiceAssistant({ ai, content, lang, index, onClose, onGo, onReport }: { ai: AiApi; content: InstructionContent; lang: string; index: number; onClose: () => void; onGo: (i: number) => void; onReport: () => void }) {
-  const t = strings(lang).assistant
+  const t = usePlayerStrings(lang).assistant
   const indexRef = useRef(index)
   indexRef.current = index
   const handlers = useRef({ onGo, onReport })

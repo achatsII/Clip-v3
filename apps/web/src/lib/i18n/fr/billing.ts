@@ -45,9 +45,14 @@ export const billing = {
   },
   /** Les cartes des plans : la phrase de chaque plan et ce qu’il donne. */
   plans: {
+    /** Le nom de chaque plan dans la langue de l’outil (le manifeste les nomme en français). */
+    names: { free: 'Sans abonnement', solo: 'Solo', equipe: 'Équipe', usine: 'Usine' },
+    /** L’essai d’un plan payant, offert une fois par organisation (Stripe l’applique au paiement). */
+    trialNote: (days: number) => `${days} jours d’essai gratuit à votre premier abonnement`,
+    tryPlan: (plan: string, days: number) => `Essayer ${plan} ${days} jours`,
     /** Phrase de présentation de chaque plan (le manifeste n’a pas de champ de description). */
     pitch: {
-      free: 'Pour essayer avec vos premières instructions.',
+      free: 'Sans abonnement : l’IA vient avec Solo ou Équipe, à essayer 7 jours.',
       solo: 'Pour la personne qui documente son travail et le partage par code QR.',
       equipe: 'Pour essayer à quelques-uns sur une ligne : l’équipe rédige, approuve et traduit.',
       usine: 'Pour toute l’usine, ou plusieurs : sur devis, avec un démarrage accompagné.',
@@ -308,6 +313,34 @@ export const billing = {
     },
   },
   /** Les erreurs du client de facturation. */
+  /**
+   * Le nom de chaque fonction des forfaits (clés du manifeste, `FEATURE_LABELS` de src/lib/billing/catalog.ts),
+   * et la quantité des limites : « 10 postes ».
+   */
+  feature: {
+    ai_credits: 'Crédits IA par mois',
+    published_instructions: 'Instructions publiées',
+    stations: 'Postes avec code QR et tablette',
+    editors: 'Rédacteurs et approbateurs',
+    approvals: 'Approbation avant publication',
+    bulk_import: 'Import en lot des anciens PDF et Word',
+    translations: 'Traduction pour les opérateurs',
+    voice_assistant: 'Assistant vocal au poste',
+    adoption_stats: 'Statistiques d’adoption et retour sur investissement',
+    brand_kit: 'Logo et couleurs de l’usine, PDF sans mention CLIP',
+    full_export: 'Export complet de toutes les instructions',
+    shared_blocks: 'Blocs communs : des étapes rédigées une fois, à jour partout',
+    screen_capture: 'Enregistrer l’écran d’un logiciel : une étape par clic',
+    ai_learning: 'L’IA apprend des corrections de toute l’équipe',
+    academy: 'Académie',
+    records_plus: 'Relevés avancés',
+  },
+  count: {
+    ai_credits: (n: number) => `${fmt(n)} crédit${n > 1 ? 's' : ''}`,
+    published_instructions: (n: number) => `${fmt(n)} instruction${n > 1 ? 's' : ''}`,
+    stations: (n: number) => `${fmt(n)} poste${n > 1 ? 's' : ''}`,
+    editors: (n: number) => `${fmt(n)} rédacteur${n > 1 ? 's' : ''}`,
+  },
   errors: {
     signedOut: 'Aucun utilisateur connecté',
     status: (status: number) => `Erreur ${status}`,

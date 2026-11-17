@@ -5,7 +5,7 @@
  * les fiches de contact, et envoie des courriels ; les notifications passent par le service push
  * d'Expo. Personne d'autre que le serveur ne peut ouvrir le lien.
  */
-import { messagesIn } from '@/lib/i18n/core'
+import { loadMessages, messagesIn } from '@/lib/i18n/core'
 import { T } from '@/lib/model/repo'
 import type { Contact } from '@/lib/model/types'
 import { dataWith, GATEWAY_URL, gatewayJson } from './gateway'
@@ -126,6 +126,8 @@ export async function deliver(service: { token: string; email: boolean }, userId
   for (const { json_data: c } of contacts) {
     if (seen.has(c.userId)) continue
     seen.add(c.userId)
+    // La langue de la personne, chargée au besoin (hors du français et de l'anglais).
+    await loadMessages(c.lang || 'fr')
     const msg = compose(m, c.lang || 'fr')
     if (service.email && c.emails !== false && c.email && (await sendEmail(service.token, c.email, msg.title, msg.html))) emails += 1
     if (c.push !== false) for (const p of c.pushTokens ?? []) pushes.push({ to: p.token, title: msg.title, body: msg.body, url: m.url })

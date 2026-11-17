@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** De vakwoorden: categorieën, soorten instructie, PBM, energiebronnen, waarschuwingen, terugmeldingen, rollen, statussen, thema’s. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: 'Productie', short: 'Prod.' },
+    maintenance: { label: 'Onderhoud', short: 'Onderh.' },
+    qualite: { label: 'Kwaliteit', short: 'Kwaliteit' },
+    sst: { label: 'Gezondheid en veiligheid', short: 'Veiligheid' },
+    nettoyage: { label: 'Reiniging', short: 'Reiniging' },
+    changement: { label: 'Omstelling', short: 'Omstelling' },
+    demarrage: { label: 'Opstarten en stoppen', short: 'Opstarten' },
+    autre: { label: 'Overig', short: 'Overig' },
+  },
+  kinds: {
+    procedure: { label: 'Werkinstructie', description: 'Stap voor stap, met foto’s en video’s.' },
+    lockout: { label: 'Lock-outkaart', description: 'Energiebronnen, afsluitpunten, controle.' },
+  },
+  ppe: {
+    casque: 'Veiligheidshelm',
+    lunettes: 'Veiligheidsbril',
+    gants: 'Handschoenen',
+    'gants-coupure': 'Snijbestendige handschoenen',
+    'protection-auditive': 'Gehoorbescherming',
+    bottes: 'Veiligheidsschoenen',
+    visiere: 'Gelaatsscherm',
+    masque: 'Masker',
+    harnais: 'Harnas',
+    'vetements-ignifuges': 'Vlamvertragende kleding',
+    dossard: 'Veiligheidshesje',
+    tablier: 'Schort',
+  },
+  energy: {
+    electrique: 'Elektrisch',
+    pneumatique: 'Pneumatisch',
+    hydraulique: 'Hydraulisch',
+    mecanique: 'Mechanisch',
+    gravite: 'Zwaartekracht',
+    thermique: 'Thermisch',
+    chimique: 'Chemisch',
+    vapeur: 'Stoom',
+    eau: 'Water',
+    autre: 'Overig',
+  },
+  warnings: { danger: 'Gevaar', caution: 'Let op', info: 'Goed om te weten' },
+  feedbackKinds: {
+    unclear: { label: 'Onduidelijk', question: 'Het is niet duidelijk' },
+    error: { label: 'Fout', question: 'Er zit een fout in' },
+    danger: { label: 'Gevaar', question: 'Het is gevaarlijk' },
+    idea: { label: 'Idee', question: 'Ik weet een betere manier' },
+    praise: { label: 'Bedankt', question: 'Het heeft me geholpen' },
+  },
+  roles: {
+    admin: { label: 'Beheerder', summary: 'Richt de fabriek, de stations en de leden in; maakt, keurt goed en publiceert.' },
+    approver: { label: 'Beoordelaar', summary: 'Maakt en bewerkt; keurt goed wat anderen publiceren.' },
+    author: { label: 'Redacteur', summary: 'Maakt en bewerkt instructies; publiceert ze, of vraagt goedkeuring als de fabriek dat eist.' },
+    reader: { label: 'Lezer', summary: 'Bekijkt gepubliceerde instructies en meldt wat onduidelijk is.' },
+  },
+  status: { draft: 'Concept', review: 'Wacht op goedkeuring', published: 'Gepubliceerd', archived: 'Gearchiveerd' },
+  themes: { ocean: 'Indigo', bleu: 'Oceaan', nature: 'Natuur', crepuscule: 'Schemering', royal: 'Royal', monochrome: 'Monochroom' },
+}

@@ -12,7 +12,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
-const EXCLUDED = [/src\/lib\/i18n\//, /src\/components\/player\/i18n\.ts$/]
+const EXCLUDED = [/src\/lib\/i18n\//, /src\/components\/player\/i18n\//]
 const FRENCH = /[àâçéèêëîïôûùüÿœÀÂÇÉÈÊËÎÏÔÛÙÜŸŒ’«»]/
 const ATTR = /\b(aria-label|title|placeholder|alt|label)=("([^"]*[A-Za-z]{2}[^"]*)"|'([^']*[A-Za-z]{2}[^']*)')/
 const ALLOWED_WORDS = /^(CLIP|PDF|QR|JSON|SVG|HTML|OK|II|EPI|PPE|SST|iOS|Android|AI|IA)$/

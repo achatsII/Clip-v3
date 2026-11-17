@@ -5,7 +5,8 @@
  */
 import { Check, Minus, Sparkles } from 'lucide-react'
 import Link from 'next/link'
-import { FEATURE_LABELS, FEATURE_ORDER, type FeatureKey } from '@/lib/billing/catalog'
+import { FEATURE_ORDER, type FeatureKey } from '@/lib/billing/catalog'
+import { loadMessages, type Messages } from '@/lib/i18n/core'
 import type { PlanInterval } from '@/lib/billing/intent'
 import { content, listOf, planName } from '@/lib/site/content'
 import { fmt, siteNum, type SiteLang } from '@/lib/site/lang'
@@ -17,13 +18,15 @@ import { ButtonLink, cx, type ButtonTone } from './ui'
 const MODULE_FEATURES = new Set<FeatureKey>(['academy', 'records_plus'])
 const BOOLEAN_FEATURES = FEATURE_ORDER.filter((k) => k !== 'ai_credits' && !(LIMIT_KEYS as readonly string[]).includes(k) && !MODULE_FEATURES.has(k))
 
-const label = (key: FeatureKey, lang: SiteLang) => FEATURE_LABELS[key][lang]
+// Le nom de chaque fonction : celui de l'app, dans la langue de la page (`billing.feature`, chargé au serveur).
+const label = (key: FeatureKey, words: Messages) => words.billing.feature[key]
 
-function limitLine(plan: SitePlan, key: (typeof LIMIT_KEYS)[number], lang: SiteLang): string {
+// La quantité d'une limite : la phrase de l'app (`billing.count`, le bon pluriel dans chaque langue).
+function limitLine(plan: SitePlan, key: (typeof LIMIT_KEYS)[number], lang: SiteLang, words: Messages): string {
   const t = content(lang)
   const v = plan.limits[key]
   if (v === null) return t.limitsUnlimited[key] ?? ''
-  return `${siteNum(v, lang)} ${v === 1 ? t.limitsOne[key] : t.limits[key]}`
+  return words.billing.count[key](v)
 }
 
 function PriceBlock({ plan, lang, featured }: { plan: SitePlan; lang: SiteLang; featured: boolean }) {
@@ -94,7 +97,8 @@ function PlanButton({ plan, lang, featured }: { plan: SitePlan; lang: SiteLang; 
 }
 
 /** Les cartes des forfaits ; le forfait sur devis en dernier (on en parle avec l'équipe). */
-export function PlanCards({ lang, compact }: { lang: SiteLang; compact?: boolean }) {
+export async function PlanCards({ lang, compact }: { lang: SiteLang; compact?: boolean }) {
+  const words = await loadMessages(lang)
   const t = content(lang)
   const c = siteCatalog()
   return (
@@ -135,7 +139,7 @@ export function PlanCards({ lang, compact }: { lang: SiteLang; compact?: boolean
                       {LIMIT_KEYS.map((k) => (
                         <li key={k} className="flex items-start gap-2">
                           <Check className={cx('mt-0.5 h-4 w-4 shrink-0', featured ? 'text-white' : 'text-emerald-500')} strokeWidth={3} aria-hidden />
-                          {limitLine(plan, k, lang)}
+                          {limitLine(plan, k, lang, words)}
                         </li>
                       ))}
                     </ul>
@@ -150,7 +154,7 @@ export function PlanCards({ lang, compact }: { lang: SiteLang; compact?: boolean
                           {gained.map((k) => (
                             <li key={k} className="flex items-start gap-2">
                               <Check className={cx('mt-0.5 h-4 w-4 shrink-0', featured ? 'text-white' : 'text-[var(--primary)]')} strokeWidth={3} aria-hidden />
-                              {label(k, lang)}
+                              {label(k, words)}
                             </li>
                           ))}
                         </ul>
@@ -173,7 +177,8 @@ export function PlanCards({ lang, compact }: { lang: SiteLang; compact?: boolean
 }
 
 /** Le tableau comparatif (à partir de la tablette ; au téléphone, les cartes disent déjà tout). */
-export function CompareTable({ lang }: { lang: SiteLang }) {
+export async function CompareTable({ lang }: { lang: SiteLang }) {
+  const words = await loadMessages(lang)
   const t = content(lang)
   const c = siteCatalog()
   const yes = (
@@ -227,7 +232,7 @@ export function CompareTable({ lang }: { lang: SiteLang }) {
           {rows.map((row) => (
             <tr key={row.key} className="border-b border-slate-900/5 last:border-0 dark:border-white/5">
               <th scope="row" className="p-4 pl-5 text-[15px] font-bold text-slate-700 dark:text-slate-200">
-                {label(row.key, lang)}
+                {label(row.key, words)}
               </th>
               {row.cells.map((cell, i) => (
                 <td key={c.plans[i]?.code ?? i} className={cx('p-4 text-center text-[15px] font-black text-slate-900 dark:text-white', c.plans[i]?.featured && 'bg-[var(--primary-soft)]/60')}>

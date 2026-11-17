@@ -1,5 +1,6 @@
 'use client'
 
+import { PRODUCT, SERVER_META } from '@/lib/brand/product'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
 import { callNative, hasCapability, nativeEnv } from '@/lib/bridge/native'
@@ -61,13 +62,13 @@ function ShellLanguage() {
 }
 
 /**
- * Le titre par défaut, écrit en français par le serveur (layout.tsx), suit la langue de l'outil.
- * Next peut le réécrire après le premier rendu : on le surveille.
+ * Le titre par défaut, écrit par le serveur dans la langue de la marque (layout.tsx), suit la langue de
+ * l'outil. Next peut le réécrire après le premier rendu : on le surveille.
  */
-const SERVER_TITLE = 'CLIP — Instructions de travail'
+const SERVER_TITLE = SERVER_META.title
 function DocumentTitle() {
   const t = useMessages()
-  const translated = `CLIP — ${t.auth.login.tagline}`
+  const translated = `${PRODUCT.name} — ${t.auth.login.tagline}`
   useEffect(() => {
     const apply = () => {
       if (document.title === SERVER_TITLE && translated !== SERVER_TITLE) document.title = translated

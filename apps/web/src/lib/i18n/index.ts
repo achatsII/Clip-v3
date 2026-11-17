@@ -1,13 +1,13 @@
 /**
- * La langue de l'outil (français ou anglais ; d'autres viendront). Chaque écran lit ses textes
- * dans un dictionnaire typé (`useMessages()` dans un composant, `messages()` ailleurs) : le
- * français est la source, et chaque autre langue doit avoir exactement les mêmes clés, sinon le
- * contrôle de types échoue. La personne choisit sa langue (Réglages → Apparence) ; sans choix, la
- * langue du navigateur. Les instructions elles-mêmes gardent leur langue (`content.language`), et
+ * La langue de l'outil (dix-huit langues, `LANGS`). Chaque écran lit ses textes dans un dictionnaire
+ * typé (`useMessages()` dans un composant, `messages()` ailleurs) : le français est la source, et
+ * chaque autre langue doit avoir exactement les mêmes clés, sinon le contrôle de types échoue. La
+ * personne choisit sa langue (Réglages → Apparence, ou à la connexion) ; sans choix, celle du
+ * navigateur. Hors du français et de l'anglais, un dictionnaire se charge à la demande. Les instructions elles-mêmes gardent leur langue (`content.language`), et
  * le lecteur des opérateurs a ses propres langues (components/player/i18n.ts).
  */
 import { useSyncExternalStore } from 'react'
-import { DICTS, getLang, langSwitches, subscribe, type Lang } from './core'
+import { DICTS, getLang, langSwitches, messages, subscribe, type Lang } from './core'
 import type { Messages } from './fr'
 
 export * from './core'
@@ -25,8 +25,8 @@ export function useLangVersion(): number {
   return useSyncExternalStore(subscribe, langSwitches, () => 0)
 }
 
-/** Les textes de l'outil, dans un composant. */
+/** Les textes de l'outil, dans un composant : il se redessine quand la langue change ou finit de se charger. */
 export function useMessages(): Messages {
-  return DICTS[useLang()]
+  return useSyncExternalStore(subscribe, messages, () => DICTS.fr)
 }
 

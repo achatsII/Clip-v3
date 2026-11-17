@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** 업무 용어: 분류, 문서 유형, 보호구, 에너지, 주의사항, 의견, 역할, 상태, 테마. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: '생산', short: '생산' },
+    maintenance: { label: '보전', short: '보전' },
+    qualite: { label: '품질', short: '품질' },
+    sst: { label: '안전보건', short: '안전' },
+    nettoyage: { label: '청소', short: '청소' },
+    changement: { label: '품종 교체', short: '교체' },
+    demarrage: { label: '기동 및 정지', short: '기동' },
+    autre: { label: '기타', short: '기타' },
+  },
+  kinds: {
+    procedure: { label: '작업 지시서', description: '사진과 동영상으로 단계별 안내.' },
+    lockout: { label: '잠금 시트', description: '에너지원, 차단 지점, 확인.' },
+  },
+  ppe: {
+    casque: '안전모',
+    lunettes: '보안경',
+    gants: '장갑',
+    'gants-coupure': '절단 방지 장갑',
+    'protection-auditive': '청력 보호구',
+    bottes: '안전화',
+    visiere: '안면 보호구',
+    masque: '마스크',
+    harnais: '안전대',
+    'vetements-ignifuges': '방염복',
+    dossard: '고시인성 조끼',
+    tablier: '앞치마',
+  },
+  energy: {
+    electrique: '전기',
+    pneumatique: '공압',
+    hydraulique: '유압',
+    mecanique: '기계',
+    gravite: '중력',
+    thermique: '열',
+    chimique: '화학',
+    vapeur: '증기',
+    eau: '물',
+    autre: '기타',
+  },
+  warnings: { danger: '위험', caution: '주의', info: '참고' },
+  feedbackKinds: {
+    unclear: { label: '불명확', question: '이해하기 어려워요' },
+    error: { label: '오류', question: '잘못된 내용이 있어요' },
+    danger: { label: '위험', question: '위험해요' },
+    idea: { label: '아이디어', question: '더 좋은 방법이 있어요' },
+    praise: { label: '감사', question: '도움이 됐어요' },
+  },
+  roles: {
+    admin: { label: '관리자', summary: '공장, 작업대, 구성원을 설정하고 작성, 승인, 게시합니다.' },
+    approver: { label: '승인자', summary: '작성과 편집을 하고, 다른 사람이 게시하는 내용을 승인합니다.' },
+    author: { label: '작성자', summary: '지시서를 작성, 편집하고 게시합니다. 공장에서 요구하면 승인을 요청합니다.' },
+    reader: { label: '열람자', summary: '게시된 지시서를 보고, 불명확한 부분을 알립니다.' },
+  },
+  status: { draft: '초안', review: '승인 대기', published: '게시됨', archived: '보관됨' },
+  themes: { ocean: '인디고', bleu: '오션', nature: '네이처', crepuscule: '황혼', royal: '로열', monochrome: '모노크롬' },
+}

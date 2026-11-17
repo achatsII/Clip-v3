@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Segmented } from '@/components/ui/Field'
-import { LANG_NAMES, LANGS, setLang, useLang, useMessages } from '@/lib/i18n'
+import { LanguageSelect } from '@/components/ui/LanguageSelect'
+import { setLang, useLang, useMessages } from '@/lib/i18n'
 import { applyBrandColor, readTheme, saveTheme, THEME_PRESETS, type UiTheme } from '@/lib/theme'
 import { cn } from '@/lib/util/cn'
 
@@ -24,7 +25,7 @@ export function AppearanceControls({ brandColor, compact = false }: { brandColor
   return (
     <div>
       <p className="label-caps mb-2 text-slate-500">{t.language}</p>
-      <Segmented value={lang} onChange={setLang} options={LANGS.map((l) => ({ value: l, label: <span lang={l}>{LANG_NAMES[l]}</span> }))} />
+      <LanguageSelect value={lang} onChange={setLang} label={t.language} />
       <p className="mt-2 text-xs font-medium text-slate-500">{t.languageNote}</p>
       <p className="label-caps mt-6 mb-2 text-slate-500">{t.display}</p>
       <Segmented

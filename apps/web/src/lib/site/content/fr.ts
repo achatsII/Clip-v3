@@ -51,13 +51,13 @@ export const fr = {
   },
 
   cta: {
-    trial: 'Essayer gratuitement',
+    trial: 'Essayer {trialDays} jours',
     book: 'Réserver une démo',
     film: 'Voir le film',
     filmLength: '1 min',
     pricing: 'Voir les tarifs',
     features: 'Voir toutes les fonctions',
-    noCard: 'Forfait gratuit, sans date de fin',
+    noCard: '{trialDays} jours gratuits, annulables en tout temps',
     bookHint: 'Une rencontre en ligne avec notre équipe',
   },
 
@@ -83,7 +83,7 @@ export const fr = {
     },
     pricing: {
       title: 'Tarifs de Clip — Forfaits et crédits d’IA',
-      description: 'Des forfaits clairs en dollars canadiens, du gratuit à l’usine entière. Les opérateurs ne sont jamais facturés. À l’année, {freeMonths} mois offerts.',
+      description: 'Des forfaits clairs en dollars canadiens, à essayer {trialDays} jours. Les opérateurs ne sont jamais facturés. À l’année, {freeMonths} mois offerts.',
     },
     knowledge: {
       title: 'Transfert de savoir-faire avant la retraite — Clip',
@@ -128,17 +128,17 @@ export const fr = {
       sub: 'Filmez l’expert pendant qu’il explique. Clip rédige l’instruction de travail étape par étape, la traduit dans la langue de vos opérateurs et l’affiche sur la tablette du poste.',
       trust: ['Sans compte au poste', 'Opérateurs jamais facturés', 'Web, iPhone et Android'],
       videoLabel: 'Aperçu de Clip : la capture au téléphone, l’instruction rédigée par l’IA, puis le pas-à-pas au poste.',
-      chips: ['Vidéo 720p, légère', 'D’habitude moins de 2 minutes', '{languages} langues au poste'],
+      chips: ['Vidéo 720p, légère', 'Rédigée en quelques minutes', '{languages} langues au poste'],
     },
     problem: {
       eyebrow: 'Le constat',
-      lead: 'D’ici 2030,',
-      stat: 'de 20 à 30 %',
-      statLine: 'des technologues partiront à la retraite.',
-      kicker: 'Leur savoir-faire n’est écrit nulle part.',
+      lead: 'Quand un expert part à la retraite,',
+      stat: 'son savoir-faire',
+      statLine: 'part avec lui.',
+      kicker: 'Souvent, il n’est écrit nulle part.',
       photoAlt: 'Un machiniste d’expérience explique le fonctionnement de sa machine (image d’illustration).',
       photoTag: 'Son savoir-faire : nulle part par écrit',
-      timeline: ['Aujourd’hui', '2030'],
+      timeline: ['Aujourd’hui', 'Le dernier jour'],
       pains: [
         {
           icon: 'brain',
@@ -166,8 +166,8 @@ export const fr = {
         {
           eyebrow: 'Générer',
           title: 'L’IA rédige l’instruction.',
-          text: 'Une action par étape, le bon extrait vidéo à la seconde près, les mises en garde et les équipements de protection au bon moment. D’habitude en moins de 2 minutes.',
-          alt: 'Les notes passent à l’IA, qui rédige l’instruction étape par étape, mises en garde et extraits vidéo compris, en moins de 2 minutes.',
+          text: 'Une action par étape, le bon extrait vidéo à la seconde près, les mises en garde et les équipements de protection au bon moment.',
+          alt: 'Les notes passent à l’IA, qui rédige l’instruction étape par étape, mises en garde et extraits vidéo compris.',
         },
         {
           eyebrow: 'Déployer au poste',
@@ -179,7 +179,7 @@ export const fr = {
       /** Les mots des trois illustrations (l'exemple des démos : le nettoyage des rails). */
       art: {
         capture: { film: 'Filmer le geste', generate: 'Générer', sources: ['Vidéo', 'Photos', 'Note vocale', 'Procédure'] },
-        generate: { title: 'Nettoyage des rails', steps: ['Cadenassez', 'Brossez les rails', 'Huilez les rails'], time: '< 2 min' },
+        generate: { title: 'Nettoyage des rails', steps: ['Cadenassez', 'Brossez les rails', 'Huilez les rails'], time: 'IA' },
         deploy: {
           published: 'Publiée',
           station: 'Poste · Machine 1234',
@@ -259,13 +259,13 @@ export const fr = {
       items: [
         { value: '0', label: 'compte à créer pour vos opérateurs : tablette, code QR ou lien' },
         { value: '{languages}', label: 'langues pour les opérateurs, de droite à gauche comprises' },
-        { value: '< 2 min', label: 'pour générer une instruction, d’habitude' },
+        { value: '{uiLanguages}', label: 'langues pour l’outil lui-même, au bureau comme au poste' },
         { value: 'PDF', label: 'et JSON à tous les forfaits : vos instructions vous appartiennent' },
       ],
     },
     pricing: {
       eyebrow: 'Tarifs',
-      title: 'Commencez gratuitement. Grandissez avec l’usine.',
+      title: 'Essayez {trialDays} jours. Grandissez avec l’usine.',
       text: 'Vous payez la création, les postes et l’IA, jamais la consultation : opérateurs et lecteurs ne sont pas comptés.',
       link: 'Comparer les forfaits',
     },
@@ -279,7 +279,7 @@ export const fr = {
         },
         {
           q: 'Combien de temps faut-il pour créer une instruction ?',
-          a: 'Filmer prend le temps de la tâche. La génération prend d’habitude moins de 2 minutes. Vous relisez, corrigez d’un mot et publiez.',
+          a: 'Filmer prend le temps de la tâche. La génération prend quelques minutes. Vous relisez, corrigez d’un mot et publiez.',
         },
         {
           q: 'Mes opérateurs ont-ils besoin d’un compte ?',
@@ -292,7 +292,7 @@ export const fr = {
         },
         {
           q: 'Dans quelles langues ?',
-          a: 'Clip s’utilise en français et en anglais. Avec {plans:translations}, vos instructions se traduisent dans {languages} langues pour les opérateurs, y compris celles qui s’écrivent de droite à gauche.',
+          a: 'Clip s’utilise en {uiLanguages} langues, dont le français, l’anglais, l’espagnol, le portugais, l’allemand, le polonais, le chinois et le japonais. Avec {plans:translations}, vos instructions se traduisent dans {languages} langues pour les opérateurs, y compris celles qui s’écrivent de droite à gauche.',
         },
         {
           q: 'Mes instructions m’appartiennent-elles ?',
@@ -479,7 +479,7 @@ export const fr = {
     credits: '{credits} crédits d’IA par mois',
     choose: 'Choisir {plan}',
     everythingIn: 'Tout {plan}, plus :',
-    start: 'Commencer gratuitement',
+    start: 'Essayer {trialDays} jours',
     contact: 'Parler à l’équipe',
     allPlans: {
       title: 'Dans tous les forfaits',
@@ -511,7 +511,7 @@ export const fr = {
       title: 'Questions sur les forfaits',
       items: [
         { q: 'Qui est compté dans le prix ?', a: 'Les rédacteurs et les approbateurs. Les opérateurs et les lecteurs ne sont jamais comptés : déployez Clip sur tout le plancher.' },
-        { q: 'Puis-je essayer avant de payer ?', a: 'Oui. Le forfait {freePlan} n’a pas de date de fin : il suffit pour essayer toute la boucle, de la capture au poste.' },
+        { q: 'Puis-je essayer avant de payer ?', a: 'Oui. {trialPlans} s’essaient {trialDays} jours, une fois par usine : toute la boucle, de la capture au poste. Annulez avant la fin de l’essai et rien n’est facturé.' },
         {
           q: 'Que se passe-t-il quand mes crédits sont épuisés ?',
           a: 'Les fonctions d’IA attendent le mois suivant ou un forfait supérieur. Tout le reste fonctionne : vos instructions restent consultables au poste.',
@@ -530,7 +530,7 @@ export const fr = {
     knowledge: {
       eyebrow: 'Départs à la retraite',
       h1: 'Captez le savoir-faire de vos experts avant leur départ.',
-      sub: 'D’ici 2030, de 20 à 30 % des technologues partiront à la retraite. Filmez vos experts pendant qu’ils expliquent : Clip en fait des instructions de travail que toute l’équipe peut suivre.',
+      sub: 'Vos experts partiront un jour à la retraite. Filmez-les pendant qu’ils expliquent : Clip en fait des instructions de travail que toute l’équipe peut suivre.',
       photo: 'filming',
       photoAlt: 'Une technicienne en méthodes filme un machiniste qui explique sa machine (image d’illustration).',
       problem: {
@@ -552,7 +552,7 @@ export const fr = {
       },
       demo: { title: 'Cinq notes, une instruction.', text: 'Une vidéo, des photos, une note vocale et une vieille procédure : voici ce que Clip en fait.', kind: 'generate' },
       faq: [
-        { q: 'Combien de temps faut-il à l’expert ?', a: 'Le temps de faire la tâche en l’expliquant. La génération prend d’habitude moins de 2 minutes, puis quelques minutes de relecture.' },
+        { q: 'Combien de temps faut-il à l’expert ?', a: 'Le temps de faire la tâche en l’expliquant. La génération prend quelques minutes, puis quelques minutes de relecture.' },
         { q: 'L’expert doit-il savoir écrire ou se servir d’un ordinateur ?', a: 'Non. Il parle et il montre ; un collègue peut le filmer avec son téléphone.' },
         {
           q: 'Que fait-on des anciennes procédures ?',
@@ -622,7 +622,7 @@ export const fr = {
           {
             icon: 'sparkles',
             title: 'Rédigée dans le bon ordre',
-            text: 'L’IA suit les exigences du RSST et de la norme CSA Z460. Une source probable mais non confirmée est marquée « À confirmer ».',
+            text: 'Les étapes dans l’ordre : arrêt, isolement, cadenas, vérification. Une source probable mais non confirmée est marquée « À confirmer ».',
           },
           { icon: 'qr', title: 'Au bon endroit', text: 'Le code QR de l’équipement ouvre d’abord ses procédures et sa fiche de cadenassage.' },
           { icon: 'shield', title: 'Les mises en garde au bon moment', text: 'Danger, attention et EPI en pictogrammes ; un danger signalé avertit les bonnes personnes.' },
@@ -680,7 +680,7 @@ export const fr = {
           q: 'Combien coûte une traduction ?',
           a: 'La traduction vient avec {plans:translations}. Elle se paie en crédits d’IA, à son coût réel, comme le reste de l’IA.',
         },
-        { q: 'L’outil lui-même est-il traduit ?', a: 'Clip s’utilise en français et en anglais. Au poste, les boutons du lecteur parlent aussi espagnol.' },
+        { q: 'L’outil lui-même est-il traduit ?', a: 'Oui : Clip s’utilise en {uiLanguages} langues, et les boutons du lecteur au poste aussi. Le contenu de chaque instruction suit sa traduction.' },
         { q: 'La lecture à voix haute suit-elle la langue ?', a: 'Oui : elle lit l’étape dans la langue choisie au poste, à tous les forfaits.' },
         { q: 'Et quand l’instruction change ?', a: 'Retraduisez la nouvelle version en un geste. Un média modifié ne garde pas sa vieille traduction.' },
       ],
@@ -725,7 +725,7 @@ export const fr = {
 
   consent: {
     title: 'Témoins',
-    text: 'Avec votre accord, nous utilisons les témoins de HubSpot pour mesurer l’audience du site et améliorer nos communications. Rien n’est activé sans votre accord.',
+    text: 'Avec votre accord, nous utilisons des témoins de mesure d’audience ({tools}) pour comprendre comment le site est utilisé et l’améliorer. Rien n’est activé sans votre accord.',
     accept: 'Accepter',
     refuse: 'Refuser',
     policy: 'Politique de confidentialité',
@@ -757,7 +757,7 @@ export const fr = {
       emptyHint: 'L’instruction rédigée apparaîtra ici.',
       button: 'Générer l’instruction',
       running: 'L’IA rédige votre instruction',
-      elapsed: '{clock} · d’habitude moins de 2 minutes',
+      elapsed: '{clock}',
       stages: ['Préparation des médias', 'L’IA regarde et écoute vos notes', 'Mise en forme des étapes', 'Annotation des images'],
       thumbs: 'Vignettes des extraits',
       tip: 'Chaque étape garde le bon extrait de votre vidéo, à la seconde près.',
@@ -829,7 +829,7 @@ export const fr = {
   planNames: {} as Record<string, string>,
   /** Une phrase par forfait, par code ; un forfait sans phrase n'en montre pas. */
   planPitch: {
-    free: 'Pour essayer avec vos premières instructions.',
+    free: '{freePlan} : l’IA vient avec {trialPlansOr}, à essayer {trialDays} jours.',
     solo: 'Pour la personne qui documente son travail et le partage par code QR.',
     equipe: 'Pour essayer à quelques-uns sur une ligne : l’équipe rédige, approuve et traduit.',
     usine: 'Pour toute l’usine, ou plusieurs : déploiement accompagné et support prioritaire.',

@@ -44,13 +44,13 @@ export const en: SiteContent = {
   },
 
   cta: {
-    trial: 'Start free',
+    trial: 'Try {trialDays} days',
     book: 'Book a demo',
     film: 'Watch the film',
     filmLength: '1 min',
     pricing: 'See pricing',
     features: 'See every feature',
-    noCard: 'Free plan, no end date',
+    noCard: '{trialDays} days free, cancel anytime',
     bookHint: 'An online meeting with our team',
   },
 
@@ -74,7 +74,7 @@ export const en: SiteContent = {
     },
     pricing: {
       title: 'Clip pricing — Plans and AI credits',
-      description: 'Clear plans in Canadian dollars, from free to the whole plant. Operators are never billed. Pay yearly and get {freeMonths} months free.',
+      description: 'Clear plans in Canadian dollars, free to try for {trialDays} days. Operators are never billed. Pay yearly and get {freeMonths} months free.',
     },
     knowledge: {
       title: 'Knowledge transfer before retirement — Clip',
@@ -118,17 +118,17 @@ export const en: SiteContent = {
       sub: 'Film the expert while they explain. Clip writes the step-by-step work instruction, translates it into your operators’ languages and shows it on the workstation tablet.',
       trust: ['No login at the workstation', 'Operators never billed', 'Web, iPhone and Android'],
       videoLabel: 'Clip preview: capture on the phone, the instruction written by AI, then the step-by-step view at the workstation.',
-      chips: ['Lightweight 720p video', 'Usually under 2 minutes', '{languages} languages at the workstation'],
+      chips: ['Lightweight 720p video', 'Written in minutes', '{languages} languages at the workstation'],
     },
     problem: {
       eyebrow: 'The problem',
-      lead: 'By 2030,',
-      stat: '20 to 30%',
-      statLine: 'of technologists will have retired.',
-      kicker: 'Their know-how isn’t written down anywhere.',
+      lead: 'When an expert retires,',
+      stat: 'their know-how',
+      statLine: 'leaves with them.',
+      kicker: 'Often, it isn’t written down anywhere.',
       photoAlt: 'An experienced machinist explains how his machine works (illustration).',
       photoTag: 'His know-how: not written anywhere',
-      timeline: ['Today', '2030'],
+      timeline: ['Today', 'The last day'],
       pains: [
         {
           icon: 'brain',
@@ -152,8 +152,8 @@ export const en: SiteContent = {
         {
           eyebrow: 'Generate',
           title: 'AI writes the instruction.',
-          text: 'One action per step, the right video clip down to the second, warnings and protective equipment at the right moment. Usually in under 2 minutes.',
-          alt: 'The notes go to AI, which writes the instruction step by step, warnings and video clips included, in under 2 minutes.',
+          text: 'One action per step, the right video clip down to the second, warnings and protective equipment at the right moment.',
+          alt: 'The notes go to AI, which writes the instruction step by step, warnings and video clips included.',
         },
         {
           eyebrow: 'Deploy to the floor',
@@ -164,7 +164,7 @@ export const en: SiteContent = {
       ],
       art: {
         capture: { film: 'Film the task', generate: 'Generate', sources: ['Video', 'Photos', 'Voice note', 'Procedure'] },
-        generate: { title: 'Rail cleaning', steps: ['Lock out', 'Brush the rails', 'Oil the rails'], time: '< 2 min' },
+        generate: { title: 'Rail cleaning', steps: ['Lock out', 'Brush the rails', 'Oil the rails'], time: 'AI' },
         deploy: {
           published: 'Published',
           station: 'Station · Machine 1234',
@@ -244,13 +244,13 @@ export const en: SiteContent = {
       items: [
         { value: '0', label: 'accounts to create for your operators: tablet, QR code or link' },
         { value: '{languages}', label: 'languages for operators, right-to-left included' },
-        { value: '< 2 min', label: 'to generate an instruction, usually' },
+        { value: '{uiLanguages}', label: 'languages for the app itself, at the desk and at the station' },
         { value: 'PDF', label: 'and JSON on every plan: your instructions belong to you' },
       ],
     },
     pricing: {
       eyebrow: 'Pricing',
-      title: 'Start free. Grow with your plant.',
+      title: 'Try it for {trialDays} days. Grow with your plant.',
       text: 'You pay for authoring, workstations and AI, never for viewing: operators and readers aren’t counted.',
       link: 'Compare plans',
     },
@@ -262,13 +262,13 @@ export const en: SiteContent = {
           q: 'What is Clip?',
           a: 'An app that turns your experts’ explanations (video, photos, voice notes, old documents) into clear, step-by-step work instructions, viewed at the workstation on a tablet, phone or QR code.',
         },
-        { q: 'How long does it take to create an instruction?', a: 'Filming takes as long as the task. Generation usually takes under 2 minutes. You review, fix with a word and publish.' },
+        { q: 'How long does it take to create an instruction?', a: 'Filming takes as long as the task. Generation takes a few minutes. You review, fix with a word and publish.' },
         { q: 'Do my operators need an account?', a: 'No. Workstation tablet, QR code or direct link, with no username or password. Operators and readers are never counted in the price.' },
         { q: 'Does AI publish on its own?', a: 'No. AI suggests, you decide: nothing is published without a human action, and you can require approval with {plans:approvals}.' },
         { q: 'Can I reuse my old procedures?', a: 'Yes. Drop a PDF or Word document into a new instruction, on every plan. With {plans:bulk_import}, bulk import handles dozens at once.' },
         {
           q: 'Which languages?',
-          a: 'Clip runs in English and French. With {plans:translations}, your instructions translate into {languages} languages for operators, including right-to-left scripts.',
+          a: 'Clip runs in {uiLanguages} languages, including English, French, Spanish, Portuguese, German, Polish, Chinese and Japanese. With {plans:translations}, your instructions translate into {languages} languages for operators, including right-to-left scripts.',
         },
         { q: 'Do my instructions belong to me?', a: 'Yes. Every instruction exports to PDF and JSON, on every plan. With {plans:full_export}, the full export takes them all at once.' },
         {
@@ -452,7 +452,7 @@ export const en: SiteContent = {
     credits: '{credits} AI credits per month',
     choose: 'Choose {plan}',
     everythingIn: 'Everything in {plan}, plus:',
-    start: 'Start free',
+    start: 'Try {trialDays} days',
     contact: 'Talk to us',
     allPlans: {
       title: 'On every plan',
@@ -484,7 +484,7 @@ export const en: SiteContent = {
       title: 'Questions about plans',
       items: [
         { q: 'Who counts toward the price?', a: 'Editors and approvers. Operators and readers are never counted: roll Clip out across the whole floor.' },
-        { q: 'Can I try before I pay?', a: 'Yes. The {freePlan} plan has no end date: it’s enough to try the whole loop, from capture to the workstation.' },
+        { q: 'Can I try before I pay?', a: 'Yes. {trialPlans} come with a {trialDays}-day trial, once per plant: the whole loop, from capture to the workstation. Cancel before the trial ends and you pay nothing.' },
         { q: 'What happens when I run out of credits?', a: 'AI features wait for next month or a higher plan. Everything else keeps working: your instructions stay available at the workstation.' },
         { q: 'Do unused credits roll over?', a: 'No: the credit bank renews every month.' },
         { q: 'How does yearly billing work?', a: 'You pay for {paidMonths} months and use 12: {freeMonths} months free on every paid plan.' },
@@ -499,7 +499,7 @@ export const en: SiteContent = {
     knowledge: {
       eyebrow: 'Retirements',
       h1: 'Capture your experts’ know-how before they leave.',
-      sub: 'By 2030, 20 to 30% of technologists will have retired. Film your experts while they explain: Clip turns it into work instructions the whole team can follow.',
+      sub: 'Your experts will retire one day. Film them while they explain: Clip turns it into work instructions the whole team can follow.',
       photo: 'filming',
       photoAlt: 'A process technician films a machinist explaining his machine (illustration).',
       problem: {
@@ -521,7 +521,7 @@ export const en: SiteContent = {
       },
       demo: { title: 'Five notes, one instruction.', text: 'A video, photos, a voice note and an old procedure: here is what Clip makes of them.', kind: 'generate' },
       faq: [
-        { q: 'How much of the expert’s time does it take?', a: 'As long as the task takes while they explain it. Generation usually takes under 2 minutes, then a few minutes to review.' },
+        { q: 'How much of the expert’s time does it take?', a: 'As long as the task takes while they explain it. Generation takes a few minutes, then a few minutes to review.' },
         { q: 'Does the expert need to write or use a computer?', a: 'No. They talk and show; a coworker can film them with a phone.' },
         { q: 'What about our old procedures?', a: 'Drop them in: each PDF or Word file becomes a draft to review. With {plans:bulk_import}, bulk import handles dozens at once.' },
         { q: 'Who owns the instructions?', a: 'Your plant does. Every instruction exports to PDF and JSON, on every plan.' },
@@ -588,7 +588,7 @@ export const en: SiteContent = {
           {
             icon: 'sparkles',
             title: 'Written in the right order',
-            text: 'AI follows the requirements of Québec’s RSST and the CSA Z460 standard. A likely but unconfirmed source is marked “To confirm”.',
+            text: 'The steps in order: shutdown, isolation, locks, verification. A likely but unconfirmed source is marked “To confirm”.',
           },
           { icon: 'qr', title: 'Right where it’s needed', text: 'The equipment’s QR code opens its procedures and lockout sheet first.' },
           { icon: 'shield', title: 'Warnings at the right time', text: 'Danger, caution and PPE as pictograms; a reported danger alerts the right people.' },
@@ -643,7 +643,7 @@ export const en: SiteContent = {
           q: 'How much does a translation cost?',
           a: 'Translation comes with {plans:translations}. It’s paid for in AI credits, at its real cost, like the rest of the AI.',
         },
-        { q: 'Is the app itself translated?', a: 'Clip runs in English and French. At the workstation, the player’s buttons also speak Spanish.' },
+        { q: 'Is the app itself translated?', a: 'Yes: Clip runs in {uiLanguages} languages, and so do the player’s buttons at the workstation. Each instruction’s content follows its translation.' },
         { q: 'Does read-aloud follow the language?', a: 'Yes: it reads the step in the language picked at the workstation, on every plan.' },
         { q: 'And when the instruction changes?', a: 'Retranslate the new version in one step. A changed media file doesn’t keep its old translation.' },
       ],
@@ -688,7 +688,7 @@ export const en: SiteContent = {
 
   consent: {
     title: 'Cookies',
-    text: 'With your consent, we use HubSpot cookies to measure site traffic and improve our communications. Nothing is turned on without your consent.',
+    text: 'With your consent, we use audience measurement cookies ({tools}) to understand how the site is used and improve it. Nothing is turned on without your consent.',
     accept: 'Accept',
     refuse: 'Decline',
     policy: 'Privacy policy',
@@ -720,7 +720,7 @@ export const en: SiteContent = {
       emptyHint: 'The written instruction will appear here.',
       button: 'Generate the instruction',
       running: 'AI is writing your instruction',
-      elapsed: '{clock} · usually under 2 minutes',
+      elapsed: '{clock}',
       stages: ['Preparing media', 'AI watches and listens to your notes', 'Shaping the steps', 'Annotating images'],
       thumbs: 'Clip thumbnails',
       tip: 'Each step keeps the right clip from your video, down to the second.',
@@ -788,9 +788,9 @@ export const en: SiteContent = {
     },
   },
 
-  planNames: { free: 'Free', equipe: 'Team', usine: 'Plant' },
+  planNames: { free: 'No subscription', equipe: 'Team', usine: 'Plant' },
   planPitch: {
-    free: 'To try it out with your first instructions.',
+    free: '{freePlan}: AI comes with {trialPlansOr}, free to try for {trialDays} days.',
     solo: 'For the person who documents their work and shares it by QR code.',
     equipe: 'For a few people trying it on a line: the team writes, approves and translates.',
     usine: 'For the whole plant, or several: guided rollout and priority support.',

@@ -7,8 +7,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
-import type { SiteLang } from '@/lib/site/lang'
+import { HREFLANG, SITE_LANG_NAMES, SITE_LANGS, type SiteLang } from '@/lib/site/lang'
 import { ROUTES, type PageKey } from '@/lib/site/routes'
+import { trackEvent } from '@/lib/site/consent'
 import { cx } from './ui'
 
 /**
@@ -23,7 +24,7 @@ export function InlineScript({ html }: { html: string }) {
 /** `<html lang>` suit la langue de la page du site, d'une navigation interne à l'autre. */
 export function SiteLanguage({ lang }: { lang: SiteLang }) {
   useEffect(() => {
-    document.documentElement.lang = lang === 'en' ? 'en' : 'fr-CA'
+    document.documentElement.lang = HREFLANG[lang]
   }, [lang])
   return null
 }
@@ -88,15 +89,69 @@ export function IntervalToggle({ target, labels, initial = 'month' }: { target: 
   )
 }
 
-/** Le lien vers la même page dans l'autre langue (les slugs sont traduits : `ROUTES`). */
-export function LangLink({ lang, className, children, label }: { lang: SiteLang; className?: string; children: ReactNode; label?: string }) {
+/**
+ * Le menu des langues : la même page dans chacune des langues du site (les slugs sont traduits : `ROUTES`).
+ * Un « popover » natif, comme les autres menus du site ; chaque langue s'écrit dans sa propre langue.
+ */
+export function LangMenu({ lang, id, label, className, children }: { lang: SiteLang; id: string; label: string; className?: string; children: ReactNode }) {
   const pathname = usePathname()
-  const other = lang === 'fr' ? 'en' : 'fr'
   const page = (Object.keys(ROUTES) as PageKey[]).find((key) => ROUTES[key][lang] === pathname) ?? 'home'
-  const hreflang = other === 'fr' ? 'fr-CA' : 'en'
   return (
-    <Link href={ROUTES[page][other]} hrefLang={hreflang} lang={hreflang} aria-label={label} className={className}>
-      {children}
-    </Link>
+    <>
+      <button type="button" popoverTarget={id} aria-label={label} title={label} className={className}>
+        {children}
+      </button>
+      <div id={id} popover="auto" className="site-popover site-menu">
+        <nav aria-label={label} className="glass-float rounded-[30px] p-3">
+          <ul className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+            {SITE_LANGS.map((l) => (
+              <li key={l}>
+                <Link
+                  href={ROUTES[page][l]}
+                  hrefLang={HREFLANG[l]}
+                  lang={HREFLANG[l]}
+                  aria-current={l === lang ? 'page' : undefined}
+                  className={cx(
+                    'btn-press flex min-h-11 items-center rounded-2xl px-3 text-[15px] font-bold',
+                    l === lang ? 'bg-gradient-primary shadow-primary text-white' : 'text-slate-700 hover:bg-slate-900/5 dark:text-slate-200 dark:hover:bg-white/10',
+                  )}
+                >
+                  {SITE_LANG_NAMES[l]}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </>
   )
 }
+
+/**
+ * La mesure des gestes du site (Google Analytics 4, seulement avec l'accord : `trackEvent`) : la page des
+ * tarifs vue (`vue_prix`), un bouton d'essai (`clic_essai`), une démo avec l'équipe (`clic_demo`). Chaque
+ * événement porte l'offre (la marque), le type de page, la langue et l'emplacement (en-tête, pied, page).
+ */
+export function SiteAnalytics({ lang, offer }: { lang: SiteLang; offer: string }) {
+  const pathname = usePathname()
+  const page = (Object.keys(ROUTES) as PageKey[]).find((key) => ROUTES[key][lang] === pathname) ?? 'home'
+  useEffect(() => {
+    if (page === 'pricing') trackEvent('vue_prix', { offre: offer, type_page: page, langue: lang, emplacement: 'page' })
+  }, [page, lang, offer])
+  useEffect(() => {
+    const book = new Set(Object.values(ROUTES.book))
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement | null)?.closest('a')
+      if (!a) return
+      const href = a.getAttribute('href') ?? ''
+      const emplacement = a.closest('[data-place]')?.getAttribute('data-place') ?? (a.closest('header') ? 'entete' : a.closest('footer') ? 'pied' : 'page')
+      const params = { offre: offer, type_page: page, langue: lang, emplacement }
+      if (href.includes('inscription=1')) trackEvent('clic_essai', params)
+      else if (book.has(href.split('?')[0])) trackEvent('clic_demo', params)
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [page, lang, offer])
+  return null
+}
+

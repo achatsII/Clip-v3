@@ -2,31 +2,41 @@
 
 import { Cookie } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { CONSENT_OPEN_EVENT, loadHubSpot, readConsent, revokeHubSpot, saveConsent } from '@/lib/site/consent'
+import { CONSENT_OPEN_EVENT, loadGoogleAnalytics, loadHubSpot, readConsent, revokeGoogleAnalytics, revokeHubSpot, saveConsent } from '@/lib/site/consent'
 
 /**
- * La bannière des témoins (Loi 25) : rien n'est chargé avant « Accepter » ; refuser est aussi simple
- * qu'accepter (deux boutons identiques) et efface les témoins de HubSpot. Le lien « Témoins » du
- * pied de page la rouvre.
+ * La bannière des témoins (Loi 25, RGPD) : rien n'est chargé avant « Accepter » ; refuser est aussi
+ * simple qu'accepter (deux boutons identiques) et efface les témoins. Elle nomme les outils de mesure
+ * vraiment branchés sur ce site (`text`, jeton `{tools}`) ; sans aucun outil, pas de bannière. Le lien
+ * « Témoins » du pied de page la rouvre.
  */
-export function ConsentBanner({ hubId, t, privacyUrl }: { hubId: string; t: { title: string; text: string; accept: string; refuse: string; policy: string }; privacyUrl: string }) {
+export function ConsentBanner({ hubId, gaId, tools, t, privacyUrl }: { hubId: string; gaId: string; tools: string; t: { title: string; text: string; accept: string; refuse: string; policy: string }; privacyUrl: string }) {
   const [open, setOpen] = useState(false)
+  const any = !!(hubId || gaId)
 
   useEffect(() => {
+    if (!any) return
     const choice = readConsent()
-    if (choice === 'granted') loadHubSpot(hubId)
-    else if (choice === null) setOpen(true)
+    if (choice === 'granted') {
+      loadGoogleAnalytics(gaId)
+      loadHubSpot(hubId)
+    } else if (choice === null) setOpen(true)
     const reopen = () => setOpen(true)
     window.addEventListener(CONSENT_OPEN_EVENT, reopen)
     return () => window.removeEventListener(CONSENT_OPEN_EVENT, reopen)
-  }, [hubId])
+  }, [any, hubId, gaId])
 
   if (!open) return null
 
   function choose(granted: boolean) {
     saveConsent(granted ? 'granted' : 'denied')
-    if (granted) loadHubSpot(hubId)
-    else revokeHubSpot()
+    if (granted) {
+      loadGoogleAnalytics(gaId)
+      loadHubSpot(hubId)
+    } else {
+      revokeGoogleAnalytics(gaId)
+      revokeHubSpot()
+    }
     setOpen(false)
   }
 
@@ -43,7 +53,7 @@ export function ConsentBanner({ hubId, t, privacyUrl }: { hubId: string; t: { ti
           {t.title}
         </p>
         <p className="mt-1.5 text-sm leading-relaxed font-medium text-slate-600 dark:text-slate-300">
-          {t.text}{' '}
+          {t.text.replace('{tools}', tools)}{' '}
           <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--primary-strong)] underline underline-offset-2 dark:text-[var(--primary-light)]">
             {t.policy}
           </a>

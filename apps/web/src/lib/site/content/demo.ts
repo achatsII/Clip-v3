@@ -332,4 +332,9 @@ export const DEMO: Record<DemoLang, DemoInstruction> = {
 }
 
 /** Les langues de la démo, la langue du site d'abord. */
-export const demoLangsFor = (siteLang: 'fr' | 'en'): DemoLang[] => [siteLang, ...DEMO_LANGS.filter((l) => l !== siteLang)]
+/** La langue de la démo pour une langue du site : la même si la démo la parle, sinon l'anglais. */
+export const demoLangOf = (siteLang: string): DemoLang => ((DEMO_LANGS as readonly string[]).includes(siteLang) ? (siteLang as DemoLang) : 'en')
+export const demoLangsFor = (siteLang: string): DemoLang[] => {
+  const first = demoLangOf(siteLang)
+  return [first, ...DEMO_LANGS.filter((l) => l !== first)]
+}

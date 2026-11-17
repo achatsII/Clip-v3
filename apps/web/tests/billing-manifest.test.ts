@@ -41,12 +41,28 @@ describe('billing.manifest.yaml ↔ code de l’app', () => {
     // Une réponse lancée est payée en entier, même sous zéro : c'est la suivante qui est refusée.
     expect(manifest.product.enforce_denial).toBe(false)
     expect(manifest.product.application.default_scopes).toContain('assistant:ask')
-    // Chaque plan de base, gratuit compris, donne ses crédits d'IA chaque mois.
+    // Chaque plan de base qu'on paie (ou qu'on reçoit de l'équipe) donne ses crédits d'IA chaque mois ;
+    // le plan sans abonnement n'en a aucun (décision du 2026-11-17 : on essaie 7 jours, pas de gratuit).
     for (const p of manifest.plans.filter((x) => x.kind === 'base')) {
       const grant = p.entitlements.credits?.find((c) => c.feature === AI_FEATURE)
+      if (p.code === FREE_PLAN) {
+        expect(grant, p.code).toBeUndefined()
+        continue
+      }
       expect(grant?.period, p.code).toBe('monthly')
       expect(grant?.amount, p.code).toBeGreaterThan(0)
     }
+  })
+
+  it('l’offre en ligne : sur le web seulement, Solo et Équipe à l’essai 7 jours, aucun produit des magasins', () => {
+    expect(manifest.product.channels).toEqual(['web'])
+    expect((manifest.product as { providers: Record<string, unknown> }).providers.revenuecat).toBeUndefined()
+    for (const p of manifest.plans) {
+      expect(p.availability.channels, p.code).toEqual(['web'])
+      for (const price of p.prices ?? []) expect((price as { store_product_id?: string }).store_product_id, p.code).toBeUndefined()
+    }
+    const trial = (code: string) => (manifest.plans.find((p) => p.code === code && p.status === 'active') as { trial_days?: number }).trial_days
+    expect([trial('solo'), trial('equipe'), trial('usine'), trial(FREE_PLAN)]).toEqual([7, 7, undefined, undefined])
   })
 
   it('chaque feature du manifeste a son libellé, et l’ordre d’affichage les couvre toutes', () => {
@@ -144,7 +160,8 @@ describe('billing.manifest.yaml ↔ code de l’app', () => {
     for (const p of manifest.plans.filter((x) => x.kind === 'base' && x.status === 'active')) {
       const limit = p.entitlements.limits?.published_instructions
       const bank = p.entitlements.credits?.find((c) => c.feature === 'ai_credits')?.amount ?? 0
-      if (limit == null) continue
+      // Sans abonnement, pas d'IA : ses quelques instructions se rédigent à la main.
+      if (limit == null || p.code === FREE_PLAN) continue
       expect(bank, `${p.code} : ${bank} crédits pour ${limit} instructions`).toBeGreaterThanOrEqual(limit * LONG_GENERATION)
     }
   })

@@ -1,0 +1,61 @@
+import type { catalog as Fr } from '../fr/catalog'
+
+/** Les mots du métier : catégories, types de fiche, EPI, énergies, mises en garde, retours, rôles, statuts, thèmes. */
+export const catalog: typeof Fr = {
+  categories: {
+    production: { label: '生産', short: '生産' },
+    maintenance: { label: '保全', short: '保全' },
+    qualite: { label: '品質', short: '品質' },
+    sst: { label: '安全衛生', short: '安全' },
+    nettoyage: { label: '清掃', short: '清掃' },
+    changement: { label: '段取り替え', short: '段替え' },
+    demarrage: { label: '起動と停止', short: '起動' },
+    autre: { label: 'その他', short: 'その他' },
+  },
+  kinds: {
+    procedure: { label: '作業手順書', description: '写真と動画付きで、ステップごとに説明します。' },
+    lockout: { label: 'ロックアウト票', description: 'エネルギー源、遮断箇所、確認。' },
+  },
+  ppe: {
+    casque: 'ヘルメット',
+    lunettes: '保護メガネ',
+    gants: '手袋',
+    'gants-coupure': '耐切創手袋',
+    'protection-auditive': '耳栓・イヤーマフ',
+    bottes: '安全靴',
+    visiere: 'フェイスシールド',
+    masque: 'マスク',
+    harnais: '安全帯',
+    'vetements-ignifuges': '難燃服',
+    dossard: '反射ベスト',
+    tablier: 'エプロン',
+  },
+  energy: {
+    electrique: '電気',
+    pneumatique: '空圧',
+    hydraulique: '油圧',
+    mecanique: '機械',
+    gravite: '重力',
+    thermique: '熱',
+    chimique: '化学',
+    vapeur: '蒸気',
+    eau: '水',
+    autre: 'その他',
+  },
+  warnings: { danger: '危険', caution: '注意', info: '補足' },
+  feedbackKinds: {
+    unclear: { label: 'わかりにくい', question: 'わかりにくい' },
+    error: { label: '誤り', question: '間違いがある' },
+    danger: { label: '危険', question: '危ない' },
+    idea: { label: '提案', question: 'もっと良い方法がある' },
+    praise: { label: 'ありがとう', question: '役に立った' },
+  },
+  roles: {
+    admin: { label: '管理者', summary: '工場、ステーション、メンバーを設定し、作成・承認・公開ができます。' },
+    approver: { label: '承認者', summary: '作成・編集ができ、ほかの人が公開するものを承認します。' },
+    author: { label: '作成者', summary: '手順書を作成・編集し、公開します。工場の設定によっては承認を依頼します。' },
+    reader: { label: '閲覧者', summary: '公開済みの手順書を見て、わかりにくい点を知らせます。' },
+  },
+  status: { draft: '下書き', review: '承認待ち', published: '公開中', archived: 'アーカイブ済み' },
+  themes: { ocean: 'インディゴ', bleu: 'オーシャン', nature: 'ネイチャー', crepuscule: '夕暮れ', royal: 'ロイヤル', monochrome: 'モノクロ' },
+}

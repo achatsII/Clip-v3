@@ -13,6 +13,17 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 
 ## Repères
 
+- **Deux marques, un seul produit** (décision du 2026-11-17, `src/lib/brand/product.ts`) : **CLIP**, vendu
+  par l'équipe d'Intelligence Industrielle à ses clients (aucun prix du libre-service : tout y est « sur devis »,
+  `presentOffer` et `forBrand` ; site hors des moteurs, `siteIndexed`) et **Gesto**, la version publique en
+  libre-service (« Filmez le geste. L'IA écrit l'instruction. »), qui ne nomme jamais Intelligence Industrielle,
+  sauf dans sa politique de confidentialité (`PRODUCT.legal`, exigée par la loi). La build choisit
+  (`NEXT_PUBLIC_BRAND=gesto` ; sans valeur, CLIP). Les textes gardent le jeton `CLIP` (`Clip` sur le site) :
+  `brandify`/`brandText` y mettent le nom de la marque, une fois par dictionnaire chargé ; `APP_NAME` et
+  `PRODUCT` partout ailleurs (métadonnées, consignes de l'IA). Gesto n'a ni Découvrir (`src/proxy.ts`), ni
+  démo avec l'équipe (`BookPage`), ni Usine ni modules en vente ; son logo est le n° 3 « Filmer, puis lire »
+  (`PRODUCT.mark`), ses icônes dans `public/brands/gesto/` (`npm run brand-icons` les refait pour les deux
+  marques), son favicon par réécriture (`next.config.ts`), son manifeste par `src/app/manifest.ts`.
 - **Une seule interface** : tout l'écran est dans `apps/web`. La coquille Expo n'ajoute que des
   capacités natives, déclarées dans `packages/bridge` ; le web vérifie une capacité
   (`hasCapability`) avant de l'appeler et garde toujours un repli web. Au démarrage, un seul logo :
@@ -334,6 +345,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   alphabétique : un registre, jamais un palmarès. La revue de la semaine est ouverte à tous ; les
   autres viennent avec `adoption_stats`. Un rapport lit au plus 30 000 événements, par pages de
   10 000, et 5 000 travaux (`load.ts`), et le dit.
+- **Mesure du site** (`src/lib/site/consent.ts`, `SiteAnalytics`) : Google Analytics 4 en Consent Mode v2, mode
+  de base : rien avant « Accepter » (la bannière nomme les outils branchés, `{tools}`) ; la mesure d'audience
+  seulement, publicité refusée ; refuser efface `_ga`. Événements du moteur marketing : `vue_prix`, `clic_essai`,
+  `clic_demo`, chacun avec `offre`, `type_page`, `langue`, `emplacement`. Réglages de la build :
+  `NEXT_PUBLIC_GA_ID` (le flux `G-…` de la marque : chaque marque a sa propriété), `NEXT_PUBLIC_GSC_VERIFICATION`
+  et `NEXT_PUBLIC_BING_VERIFICATION` (les jetons de vérification), `NEXT_PUBLIC_HUBSPOT_ID` (CLIP seulement).
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le
@@ -343,14 +360,22 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   bouton (toggle `aiConsentAtSignIn` ; Google pour tout, OpenAI pour les images qu'on lui demande),
   jamais par une fenêtre au premier usage, retiré ou redonné dans Réglages › Données ; « Supprimer mon
   compte » dans Mon compte.
-- **Interface** : français du Québec et anglais, par les dictionnaires typés de `src/lib/i18n`
+- **Interface** : dix-huit langues (`LANGS` de `src/lib/i18n/core.ts` : français du Québec, anglais, espagnol,
+  portugais du Brésil, allemand, italien, polonais, néerlandais, tchèque, roumain, hongrois, turc, chinois,
+  japonais, coréen, vietnamien, indonésien, thaï), par les dictionnaires typés de `src/lib/i18n`
   (`useMessages()` dans un composant, `messages()` ailleurs ; aucun texte écrit dans un écran, aucun
-  `'fr-CA'` en dur ; règles dans `docs/architecture.md` §7). Design system « verre » de
+  `'fr-CA'` en dur ; règles dans `docs/architecture.md` §7). Le français (la source) et l'anglais (le repli)
+  sont toujours chargés ; les autres à la demande (`loadLang`, `loadMessages` pour un PDF ou un courriel ;
+  `messagesIn` rend l'anglais en attendant). Découvrir ne parle que français et anglais (`decouvrir` vient de
+  l'anglais). Le lecteur du poste a un fichier par langue (`src/components/player/i18n/`, `usePlayerStrings`) ;
+  le site, un dictionnaire par langue (`src/lib/site/content/<langue>.ts`) et ses pages sous `/<langue>` (slugs
+  anglais, `(site)/(intl)/[lang]`). Un texte qui change en français se reporte dans les dix-sept autres
+  langues (une passe de traduction, les clés changées données par une comparaison des fichiers). Design system « verre » de
   `src/app/globals.css` (tokens, `glass-*`), une seule action principale par écran, trois états pour
   toute donnée asynchrone, cibles d'au moins 44 px, mode sombre (le gris `slate-500` y passe à
   `slate-400`, `--primary-soft` à une teinte translucide de la primaire, et le texte teinté à
   `--primary-light`, qui suit le thème : jamais un bleu ciel codé en dur).
-- **Couleur et logo** (décision du 2026-11-16) : la couleur par défaut est l'indigo de CLIP, `#5B4CF0`
+- **Couleur et logo** (décision du 2026-11-16 ; une marque, un symbole depuis le 2026-11-17 : `PRODUCT.mark`) : la couleur par défaut est l'indigo de CLIP, `#5B4CF0`
   (`BRAND`, `src/lib/brand/colors.ts`, mêmes valeurs que `:root`, un test les compare) ; les boutons et
   le logo prennent un dégradé de l'indigo vers le bleu (`#7C5CFF` → `#3D6BF5`), sans rose. Le thème par
   défaut garde son identifiant historique `ocean` (« Indigo ») ; le bleu II d'avant est le thème `bleu`
@@ -419,10 +444,12 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   de `billing-publish` avant d'être publié ; le verrou `billing.manifest.lock.json` dira ce qui est
   publié (rien ne l'est encore). Le slug `clip-v3` doit d'abord être enregistré à la Gateway comme
   application.
-- La grille (manifeste, décision du 2026-11-16, volume du 2026-11-17) : en libre-service (site par Stripe,
-  magasins par RevenueCat), seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : Gratuit
-  (1 rédacteur, 3 publiées, 1 poste, 500 crédits) · Solo 49 $/mois (1, 15, 3, 2 500, l'écran) · Équipe
-  199 $/mois, mis en avant (5 rédacteurs, 75 publiées, 15 postes, 12 500, l'IA qui apprend de l'équipe).
+- La grille (manifeste, décision du 2026-11-16, volume et essai du 2026-11-17) : sur le web seulement (Stripe),
+  seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : **Sans abonnement** (le plan par défaut :
+  aucune IA, 1 rédacteur, 3 publiées, 1 poste ; plus de crédits offerts sans fin) · Solo 49 $/mois (1, 15, 3,
+  2 500, l'écran) · Équipe 199 $/mois, mis en avant (5 rédacteurs, 75 publiées, 15 postes, 12 500, l'IA qui
+  apprend de l'équipe). **L'essai** : Solo et Équipe s'essaient 7 jours (`trial_days`), une fois par organisation,
+  au paiement Stripe (« Essayer Équipe 7 jours », `tryPlan`, `trialNote`).
   **Le volume** : Équipe donne 5 fois Solo pour 4 fois le prix, chaque poste, rédacteur, instruction et
   crédit y revient ~20 % moins cher (un test le tient) ; Usine descend encore, au contrat. **La durée** :
   annuel = 10 mois ; 3 et 5 ans (jusqu'à 25 %), au contrat d'Usine (`multiYear`, sur le web seulement).
@@ -535,20 +562,18 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   l'administrateur » (`clip_request`, une par personne et par fonction sur 30 jours) : la demande
   paraît dans « À voir » des administrateurs jusqu'à ce que l'usine ait la fonction, et part par
   courriel ou sur le téléphone si l'usine avertit (`/api/notify`, `request`).
-- **Dans l'app mobile, on vend dans le magasin** (posture `in_app_purchase`, décidée pour garder la
-  vision : le champion s'abonne seul dans l'App Store). Solo, Équipe et Usine se vendent sur iOS et
-  Android par RevenueCat (projet `clip-v3`), jamais par Stripe.
+- **Dans l'app mobile, on ne vend rien** (décision du 2026-11-17, modèle « Spotify ») : l'app est une app
+  compagnon (règle Apple 3.1.3(f)) ; on s'abonne sur le site, une seule facturation. Ni prix, ni bouton, ni lien
+  d'achat dans la coquille (sans capacité `store.*`, la page Abonnement n'y montre qu'une phrase). **Si Apple
+  exige l'achat dans l'app** (3.1.3(b), la règle du skill `billing` pour une app grand public), la version
+  suivante du manifeste ajoute `ios`/`android`, `providers.revenuecat` (posture `in_app_purchase`, projet
+  `clip-v3`) et les `store_product_id` : le code sait déjà vendre dans le magasin.
   - La coquille annonce les capacités `store.connect`, `store.offers`, `store.purchase` et
     `store.restore` seulement à trois conditions : une clé publique RevenueCat
     (`EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `…_ANDROID_KEY`), hors d'Expo Go, et le toggle
-    `storePurchases` allumé.
+    `storePurchases` allumé (éteint tant que l'app ne vend rien).
   - La page achète par le pont, puis fait relire l'achat par `mobileSync`
     (`src/lib/billing/store.ts`, `src/components/billing/Store.tsx`).
-  - L'achat n'est offert que si `store_purchase.allowed` (une organisation d'une seule personne).
-    Sinon, une phrase, sans lien ni prix d'ailleurs.
-  - Avant l'achat : le prix du magasin, les mentions, la politique de confidentialité
-    d'Intelligence Industrielle et, sur iPhone, les conditions standard d'Apple. Ensuite :
-    « Restaurer mes achats » et la gestion dans le magasin.
   - Le module natif part dans une build EAS, jamais dans une mise à jour à distance seule.
 - Le drapeau reste éteint partout tant que le catalogue n'est pas publié ; on l'allume en QA quand
   `GET /api/v2/billing/context` y répond pour `clip-v3`.

@@ -17,7 +17,7 @@ export function FilmButton({
   className,
 }: {
   lang: SiteLang
-  labels: { button: string; length: string; title: string; note: string; close: string; poster: string; tracks: Record<SiteLang, string> }
+  labels: { button: string; length: string; title: string; note: string; close: string; poster: string; tracks: { fr: string; en: string } }
   className?: string
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
