@@ -12,7 +12,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Coquille mobile, hors workspaces : `cd apps/mobile && npm test` (Jest) et `npm run typecheck`.
 - Déploiement : un push suffit (GitHub Action `deploy-vercel.yml`, workflow partagé de l'organisation).
   `main` → production (Gateway prod), `dev` → QA (Gateway QA), autre branche → preview. Les variables
-  vivent par environnement dans Vercel (`docs/architecture.md`, « Les environnements »).
+  vivent par environnement dans Vercel (`docs/architecture.md`, « Les environnements »). **Le fichier
+  n'est pas encore dans le dépôt** (`.github/workflows/` absent, constaté le 17 novembre 2026) : d'ici
+  là, Vercel ne fait que des aperçus de `main`, et la production de CLIP se déploie à la main (un
+  déploiement de production de `main` par Vercel). Le site de la marque publique (projet Vercel à part)
+  suit `main` tout seul.
 
 ## Repères
 
@@ -26,7 +30,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `PRODUCT` partout ailleurs (métadonnées, consignes de l'IA). Gesto n'a ni Découvrir (`src/proxy.ts`), ni
   démo avec l'équipe (`BookPage`), ni Usine ni modules en vente ; son logo est le n° 3 « Filmer, puis lire »
   (`PRODUCT.mark`), ses icônes dans `public/brands/gesto/` (`npm run brand-icons` les refait pour les deux
-  marques), son favicon par réécriture (`next.config.ts`), son manifeste par `src/app/manifest.ts`.
+  marques), son favicon par réécriture (`next.config.ts`), son manifeste par `src/app/manifest.ts`. L'app
+  mobile aussi : `EXPO_PUBLIC_BRAND` (profil d'EAS au nom de la marque), `apps/mobile/brands.json` (nom,
+  adresse du site, identifiants des magasins) et `app.config.js` (« Deux marques, une coquille »,
+  `docs/pont-natif.md`).
 - **Une seule interface** : tout l'écran est dans `apps/web`. La coquille Expo n'ajoute que des
   capacités natives, déclarées dans `packages/bridge` ; le web vérifie une capacité
   (`hasCapability`) avant de l'appeler et garde toujours un repli web. Au démarrage, un seul logo :
@@ -375,7 +382,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `messagesIn` rend l'anglais en attendant). Découvrir ne parle que français et anglais (`decouvrir` vient de
   l'anglais). Le lecteur du poste a un fichier par langue (`src/components/player/i18n/`, `usePlayerStrings`) ;
   le site, un dictionnaire par langue (`src/lib/site/content/<langue>.ts`) et ses pages sous `/<langue>` (slugs
-  anglais, `(site)/(intl)/[lang]`). Un texte qui change en français se reporte dans les dix-sept autres
+  anglais, `(site)/(intl)/[lang]`) ; la coquille mobile, ses écrans natifs et les textes des permissions d'iOS
+  (`apps/mobile/src/i18n/<langue>.ts`, `apps/mobile/locales/<langue>.json`). Un texte qui change en français se reporte dans les dix-sept autres
   langues (une passe de traduction, les clés changées données par une comparaison des fichiers). Design system « verre » de
   `src/app/globals.css` (tokens, `glass-*`), une seule action principale par écran, trois états pour
   toute donnée asynchrone, cibles d'au moins 44 px, mode sombre (le gris `slate-500` y passe à

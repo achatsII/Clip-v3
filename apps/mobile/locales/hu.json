@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "A CLIP a kamerával fotózza és filmezi a munkautasításai lépéseit, és beolvassa a munkaállomások QR-kódjait.",
+    "NSMicrophoneUsageDescription": "A CLIP a mikrofont a hangjegyzetei és a videói hangjának rögzítésére, valamint a hangasszisztenssel való beszélgetésre használja.",
+    "NSPhotoLibraryUsageDescription": "A CLIP hozzáfér a fotóihoz és videóihoz, hogy a már elkészült felvételeket hozzáadhassa egy munkautasításhoz."
+  }
+}

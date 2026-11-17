@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "CLIP, iş talimatlarınızın adımlarını fotoğraflamak ve filme almak, ayrıca istasyonların QR kodlarını okumak için kamerayı kullanır.",
+    "NSMicrophoneUsageDescription": "CLIP, ses notlarınızı ve videolarınızın sesini kaydetmek, ayrıca sesli asistanla konuşmak için mikrofonu kullanır.",
+    "NSPhotoLibraryUsageDescription": "CLIP, daha önce çektiğiniz medyayı bir iş talimatına eklemek için fotoğraflarınıza ve videolarınıza erişir."
+  }
+}

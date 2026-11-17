@@ -8,6 +8,7 @@ import type * as NotificationsModule from 'expo-notifications'
 import { Platform } from 'react-native'
 
 import { BridgeError } from '../bridge/errors'
+import { BRAND } from '../config/brand'
 import { strings } from '../i18n'
 
 /**
@@ -46,7 +47,7 @@ export async function registerForPush(): Promise<{ token: string; platform: 'ios
   const Notifications = notifications()
   if (!pushAvailable() || !Notifications) throw new BridgeError('unsupported', strings().errors.pushUnavailable)
   ensureHandler(Notifications)
-  if (Platform.OS === 'android') await Notifications.setNotificationChannelAsync('default', { name: 'CLIP', importance: Notifications.AndroidImportance.HIGH })
+  if (Platform.OS === 'android') await Notifications.setNotificationChannelAsync('default', { name: BRAND.name, importance: Notifications.AndroidImportance.HIGH })
   let granted = (await Notifications.getPermissionsAsync()).granted
   if (!granted) granted = (await Notifications.requestPermissionsAsync()).granted
   if (!granted) throw new BridgeError('permission_denied', strings().errors.pushDenied)

@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "CLIP 使用相机拍摄作业指导书各个步骤的照片和视频，并读取工位二维码。",
+    "NSMicrophoneUsageDescription": "CLIP 使用麦克风录制你的语音备注和视频中的声音，并与语音助手对话。",
+    "NSPhotoLibraryUsageDescription": "CLIP 需要访问你的照片和视频，以便将已拍摄的媒体添加到作业指导书中。"
+  }
+}

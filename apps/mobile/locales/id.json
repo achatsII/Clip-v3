@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "CLIP menggunakan kamera untuk memotret dan merekam langkah-langkah instruksi kerja Anda, serta untuk membaca kode QR stasiun.",
+    "NSMicrophoneUsageDescription": "CLIP menggunakan mikrofon untuk merekam catatan suara dan suara video Anda, serta untuk berbicara dengan asisten suara.",
+    "NSPhotoLibraryUsageDescription": "CLIP mengakses foto dan video Anda untuk menambahkan media yang sudah Anda ambil ke instruksi kerja."
+  }
+}
