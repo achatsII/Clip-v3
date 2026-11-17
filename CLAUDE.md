@@ -79,7 +79,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   s'attendre (`data.phase: 'run'`) : ce deuxième passage roule `Job_Generate_CLIP_V2` (Ask_AI_V4 tel
   quel, la réponse lue comme `aiApi.ask` la lit) et écrit l'état, le résultat et son coût dans
   `clip_job`. L'appareil peut alors se fermer ; le premier
-  appareil ouvert qui voit le travail fini termine l'instruction avec le code de l'app
+  appareil ouvert qui voit le travail fini termine l'instruction avec le code de l'app (le travail se
+  relit aussi onglet caché, une fois par minute, `POLL_HIDDEN_JOB_MS` : un onglet resté derrière un
+  autre termine les figures d'un PDF et les vignettes sans qu'on y revienne)
   (`finishServerGeneration` dans `CreationWatcher` : verrou `generating.finishing`, même fin que sur
   l'appareil) et débite le coût réel avec la clé du travail (`jobDebitKey`, une seule fois). Une
   création au serveur ne se juge jamais au signe de vie du téléphone : elle reste en cours jusqu'à ce

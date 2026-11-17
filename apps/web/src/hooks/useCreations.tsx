@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { useToast } from '@/components/ui/Toast'
-import { creationOf, diffCreations, POLL_BUSY_MS, POLL_IDLE_MS } from '@/lib/ai/creation'
+import { creationOf, diffCreations, POLL_BUSY_MS, POLL_HIDDEN_JOB_MS, POLL_IDLE_MS } from '@/lib/ai/creation'
 import { ranHere } from '@/lib/ai/jobs'
 import { finishServerGeneration } from '@/lib/ai/runGeneration'
 import { jobOutcome, readServerJob, serverJobIds } from '@/lib/ai/serverJob'
@@ -84,16 +84,19 @@ export function CreationWatcher() {
   const { data, files, ai, profile, displayName, org } = useSession()
   const creations = useCreations({ idle: pathname === '/accueil' || pathname === '/instructions' })
   const stations = useStations()
-  // La génération au serveur : les travaux des créations en cours, relus toutes les 10 s (jamais onglet
-  // caché). Une création au serveur reste en cours tant que son travail n'est pas réglé, même des jours
-  // plus tard. Le toggle `serverGeneration` ne décide que du lancement : un travail parti se termine toujours.
+  // La génération au serveur : les travaux des créations en cours, relus toutes les 10 s, et aussi onglet
+  // caché, une fois par minute : un onglet laissé ouvert derrière un autre termine l'instruction (figures
+  // d'un PDF, vignettes) sans qu'on revienne. Seulement tant qu'un travail est en cours. Une création au
+  // serveur reste en cours tant que son travail n'est pas réglé, même des jours plus tard. Le toggle
+  // `serverGeneration` ne décide que du lancement : un travail parti se termine toujours.
   const running = (creations.data ?? []).filter((d) => creationOf(d.json_data).kind === 'running')
   const jobIds = serverJobIds(running)
   const jobs = useQuery({
     queryKey: [...qk.creations, 'jobs', jobIds],
     queryFn: () => Promise.all(jobIds.map(async (id) => ({ id, job: await readServerJob(data, id) }))),
     enabled: jobIds.length > 0,
-    refetchInterval: POLL_BUSY_MS,
+    refetchInterval: () => (typeof document !== 'undefined' && document.visibilityState === 'hidden' ? POLL_HIDDEN_JOB_MS : POLL_BUSY_MS),
+    refetchIntervalInBackground: true,
     staleTime: 5_000,
   })
   const seen = useRef<Set<string> | null>(null)

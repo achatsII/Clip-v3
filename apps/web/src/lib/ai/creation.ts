@@ -19,6 +19,8 @@ export const STALE_MS = 120_000
 /** Relire les créations : toutes les 10 s pendant l'une d'elles, toutes les 60 s sinon (accueil et liste). */
 export const POLL_BUSY_MS = 10_000
 export const POLL_IDLE_MS = 60_000
+/** Onglet caché pendant un travail au serveur : le travail se relit une fois par minute, pour le terminer. */
+export const POLL_HIDDEN_JOB_MS = 60_000
 
 export type CreationState = { kind: 'none' } | { kind: 'running'; info: GeneratingInfo } | { kind: 'stale'; info: GeneratingInfo }
 
