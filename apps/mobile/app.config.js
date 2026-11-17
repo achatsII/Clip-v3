@@ -63,7 +63,9 @@ module.exports = ({ config }) => {
     const json = readLocale(file)
     locales[tag] = { ...json, ios: withText(json.ios ?? {}) }
   }
-  if (id === 'clip') return { ...config, locales }
+  // Les langues déclarées à iOS (CFBundleLocalizations) : sans elles, l'App Store n'en affiche qu'une partie.
+  const localizations = Object.keys(locales)
+  if (id === 'clip') return { ...config, ios: { ...config.ios, infoPlist: { ...config.ios?.infoPlist, CFBundleLocalizations: localizations } }, locales }
 
   // Jamais une build de la marque publique avec les identifiants de CLIP : ils ne se changent plus ensuite.
   if (!brand.bundleIdentifier || !brand.package) {
@@ -92,7 +94,7 @@ module.exports = ({ config }) => {
     ios: {
       ...config.ios,
       bundleIdentifier: brand.bundleIdentifier,
-      infoPlist: { ...config.ios?.infoPlist, ...base },
+      infoPlist: { ...config.ios?.infoPlist, ...base, CFBundleLocalizations: localizations },
     },
     android: {
       ...config.android,
