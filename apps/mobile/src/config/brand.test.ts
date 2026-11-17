@@ -61,6 +61,9 @@ describe('la configuration de la build (app.config.js)', () => {
     expect(c.plugins).toEqual(appJson.expo.plugins)
     expect(c.locales.fr.ios.NSCameraUsageDescription).toMatch(/^CLIP /)
     expect(Object.keys(c.locales)).toEqual(expect.arrayContaining(['fr', 'en']))
+    // Chaque langue déclarée à iOS, sinon l'App Store n'en affiche qu'une partie.
+    expect(c.ios.infoPlist.CFBundleLocalizations).toEqual(Object.keys(c.locales))
+    expect(c.ios.infoPlist.CFBundleLocalizations).toHaveLength(18)
   })
 
   it('la marque publique ne se construit jamais sans ses propres identifiants', () => {
@@ -73,6 +76,7 @@ describe('la configuration de la build (app.config.js)', () => {
     expect(c.icon).toBe('./assets/brands/gesto/icon.png')
     expect(c.android.adaptiveIcon.foregroundImage).toBe('./assets/brands/gesto/android-icon-foreground.png')
     expect(c.extra.brand).toBe('gesto')
+    expect(c.ios.infoPlist.CFBundleLocalizations).toHaveLength(18)
     expect(c.extra.eas.projectId).toBe(appJson.expo.extra.eas.projectId)
     // Aucun « CLIP » nulle part : ni dans Info.plist, ni dans les modules, ni dans une langue.
     expect(JSON.stringify([c.ios.infoPlist, c.plugins, c.locales])).not.toMatch(/\bCLIP\b/)
