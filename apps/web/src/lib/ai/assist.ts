@@ -8,6 +8,8 @@ import { getLang, messages, messagesIn } from '../i18n'
 import { PPE } from '../model/catalog'
 import { FIRST_STEP_KINDS, firstStepOf, withFirstStep, type FirstStepKind } from '../model/firstStep'
 import { uid } from '../model/repo'
+import { lastAnnotationSize } from '../annotations/lastStyle'
+import { autoMarkSize } from '../annotations/model'
 import { MAX_HTML_BYTES } from '../model/media'
 import type { Annotation, AnnotationColor, InstructionContent, OrgSettings, Step, StepMedia, TranslatedContent, WritingStandard } from '../model/types'
 import { AiStep, normalizeSteps, warningFrom } from './normalize'
@@ -74,7 +76,7 @@ export async function assistStep(ai: AiApi, org: OrgAi, content: InstructionCont
  * `hint` : ce que la génération voulait montrer sur cette image (une piste, pas une demande stricte :
  * l'IA marque ce que le geste de l'étape touche, sur l'image elle-même).
  */
-export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, request?: string, hint?: string): Promise<Annotation[]> {
+export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, request?: string, hint?: string, opts: { screen?: boolean } = {}): Promise<Annotation[]> {
   const res = await ai.ask<{ marks: Array<{ label: string; shape: 'circle' | 'rect' | 'arrow' | 'measure'; box: number[]; color?: AnnotationColor }> }>(
     'annotate',
     {
@@ -91,6 +93,8 @@ export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, req
   )
   const marks = res.json?.marks ?? []
   const out: Annotation[] = []
+  // La dernière grosseur choisie à la main, si elle est plus fine que celle qui convient.
+  const preferred = lastAnnotationSize()
   for (const m of marks.slice(0, request ? 5 : 3)) {
     const color: AnnotationColor = m.color && COLORS.includes(m.color) ? m.color : 'red'
     if (!Array.isArray(m.box) || m.box.length < 4) continue
@@ -98,16 +102,18 @@ export async function annotateImage(ai: AiApi, imageUrl: string, step: Step, req
     if (xmax <= xmin || ymax <= ymin) continue
     const cx = (xmin + xmax) / 2
     const cy = (ymin + ymax) / 2
+    // Un trait fin autour d'un petit élément, et sur une image d'écran.
+    const size = autoMarkSize({ w: xmax - xmin, h: ymax - ymin }, { screen: opts.screen, preferred })
     if (m.shape === 'arrow') {
       const fromX = cx > 0.5 ? Math.max(0.05, xmin - 0.18) : Math.min(0.95, xmax + 0.18)
       const fromY = cy > 0.5 ? Math.max(0.05, ymin - 0.14) : Math.min(0.95, ymax + 0.14)
-      out.push({ id: uid('an_'), type: 'arrow', x: fromX, y: fromY, x2: cx, y2: cy, text: m.label, color })
+      out.push({ id: uid('an_'), type: 'arrow', x: fromX, y: fromY, x2: cx, y2: cy, text: m.label, color, size })
     } else if (m.shape === 'measure') {
       // Une distance : d'un bout à l'autre de la boîte, dans son sens le plus long.
       const across = xmax - xmin >= ymax - ymin
-      out.push(across ? { id: uid('an_'), type: 'measure', x: xmin, y: cy, x2: xmax, y2: cy, text: m.label, color } : { id: uid('an_'), type: 'measure', x: cx, y: ymin, x2: cx, y2: ymax, text: m.label, color })
+      out.push(across ? { id: uid('an_'), type: 'measure', x: xmin, y: cy, x2: xmax, y2: cy, text: m.label, color, size } : { id: uid('an_'), type: 'measure', x: cx, y: ymin, x2: cx, y2: ymax, text: m.label, color, size })
     } else {
-      out.push({ id: uid('an_'), type: m.shape === 'rect' ? 'rect' : 'circle', x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin, text: m.label, color })
+      out.push({ id: uid('an_'), type: m.shape === 'rect' ? 'rect' : 'circle', x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin, text: m.label, color, size })
     }
   }
   if (!out.length) throw new ApiError(messages().editor.ai.nothingToMark, 422)

@@ -58,6 +58,21 @@ export const clampScale = (v: number): number => Math.round(Math.min(SCALE_MAX, 
 
 export const sizeOf = (a: Annotation): AnnotationSize => a.size ?? 'm'
 
+/** Ce qui compte comme un petit élément : au plus 15 % de l'image, dans son sens le plus long. */
+export const SMALL_MARK = 0.15
+
+/**
+ * La grosseur d'un repère posé par l'IA, d'après ce qu'il entoure. Un petit élément (un bouton, une
+ * vis) reçoit un trait fin : un trait moyen l'écrasait. Une image d'écran, toujours fin : tout y est
+ * petit, et ce qu'on entoure doit rester lisible. La dernière grosseur choisie à la main l'emporte
+ * si elle est plus fine.
+ */
+export function autoMarkSize(box: { w: number; h: number }, opts: { screen?: boolean; preferred?: AnnotationSize | null } = {}): AnnotationSize {
+  const fitted: AnnotationSize = opts.screen || Math.max(box.w, box.h) <= SMALL_MARK ? 's' : 'm'
+  const preferred = opts.preferred
+  return preferred && SIZES.indexOf(preferred) < SIZES.indexOf(fitted) ? preferred : fitted
+}
+
 /** Une valeur bornée, comme `clamp(min, cqw, max)` en CSS, pour une image large de `width` px. */
 export function clampPx(spec: { cqw: number; min: number; max: number }, width: number): number {
   return Math.min(spec.max, Math.max(spec.min, (spec.cqw / 100) * width))

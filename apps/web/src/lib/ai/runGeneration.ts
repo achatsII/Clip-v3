@@ -304,7 +304,7 @@ export function finishServerGeneration(input: {
     tell('stage', 'finish')
 
     // Le coût réel, débité une fois (la clé est celle du travail), que la réponse ait abouti ou non.
-    await ai.chargeCost(operation, outcome.costCad, jobDebitKey(operation, jobId), { model: outcome.kind === 'completed' ? outcome.model : null, ok: outcome.kind === 'completed' })
+    await ai.chargeCost(operation, outcome.costCad, jobDebitKey(operation, jobId), { model: outcome.kind === 'completed' ? outcome.model : null, ok: outcome.kind === 'completed', tokens: outcome.kind === 'completed' ? outcome.tokens : null })
 
     if (outcome.kind === 'failed') {
       await data.patch(T.instruction, doc._id, { generating: null, generationError: { at: nowIso(), message: outcome.message, server: true } })

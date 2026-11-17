@@ -11,7 +11,7 @@ import { finishServerGeneration, startGeneration } from '@/lib/ai/runGeneration'
 import { DEVICE_ID, FINISH_LOCK_MS, JOB_IGNORED_FIELDS, JOB_RELAYED_FIELDS, JOB_SILENCE_MS, jobOutcome, SERVER_PICKUP_MS, serverJobIds } from '@/lib/ai/serverJob'
 import { importAsk, prepareGeneration } from '@/lib/ai/generate'
 import { APP_IDENTIFIER } from '@/lib/config'
-import { aiApi, jobDebitKey, jobRecordId, type AskBody } from '@/lib/gateway/ai'
+import { aiApi, jobDebitKey, jobRecordId, onAiUsage, type AskBody } from '@/lib/gateway/ai'
 import { ApiError } from '@/lib/gateway/client'
 import type { Doc } from '@/lib/gateway/data'
 import { defaultStandard, T } from '@/lib/model/repo'
@@ -70,6 +70,17 @@ describe('Job_start : le travail au serveur', () => {
     expect(bodies[0].quantity).toBe(5)
   })
 
+  it('le travail rend son coût exact et ses jetons, au rapport des crédits comme un appel direct', async () => {
+    const job = { status: 'completed', stage: 'done', startedAt: iso(now), heartbeatAt: iso(now), result: { json: {}, model: 'gemini', billing: { costs: { cad: 0.0147057605475 }, usage: { total: 8769 } } } } as unknown as ServerJob
+    const out = jobOutcome(job, now)
+    expect(out).toMatchObject({ kind: 'completed', costCad: 0.0147057605475, tokens: 8769 })
+    const seen: Array<{ usage: unknown; model: string | null }> = []
+    const off = onAiUsage((e) => seen.push({ usage: e.usage, model: e.model }))
+    await aiApi(fakeGateway(() => ({})), { billing: false }).chargeCost('generate_s', 0.0147, 'k', { model: 'gemini', ok: true, tokens: 8769 })
+    off()
+    expect(seen).toEqual([{ usage: { total_tokens: 8769 }, model: 'gemini' }])
+  })
+
   it('facturation éteinte ou coût inconnu : rien n’est débité', async () => {
     const off = fakeGateway(() => ({ consumed: 1 }))
     expect(await aiApi(off, { billing: false }).chargeCost('generate_s', 0.02, 'k', { ok: true })).toBeNull()
@@ -83,7 +94,7 @@ describe('où en est un travail au serveur', () => {
   const job = (over: Partial<ServerJob>): ServerJob => ({ kind: 'generation', status: 'running', stage: 'analyze', steps: ['started', 'analyze'], startedAt: iso(now - 60_000), heartbeatAt: iso(now - 60_000), instructionId: 'i1', operation: 'generate_s', result: null, error: null, ...over })
 
   it('fini, raté, en cours, jamais pris, introuvable, déjà terminé', () => {
-    expect(jobOutcome(job({ status: 'completed', result: { json: { title: 'T' }, model: 'g', billing: { costs: { cad: 0.01 } } } }), now)).toEqual({ kind: 'completed', json: { title: 'T' }, model: 'g', costCad: 0.01 })
+    expect(jobOutcome(job({ status: 'completed', result: { json: { title: 'T' }, model: 'g', billing: { costs: { cad: 0.01 } } } }), now)).toEqual({ kind: 'completed', json: { title: 'T' }, model: 'g', costCad: 0.01, tokens: null })
     expect(jobOutcome(job({ status: 'failed', result: { billing: { costs: { cad: 0.002 } } }, error: { message: 'no_result' } }), now)).toMatchObject({ kind: 'failed', costCad: 0.002, reason: 'error' })
     expect(jobOutcome(job({}), now)).toEqual({ kind: 'running' })
     expect(jobOutcome(job({ stage: 'start', startedAt: iso(now - SERVER_PICKUP_MS + 1000) }), now)).toEqual({ kind: 'running' })
@@ -232,7 +243,7 @@ describe('terminer sur un autre appareil', () => {
     const db = memoryData({ [`${T.instruction}/i1`]: { _id: 'i1', json_data: running() }, [`${T.serverJob}/job1`]: job })
     const chargeCost = vi.fn(async () => 5)
     await finishServerGeneration({ doc: { _id: 'i1', json_data: running() }, job, data: db.api, files: {} as never, ai: { chargeCost } as never, stations: [], actor: { id: 'u2', name: 'Paul' } })
-    expect(chargeCost).toHaveBeenCalledWith('generate_s', 0.0123, jobDebitKey('generate_s', 'job1'), { model: 'gemini', ok: true })
+    expect(chargeCost).toHaveBeenCalledWith('generate_s', 0.0123, jobDebitKey('generate_s', 'job1'), { model: 'gemini', ok: true, tokens: null })
     const saved = db.docs.get(`${T.instruction}/i1`)!.json_data as Instruction
     expect(saved.draft?.steps).toHaveLength(1)
     expect(saved.draft?.steps[0].media[0]).toMatchObject({ kind: 'image', url: photo.url })
@@ -280,7 +291,7 @@ describe('terminer sur un autre appareil', () => {
     const db = memoryData({ [`${T.instruction}/i1`]: { _id: 'i1', json_data: running() }, [`${T.serverJob}/job1`]: failed })
     const chargeCost = vi.fn(async () => 2)
     await finishServerGeneration({ doc: { _id: 'i1', json_data: running() }, job: failed, data: db.api, files: {} as never, ai: { chargeCost } as never, stations: [], actor: { id: 'u2', name: 'Paul' } })
-    expect(chargeCost).toHaveBeenCalledWith('generate_s', 0.004, jobDebitKey('generate_s', 'job1'), { model: null, ok: false })
+    expect(chargeCost).toHaveBeenCalledWith('generate_s', 0.004, jobDebitKey('generate_s', 'job1'), { model: null, ok: false, tokens: null })
     const saved = db.docs.get(`${T.instruction}/i1`)!.json_data as Instruction
     expect(saved.generating).toBeNull()
     expect(saved.generationError).toMatchObject({ server: true })

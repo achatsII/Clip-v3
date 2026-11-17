@@ -168,10 +168,11 @@ describe('ce que l’IA en reçoit', () => {
       ['S1', video],
       ['S2', shotAt('a', 12.34)],
     ])
-    const marks: Array<{ stepId: string; mediaIndex: number; hint: string }> = []
+    const marks: Array<{ stepId: string; mediaIndex: number; hint: string; screen?: boolean }> = []
     const [step] = normalizeSteps([{ title: 'Cliquer sur Enregistrer', text: '', keyPoints: [], warningLevel: 'none', warningText: '', section: '', media: [{ source: 'S2', focusLabel: 'Enregistrer' }] }] as never, byId, undefined, marks)
     expect(step.media[0]).toEqual({ kind: 'image', url: 'https://x/a.jpg', sourceId: 'a', frame: { videoUrl: 'https://x/screen.mp4', at: 12.3, start: 9.3, end: 14.3 } })
-    expect(marks).toEqual([{ stepId: step.id, mediaIndex: 0, hint: 'Enregistrer' }])
+    // Une image d'écran : le repère y prendra un trait fin.
+    expect(marks).toEqual([{ stepId: step.id, mediaIndex: 0, hint: 'Enregistrer', screen: true }])
   })
 })
 

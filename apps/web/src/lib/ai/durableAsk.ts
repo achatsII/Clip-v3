@@ -96,7 +96,7 @@ export async function durableAsk<T>(deps: Deps, operation: AiOperation, ask: Ask
     if (doc !== undefined) {
       const out = jobOutcome(doc?.json_data ?? null, now())
       if (out.kind === 'completed') {
-        const charged = await deps.ai.chargeCost(operation, out.costCad, jobDebitKey(operation, jobId), { model: out.model, ok: true })
+        const charged = await deps.ai.chargeCost(operation, out.costCad, jobDebitKey(operation, jobId), { model: out.model, ok: true, tokens: out.tokens })
         finalize()
         return { text: '', json: (out.json ?? null) as T | null, model: out.model, usage: null, charged }
       }
@@ -127,7 +127,7 @@ async function settleLater(deps: Deps, operation: AiOperation, jobId: string, po
     if (doc !== undefined) {
       const out = jobOutcome(doc?.json_data ?? null, now())
       if (out.kind === 'completed' || out.kind === 'failed') {
-        if (out.costCad !== null) await deps.ai.chargeCost(operation, out.costCad, jobDebitKey(operation, jobId), { model: out.kind === 'completed' ? out.model : null, ok: out.kind === 'completed' }).catch(() => undefined)
+        if (out.costCad !== null) await deps.ai.chargeCost(operation, out.costCad, jobDebitKey(operation, jobId), { model: out.kind === 'completed' ? out.model : null, ok: out.kind === 'completed', tokens: out.kind === 'completed' ? out.tokens : null }).catch(() => undefined)
         void deps.data.patch(T.serverJob, jobId, { finalizedAt: new Date(now()).toISOString() }).catch(() => undefined)
         return
       }

@@ -36,7 +36,7 @@ export type JobOutcome =
   | { kind: 'running' }
   /** Déjà terminée par un appareil. */
   | { kind: 'done' }
-  | { kind: 'completed'; json: unknown; model: string | null; costCad: number | null }
+  | { kind: 'completed'; json: unknown; model: string | null; costCad: number | null; tokens: number | null }
   | { kind: 'failed'; message: string; costCad: number | null; reason: 'error' | 'stuck' | 'missing' }
 
 function costOf(job: ServerJob): number | null {
@@ -44,12 +44,18 @@ function costOf(job: ServerJob): number | null {
   return typeof cad === 'number' && Number.isFinite(cad) && cad >= 0 ? cad : null
 }
 
+/** Les jetons du travail, comme Ask_AI_V4 les compte (entrée, réflexion et sortie), pour le rapport des crédits. */
+function tokensOf(job: ServerJob): number | null {
+  const total = job.result?.billing?.usage?.total
+  return typeof total === 'number' && Number.isFinite(total) && total >= 0 ? total : null
+}
+
 /** Où en est un travail au serveur, et ce qu'il faut en faire. */
 export function jobOutcome(job: ServerJob | null | undefined, now = Date.now()): JobOutcome {
   const t = messages().capture.progress
   if (!job) return { kind: 'failed', message: t.serverLost, costCad: null, reason: 'missing' }
   if (job.finalizedAt) return { kind: 'done' }
-  if (job.status === 'completed') return { kind: 'completed', json: job.result?.json ?? null, model: job.result?.model ?? null, costCad: costOf(job) }
+  if (job.status === 'completed') return { kind: 'completed', json: job.result?.json ?? null, model: job.result?.model ?? null, costCad: costOf(job), tokens: tokensOf(job) }
   if (job.status === 'failed') return { kind: 'failed', message: t.serverFailed, costCad: costOf(job), reason: 'error' }
   const started = Date.parse(job.startedAt)
   if (job.stage === 'start' && Number.isFinite(started) && now - started > SERVER_PICKUP_MS) return { kind: 'failed', message: t.serverNotTaken, costCad: null, reason: 'stuck' }

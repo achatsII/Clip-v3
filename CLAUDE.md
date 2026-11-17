@@ -233,7 +233,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   instant, et l'IA peut les choisir comme média. Elle reçoit aussi des consignes d'écran (`SCREEN_RULES`) : une étape par action, l'image nette en média avec
   `focusLabel` (entourée ensuite), jamais un mot de passe recopié. L'image d'une étape sait son instant
   (`frame`) : « Vidéo » et « GIF » en repartent. Aussi dans l'assistant (bouton à côté du trombone).
-  Consignes et fichiers passent tels quels au serveur : rien dans n8n.
+  Consignes et fichiers passent tels quels au serveur : rien dans n8n. Les repères que l'IA pose
+  (automatiques ou « Annoter par IA ») prennent un trait fin autour d'un petit élément (au plus 15 % de
+  l'image) et partout sur une image d'écran (`MarkHint.screen`). La dernière grosseur choisie à la main
+  l'emporte si elle est plus fine (`autoMarkSize`, `clip_pref_annot_style`, `src/lib/annotations/lastStyle.ts`).
 - **L'IA qui apprend des corrections** (toggle `learnFromEdits`, `src/lib/learning/`) : la génération garde
   le texte de sa version (`generation.original`) ; à la première publication, ce que la personne a corrigé
   part dans `clip_edit` (`editSignals` : longueurs, points clés, mises en garde, étapes, mots remplacés,

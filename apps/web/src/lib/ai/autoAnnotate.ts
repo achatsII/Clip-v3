@@ -86,7 +86,7 @@ export async function annotateMarks(
       const media = step?.media[job.mediaIndex]
       if (step && media?.kind === 'image' && media.url) {
         try {
-          const annotations = await annotateImage(ai, media.url, step, undefined, job.hint)
+          const annotations = await annotateImage(ai, media.url, step, undefined, job.hint, { screen: job.screen })
           step.media[job.mediaIndex] = { ...media, annotations }
           marked += 1
         } catch (e) {

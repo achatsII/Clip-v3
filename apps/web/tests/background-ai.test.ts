@@ -55,7 +55,7 @@ describe('une réponse qui survit à l’arrière-plan', () => {
     expect(ai.startJob).toHaveBeenCalledWith({ operation: 'edit_agent', instructionId: 'i1', ask: body })
     expect(ai.ask).not.toHaveBeenCalled()
     expect(res).toMatchObject({ json: { reply: 'Fait' }, model: 'gemini', charged: 3 })
-    expect(ai.chargeCost).toHaveBeenCalledWith('edit_agent', 0.004, jobDebitKey('edit_agent', 'job1'), { model: 'gemini', ok: true })
+    expect(ai.chargeCost).toHaveBeenCalledWith('edit_agent', 0.004, jobDebitKey('edit_agent', 'job1'), { model: 'gemini', ok: true, tokens: null })
     expect(data.patch).toHaveBeenCalledWith('clip_job', 'job1', { finalizedAt: expect.any(String) })
   })
 
@@ -96,7 +96,7 @@ describe('une réponse qui survit à l’arrière-plan', () => {
     const stop = new AbortController()
     stop.abort()
     await expect(durableAsk({ ai, data } as never, 'edit_agent', body, { instructionId: 'i1', signal: stop.signal, pollMs: 1, now: () => T0 })).rejects.toMatchObject({ name: 'AbortError' })
-    await vi.waitFor(() => expect(ai.chargeCost).toHaveBeenCalledWith('edit_agent', 0.003, jobDebitKey('edit_agent', 'job1'), { model: 'm', ok: true }), { timeout: 12_000 })
+    await vi.waitFor(() => expect(ai.chargeCost).toHaveBeenCalledWith('edit_agent', 0.003, jobDebitKey('edit_agent', 'job1'), { model: 'm', ok: true, tokens: null }), { timeout: 12_000 })
   }, 15_000)
 })
 

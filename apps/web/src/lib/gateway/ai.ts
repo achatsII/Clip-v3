@@ -318,12 +318,14 @@ export function aiApi(client: GatewayClient, options: { billing?: boolean; credi
    * Débite le coût réel d'un travail fait au serveur (`clip_job`), avec sa clé (`jobDebitKey`) : deux
    * appareils qui le terminent ensemble ne le débitent qu'une fois. Sans coût connu, rien n'est débité.
    */
-  async function chargeCost(operation: AiOperation, costCad: number | null, key: string, outcome: { model?: string | null; ok: boolean }): Promise<number | null> {
+  async function chargeCost(operation: AiOperation, costCad: number | null, key: string, outcome: { model?: string | null; ok: boolean; tokens?: number | null }): Promise<number | null> {
     const env = costCad === null ? {} : { billing: { costs: { cad: costCad } }, results: { model: outcome.model ?? undefined } }
     const cost = billing ? await debit(operation, env, key) : { costCad, charged: null }
     emitAiCost({ operation, ...cost })
     if (billing) emitSettled()
-    usageListeners.forEach((fn) => fn({ operation, model: outcome.model ?? null, usage: null, ok: outcome.ok, credits: cost.charged }))
+    // Les jetons du travail, s'il les rend : le rapport des crédits les montre comme ceux d'un appel direct.
+    const usage = typeof outcome.tokens === 'number' ? { total_tokens: outcome.tokens } : null
+    usageListeners.forEach((fn) => fn({ operation, model: outcome.model ?? null, usage, ok: outcome.ok, credits: cost.charged }))
     return cost.charged
   }
 

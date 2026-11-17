@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { annotateMarks, readAutoAnnotate, setAutoAnnotate } from '@/lib/ai/autoAnnotate'
 import { annotatePrompt } from '@/lib/ai/prompts'
+import { normalizeInstruction } from '@/lib/ai/normalize'
+import { lastAnnotationSize } from '@/lib/annotations/lastStyle'
+import { autoMarkSize } from '@/lib/annotations/model'
 import type { AiApi } from '@/lib/gateway/ai'
 import { ApiError } from '@/lib/gateway/client'
 import { emptyContent } from '@/lib/model/repo'
@@ -76,5 +79,83 @@ describe('les annotations automatiques, au deuxième temps', () => {
     const s = step('s1', [])
     expect(annotatePrompt(s, undefined, 'Bouton vert')).toContain('PISTE : la rédaction veut montrer « Bouton vert »')
     expect(annotatePrompt(s)).not.toContain('PISTE')
+  })
+})
+
+describe('la grosseur des repères posés par l’IA', () => {
+  afterEach(() => localStorage.removeItem('clip_pref_annot_style'))
+
+  /** Un petit bouton (8 % de l'image) et une grande pièce (40 %). */
+  function twoMarks() {
+    const ask = vi.fn(async () => ({
+      json: {
+        marks: [
+          { label: 'Enregistrer', shape: 'circle', box: [100, 100, 140, 180] },
+          { label: 'Carter', shape: 'rect', box: [300, 200, 700, 600] },
+        ],
+      },
+      text: '',
+      model: 't',
+    }))
+    return { ai: { ask } as unknown as AiApi, ask }
+  }
+
+  it('fine autour d’un petit élément, moyenne autour d’une grande pièce', () => {
+    expect(autoMarkSize({ w: 0.08, h: 0.04 })).toBe('s')
+    expect(autoMarkSize({ w: 0.4, h: 0.4 })).toBe('m')
+  })
+
+  it('fine partout sur une image d’écran ; la dernière grosseur choisie l’emporte si elle est plus fine, jamais plus épaisse', () => {
+    expect(autoMarkSize({ w: 0.4, h: 0.4 }, { screen: true })).toBe('s')
+    expect(autoMarkSize({ w: 0.4, h: 0.4 }, { preferred: 's' })).toBe('s')
+    expect(autoMarkSize({ w: 0.08, h: 0.04 }, { preferred: 'xl' })).toBe('s')
+  })
+
+  it('une image d’écran : tous les repères fins ; une photo : chacun selon ce qu’il entoure', async () => {
+    const content = emptyContent({ steps: [step('s1', [frame('https://x/ecran.jpg')]), step('s2', [frame('https://x/photo.jpg')])] })
+    const f = twoMarks()
+    const out = await annotateMarks(f.ai, content, [
+      { stepId: 's1', mediaIndex: 0, hint: 'Enregistrer', screen: true },
+      { stepId: 's2', mediaIndex: 0, hint: 'Carter' },
+    ])
+    const sizes = (i: number) => {
+      const m = out.content.steps[i].media[0]
+      return m.kind === 'image' ? (m.annotations ?? []).map((a) => a.size) : []
+    }
+    expect(sizes(0)).toEqual(['s', 's'])
+    expect(sizes(1)).toEqual(['s', 'm'])
+  })
+
+  it('la grosseur fine choisie à la main est retenue sur l’appareil et suivie par l’IA', async () => {
+    localStorage.setItem('clip_pref_annot_style', JSON.stringify({ size: 's' }))
+    expect(lastAnnotationSize()).toBe('s')
+    const content = emptyContent({ steps: [step('s1', [frame('https://x/photo.jpg')])] })
+    const out = await annotateMarks(twoMarks().ai, content, [{ stepId: 's1', mediaIndex: 0, hint: 'Carter' }])
+    const m = out.content.steps[0].media[0]
+    expect(m.kind === 'image' ? (m.annotations ?? []).map((a) => a.size) : []).toEqual(['s', 's'])
+  })
+})
+
+describe('une image d’écran se reconnaît dès la génération', () => {
+  it('le repère demandé sur une image nette d’un enregistrement d’écran est marqué « écran » ; sur une photo, non', () => {
+    const t = new Date().toISOString()
+    const sources = [
+      { id: 'scr', kind: 'video' as const, url: 'https://x/ecran.mp4', screen: true as const, durationSec: 30, createdAt: t },
+      { id: 'shot', kind: 'photo' as const, url: 'https://x/shot.jpg', shot: { sourceId: 'scr', at: 4 }, createdAt: t },
+      { id: 'ph', kind: 'photo' as const, url: 'https://x/ph.jpg', createdAt: t },
+    ]
+    const json = {
+      title: 'Saisir un bon',
+      kind: 'procedure',
+      steps: [
+        { title: 'Cliquer sur Enregistrer', text: '', warningLevel: 'none', media: [{ source: 'S2', focusLabel: 'Enregistrer' }] },
+        { title: 'Vérifier la vanne', text: '', warningLevel: 'none', media: [{ source: 'S3', focusLabel: 'Vanne V-12' }] },
+      ],
+    }
+    const { marks } = normalizeInstruction(json as never, sources, 'fr')
+    expect(marks.map((m) => [m.hint, !!m.screen])).toEqual([
+      ['Enregistrer', true],
+      ['Vanne V-12', false],
+    ])
   })
 })

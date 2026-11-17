@@ -37,7 +37,8 @@ import {
 } from '@/lib/annotations/model'
 import { useMessages } from '@/lib/i18n'
 import { uid } from '@/lib/model/repo'
-import { readPref, writePref } from '@/lib/prefs'
+import { writePref } from '@/lib/prefs'
+import { LAST_STYLE_PREF, readLastStyle } from '@/lib/annotations/lastStyle'
 import type { Annotation, AnnotationColor, AnnotationSize, AnnotationType, Step } from '@/lib/model/types'
 import { IDENTITY, clampView, isZoomed, pinchView, zoomAround, type View } from '@/lib/ui/zoom'
 import { cn } from '@/lib/util/cn'
@@ -127,17 +128,8 @@ export function Annotator({ open, ...props }: AnnotatorProps & { open: boolean }
   return createPortal(<AnnotatorScreen {...props} />, document.body)
 }
 
-/** Le dernier outil de dessin et son style, retenus sur l'appareil. */
-const LAST_STYLE = 'clip_pref_annot_style'
-type LastStyle = { tool?: AnnotationType; color?: AnnotationColor; size?: AnnotationSize; icon?: string; dashed?: boolean; filled?: boolean }
-function readLastStyle(): LastStyle {
-  try {
-    const v = JSON.parse(readPref(LAST_STYLE) ?? '{}') as LastStyle
-    return v && typeof v === 'object' ? v : {}
-  } catch {
-    return {}
-  }
-}
+/** Le dernier outil de dessin et son style, retenus sur l'appareil (`lastStyle.ts`). */
+const LAST_STYLE = LAST_STYLE_PREF
 
 function AnnotatorScreen({ onClose, src, step, value, onSave, onLive, noAi }: AnnotatorProps) {
   const { ai } = useSession()
@@ -329,7 +321,8 @@ function AnnotatorScreen({ onClose, src, step, value, onSave, onLive, noAi }: An
     setBusy(true)
     try {
       const marks = await annotateImage(ai, src, step)
-      commit([...items, ...marks.map((m) => ({ ...m, size }))])
+      // La grosseur qui convient à ce qu'il entoure, jamais plus épaisse que celle choisie ici.
+      commit([...items, ...marks.map((m) => ({ ...m, size: SIZES.indexOf(sizeOf(m)) < SIZES.indexOf(size) ? sizeOf(m) : size }))])
       chooseTool('select')
       toast.success(t.editorTools.annotator.ai.added, t.editorTools.annotator.ai.addedHint)
     } catch (e) {

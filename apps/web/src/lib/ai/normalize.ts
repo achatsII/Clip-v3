@@ -30,6 +30,8 @@ export interface MarkHint {
   stepId: string
   mediaIndex: number
   hint: string
+  /** Une image d'un enregistrement d'écran : le repère y prend un trait fin (`autoMarkSize`). */
+  screen?: boolean
 }
 
 export interface AiStep {
@@ -166,7 +168,10 @@ export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<str
       if (m && !media.some((x) => mediaKey(x) === mediaKey(m))) {
         media.push(m)
         const hint = clean(ref.focusLabel).slice(0, 60)
-        if (marks && hint && m.kind === 'image') marks.push({ stepId: id, mediaIndex: media.length - 1, hint })
+        // Une image nette d'un enregistrement d'écran, ou une image tirée de sa vidéo.
+        const from = sourcesById.get(String(ref.source ?? '').trim().toUpperCase())
+        const screen = !!(from?.screen || from?.shot)
+        if (marks && hint && m.kind === 'image') marks.push({ stepId: id, mediaIndex: media.length - 1, hint, ...(screen ? { screen: true } : {}) })
       }
       if (media.length >= 2) break
     }
