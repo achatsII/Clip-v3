@@ -18,7 +18,7 @@ import { GenerateDemo } from '../GenerateDemo'
 import { HowArt, type HowArtKind } from '../HowArt'
 import { PlayerDemo } from '../PlayerDemo'
 import { PlanCards } from '../pricing'
-import { CheckList, Container, cx, Eyebrow, IconTile, PrimaryCta, SectionHeading } from '../ui'
+import { CheckList, Container, cx, Eyebrow, IconTile, PrimaryCta, SectionHeading, tightApostrophes } from '../ui'
 
 /** Les trois temps en illustrations propres au site : le film est déjà en haut de la page. */
 const HOW_ART: HowArtKind[] = ['capture', 'generate', 'deploy']
@@ -61,9 +61,9 @@ export function HomePage({ lang }: { lang: SiteLang }) {
             {h.hero.pill}
           </p>
           <h1 className="mx-auto mt-6 max-w-5xl text-[2.6rem] leading-[1.02] font-black tracking-tighter text-balance text-slate-900 sm:text-6xl lg:text-7xl xl:text-[5.4rem] dark:text-white">
-            {h.hero.h1.before}
+            {tightApostrophes(h.hero.h1.before)}
             <span className="site-gradient-text">{h.hero.h1.highlight}</span>
-            {h.hero.h1.after}
+            {tightApostrophes(h.hero.h1.after)}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed font-medium text-pretty text-slate-600 sm:text-xl dark:text-slate-300">{h.hero.sub}</p>
           <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">

@@ -114,7 +114,7 @@ export const en: SiteContent = {
   home: {
     hero: {
       pill: 'AI writes, you approve',
-      h1: { before: 'Your experts’ know-how, ', highlight: 'at the workstation', after: ', in minutes.' },
+      h1: { before: 'Your experts’ know-\u2060how, ', highlight: 'at the workstation', after: ', in minutes.' },
       sub: 'Film the expert while they explain. Clip writes the step-by-step work instruction, translates it into your operators’ languages and shows it on the workstation tablet.',
       trust: ['No login at the workstation', 'Operators never billed', 'Web, iPhone and Android'],
       videoLabel: 'Clip preview: capture on the phone, the instruction written by AI, then the step-by-step view at the workstation.',

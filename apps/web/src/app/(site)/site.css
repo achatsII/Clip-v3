@@ -23,6 +23,19 @@ html.site-leaving .site-leaving-mark {
 }
 
 /* ───────── Texte en dégradé ───────── */
+/*
+ * Le texte en dégradé : le dégradé ne se peint que dans la boîte du texte. En Inter Black aux lettres
+ * serrées, la dernière lettre d'une ligne dépasse sa boîte et se voyait rognée (le « e » de « at the »,
+ * novembre 2026). Un peu d'air à droite de chaque ligne (`clone`), repris par une marge négative : la
+ * mise en page ne bouge pas. N'écrire que la propriété sans préfixe (Lightning CSS ajoute -webkit-).
+ */
+.site-gradient-text,
+.site-ai-text,
+.site-danger-text {
+  box-decoration-break: clone;
+  padding-right: 0.12em;
+  margin-right: -0.12em;
+}
 .site-gradient-text {
   background-image: var(--gradient-primary);
   -webkit-background-clip: text;

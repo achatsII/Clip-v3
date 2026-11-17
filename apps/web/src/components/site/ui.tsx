@@ -35,6 +35,16 @@ import type { SiteCta } from '@/lib/site/routes'
 /** Joindre des classes (le site n'importe pas `cn` de l'app, lié aux langues de l'outil). */
 export const cx = (...parts: Array<string | false | null | undefined>) => parts.filter(Boolean).join(' ')
 
+/**
+ * Un grand titre aux lettres serrées : l'apostrophe en fin de mot (« experts’ ») s'y détachait de sa
+ * lettre (Inter Black, `tracking-tighter`). On la rapproche d'un cran ; le reste du texte ne change pas.
+ */
+export function tightApostrophes(text: string): ReactNode {
+  const parts = text.split(/(?<=\p{L})’(?=\s|$)/u) // i18n-ignore : un signe typographique, pas un texte
+  if (parts.length === 1) return text
+  return parts.flatMap((part, i) => (i === 0 ? [part] : [<span key={i} className="-ml-[0.05em]">’</span>, part])) // i18n-ignore : le même signe, rapproché
+}
+
 export function Container({ children, className, wide }: { children: ReactNode; className?: string; wide?: boolean }) {
   return <div className={cx('mx-auto w-full px-4 sm:px-6 lg:px-8', wide ? 'max-w-7xl' : 'max-w-6xl', className)}>{children}</div>
 }

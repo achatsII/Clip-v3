@@ -124,7 +124,7 @@ export const fr = {
   home: {
     hero: {
       pill: 'L’IA rédige, vous approuvez',
-      h1: { before: 'Le savoir-faire de vos experts, ', highlight: 'au poste', after: ', en quelques minutes.' },
+      h1: { before: 'Le savoir-\u2060faire de vos experts, ', highlight: 'au poste', after: ', en quelques minutes.' },
       sub: 'Filmez l’expert pendant qu’il explique. Clip rédige l’instruction de travail étape par étape, la traduit dans la langue de vos opérateurs et l’affiche sur la tablette du poste.',
       trust: ['Sans compte au poste', 'Opérateurs jamais facturés', 'Web, iPhone et Android'],
       videoLabel: 'Aperçu de Clip : la capture au téléphone, l’instruction rédigée par l’IA, puis le pas-à-pas au poste.',
