@@ -5,6 +5,12 @@
   "build": {
     "production": {
       "autoIncrement": true
+    },
+    "gesto": {
+      "extends": "production",
+      "env": {
+        "EXPO_PUBLIC_BRAND": "gesto"
+      }
     }
   },
   "submit": {
@@ -12,6 +18,7 @@
       "ios": {
         "ascAppId": "6834038200"
       }
-    }
+    },
+    "gesto": {}
   }
 }

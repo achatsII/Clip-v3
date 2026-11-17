@@ -5,7 +5,7 @@ import { routeBridgeMessage } from '../bridge/router'
 import { capabilitiesFor } from '../config/capabilities'
 import { en } from './en'
 import { fr } from './fr'
-import { applyPageLanguage, deviceLang, setShellLang, shellLang, shellLangOf, strings } from './index'
+import { applyPageLanguage, deviceLang, initShellLang, setShellLang, SHELL_LANGS, shellLang, shellLangOf, strings, stringsIn } from './index'
 import { loadShellLang } from './persist'
 
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'))
@@ -17,11 +17,17 @@ function leaves(o: unknown, path = ''): Array<[string, unknown]> {
 }
 
 describe('les mots de la coquille', () => {
-  it('ont les mêmes clés et les mêmes formes en français et en anglais', () => {
+  it('ont les mêmes clés et les mêmes formes dans les dix-huit langues', () => {
     const f = leaves(fr)
-    const e = new Map(leaves(en))
-    expect([...e.keys()].sort()).toEqual(f.map(([k]) => k).sort())
-    for (const [k, v] of f) expect(typeof e.get(k)).toBe(typeof v)
+    const keys = f.map(([k]) => k).sort()
+    const wrong: string[] = []
+    for (const lang of SHELL_LANGS) {
+      const d = new Map(leaves(stringsIn(lang)))
+      if ([...d.keys()].sort().join() !== keys.join()) wrong.push(`${lang}: clés`)
+      for (const [k, v] of f) if (typeof d.get(k) !== typeof v) wrong.push(`${lang}: ${k}`)
+    }
+    expect(wrong).toEqual([])
+    expect(SHELL_LANGS).toHaveLength(18)
   })
 
   it('sont vraiment traduits', () => {
@@ -32,20 +38,39 @@ describe('les mots de la coquille', () => {
     expect(accented).toEqual([])
     expect(fr.photo.count(1)).toBe('1 photo')
     expect(en.photo.count(0)).toBe('0 photos')
+    // Aucune autre langue n'est une copie de l'anglais ou du français (une phrase de plus de deux mots).
+    const enMap = new Map(leaves(en))
+    const copied = SHELL_LANGS.filter((l) => l !== 'fr' && l !== 'en').flatMap((lang) =>
+      leaves(stringsIn(lang))
+        .filter(([k, v]) => typeof v === 'string' && v.split(/\s+/).length > 2 && (v === enMap.get(k) || v === frMap.get(k)))
+        .map(([k]) => `${lang}: ${k}`),
+    )
+    expect(copied).toEqual([])
   })
 })
 
 describe('la langue de la coquille', () => {
-  it('part de celle de l’appareil : l’anglais s’il est en anglais, le français sinon', () => {
-    expect(deviceLang('en-US')).toBe('en')
-    expect(deviceLang('fr-CA')).toBe('fr')
-    expect(deviceLang('es-MX')).toBe('fr')
+  it('part de celle de l’appareil ; une langue qu’elle ne parle pas prend la langue de la marque', () => {
+    expect(['en-US', 'fr-CA', 'es-MX', 'pt-BR', 'zh-Hans-CN', 'de_AT', 'in-ID'].map((l) => deviceLang(l))).toEqual(['en', 'fr', 'es', 'pt', 'zh', 'de', 'id'])
+    // La build des tests est CLIP : sa langue par défaut est le français.
+    expect(deviceLang('sv-SE')).toBe('fr')
   })
 
   it('suit la langue que dit la page, et l’anglais pour une langue qu’elle ne parle pas', () => {
     expect(shellLangOf('fr-CA')).toBe('fr')
     expect(shellLangOf('en')).toBe('en')
-    expect(shellLangOf('es')).toBe('en')
+    expect(shellLangOf('es')).toBe('es')
+    expect(shellLangOf('ja-JP')).toBe('ja')
+    expect(shellLangOf('sv')).toBe('en')
+  })
+
+  it('reprend au démarrage n’importe laquelle de ses langues, et ignore une valeur inconnue', () => {
+    initShellLang('de', () => undefined)
+    expect(shellLang()).toBe('de')
+    expect(strings().common.close).toBe(stringsIn('de').common.close)
+    initShellLang('xx', () => undefined)
+    expect(shellLang()).toBe('de')
+    setShellLang('fr')
   })
 
   it('reçoit la langue par le pont, la garde, et la reprend au démarrage', async () => {

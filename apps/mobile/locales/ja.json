@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "CLIPは、手順書のステップを写真や動画で撮影するため、またステーションのQRコードを読み取るために、カメラを使用します。",
+    "NSMicrophoneUsageDescription": "CLIPは、音声メモや動画の音声を録音するため、また音声アシスタントと話すために、マイクを使用します。",
+    "NSPhotoLibraryUsageDescription": "CLIPは、撮影済みの写真や動画を手順書に追加するために、写真と動画にアクセスします。"
+  }
+}

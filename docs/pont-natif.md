@@ -24,7 +24,7 @@ chargement de la page). La page n'appelle que ce qui est annoncé ; sinon, elle 
 | `haptics`, `keepAwake` | Vibration, écran allumé pendant la lecture | expo-haptics, expo-keep-awake |
 | `share`, `print`, `openExternal` | Feuille de partage, impression (PDF), navigateur du système | expo-sharing, expo-print, expo-web-browser |
 | `context.set` | Organisation et utilisateur connectés, pour les journaux | — |
-| `ui.language` | La langue de l'outil, dite par la page au chargement et à chaque changement : les écrans natifs (caméra, note vocale, scan, mise à jour, hors ligne) la suivent et la gardent pour le prochain démarrage ; sans elle, la langue de l'appareil. Une langue que la coquille ne parle pas encore prend l'anglais | — |
+| `ui.language` | La langue de l'outil, dite par la page au chargement et à chaque changement : les écrans natifs (caméra, note vocale, scan, mise à jour, hors ligne) la suivent et la gardent pour le prochain démarrage ; sans elle, la langue de l'appareil, sinon celle de la marque. La coquille parle les dix-huit langues de l'app web (`src/i18n/<langue>.ts`, et les textes des permissions d'iOS dans `locales/<langue>.json`) ; une autre langue prend l'anglais | — |
 | `store.connect`, `store.offers`, `store.purchase`, `store.restore` | Achat d'un abonnement dans l'App Store ou Google Play : l'organisation comme acheteur, les prix du magasin, l'achat, « Restaurer mes achats ». Annoncée seulement avec une clé RevenueCat, hors Expo Go, toggle `storePurchases` allumé | react-native-purchases |
 | `push.register` | Les avertissements sur le téléphone : la permission, puis le jeton push d'Expo, que la page range dans la fiche de contact de la personne. Un toucher sur un avertissement ouvre sa page (même origine seulement). Annoncée hors Expo Go, avec le module natif, toggle `notify` allumé. Le module se charge à la demande : une build d'avant lui ne plante pas en recevant ce code, le push y est simplement absent | expo-notifications |
 | `splash.hide` | Un seul logo au démarrage : l'écran de démarrage de la coquille attend le premier vrai écran de la page, qui le lui dit (`ShellSplash`, dès qu'aucun écran de chargement de démarrage, marqué `data-boot-loader`, n'est dans la page). Sans ce message, il s'efface 8 s après la fin du premier chargement (`SPLASH_WAIT_MS`) ; une erreur de chargement l'efface tout de suite. Annoncée avec le toggle `splashHandoff` ; sans elle, l'écran s'efface à la fin du chargement, comme avant. En fondu sur iPhone | expo-splash-screen |
@@ -149,8 +149,30 @@ npx expo start
   envoi, impression, partage. Dans Expo Go, l'app porte le nom, l'icône, l'écran de démarrage et les
   textes de permission d'Expo Go, et la version lue est celle d'`app.json`.
 - **Une build de développement ou de distribution** (EAS) est nécessaire pour l'identité de l'app
-  (nom « CLIP », icône, écran de démarrage, textes de permission en français, identifiant
-  `com.intelligenceindustrielle.clip`), et le sera pour les achats des magasins.
+  (nom, icône, écran de démarrage, textes de permission, identifiant), et le sera pour les achats
+  des magasins.
+
+## Deux marques, une coquille
+
+La coquille se construit au nom de CLIP ou de la marque publique en libre-service, comme l'app web
+(`NEXT_PUBLIC_BRAND`, `apps/web/src/lib/brand/product.ts`). La marque se choisit à la build par
+`EXPO_PUBLIC_BRAND`, que pose le profil d'EAS (`eas.json` : `production` pour CLIP, un profil au nom
+de la marque publique) ; sans valeur, CLIP.
+
+- **`brands.json`** : chaque marque, son nom, l'adresse de son app web (`PRODUCTION_WEB_URL`), sa
+  langue par défaut, son schéma de liens et ses identifiants de magasin. Lu par `app.config.js` et
+  par la coquille (`src/config/brand.ts`).
+- **`app.config.js`** : `app.json` reste la base, celle de CLIP, que les outils lisent tels quels ;
+  la marque publique y change son nom, ses identifiants, son schéma, ses icônes
+  (`assets/brands/<marque>/`, refaites par `npm run brand-icons` d'apps/web) et ses textes de
+  permission, dans sa langue de base puis dans chaque langue (`locales/<langue>.json`). Sans ses
+  propres identifiants, une build de la marque publique s'arrête : ils ne se changent plus une fois
+  l'app créée dans un magasin.
+- **Les textes** gardent le jeton `CLIP` ; `brandify` (coquille) et `app.config.js` (permissions) y
+  mettent le nom de la marque.
+- **Avec le skill `mobile`** : ses scripts lisent la configuration par `npx expo config`. Pour la
+  marque publique, posez la variable avant de les lancer, avec le profil au même nom :
+  `EXPO_PUBLIC_BRAND=<marque> bash ios.sh --profile <marque>`.
 - **Assistant vocal de la page** : le micro dans une WebView exige un contexte sécurisé ; une page
   servie en `http://` sur l'adresse IP du poste ne l'obtiendra pas. Utilisez l'adresse `https` de
   l'app web.
@@ -162,7 +184,8 @@ configuration, navigation) et `npm run typecheck`.
 
 | Variable | Rôle |
 |---|---|
-| `EXPO_PUBLIC_CLIP_WEB_URL` | Adresse de l'app web, figée dans la build. Sans elle, la coquille affiche un écran de configuration. |
+| `EXPO_PUBLIC_BRAND` | La marque de la build (`brands.json`), posée par le profil d'EAS ; sans valeur, CLIP. |
+| `EXPO_PUBLIC_CLIP_WEB_URL` | Adresse de l'app web, figée dans la build (développement, préproduction). Sans elle, l'app web de production de la marque. |
 | `EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` | Clés **publiques** de RevenueCat (projet `clip-v3`), variables d'EAS figées dans la build. Sans elles, aucun achat dans l'app. |
 
 ## Ce qui reste à faire
@@ -171,5 +194,5 @@ configuration, navigation) et `npm run typecheck`.
   magasins et de RevenueCat (skill `mobile`), puis `billing-publish`. Les achats ne s'essaient que
   sur une build de développement, TestFlight ou le test interne (jamais Expo Go).
 - **Liens universels** : ouvrir directement dans l'app les liens `https://…/p/…` des postes.
-- **Confirmer** l'identifiant `com.intelligenceindustrielle.clip` avant la création des fiches dans les
-  magasins (skill `mobile`).
+- **La marque publique dans les magasins** : ses identifiants (`brands.json`), puis la création de
+  l'app chez Apple et Google (skill `mobile`, profil d'EAS au nom de la marque).

@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "CLIP używa aparatu, aby fotografować i nagrywać kroki Twoich instrukcji stanowiskowych oraz odczytywać kody QR stanowisk.",
+    "NSMicrophoneUsageDescription": "CLIP używa mikrofonu, aby nagrywać Twoje notatki głosowe i dźwięk Twoich nagrań wideo oraz rozmawiać z asystentem głosowym.",
+    "NSPhotoLibraryUsageDescription": "CLIP uzyskuje dostęp do Twoich zdjęć i wideo, aby dodać do instrukcji stanowiskowej media, które już masz."
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "CLIP používá fotoaparát k focení a natáčení kroků vašich pracovních instrukcí a ke čtení QR kódů pracovišť.",
+    "NSMicrophoneUsageDescription": "CLIP používá mikrofon k nahrávání vašich hlasových poznámek a zvuku vašich videí a k rozhovoru s hlasovým asistentem.",
+    "NSPhotoLibraryUsageDescription": "CLIP přistupuje k vašim fotkám a videím, abyste mohli do pracovní instrukce přidat už pořízená média."
+  }
+}

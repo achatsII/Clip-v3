@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "CLIP dùng máy ảnh để chụp ảnh và quay video các bước trong hướng dẫn công việc của bạn, và để đọc mã QR của các trạm.",
+    "NSMicrophoneUsageDescription": "CLIP dùng micro để thu ghi chú giọng nói và âm thanh trong video của bạn, và để nói chuyện với trợ lý giọng nói.",
+    "NSPhotoLibraryUsageDescription": "CLIP truy cập ảnh và video của bạn để thêm những phương tiện bạn đã chụp vào một hướng dẫn công việc."
+  }
+}

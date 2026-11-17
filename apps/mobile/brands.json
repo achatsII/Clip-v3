@@ -1,0 +1,18 @@
+{
+  "clip": {
+    "name": "CLIP",
+    "webUrl": "https://clip-v3.vercel.app",
+    "defaultLang": "fr",
+    "scheme": "clip",
+    "bundleIdentifier": "com.intelligenceindustrielle.clip",
+    "package": "com.intelligenceindustrielle.clip"
+  },
+  "gesto": {
+    "name": "Gesto",
+    "webUrl": "https://getgesto.vercel.app",
+    "defaultLang": "en",
+    "scheme": "gesto",
+    "bundleIdentifier": null,
+    "package": null
+  }
+}

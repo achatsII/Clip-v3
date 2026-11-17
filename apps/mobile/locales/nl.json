@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "CLIP gebruikt de camera om de stappen van je werkinstructies te fotograferen en te filmen, en om de QR-codes van de stations te lezen.",
+    "NSMicrophoneUsageDescription": "CLIP gebruikt de microfoon om je spraaknotities en het geluid van je video’s op te nemen, en om met de spraakassistent te praten.",
+    "NSPhotoLibraryUsageDescription": "CLIP heeft toegang tot je foto’s en video’s nodig om media die je al hebt gemaakt aan een werkinstructie toe te voegen."
+  }
+}

@@ -1,3 +1,5 @@
+import { BRAND } from './brand'
+
 /**
  * L'adresse de l'app web que la coquille affiche.
  *
@@ -7,8 +9,8 @@
  * l'écran de configuration, pour que l'erreur se voie.
  */
 
-/** L'app web de production (Vercel). */
-export const PRODUCTION_WEB_URL = 'https://clip-v3.vercel.app'
+/** L'app web de production (Vercel), celle de la marque de la build (brands.json). */
+export const PRODUCTION_WEB_URL = BRAND.webUrl
 
 export interface WebTarget {
   /** Adresse de départ, sans barre oblique finale. */
