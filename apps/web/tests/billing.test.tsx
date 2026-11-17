@@ -5,7 +5,7 @@ import { createBillingClient, hasFeature, limitOf, type BillingState } from '@/l
 import { BillingProvider, useBilling, useEntitlement, useLimit } from '@/lib/billing/state'
 
 const stateFor = (plan: string, features: Record<string, boolean>, limits: BillingState['limits'] = []): BillingState =>
-  ({ product: 'clip-v3', state: 'active', plan_code: plan, plan_version: 1, features, limits, credits: [], currency: 'CAD', current_period_end: null, grace_until: null, cancel_at_period_end: false, channel: 'web' }) as BillingState
+  ({ product: 'clip-v2', state: 'active', plan_code: plan, plan_version: 1, features, limits, credits: [], currency: 'CAD', current_period_end: null, grace_until: null, cancel_at_period_end: false, channel: 'web' }) as BillingState
 
 function fakeBilling(context: () => Promise<BillingState>) {
   return { context: vi.fn(context), check: vi.fn(), plans: vi.fn(), checkout: vi.fn(), portal: vi.fn() } as unknown as ReturnType<typeof createBillingClient> & { context: ReturnType<typeof vi.fn> }
@@ -65,7 +65,7 @@ describe('client de facturation', () => {
     await expect(client.context()).rejects.toMatchObject({ status: 403, code: 'not_entitled' })
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('https://gw.test/api/v2/billing/context')
-    expect(init.headers).toMatchObject({ Authorization: 'Bearer tok', 'X-Product': 'clip-v3' })
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer tok', 'X-Product': 'clip-v2' })
   })
 
   it('check() ne lève pas : le verdict est dans le corps', async () => {

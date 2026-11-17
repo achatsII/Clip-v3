@@ -114,6 +114,35 @@ function hms(s: number, tenths: boolean): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${secText}`
 }
 
+/** La route directe d'envoi chez Gemini n'est pas servie par cette Gateway (404 vu dans la séance). */
+let directGeminiMissing = false
+
+/** Pour les tests : oublier ce que la séance a appris de la route directe. */
+export function resetGeminiRoute(): void {
+  directGeminiMissing = false
+}
+
+/**
+ * L'envoi chez Gemini par le serveur de l'app (`/api/gemini-upload`) : la Gateway ouvre l'envoi chez
+ * Google (voie n8n), le serveur y verse le fichier depuis le stockage. Un jeton expiré se rafraîchit une fois.
+ */
+async function geminiViaBridge(client: GatewayClient, body: { url: string; mimeType: string; fileSize: number; filename: string }): Promise<{ uri: string; expiresAt: string | null }> {
+  const send = (token: string | null) =>
+    fetch('/api/gemini-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(300_000),
+    }).catch(() => null)
+  let res = await send(client.source.getToken())
+  if (res?.status === 401 && (await client.source.refresh())) res = await send(client.source.getToken())
+  const json = (await res?.json().catch(() => null)) as { uri?: string; expiresAt?: string | null; error?: string } | null
+  if (res?.ok && json?.uri) return { uri: json.uri, expiresAt: json.expiresAt ?? null }
+  if (res?.status === 401) client.source.onAuthFailure()
+  throw new ApiError(messages().common.errors.videoForAi, res?.status || 502, json, 'gemini_upload')
+}
+
 export function filesApi(client: GatewayClient) {
   async function presign(fileName: string, contentType: string, folder: string): Promise<PresignedTarget> {
     const res = await client.call<{ url?: string; publicUrl?: string; filePath?: string }>(
@@ -196,26 +225,32 @@ export function filesApi(client: GatewayClient) {
       return (res.text ?? '').trim()
     },
 
-    /** Téléverse chez Gemini un fichier déjà en ligne (≤ 100 Mo). URI valable ~48 h. */
+    /**
+     * Téléverse chez Gemini un fichier déjà en ligne (≤ 100 Mo). URI valable ~48 h.
+     *
+     * D'abord la route directe de la Gateway (service d'envoi de la plateforme). Si elle n'est pas
+     * servie (404 : la Gateway prod, novembre 2026) ou tombe (5xx), la voie n8n de la Gateway, par le
+     * serveur de l'app (`/api/gemini-upload`, la voie de Clip V1). Une route absente est retenue pour
+     * la séance : les envois suivants vont droit à la voie qui marche.
+     */
     async geminiUpload(url: string, mimeType: string, sizeBytes: number, filename: string): Promise<{ uri: string; expiresAt: string | null }> {
       await requireAiConsent()
-      const res = await client
-        .call<{ results?: Array<{ geminiFileUri?: string; expirationTime?: string }> }>('/api/v1/ai/gemini/upload/direct', {
-          method: 'POST',
-          body: { url, mimeType, fileSize: sizeBytes, filename: safeName(filename) },
-          timeoutMs: 180_000,
-        })
-        .catch((e: unknown) => {
-          // Route absente (404 : le service d'envoi de la Gateway prod ne l'avait pas, novembre 2026) ou
-          // en panne : on dit ce qui a échoué, pas « réessayez dans un instant », qui n'y changerait rien.
-          if (e instanceof ApiError && (e.status === 404 || e.status >= 500)) {
-            throw new ApiError(messages().common.errors.videoForAi, e.status, e.detail, 'gemini_upload')
-          }
-          throw e
-        })
-      const r = res.results?.[0]
-      if (!r?.geminiFileUri) throw new ApiError(messages().common.errors.videoForAi, 500, res)
-      return { uri: r.geminiFileUri, expiresAt: r.expirationTime ?? null }
+      if (!directGeminiMissing) {
+        try {
+          const res = await client.call<{ results?: Array<{ geminiFileUri?: string; expirationTime?: string }> }>('/api/v1/ai/gemini/upload/direct', {
+            method: 'POST',
+            body: { url, mimeType, fileSize: sizeBytes, filename: safeName(filename) },
+            timeoutMs: 180_000,
+          })
+          const r = res.results?.[0]
+          if (r?.geminiFileUri) return { uri: r.geminiFileUri, expiresAt: r.expirationTime ?? null }
+        } catch (e) {
+          // Une session expirée, un refus de facturation ou de droit restent tels quels.
+          if (!(e instanceof ApiError && (e.status === 404 || e.status >= 500))) throw e
+          if (e.status === 404) directGeminiMissing = true
+        }
+      }
+      return geminiViaBridge(client, { url, mimeType, fileSize: sizeBytes, filename: safeName(filename) })
     },
 
     /** Réduit une vidéo (720p par défaut) et la normalise en MP4 H.264. Synchrone : peut prendre quelques minutes. */

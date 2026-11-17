@@ -61,10 +61,10 @@ describe('aiApi.ask, facturation allumée : débitée de son coût réel, après
     offSettled()
     // Jamais l'ancienne route à prix fixe, jamais un assistant non mesuré.
     expect(gw.calls.map((c) => c.endpoint)).toEqual(['/api/v2/billing/context', '/api/v4/assistant/ask', '/api/v2/billing/consume'])
-    expect(gw.calls[0].options.headers).toMatchObject({ 'X-Product': 'clip-v3' })
+    expect(gw.calls[0].options.headers).toMatchObject({ 'X-Product': 'clip-v2' })
     expect(gw.calls[1].options.body).toEqual(body)
     const sent = gw.calls[2].options.body as Record<string, any>
-    expect(gw.calls[2].options.headers).toMatchObject({ 'X-Product': 'clip-v3' })
+    expect(gw.calls[2].options.headers).toMatchObject({ 'X-Product': 'clip-v2' })
     expect(sent).toMatchObject({ feature_key: 'ai_credits', quantity: creditsForCost(0.0231, RATE) })
     expect(sent.quantity).toBe(10)
     expect(String(sent.idempotency_key)).toMatch(/^clip:generate_s:generation:/)
