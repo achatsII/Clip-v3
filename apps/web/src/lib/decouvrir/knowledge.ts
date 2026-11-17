@@ -363,8 +363,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   statistiques d'adoption et l'enregistrement de l'écran ; 7 jours d'essai.
 - Équipe : 5 rédacteurs, 75 instructions publiées, 15 postes, avec l'approbation, la traduction pour les
   opérateurs, les blocs communs, le logo et les couleurs de l'usine et l'IA qui apprend de toute l'équipe ; 7 jours d'essai.
-- Usine : toute l'usine, sur devis (15 rédacteurs, instructions illimitées, 100 postes), avec en plus l'import en lot,
-  l'assistant vocal au poste et l'export complet.
+- Usine : 15 rédacteurs, instructions illimitées, 100 postes, pour toute l'usine et sur devis, avec en plus
+  l'import en lot, l'assistant vocal au poste et l'export complet.
 - Modules en option, avec Usine, sur devis : Académie et Relevés avancés.
 - Chaque forfait a sa banque mensuelle de crédits d'IA. Les lecteurs et les opérateurs ne se comptent jamais.
 - L'offre peut encore changer : un conseiller d'Intelligence Industrielle la confirme.

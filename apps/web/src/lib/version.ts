@@ -3,7 +3,7 @@
  * ici, dans le commit qui part en production) ; la date et le commit de la mise en ligne viennent de
  * la build (`next.config.ts`). On sait ainsi d'un coup d'œil si on a la dernière version.
  */
-export const APP_VERSION = '2.0.3'
+export const APP_VERSION = '2.0.4'
 
 /** Le commit de la build, en court (« 83804b1 ») ; vide hors d'une build. */
 export const BUILD_SHA = (process.env.NEXT_PUBLIC_BUILD_SHA ?? '').slice(0, 7)
