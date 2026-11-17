@@ -162,7 +162,12 @@ export default function RecordsPage() {
                     {e.deviations ? <TriangleAlert className="h-6 w-6" /> : <ClipboardCheck className="h-6 w-6" />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">{e.instructionTitle}</span>
+                    <span className="block truncate text-[15px] font-black text-slate-900 dark:text-white">
+                      {e.instructionTitle}
+                      {/* La variante suivie et la version courte (toggles `variants`, `quickMode`). */}
+                      {e.variant?.name && <span className="text-slate-500 dark:text-slate-400"> · {e.variant.name}</span>}
+                      {e.quick && <span className="text-slate-500 dark:text-slate-400"> · {t.quick}</span>}
+                    </span>
                     <span className="block truncate text-xs font-bold text-slate-500">{meta}</span>
                   </span>
                   <span className={cn('shrink-0 rounded-lg px-2 py-1 text-[11px] font-black tracking-wide uppercase', e.deviations ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200')}>

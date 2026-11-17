@@ -2,6 +2,7 @@
 
 import { ToolTiles } from '@/components/ToolTiles'
 import { displayName } from '@/lib/model/nomenclature'
+import { hasVariants, stepsFor } from '@/lib/model/variants'
 import {
   ArrowLeft,
   ArrowRight,
@@ -30,6 +31,7 @@ import {
   Wrench,
   X,
   Images,
+  Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { EnergyIcon, PpeIcon } from '@/components/icons'
@@ -168,10 +170,23 @@ export function Player(props: PlayerProps) {
     }
   })
   // Le nom tiré des familles devant le titre (toggle `nameTemplate`), dans toutes les langues.
-  const content = useMemo(() => {
+  const full = useMemo(() => {
     const c = localized(props.content, lang)
     return props.namePrefix ? { ...c, title: displayName(c.title, props.namePrefix) } : c
   }, [props.content, props.namePrefix, lang])
+  // Les variantes (toggle `variants`) et la version courte (toggle `quickMode`) : les étapes à suivre.
+  const variantsOn = useToggle('variants') && hasVariants(full)
+  const quickOn = useToggle('quickMode') && !!full.quick
+  const [variant, setVariant] = useState<string | null>(null)
+  const [quick, setQuick] = useState(false)
+  const scope = useMemo(() => ({ variant: variantsOn ? variant : null, quick: quickOn && quick }), [variantsOn, variant, quickOn, quick])
+  const content = useMemo(() => {
+    const steps = stepsFor(full, scope)
+    return steps.length === full.steps.length ? full : { ...full, steps }
+  }, [full, scope])
+  const variantName = scope.variant ? (full.variants?.find((v) => v.id === scope.variant)?.name ?? null) : null
+  // Une variante touchée au départ : on commence dès que ses étapes sont là.
+  const [startPending, setStartPending] = useState(false)
   const t = strings(lang)
   const exitText = typeof exitLabel === 'function' ? exitLabel(t) : exitLabel
   const total = content.steps.length
@@ -370,7 +385,9 @@ export function Player(props: PlayerProps) {
         haptic('success')
         if (recording) {
           // La trace, dans la langue d'origine de l'instruction : celle que lit le responsable.
-          const exec = buildExecution(props.content, answers, {
+          const exec = buildExecution({ ...props.content, steps: stepsFor(props.content, scope) }, answers, {
+            ...(scope.variant ? { variant: { id: scope.variant, name: variantName ?? '' } } : {}),
+            ...(scope.quick ? { quick: true } : {}),
             instructionId,
             version: version ?? null,
             stationId: stationId ?? null,
@@ -393,8 +410,13 @@ export function Player(props: PlayerProps) {
       }
       if (autoRead && clamped >= 0 && clamped < total) speakStep(content.steps[clamped])
     },
-    [total, index, recordsOn, answers, recording, recorder, notifyVia, lang, props.content, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator],
+    [total, index, recordsOn, answers, recording, recorder, notifyVia, lang, props.content, speaker, autoRead, speakStep, content.steps, preview, deps.data, instructionId, stationId, version, source, operator, scope, variantName],
   )
+  useEffect(() => {
+    if (!startPending) return
+    setStartPending(false)
+    go(0)
+  }, [startPending, go])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -467,16 +489,20 @@ export function Player(props: PlayerProps) {
             // Le titre et « Étape 3 sur 12 » ouvrent le sommaire : toute la zone se touche.
             <button type="button" onClick={() => setSummaryOpen(true)} aria-label={t.openSummary} title={t.openSummary} className="btn-press min-w-0 flex-1 rounded-2xl px-1 py-1 text-left hover:bg-slate-900/5 dark:hover:bg-white/5">
               <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
-              <p className="label-caps flex items-center gap-1 text-slate-500 tabular-nums">
-                {t.stepOf(index + 1, total)} <ChevronDown className="h-3.5 w-3.5" />
+              <p className="label-caps flex items-center gap-1 truncate text-slate-500 tabular-nums">
+                {t.stepOf(index + 1, total)}
+                {variantName && <span className="truncate"> · {variantName}</span>}
+                {scope.quick && <span> · {t.quick.chip}</span>} <ChevronDown className="h-3.5 w-3.5 shrink-0" />
               </p>
             </button>
           ) : (
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-black tracking-tight sm:text-lg">{content.title}</p>
               {index >= 0 && index < total && (
-                <p className="label-caps text-slate-500 tabular-nums">
+                <p className="label-caps truncate text-slate-500 tabular-nums">
                   {t.stepOf(index + 1, total)}
+                  {variantName && <span> · {variantName}</span>}
+                  {scope.quick && <span> · {t.quick.chip}</span>}
                 </p>
               )}
             </div>
@@ -519,6 +545,19 @@ export function Player(props: PlayerProps) {
             content={content}
             t={t}
             onStart={() => go(0)}
+            variants={
+              variantsOn
+                ? {
+                    label: full.variantsLabel,
+                    options: (full.variants ?? []).map((v) => ({ id: v.id, name: v.name, count: stepsFor(full, { variant: v.id, quick: scope.quick }).length })),
+                    onPick: (id) => {
+                      setVariant(id)
+                      setStartPending(true)
+                    },
+                  }
+                : null
+            }
+            quick={quickOn ? { on: quick, onChange: setQuick, full: stepsFor(full, { variant: scope.variant, quick: false }).length, short: stepsFor(full, { variant: scope.variant, quick: true }).length } : null}
             update={changes && update ? { changes, publishedAt: update.publishedAt, steps: content.steps } : null}
             previous={previous ? previous.version : null}
             onGoTo={(i) => go(i)}
@@ -825,10 +864,16 @@ function Intro({
   previous,
   onGoTo,
   onPrevious,
+  variants,
+  quick,
 }: {
   content: InstructionContent
   t: ReturnType<typeof strings>
   onStart: () => void
+  /** Plusieurs variantes : une grande tuile par variante, qui la choisit et commence. */
+  variants?: { label?: string; options: Array<{ id: string; name: string; count: number }>; onPick: (id: string) => void } | null
+  /** La version courte offerte : « Tout en détail » ou « L'essentiel », d'un toucher. */
+  quick?: { on: boolean; onChange: (on: boolean) => void; full: number; short: number } | null
   update?: { changes: PublishedChanges; publishedAt: string | null; steps: Step[] } | null
   previous?: number | null
   onGoTo?: (index: number) => void
@@ -849,9 +894,12 @@ function Intro({
         <h1 className="mt-2 text-4xl leading-[0.95] font-black tracking-tighter sm:text-6xl">{content.title}</h1>
         {content.summary && <p className="mt-3 text-xl font-bold text-slate-600 dark:text-slate-300">{content.summary}</p>}
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className="glass-card inline-flex h-11 items-center gap-2 rounded-2xl px-4 font-black">
-            <Layers className="h-5 w-5 text-[var(--primary)]" /> {t.stepCount(content.steps.length)}
-          </span>
+          {/* Avec des variantes, chaque tuile dit son nombre d'étapes. */}
+          {!variants && (
+            <span className="glass-card inline-flex h-11 items-center gap-2 rounded-2xl px-4 font-black">
+              <Layers className="h-5 w-5 text-[var(--primary)]" /> {t.stepCount(content.steps.length)}
+            </span>
+          )}
           {!!content.durationMin && (
             <span className="glass-card inline-flex h-11 items-center gap-2 rounded-2xl px-4 font-black">
               <Clock className="h-5 w-5 text-[var(--primary)]" /> {formatDuration(content.durationMin * 60)}
@@ -937,10 +985,46 @@ function Intro({
         </section>
       )}
 
-      <div className="pb-safe sticky bottom-0 mt-auto pt-4 pb-4">
-        <button type="button" onClick={onStart} className="btn-press bg-gradient-primary shadow-primary flex h-20 w-full items-center justify-center gap-3 rounded-full text-2xl font-black tracking-wide text-white">
-          {t.start} <ArrowRight className="h-8 w-8" />
-        </button>
+      <div className="pb-safe sticky bottom-0 mt-auto space-y-3 pt-4 pb-4">
+        {quick && (
+          <div className="glass-card rounded-[28px] p-2">
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t.quick.hint}>
+              {([false, true] as const).map((short) => (
+                <button
+                  key={String(short)}
+                  type="button"
+                  role="radio"
+                  aria-checked={quick.on === short}
+                  onClick={() => quick.onChange(short)}
+                  className={cn('btn-press flex min-h-14 items-center justify-center gap-2 rounded-[22px] px-3 text-base font-black', quick.on === short ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-600 dark:text-slate-300')}
+                >
+                  {/* Avec des variantes, chaque tuile dit son nombre d'étapes : pas de total ici. */}
+                  {short ? <Zap className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />} {short ? t.quick.short(variants ? undefined : quick.short) : t.quick.full(variants ? undefined : quick.full)}
+                </button>
+              ))}
+            </div>
+            <p className="px-3 pt-2 pb-1 text-center text-xs font-bold text-slate-500 dark:text-slate-400">{t.quick.hint}</p>
+          </div>
+        )}
+        {variants ? (
+          <div>
+            <p className="label-caps mb-2 text-center text-slate-500 dark:text-slate-400">{t.variants.question(variants.label)}</p>
+            <div className={cn('grid gap-3', variants.options.length > 2 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2')}>
+              {variants.options.map((v) => (
+                <button key={v.id} type="button" onClick={() => variants.onPick(v.id)} className="btn-press bg-gradient-primary shadow-primary flex min-h-24 flex-col items-center justify-center gap-1 rounded-[28px] px-4 py-3 text-center text-white">
+                  <span className="text-2xl leading-tight font-black tracking-tight">{v.name}</span>
+                  <span className="flex items-center gap-1 text-sm font-bold text-white/85">
+                    {t.variants.steps(v.count)} <ArrowRight className="h-4 w-4" />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={onStart} className="btn-press bg-gradient-primary shadow-primary flex h-20 w-full items-center justify-center gap-3 rounded-full text-2xl font-black tracking-wide text-white">
+            {t.start} <ArrowRight className="h-8 w-8" />
+          </button>
+        )}
       </div>
     </div>
   )

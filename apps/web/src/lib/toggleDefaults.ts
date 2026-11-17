@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate' | 'mediaOrder' | 'feedbackMedia' | 'variants' | 'quickMode'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -128,6 +128,15 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // Le modèle de nom (Réglages › Classement) : les valeurs des familles choisies devant le titre,
   // « Découpe – Presse P-12 – Changer le filtre », dans la bibliothèque, au poste et dans le PDF.
   nameTemplate: true,
+  // L'ordre des médias d'une étape, dans l'éditeur : « avant » et « après » sur le média choisi.
+  mediaOrder: true,
+  // La photo jointe au retour d'un opérateur (« Pas clair ? ») se met, d'un toucher, dans le média de l'étape.
+  feedbackMedia: true,
+  // Les variantes d'une instruction (« Pompe A », « Pompe B ») : au poste, on touche la sienne au
+  // départ et ne restent que ses étapes ; l'IA les propose quand les sources décrivent plusieurs cas.
+  variants: true,
+  // La version courte pour les habitués, si l'auteur l'offre : « L'essentiel » ou « Tout en détail ».
+  quickMode: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -183,4 +192,8 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   agentAttach: false,
   slidesImport: false,
   nameTemplate: false,
+  mediaOrder: false,
+  feedbackMedia: false,
+  variants: false,
+  quickMode: false,
 }

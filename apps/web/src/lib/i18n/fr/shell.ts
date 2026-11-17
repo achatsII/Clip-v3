@@ -19,6 +19,15 @@ export const shell = {
   account: 'Mon compte',
   appearance: 'Apparence',
   signOut: 'Se déconnecter',
+  /** La version de CLIP (2.0.x) : le dernier chiffre augmente à chaque mise à jour. */
+  version: {
+    short: (v: string) => `CLIP ${v}`,
+    label: (v: string) => `Version ${v}`,
+    built: (date: string) => `mise en ligne le ${date}`,
+    app: (platform: 'ios' | 'android', v: string, build?: string) => `App ${platform === 'ios' ? 'iPhone' : 'Android'} ${v}${build ? ` (${build})` : ''}`,
+    title: 'À propos de CLIP',
+    hint: 'Le dernier chiffre augmente à chaque mise à jour : comparez-le à celui qu’on vous annonce.',
+  },
   /** L'accord avant le premier envoi à l'IA (exigence d'Apple). */
   aiConsent: {
     title: 'Avant d’utiliser l’IA',

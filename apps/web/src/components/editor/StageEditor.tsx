@@ -24,6 +24,8 @@ import { cn } from '@/lib/util/cn'
 import { CheckDialog } from './CheckDialog'
 import { AssistMenu, EditorHeader, iconButton, QuestionsPill, ViewMenu, type StageTop } from './EditorBar'
 import { useStepAssist } from './StepAssist'
+import { OperatorFeedbackNote } from './OperatorFeedback'
+import { StepScope } from './StepScope'
 import { StepMediaEditor } from './StepMediaEditor'
 import { ChecksBlock, keepCheck, SectionField, stepMenu, type StepActions } from './StepParts'
 
@@ -55,6 +57,9 @@ export interface StageEditorProps {
   remoteNote?: string | null
   /** Ce qu'un opérateur a signalé sur cette étape. */
   feedbackNote?: string | null
+  /** La photo jointe au retour de l'opérateur, et le geste qui la met à l'étape (toggle `feedbackMedia`). */
+  feedbackPhoto?: string | null
+  onUseFeedbackPhoto?: () => Promise<void>
   feedbackByStep?: Record<string, number>
   /** En approbation : les étapes nouvelles ou modifiées depuis la version publiée. */
   changes?: Record<string, StepChange>
@@ -211,7 +216,9 @@ function StageText({ p, step, menu = false }: { p: Inner; step: Step; menu?: boo
           <Sparkles className="h-4 w-4 animate-pulse" /> {t.editor.step.assistantWorking}
         </p>
       )}
-      {p.feedbackNote && <p className="rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">{t.editor.stepEditor.operatorFeedback(p.feedbackNote)}</p>}
+      <OperatorFeedbackNote note={p.feedbackNote} photo={p.feedbackPhoto} onUsePhoto={p.readOnly ? undefined : p.onUseFeedbackPhoto} />
+      {/* Où s'applique l'étape (variantes) et si elle est essentielle (version courte). */}
+      <StepScope content={p.content} step={step} onChange={p.onChange} readOnly={p.readOnly} />
 
       {p.sections && !!step.section && <SectionField steps={p.content.steps} index={index} readOnly={p.readOnly} naming={p.namingSection} onNamed={() => p.setNamingSection(false)} onSteps={p.onSteps} className="-mb-2" />}
       <div className="flex items-start gap-4">

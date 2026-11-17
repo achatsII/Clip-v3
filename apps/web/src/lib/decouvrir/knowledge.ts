@@ -153,6 +153,15 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
   l'étape, même quand elle n'a encore aucune image (« Illustrer cette image » part de la photo affichée), et
   « Schéma de l'étape » (vue de face, de dessus, en coupe ou en 3D, avec très peu de mots).
 - Jusqu'à six médias par étape, disposés « Un à la fois », « À faire / À éviter » côte à côte, ou en « Grille ».
+  Leur ordre se change d'un toucher (« Mettre ce média avant », « après ») : le premier est celui qu'on voit
+  d'abord au poste.
+- Les variantes : une seule instruction pour des tâches presque pareilles (« Pompe A », « Pompe B », deux
+  modèles d'une machine) ; chaque étape dit à quelle variante elle s'applique, ou à toutes. Au poste, la
+  personne touche sa variante au départ et ne voit que ses étapes ; on rédige, traduit, approuve et publie
+  une seule fois. L'IA les propose quand les vidéos ou l'ancien document décrivent plusieurs modèles.
+- La version courte pour les habitués, seulement si l'auteur l'offre : au poste, « L'essentiel » ne garde
+  que les étapes marquées d'une étoile ; « Tout en détail » (le choix par défaut) les montre toutes, pour
+  les nouveaux. Une étape avec un relevé ou une mise en garde reste toujours dans la version courte.
   Plusieurs médias à une étape se voient d'un coup d'œil : leurs vignettes, « 2 / 3 » et de grandes flèches
   sur le média, et leur nombre sur l'étape dans la liste des étapes.
 - Les outils et le matériel en images : un grand emoji par outil, puis son nom ; un toucher en change
@@ -233,7 +242,8 @@ Usines manufacturières ; la personne qui écrit peut aussi être celle qui appr
 - « Pas clair ? » : l'opérateur signale en deux touchers ce qui ne va pas (« Pas clair », « Erreur »,
   « Danger », « Idée », « Merci »), avec un commentaire, son prénom et une photo s'il le veut. Le retour
   arrive à la page Retours, où la personne responsable corrige l'étape d'un geste ; l'opérateur verra la
-  nouvelle version. Si l'usine active les avertissements, un danger signalé avertit les personnes choisies.
+  nouvelle version. Dans l'éditeur, la photo de l'opérateur se voit sous l'étape, et « Mettre cette photo à
+  l'étape » en fait un média de l'étape. Si l'usine active les avertissements, un danger signalé avertit les personnes choisies.
 - « Assistant vocal » et « Poser une question » : au poste qui l'a demandé (« Assistant vocal au poste »),
   l'opérateur navigue et pose ses questions à voix haute ou à l'écrit, et la réponse vient de l'instruction
   (forfait Usine).

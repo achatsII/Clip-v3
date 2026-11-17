@@ -74,6 +74,8 @@ export function localized(content: InstructionContent, lang: string): Instructio
     // L'image d'un outil reste la même dans toutes les langues (tools.ts).
     tools: t.tools?.length === content.tools.length ? keepToolEmojis(content.tools, t.tools) : content.tools,
     equipment: t.equipment || content.equipment,
+    ...(content.variants ? { variants: content.variants.map((v) => ({ ...v, name: t.variants?.[v.id] || v.name })) } : {}),
+    ...(content.variantsLabel ? { variantsLabel: t.variantsLabel || content.variantsLabel } : {}),
     lockout: content.lockout ? localizeLockout(content.lockout, t.lockout) : content.lockout,
     steps: content.steps.map((s) => {
       const x = byId.get(s.id)

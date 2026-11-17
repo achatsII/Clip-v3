@@ -126,6 +126,8 @@ export function contentSegments(content: InstructionContent): { segments: Segmen
   const visuals = new Map<string, VisualTexts | null>()
   sectionNames(content).forEach((x, i) => hasLetter(x) && segments.push({ id: `section:${i}`, text: x }))
   content.tools.forEach((x, i) => hasLetter(x) && segments.push({ id: `tool:${i}`, text: x }))
+  content.variants?.forEach((v) => hasLetter(v.name) && segments.push({ id: `variant:${v.id}`, text: v.name }))
+  if (hasLetter(content.variantsLabel)) segments.push({ id: 'variantsLabel', text: content.variantsLabel! })
   if (hasLetter(content.equipment)) segments.push({ id: 'equipment', text: content.equipment })
   const lo = content.lockout
   if (lo) {
@@ -240,6 +242,8 @@ export function buildTranslation(content: InstructionContent, j: TranslationJson
     safety: j.safety ?? [],
     steps,
     ...(content.tools.length ? { tools: content.tools.map((x, i) => map.get(`tool:${i}`) ?? x) } : {}),
+    ...(content.variants?.some((v) => map.get(`variant:${v.id}`)) ? { variants: Object.fromEntries(content.variants.flatMap((v) => (map.get(`variant:${v.id}`) ? [[v.id, map.get(`variant:${v.id}`)!]] : []))) } : {}),
+    ...(map.get('variantsLabel') ? { variantsLabel: map.get('variantsLabel') } : {}),
     ...(map.get('equipment') ? { equipment: map.get('equipment') } : {}),
     ...(lockout ? { lockout } : {}),
     ...(quiz ? { quiz } : {}),

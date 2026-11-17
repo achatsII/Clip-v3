@@ -32,6 +32,9 @@ export default function PrintPage() {
   const session = useSession()
   const recordsOn = useToggle('records')
   const instructionName = useInstructionName()
+  // Les variantes et la version courte, marquées sur les étapes (toggles `variants`, `quickMode`).
+  const variantsOn = useToggle('variants')
+  const quickOn = useToggle('quickMode')
   // Les outils en images (toggle `toolImages`) : l'emoji devant chaque outil.
   const toolImages = useToggle('toolImages')
   const t = useMessages()
@@ -130,8 +133,10 @@ export default function PrintPage() {
       template: effective,
       scale: effective?.layout === 'onePage' ? scale : 1,
       toolImages,
+      variants: variantsOn,
+      quick: quickOn,
     })
-  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn, effective, scale, toolImages, instructionName])
+  }, [doc, published.data, versions.data, stations.data, session.org.json_data, live, qr, brandKit, ratios, recordsOn, effective, scale, toolImages, instructionName, variantsOn, quickOn])
 
   // Une autre mise en page, d'autres images connues : « Une page » se règle de nouveau.
   const fitKey = effective?.layout === 'onePage' ? JSON.stringify([effective, Object.keys(ratios).length, doc?._id]) : ''

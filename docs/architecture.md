@@ -1078,6 +1078,37 @@ bouge pas quand une marque se choisit ou se lâche. Il s'ouvre sur la Sélection
 des marques (on vient les ajuster), sinon sur le dernier outil de dessin, avec sa couleur, sa taille
 et son style, retenus sur l'appareil (la flèche la première fois).
 
+### Les variantes d'une instruction et sa version courte (toggles `variants`, `quickMode`, `src/lib/model/variants.ts`)
+
+Le démontage de la pompe A et celui de la pompe B sont presque les mêmes ; un opérateur habitué n'a pas
+besoin de relire chaque détail, un nouveau oui. Plutôt que deux instructions à tenir à jour (et deux
+traductions, deux approbations), une seule les porte.
+
+- **Les variantes** : `InstructionContent.variants` (2 à 6 noms, `variantsLabel` : ce qui les
+  distingue) et, sur chaque étape propre à certaines variantes, `Step.variants` (leurs identifiants ;
+  vide : partout). Au poste, l'accueil de l'instruction pose la question (« Modèle de pompe ? ») avec une
+  grande tuile par variante et son nombre d'étapes : toucher une tuile choisit et commence. Ne restent que
+  les étapes de la variante (`stepsFor`) : le compte, le sommaire, « Tout voir » et les relevés suivent ;
+  l'en-tête dit la variante ; la trace la garde (`Execution.variant`) et le registre la montre. Sans
+  variante choisie (l'aperçu de l'éditeur), tout se voit.
+- **La version courte**, seulement si l'auteur l'offre (`InstructionContent.quick`) : à l'accueil, « Tout
+  en détail » (défaut : on ne cache rien à un nouveau) ou « L'essentiel », d'un toucher. L'essentiel ne
+  garde que les étapes marquées (`Step.essential`). En l'offrant, l'éditeur coche d'office les étapes à
+  points clés ou à mise en garde (`withQuick`) ; une étape avec un relevé, un danger ou une attention
+  reste toujours (`alwaysEssential`) : la trace et la sécurité ne se raccourcissent pas.
+- **Dans l'éditeur** (les deux vues) : la carte « Variantes et version courte » des infos de
+  l'instruction (`VariantsCard`), et sur chaque étape « Pour : Toutes | Pompe A | Pompe B » et l'étoile
+  « Essentielle » (`StepScope`) ; la liste de la Fiche les montre en pastilles. Retirer une variante
+  libère ses étapes (`removeVariant`) ; un bloc commun mis à jour garde, dans l'instruction, les
+  variantes et l'étoile de ses copies (`replaceBlock`).
+- **L'IA** : à la génération et à l'import, si les sources décrivent la même tâche pour plusieurs modèles
+  (« modèle 3196 : aller à l'étape 42 »), elle fait une instruction avec ses variantes (schéma
+  `variants`, `variantsLabel`, `variants` de l'étape ; des variantes qu'aucune étape ne distingue sont
+  laissées : `variantsOfAi`, `stepVariantsOfAi`). L'assistant les crée et dit où s'applique une étape
+  (`set_instruction`, `update_step`). La consigne et le schéma passent tels quels au serveur : rien dans
+  n8n. La traduction traduit leurs noms ; le PDF les nomme en tête et marque les étapes propres à l'une
+  (« Seulement : Pompe A ») et les essentielles.
+
 ### Les médias d'origine (toggle `sourceLibrary`, `SourceLibrary`, `src/lib/model/sources.ts`)
 
 Ce qui a servi à rédiger une instruction (ses sources, S1, S2… dans l'ordre où l'IA les a reçues) ne se
@@ -1108,6 +1139,15 @@ jetons, ni les données, ni la page. Le PDF le remplace par un renvoi vers l'app
 dessin seul, lisible d'un coup d'œil (`visualSystem`, `src/lib/ai/prompts.ts`) : une idée (la pièce et
 le geste de l'étape), ni en-tête ni texte d'explication, au plus 4 libellés de 1 à 3 mots, le bleu pour
 le geste et les couleurs de sécurité seulement quand l'étape porte un risque.
+
+- **L'ordre des médias** (toggle `mediaOrder`) : le média choisi passe avant ou après son voisin
+  (« Mettre ce média avant / après », `StepMediaEditor`, dans les deux vues) ; le premier est celui
+  qu'on voit d'abord au poste et sur la vignette de l'étape.
+- **La photo d'un retour d'opérateur** (toggle `feedbackMedia`) : sous l'étape, dans l'éditeur, le retour
+  montre son commentaire et sa photo (`OperatorFeedbackNote`) ; « Mettre cette photo à l'étape » en fait
+  une source de l'instruction et un média de l'étape. Une photo prise sur un lien public est dans la base
+  (`clip_photo`, ou `data:` pour un vieux lien) : elle part d'abord au stockage (`photoToStorage`), car le
+  poste ne lit que des adresses publiques.
 
 ### Plusieurs médias à une étape, bien visibles (toggle `mediaNav`, repli éteint)
 
@@ -1266,6 +1306,10 @@ imprimé par le navigateur ou par la coquille (`print`). À côté de l'aperçu,
 
 - **Feature toggles** servis par `GET /api/config` (variables d'environnement du serveur web). Sans
   réponse, chaque toggle prend sa valeur de repli, qui n'active jamais une fonction nouvelle.
+- **La version** (`src/lib/version.ts`) : 2.0.x, dont le dernier chiffre augmente à chaque mise en
+  production (on le change dans le commit qui part en production) ; la build y joint sa date et son
+  commit (`next.config.ts`). Elle se lit sous le menu, dans le compte au téléphone et dans Réglages ›
+  Données, avec la version de la coquille dans l'app : on sait d'un coup d'œil si on a la dernière.
 - **Mise à jour forcée de la coquille** : `minShellVersion` (contrainte semver par plateforme) dans la
   même réponse ; serveur injoignable = on ne bloque pas.
 - **Documents partagés entre versions** : un `PATCH` ne touche que ses champs ; un remplacement

@@ -188,6 +188,13 @@ export interface Step {
    * sa version publiée, qui ne se modifie pas ici et suit le bloc quand il change.
    */
   fromBlock?: { id: string; version: number; title: string }
+  /**
+   * Les variantes où l'étape s'applique (toggle `variants`, `src/lib/model/variants.ts`) : leurs
+   * identifiants ; absent ou vide, toutes. Au poste, la personne choisit sa variante au départ.
+   */
+  variants?: string[]
+  /** La version courte pour les habitués (toggle `quickMode`) : l'étape y reste. */
+  essential?: boolean
 }
 
 /**
@@ -286,6 +293,24 @@ export interface InstructionContent {
   translations?: Record<string, TranslatedContent>
   /** Les questions de formation (toggle `training`) : vérifier qu'on a compris, en quelques questions. */
   quiz?: QuizQuestion[]
+  /**
+   * Les variantes d'une même tâche (toggle `variants`) : « Pompe A », « Pompe B ». Deux au moins ;
+   * chaque étape dit où elle s'applique (`Step.variants`). `variantsLabel` : ce qui change
+   * (« Modèle de pompe »), la question posée au départ.
+   */
+  variants?: Variant[]
+  variantsLabel?: string
+  /**
+   * La version courte pour les habitués (toggle `quickMode`) : au poste, « L'essentiel » ne montre que
+   * les étapes essentielles (`Step.essential`, et toujours celles qui ont un relevé ou une mise en garde).
+   */
+  quick?: boolean
+}
+
+/** Une variante d'une instruction (`InstructionContent.variants`). */
+export interface Variant {
+  id: string
+  name: string
 }
 
 /** Une question de formation : quelques choix courts, un seul bon, et pourquoi. */
@@ -346,6 +371,9 @@ export interface TranslatedContent {
   }>
   tools?: string[]
   equipment?: string
+  /** Les noms des variantes dans cette langue (par id), et ce qui les distingue. */
+  variants?: Record<string, string>
+  variantsLabel?: string
   lockout?: LockoutTranslation
   /** Les questions de formation dans cette langue (par id). */
   quiz?: Array<{ id: string; question?: string; choices?: string[]; why?: string }>
@@ -876,6 +904,9 @@ export interface Execution extends OperatorRef {
   /** La personne connectée, quand ce n'est pas une personne de l'équipe nommée à la tablette. */
   userId?: string | null
   userName?: string | null
+  /** La variante suivie (toggle `variants`), et la version courte (toggle `quickMode`). */
+  variant?: { id: string; name: string } | null
+  quick?: boolean
 }
 
 export type MemberRole = 'admin' | 'author' | 'approver' | 'reader'

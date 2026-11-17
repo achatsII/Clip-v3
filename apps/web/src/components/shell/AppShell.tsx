@@ -33,6 +33,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Avatar } from '@/components/ui/Avatar'
 import { callNative, hasCapability } from '@/lib/bridge/native'
 import { logout } from '@/lib/gateway/client'
+import { VersionLine } from './VersionLine'
 import { useLangVersion, useMessages } from '@/lib/i18n'
 import { canScan, clipPathFromScan, scanNative } from '@/lib/media/scan'
 import { T } from '@/lib/model/repo'
@@ -179,6 +180,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               <LogOut className="h-4 w-4" />
             </button>
           </div>
+          {/* La version (2.0.x) : on sait d'un coup d'œil si on a la dernière. */}
+          <Link href="/reglages?onglet=donnees" className="mt-2 block rounded-xl px-3 py-1 hover:bg-slate-900/5 dark:hover:bg-white/5">
+            <VersionLine />
+          </Link>
         </div>
       </aside>
 
@@ -260,6 +265,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button type="button" onClick={signOut} className="btn-press flex h-14 items-center gap-3 rounded-2xl px-4 text-left font-black text-rose-600">
             <LogOut className="h-5 w-5" /> {t.shell.signOut}
           </button>
+          <VersionLine detailed className="px-1 pt-2 text-center" />
           {/* Exigence d'Apple : supprimer son compte depuis l'app. */}
           {deleteToggle && (
             <button type="button" onClick={() => { setMoreOpen(false); setDeleteOpen(true) }} className="btn-press flex min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-bold text-slate-400 hover:text-rose-600">

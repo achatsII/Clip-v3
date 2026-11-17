@@ -6,7 +6,8 @@ import { cleanChecks } from '../model/checks'
 import { cleanSections } from '../model/sections'
 import { CATEGORY_KEYS, ENERGY, PPE } from '../model/catalog'
 import { uid } from '../model/repo'
-import type { Annotation, CategoryKey, EnergyPoint, InstructionContent, LockoutData, Source, Step, StepMedia, WarningLevel } from '../model/types'
+import { stepVariantsOfAi, variantsOfAi } from '../model/variants'
+import type { Annotation, CategoryKey, EnergyPoint, InstructionContent, LockoutData, Source, Step, StepMedia, Variant, WarningLevel } from '../model/types'
 
 export interface AiMediaRef {
   source?: string
@@ -32,6 +33,8 @@ export interface MarkHint {
 }
 
 export interface AiStep {
+  /** Les variantes où l'étape s'applique (des noms), si l'instruction en a. */
+  variants?: unknown
   id?: string
   title?: string
   text?: string
@@ -46,6 +49,9 @@ export interface AiStep {
 }
 
 export interface AiInstruction {
+  /** Les variantes de la tâche (des noms) et ce qui les distingue. */
+  variants?: unknown
+  variantsLabel?: string
   title?: string
   summary?: string
   kind?: string
@@ -137,7 +143,7 @@ function withChecks(raw: unknown): Pick<Step, 'checks'> {
 }
 
 /** `marks` : reçoit, pour chaque image où l'IA veut un repère, ce qu'il faut y montrer. */
-export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<string, Source>, keepIds?: Set<string>, marks?: MarkHint[]): Step[] {
+export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<string, Source>, keepIds?: Set<string>, marks?: MarkHint[], variants?: Variant[] | null): Step[] {
   const out: Step[] = []
   for (const s of steps ?? []) {
     const title = clean(s.title)
@@ -165,6 +171,7 @@ export function normalizeSteps(steps: AiStep[] | undefined, sourcesById: Map<str
       energyPointId: clean(s.energyTag) || null,
       ...(clean(s.section) ? { section: clean(s.section) } : {}),
       ...withChecks(s.checks),
+      ...((v) => (v ? { variants: v } : {}))(stepVariantsOfAi(s.variants, variants)),
     })
   }
   return cleanSections(trimOverlaps(out))
@@ -227,7 +234,9 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
   const sourcesById = new Map<string, Source>()
   sources.forEach((s, i) => sourcesById.set(`S${i + 1}`, s))
   const marks: MarkHint[] = []
-  const steps = normalizeSteps(raw.steps, sourcesById, undefined, marks)
+  // Les variantes de la tâche (« Pompe A », « Pompe B »), si les sources en décrivent plusieurs.
+  const variants = variantsOfAi(raw.variants)
+  const steps = normalizeSteps(raw.steps, sourcesById, undefined, marks, variants)
   const category = (CATEGORY_KEYS.includes(raw.category as CategoryKey) ? raw.category : 'production') as CategoryKey
   const lockout = normalizeLockout(raw.lockout, sourcesById)
   const kind = raw.kind === 'lockout' && lockout ? 'lockout' : 'procedure'
@@ -256,6 +265,8 @@ export function normalizeInstruction(raw: AiInstruction, sources: Source[], lang
       steps,
       lockout: kind === 'lockout' ? lockout : null,
       language,
+      // Des variantes qu'aucune étape ne distingue ne servent à rien.
+      ...(variants && steps.some((s) => s.variants?.length) ? { variants, ...(clean(raw.variantsLabel) ? { variantsLabel: clean(raw.variantsLabel).slice(0, 40) } : {}) } : {}),
     },
     stationGuess: clean(raw.station) || null,
     ...normalizeQuestions(raw.questions),

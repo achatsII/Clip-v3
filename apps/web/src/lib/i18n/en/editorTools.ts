@@ -156,6 +156,7 @@ export const editorTools: typeof Fr = {
       imageTranslated: (step: number, media: number, language: string) => `Step ${nb(step)}, media ${nb(media)}: image redone, text in ${language}`,
     },
     parts: {
+      variants: 'variants',
       title: 'title',
       summary: 'summary',
       ppe: 'PPE',

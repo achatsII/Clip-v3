@@ -9,6 +9,17 @@ import type { Check, EnergyType, FeedbackKind, WarningLevel } from '@/lib/model/
 
 const fr = {
   start: 'Commencer',
+  /** Les variantes d'une instruction (toggle `variants`) et la version courte (toggle `quickMode`). */
+  variants: {
+    question: (label?: string) => (label ? `${label} ?` : 'Laquelle ?'),
+    steps: (n: number) => `${n.toLocaleString('fr-CA')} étape${n > 1 ? 's' : ''}`,
+  },
+  quick: {
+    full: (n?: number) => (n === undefined ? 'Tout en détail' : `Tout en détail · ${n.toLocaleString('fr-CA')}`),
+    short: (n?: number) => (n === undefined ? 'L’essentiel' : `L’essentiel · ${n.toLocaleString('fr-CA')}`),
+    hint: 'L’essentiel : pour qui connaît déjà la tâche, seulement les étapes importantes.',
+    chip: 'L’essentiel',
+  },
   before: 'Avant de commencer',
   ppe: 'Équipements de protection',
   tools: 'Outils et matériel',
@@ -235,6 +246,16 @@ export type PlayerStrings = typeof fr
 
 const en: PlayerStrings = {
   start: 'Start',
+  variants: {
+    question: (label?: string) => (label ? `${label}?` : 'Which one?'),
+    steps: (n: number) => `${n.toLocaleString('en-CA')} step${n !== 1 ? 's' : ''}`,
+  },
+  quick: {
+    full: (n?: number) => (n === undefined ? 'Full detail' : `Full detail · ${n.toLocaleString('en-CA')}`),
+    short: (n?: number) => (n === undefined ? 'Essentials' : `Essentials · ${n.toLocaleString('en-CA')}`),
+    hint: 'Essentials: for people who already know the task, only the important steps.',
+    chip: 'Essentials',
+  },
   before: 'Before you start',
   ppe: 'Protective equipment',
   tools: 'Tools and material',
@@ -449,6 +470,16 @@ const en: PlayerStrings = {
 
 const es: PlayerStrings = {
   start: 'Empezar',
+  variants: {
+    question: (label?: string) => (label ? `¿${label}?` : '¿Cuál?'),
+    steps: (n: number) => `${n.toLocaleString('es')} paso${n !== 1 ? 's' : ''}`,
+  },
+  quick: {
+    full: (n?: number) => (n === undefined ? 'Todo en detalle' : `Todo en detalle · ${n.toLocaleString('es')}`),
+    short: (n?: number) => (n === undefined ? 'Lo esencial' : `Lo esencial · ${n.toLocaleString('es')}`),
+    hint: 'Lo esencial: para quien ya conoce la tarea, solo los pasos importantes.',
+    chip: 'Lo esencial',
+  },
   before: 'Antes de empezar',
   ppe: 'Equipo de protección',
   tools: 'Herramientas y material',

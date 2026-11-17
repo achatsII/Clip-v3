@@ -81,7 +81,9 @@ export function removeBlock(c: InstructionContent, id: string): InstructionConte
   return { ...c, steps: c.steps.filter((s) => s.fromBlock?.id !== id) }
 }
 
-const sameStep = (a: Step | undefined, b: Step) => !!a && JSON.stringify({ ...a, fromBlock: undefined }) === JSON.stringify({ ...b, fromBlock: undefined })
+/** Ce que l'instruction ajoute à une copie : où elle s'applique (variantes), et si elle est essentielle. */
+const OWN = (s: Step) => ({ ...s, fromBlock: undefined, variants: undefined, essential: undefined })
+const sameStep = (a: Step | undefined, b: Step) => !!a && JSON.stringify(OWN(a)) === JSON.stringify(OWN(b))
 
 /**
  * Le bloc, remplacé par sa nouvelle version, à la place de sa première suite (une copie en double
@@ -93,6 +95,11 @@ export function replaceBlock(c: InstructionContent, id: string, copies: Step[]):
   if (first < 0) return null
   const old = c.steps.filter((s) => s.fromBlock?.id === id)
   const before = new Map(old.map((s) => [s.id, s]))
+  // Les variantes et la marque « essentielle » sont à l'instruction : la nouvelle version du bloc les garde.
+  copies = copies.map((n) => {
+    const o = before.get(n.id)
+    return o ? { ...n, ...(o.variants?.length ? { variants: o.variants } : {}), ...(o.essential !== undefined ? { essential: o.essential } : {}) } : n
+  })
   const unchanged = old.length === copies.length && copies.every((s, i) => sameStep(old[i], s) && old[i].fromBlock?.version === s.fromBlock?.version)
   if (unchanged) return null
   const steps = [...c.steps.slice(0, first).filter((s) => s.fromBlock?.id !== id), ...copies, ...c.steps.slice(first).filter((s) => s.fromBlock?.id !== id)]

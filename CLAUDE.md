@@ -155,6 +155,27 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   avec la demande, en un seul tour facturé selon sa taille, comme une revue (`agentTurn` `attached`,
   `look_s/m/l` ; `files` et `mediaResolution` passent déjà au serveur : rien dans n8n). Retiré avant
   l'envoi, il quitte aussi les sources.
+- **Variantes et version courte** (toggles `variants` et `quickMode`, `src/lib/model/variants.ts`) : une
+  instruction pour des tâches presque pareilles (« Pompe A », « Pompe B » : `InstructionContent.variants`,
+  deux au moins, et `variantsLabel`) ; chaque étape dit où elle s'applique (`Step.variants`, vide : partout).
+  Au poste, une grande tuile par variante, avec son nombre d'étapes, choisit et commence ; ne restent que
+  ses étapes (`stepsFor`), et la trace garde la variante (`Execution.variant`). La version courte, si
+  l'auteur l'offre (`InstructionContent.quick`) : « L'essentiel » pour les habitués, « Tout en détail »
+  (défaut) pour les nouveaux ; `Step.essential`, cochée d'office pour les étapes à points clés ou mise en
+  garde (`withQuick`), et toujours pour un relevé, un danger ou une attention (`alwaysEssential` : la
+  trace et la sécurité ne se raccourcissent pas). Éditeur : la carte « Variantes et version courte » des
+  infos (`VariantsCard`) et, sur chaque étape des deux vues, « Pour » et l'étoile (`StepScope`). L'IA les
+  propose à la génération et à l'import quand les sources décrivent plusieurs modèles (schéma `variants`,
+  `variantsLabel`, `variants` de l'étape : rien dans n8n), l'assistant les crée (`set_instruction`,
+  `update_step`), la traduction traduit leurs noms, le PDF les nomme, une copie de bloc les garde.
+- **Ordre et photos des médias** : le média choisi passe avant ou après son voisin (toggle `mediaOrder`,
+  `StepMediaEditor`) ; la photo jointe au retour d'un opérateur se voit dans l'éditeur, sous l'étape, et
+  « Mettre cette photo à l'étape » en fait une source et un média (toggle `feedbackMedia`,
+  `OperatorFeedbackNote`, `photoToStorage` : une photo de la base part d'abord au stockage).
+- **Version** (`src/lib/version.ts`) : `APP_VERSION` = 2.0.x ; **le dernier chiffre augmente à chaque mise en
+  production**, dans le commit qui part en production. La date et le commit viennent de la build
+  (`next.config.ts`, `NEXT_PUBLIC_BUILD_SHA`, `NEXT_PUBLIC_BUILD_DATE`). Affichée sous le menu, dans le compte
+  au téléphone et dans Réglages › Données (`VersionLine`), avec la version de l'app mobile.
 - **Capturer** (« Nouvelle instruction », `CaptureBoard`) : d'un seul écran au téléphone, qui prend tout
   l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
   ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher. Les sources

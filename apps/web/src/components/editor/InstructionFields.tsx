@@ -1,6 +1,7 @@
 'use client'
 
-import { FileText, FolderTree, MapPin, Tags } from 'lucide-react'
+import { FileText, FolderTree, MapPin, Tags, Split } from 'lucide-react'
+import { useVariantsCard, VariantsCard } from './VariantsCard'
 import { Input, Label, Textarea } from '@/components/ui/Field'
 import type { Doc } from '@/lib/gateway/data'
 import { useMessages } from '@/lib/i18n'
@@ -31,6 +32,7 @@ export interface InstructionFieldsProps {
  */
 export function InstructionFields({ layout, content, onChange, readOnly, block, stationIds, stations, onStations, onCreateStation, classification }: InstructionFieldsProps & { layout: 'dialog' | 'cards' }) {
   const t = useMessages()
+  const variantsCard = useVariantsCard()
   const tp = t.editor.page
   const tf = t.editor.form
   const head = (
@@ -58,6 +60,12 @@ export function InstructionFields({ layout, content, onChange, readOnly, block, 
           </section>
         )}
         <MetaCard embedded noStations={block} content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={onChange} onStations={onStations} onCreateStation={onCreateStation} />
+        {variantsCard && !block && (
+          <section>
+            <p className="label-caps mb-3 text-slate-500">{t.editor.variants.card}</p>
+            <VariantsCard content={content} onChange={onChange} readOnly={readOnly} />
+          </section>
+        )}
         {lockout}
       </div>
     )
@@ -81,6 +89,12 @@ export function InstructionFields({ layout, content, onChange, readOnly, block, 
       <FormCard icon={<Tags className="h-4 w-4" />} title={tf.details}>
         <MetaCard embedded noStations content={content} stationIds={stationIds} stations={stations} readOnly={readOnly} onChange={onChange} onStations={onStations} onCreateStation={onCreateStation} />
       </FormCard>
+      {/* Les variantes et la version courte (toggles `variants`, `quickMode`). */}
+      {variantsCard && !block && (
+        <FormCard icon={<Split className="h-4 w-4" />} title={t.editor.variants.card}>
+          <VariantsCard content={content} onChange={onChange} readOnly={readOnly} />
+        </FormCard>
+      )}
       {lockout}
     </div>
   )

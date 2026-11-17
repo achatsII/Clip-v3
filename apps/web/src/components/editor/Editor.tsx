@@ -96,6 +96,7 @@ import { MediaPlaybackProvider, VideoPool } from '@/lib/media/videoPool'
 import { MAX_STEP_MEDIA } from '@/lib/model/media'
 import { useInstructionName } from '@/lib/ui/naming'
 import { viewableSources } from '@/lib/model/sources'
+import { photoToStorage } from '@/lib/media/photos'
 import { MediaPicker } from './MediaPicker'
 import { SourceLibrary } from './SourceLibrary'
 import { saveClassification, staleRuleStations } from '@/lib/model/classification'
@@ -162,6 +163,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   const blocksToggle = useToggle('sharedBlocks')
   // Les médias d'origine, à revoir et à remettre dans une étape (toggle `sourceLibrary`).
   const sourceLibraryOn = useToggle('sourceLibrary')
+  // La photo d'un retour d'opérateur, mise à l'étape d'un toucher (toggle `feedbackMedia`).
+  const feedbackMediaOn = useToggle('feedbackMedia')
   // Le nom tiré des familles, devant le titre, dans l'en-tête (toggle `nameTemplate`).
   const instructionName = useInstructionName()
   const [sourceFocus, setSourceFocus] = useState<{ sourceId: string; at?: number } | null>(null)
@@ -920,7 +923,25 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
       </>
     ) : null
 
-  const feedbackNote = !step ? null : highlightFeedback && highlightFeedback.json_data.stepId === step.id ? highlightFeedback.json_data.comment || FEEDBACK_KINDS.unclear.label : ((feedback.data ?? []).find((f) => f.json_data.stepId === step.id)?.json_data.comment ?? null)
+  // Le retour d'un opérateur sur l'étape : celui qu'on vient ouvrir, sinon le plus récent ; son commentaire et sa photo.
+  const stepFeedback = !step ? null : highlightFeedback && highlightFeedback.json_data.stepId === step.id ? highlightFeedback : ((feedback.data ?? []).find((f) => f.json_data.stepId === step.id && (f.json_data.comment || f.json_data.photoUrl)) ?? null)
+  const feedbackNote = !stepFeedback ? null : stepFeedback.json_data.comment || (stepFeedback === highlightFeedback ? FEEDBACK_KINDS.unclear.label : null)
+  const feedbackPhoto = feedbackMediaOn ? (stepFeedback?.json_data.photoUrl ?? null) : null
+  /** La photo du retour devient une source de l'instruction et un média de l'étape (envoyée au stockage si elle est dans la base). */
+  async function putFeedbackPhoto() {
+    if (!stepFeedback?.json_data.photoUrl || !step) return
+    const ts = t.editor.stepEditor
+    try {
+      // Une photo prise sur un lien est dans la base : elle part au stockage pour aller au poste.
+      const url = await photoToStorage(data, files, stepFeedback.json_data.photoUrl, `retour-${stepFeedback._id}.jpg`)
+      const who = stepFeedback.json_data.operatorName ?? stepFeedback.json_data.authorName ?? null
+      const source: Source = { id: uid('src_'), kind: 'photo', url, thumbnailUrl: url, mimeType: 'image/jpeg', name: ts.feedbackPhotoName(who, formatDate(stepFeedback.json_data.createdAt)), createdAt: nowIso() }
+      addSource(source)
+      addMediaToStep({ kind: 'image', url, sourceId: source.id })
+    } catch (e) {
+      toast.error(ts.feedbackPhotoFailed, errorText(e))
+    }
+  }
   const addSource = (src: Source) => {
     const next = [...sourcesRef.current, src]
     sourcesRef.current = next
@@ -1029,6 +1050,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     badge: liveToggle ? <LiveBadge state={realtimeState} compact /> : null,
     remoteNote: step && flash?.stepId === step.id ? flash.note : null,
     feedbackNote,
+    feedbackPhoto,
+    onUseFeedbackPhoto: feedbackPhoto && !readOnly && !step?.fromBlock ? putFeedbackPhoto : undefined,
     feedbackByStep,
     changes: inReview ? changes : undefined,
     history,

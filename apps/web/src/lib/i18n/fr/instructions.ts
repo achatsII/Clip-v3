@@ -153,6 +153,11 @@ export const instructions = {
     date: (iso: string) => new Date(iso).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' }),
     today: () => new Date().toLocaleDateString('fr-CA'),
     draft: 'Brouillon — non publié',
+    /** Une étape propre à une variante, une étape de la version courte. */
+    only: (names: string) => `Seulement : ${names}`,
+    essential: 'Essentielle',
+    variants: (label: string, names: string) => `${label} : ${names}`,
+    variantsDefault: 'Variantes',
     version: (n: number, date: string) => `Version ${n.toLocaleString('fr-CA')} du ${date}`,
     printedOn: (date: string) => `Imprimé le ${date}`,
     /** Le bas de chaque page (gabarit) : « IT-0042 · Version 4 · Page 1 de 2 ». */

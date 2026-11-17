@@ -169,6 +169,7 @@ export const editorTools = {
     },
     /** Les parties changées, dans ces lignes. */
     parts: {
+      variants: 'variantes',
       title: 'titre',
       summary: 'résumé',
       ppe: 'EPI',

@@ -12,6 +12,8 @@ import { CheckDialog } from './CheckDialog'
 import { iconButton } from './EditorBar'
 import { FormCard } from './FormParts'
 import { ASSIST_ACTIONS, type useStepAssist } from './StepAssist'
+import { OperatorFeedbackNote } from './OperatorFeedback'
+import { StepScope } from './StepScope'
 import { StepMediaEditor } from './StepMediaEditor'
 import { ChecksBlock, keepCheck, SectionField, type StepActions } from './StepParts'
 
@@ -34,6 +36,9 @@ export interface StepFormProps extends StepActions {
   agentWorking?: boolean
   remoteNote?: string | null
   feedbackNote?: string | null
+  /** La photo jointe au retour de l'opérateur, et le geste qui la met à l'étape (toggle `feedbackMedia`). */
+  feedbackPhoto?: string | null
+  onUseFeedbackPhoto?: () => Promise<void>
   namingSection: boolean
   onChange: (s: Step) => void
   onSourceAdded: (s: Source) => void
@@ -100,7 +105,9 @@ export function StepForm(p: StepFormProps) {
           <Sparkles className="h-4 w-4 animate-pulse" /> {t.editor.step.assistantWorking}
         </p>
       )}
-      {p.feedbackNote && <p className="rounded-2xl bg-amber-100 px-4 py-3 text-sm font-bold text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">{t.editor.stepEditor.operatorFeedback(p.feedbackNote)}</p>}
+      <OperatorFeedbackNote note={p.feedbackNote} photo={p.feedbackPhoto} onUsePhoto={readOnly ? undefined : p.onUseFeedbackPhoto} />
+      {/* Où s'applique l'étape (variantes) et si elle est essentielle (version courte). */}
+      <StepScope content={p.content} step={step} onChange={p.onChange} readOnly={readOnly} />
 
       {/* Au bureau large, deux colonnes : à gauche ce qu'on écrit (texte, mise en garde, points clés), à
           droite ce qu'on montre et relève (média, relevés, section). Plus étroit, une colonne, dans

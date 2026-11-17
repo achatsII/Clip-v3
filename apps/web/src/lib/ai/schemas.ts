@@ -54,6 +54,7 @@ const stepSchema = {
     energyTag: str('Fiche de cadenassage : repère du point d’isolement traité (E1, P1…) ; vide sinon'),
     section: str('La phase où se trouve l’étape, 1 à 3 mots (« Démontage ») ; les étapes d’une même phase se suivent et portent le même nom ; vide si l’instruction a 8 étapes ou moins'),
     checks: { type: 'array', items: checkSchema, description: 'Ce que l’opérateur doit relever à cette étape pour la trace : 0 à 2, le plus souvent aucun' },
+    variants: strList('Les variantes où s’applique cette étape, nommées comme dans variants ; vide si elle s’applique à toutes (le plus souvent)'),
   },
   required: ['title', 'text', 'keyPoints', 'warningLevel', 'warningText', 'media', 'section'],
 }
@@ -116,6 +117,8 @@ export const instructionSchema = {
     tools: strList('Outils et matériel nécessaires, chacun précédé de l’emoji qui le montre le mieux (🔧 clé, 🪛 tournevis, 🔨 marteau, 🗜️ pince, 📏 règle ou ruban, 🔦 lampe, 🧻 chiffon, 🧴 nettoyant, 🛢️ graisse ou huile, 🔩 vis ou boulon, ⚙️ pièce, 🔒 cadenas, 🧰 sinon) : « 🔧 Clé de 13 mm »'),
     safety: strList('Mises en garde générales, avant de commencer'),
     steps: { type: 'array', items: stepSchema },
+    variants: strList('Les variantes de la tâche, seulement si les sources décrivent la même tâche pour plusieurs modèles ou cas aux étapes presque pareilles (« Pompe A », « Pompe B ») ; vide sinon (le plus souvent)'),
+    variantsLabel: str('Ce qui distingue les variantes, en 1 à 3 mots (« Modèle de pompe ») ; vide sans variantes'),
     lockout: lockoutSchema,
     questions: {
       type: 'array',

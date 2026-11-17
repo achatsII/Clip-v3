@@ -13,6 +13,7 @@ import { annotationsMarkup } from '../annotations/markup'
 import { layoutOf } from '../model/media'
 import type { Branding, InstructionContent, Step, StepMedia } from '../model/types'
 import { toolIcon } from '../model/tools'
+import { hasVariants, isEssential, variantNames } from '../model/variants'
 import { BOTTOM_MM, MARGIN_MM, pageBox, shows, type HeaderField, type PrintTemplate } from './template'
 
 /** Les mots du document : ceux du lecteur (`player`), ceux de l'impression (`print`) et ceux du métier (`catalog`). */
@@ -86,6 +87,9 @@ export interface PrintMeta {
   scale?: number
   /** Les outils en images (toggle `toolImages`) : l'emoji devant chaque outil ; absent : le texte tel quel. */
   toolImages?: boolean
+  /** Les variantes (toggle `variants`) et la version courte (toggle `quickMode`) : marquées sur les étapes. */
+  variants?: boolean
+  quick?: boolean
 }
 
 /** Un outil du PDF : son emoji puis son nom, ou le texte tel qu'écrit. */
@@ -159,6 +163,12 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
   const maxMm = tpl?.layout === 'onePage' ? 34 : tpl?.layout === 'table' ? 55 : 62
   const date = meta.publishedAt ? t.date(meta.publishedAt) : t.today()
   const ppe = content.ppe.map((k) => `<span class="chip">${esc((cat.ppe as Record<string, string>)[k] ?? k)}</span>`).join('')
+  // Une étape propre à une variante, une étape de la version courte (toggles `variants`, `quickMode`).
+  const tags = (s: Step) => {
+    const only = meta.variants ? variantNames(content, s) : []
+    const star = meta.quick && content.quick && isEssential(s)
+    return only.length || star ? `<p class="tags">${only.length ? `<span class="tag">${esc(t.only(only.join(', ')))}</span>` : ''}${star ? `<span class="tag star">★ ${esc(t.essential)}</span>` : ''}</p>` : ''
+  }
   const steps = content.steps
     .map((s, i) => {
       const w = s.warning
@@ -169,6 +179,7 @@ export function buildPrintHtml(content: InstructionContent, meta: PrintMeta): st
         ${media}
         <div class="body">
           <h3><span class="n">${i + 1}</span>${esc(s.title)}</h3>
+          ${tags(s)}
           ${w ? `<p class="warn ${w.level}"><b>${t.warning(esc(cat.warnings[w.level]))}</b> ${esc(w.text)}</p>` : ''}
           ${s.text ? `<p class="text">${esc(s.text)}</p>` : ''}
           ${s.keyPoints?.length ? `<ul class="kp">${s.keyPoints.map((k) => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
@@ -222,6 +233,7 @@ header .t{flex:1}header h1{font-size:26px;line-height:1.1;margin:4px 0 6px;font-
 .body{padding:10px 12px}.step h3{font-size:15px;margin:0 0 6px;font-weight:900;display:flex;gap:8px;align-items:flex-start}
 .n{display:inline-flex;min-width:24px;height:24px;border-radius:8px;background:${esc(color)};color:#fff;align-items:center;justify-content:center;font-size:13px}
 .text{font-size:13px;margin:4px 0;font-weight:600;color:#334155}.kp{margin:4px 0 0 18px;padding:0;font-size:12px;color:#334155}
+.tags{margin:2px 0 4px}.tag{display:inline-block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;background:#0f172a;color:#fff;border-radius:6px;padding:2px 6px;margin-right:4px}.tag.star{background:#fbbf24;color:#451a03}
 .warn{font-size:12px;padding:6px 8px;border-radius:8px;margin:4px 0}.warn.danger{background:#ffe4e6;color:#9f1239}.warn.caution{background:#fef9c3;color:#854d0e}.warn.info{background:#e0f2fe;color:#075985}
 table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #e2e8f0;padding:6px;text-align:left;vertical-align:top}th{background:#f1f5f9;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
 footer{margin-top:16px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:10px;color:#64748b;display:flex;justify-content:space-between}
@@ -245,6 +257,7 @@ ${meta.draft ? `<div class="draft">${t.draft}</div>` : ''}
       .filter(Boolean)
       .join(' · ')}</div>
     ${content.summary ? `<p class="text">${esc(content.summary)}</p>` : ''}
+    ${meta.variants && hasVariants(content) ? `<p class="tags"><span class="tag">${esc(t.variants(content.variantsLabel?.trim() || t.variantsDefault, (content.variants ?? []).map((v) => v.name).join(', ')))}</span></p>` : ''}
   </div>
   ${meta.qrSvg && show('qr') ? `<div class="qr">${meta.qrSvg}<div>${t.upToDate}</div></div>` : ''}
 </header>

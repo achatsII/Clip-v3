@@ -1,5 +1,6 @@
 'use client'
 
+import { VersionLine } from '@/components/shell/VersionLine'
 import { useToggle } from '@/lib/toggles'
 import { DEFAULT_RENEWAL_MONTHS, RENEWAL_CHOICES } from '@/lib/model/renewal'
 import { AccountCard } from '@/components/settings/Account'
@@ -259,7 +260,8 @@ function AppearanceTab() {
 
 function DataTab() {
   const { data, org } = useSession()
-  const t = useMessages().settings.data
+  const words = useMessages()
+  const t = words.settings.data
   const toast = useToast()
   const fullExport = useEntitlement('full_export')
   const gate = useGate()
@@ -300,6 +302,12 @@ function DataTab() {
         </Button>
       </Panel>
       <AccountCard />
+      {/* La version de CLIP (2.0.x) : le dernier chiffre augmente à chaque mise à jour. */}
+      <Panel>
+        <h2 className="mb-2 text-lg font-black tracking-tight">{words.shell.version.title}</h2>
+        <VersionLine detailed />
+        <p className="mt-2 text-xs font-bold text-slate-400">{words.shell.version.hint}</p>
+      </Panel>
       <Panel>
         <h2 className="mb-2 text-lg font-black tracking-tight">{t.connection}</h2>
         <p className="text-sm font-medium text-slate-500">{t.gateway(GATEWAY_URL.replace('https://', ''), APP_IDENTIFIER)}</p>

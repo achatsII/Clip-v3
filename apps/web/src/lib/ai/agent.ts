@@ -28,6 +28,7 @@ import { getLang, messages } from '../i18n'
 import { LANGUAGES, PPE } from '../model/catalog'
 import { layoutOf, mediaLabel } from '../model/media'
 import { uid } from '../model/repo'
+import { hasVariants, MAX_VARIANTS, newVariant, removeVariant, stepVariantsOfAi, variantNames } from '../model/variants'
 import type { FilesApi } from '../gateway/files'
 import type { Annotation, InstructionContent, OrgSettings, Source, Step, StepLayout, StepMedia, WarningLevel } from '../model/types'
 import { annotateImage, createVisual, illustrationPrompt } from './assist'
@@ -67,6 +68,12 @@ export interface AgentOp {
   ppe?: string[]
   tools?: string[]
   safety?: string[]
+  /**
+   * set_instruction : les variantes de l'instruction (des noms ; une liste vide les retire) et ce qui
+   * les distingue. add_step, update_step : les variantes où l'étape s'applique (vide : toutes).
+   */
+  variants?: string[]
+  variantsLabel?: string
   /** look : les sources à revoir (S1, S2…), le moins possible. */
   sources?: string[]
   /** look : ce qu'il faut y trouver. */
@@ -139,6 +146,8 @@ export const agentSchema = (ui: string) => ({
           ppe: strList(`set_instruction : les EPI, parmi ces clés : ${Object.keys(PPE).join(', ')}`),
           tools: strList('set_instruction : les outils'),
           safety: strList('set_instruction : les mises en garde générales'),
+          variants: strList('set_instruction : les variantes de l’instruction, toutes, par leur nom (vide : les retirer) ; add_step, update_step : celles où l’étape s’applique (vide : toutes)'),
+          variantsLabel: str('set_instruction : ce qui distingue les variantes (« Modèle de pompe »)'),
           sources: strList('look : les sources à revoir (S1, S2…), le moins possible'),
           question: str('look : ce qu’il faut trouver dans ces sources'),
           source: str('use_media : la source d’où prendre le média (S1…)'),
@@ -176,6 +185,7 @@ export function agentSystem(org: Pick<OrgSettings, 'standard' | 'learnings'>, la
 - Traduire pour les opérateurs : translate, avec languages (codes) ; la traduction couvre les textes, les marques sur les photos, les légendes, les outils et les schémas. images: true seulement si la personne demande aussi les images : l’IA redessine celles où du texte se lit, avec ce texte traduit (plus cher). Refaire une traduction existante : translate.
 - Un seul média : translate_media traduit sa légende, ses marques ou son schéma ; translate_image redessine une photo ou une image avec son texte traduit (plus cher). language : la langue visée ; sans language, celle de l’instruction (un média dont le texte est dans une autre langue). Vers une autre langue, l’instruction doit déjà y être traduite (voir TRADUCTIONS) ; sinon, translate d’abord.${opts.translate === false ? '\n- La traduction n’est pas offerte à cette personne : n’utilise jamais translate, translate_media ni translate_image ; dis-le simplement dans reply.' : ''}
 - Mise en garde : danger (blessure possible), caution (erreur ou bris possible), info.
+- Variantes (une instruction pour des tâches presque pareilles, « Pompe A », « Pompe B ») : set_instruction avec variants (toutes, par leur nom) et variantsLabel ; puis, sur chaque étape propre à certaines variantes, update_step (ou add_step) avec variants. Une étape commune n’en a pas. Au poste, l’opérateur choisit sa variante au départ.
 - Relevés (ce que l’opérateur note à une étape pour la trace) : set_checks, avec la liste complète des relevés de l’étape (ceux qui restent compris) ; une liste vide les retire. measure = une valeur avec son unité et ses limites (min, max) ; yesno = une vérification, avec la bonne réponse ; choice = un état parmi quelques choix, avec ceux qui sont un écart ; text = un numéro de lot ou de série ; photo = une preuve. Les limites seulement si la personne ou les sources les donnent.
 - N’invente aucune valeur (couple, pression, cote, référence) : si elle manque, demande-la dans reply, sans opération.
 - Demande floue : UNE question courte dans reply, sans opération.
@@ -236,8 +246,10 @@ export function agentPrompt(content: InstructionContent, focusStepId: string | n
   const translated = Object.keys(content.translations ?? {})
   lines.push(`TRADUCTIONS : ${translated.length ? translated.map((c) => `${c} (${LANGUAGES[c]?.native ?? c})`).join(', ') : 'aucune'}`)
   lines.push('ÉTAPES :')
+  if (hasVariants(content)) lines.push(`VARIANTES${content.variantsLabel ? ` (${content.variantsLabel})` : ''} : ${(content.variants ?? []).map((v) => v.name).join(', ')}`)
   content.steps.forEach((s, i) => {
-    lines.push(`${i + 1}. [${s.id}] ${s.title} — ${s.text}${s.keyPoints?.length ? ` (points clés : ${s.keyPoints.join(' ; ')})` : ''}${s.warning ? ` (${s.warning.level} : ${s.warning.text})` : ''}`)
+    const only = variantNames(content, s)
+    lines.push(`${i + 1}. [${s.id}] ${s.title} — ${s.text}${s.keyPoints?.length ? ` (points clés : ${s.keyPoints.join(' ; ')})` : ''}${s.warning ? ` (${s.warning.level} : ${s.warning.text})` : ''}${only.length ? ` (seulement : ${only.join(', ')})` : ''}`)
     lines.push(`   médias : ${s.media.length ? s.media.map(mediaLine).join(' ; ') : 'aucun'}${s.media.length > 1 ? ` ; disposition : ${layoutOf(s)}` : ''}`)
     if (s.checks?.length) lines.push(`   relevés : ${s.checks.map(describeCheck).join(' ; ')}`)
   })
@@ -450,11 +462,24 @@ export function applyOp(content: InstructionContent, op: AgentOp, ids: IdMap): O
       if (op.ppe) (next.ppe = cleanList(op.ppe).filter((p) => p in PPE)), changed.push(part.ppe)
       if (op.tools) (next.tools = cleanList(op.tools)), changed.push(part.tools)
       if (op.safety) (next.safety = cleanList(op.safety)), changed.push(part.safety)
+      if (op.variants) {
+        // Les noms déjà connus gardent leur identifiant : les étapes qui les nomment suivent.
+        const names = cleanList(op.variants).slice(0, MAX_VARIANTS)
+        const known = new Map((content.variants ?? []).map((v) => [v.name.toLowerCase(), v]))
+        const list = names.map((n) => known.get(n.toLowerCase()) ?? newVariant(n))
+        let c = next
+        for (const v of content.variants ?? []) if (!list.some((x) => x.id === v.id)) c = removeVariant(c, v.id)
+        Object.assign(next, c, { variants: list.length ? list : undefined })
+        changed.push(part.variants)
+      }
+      if (op.variantsLabel !== undefined) (next.variantsLabel = op.variantsLabel.trim() || undefined), changed.push(part.variants)
       return { content: next, label: t.done.instruction(changed), stepId: null }
     }
     case 'add_step': {
       if (!op.title?.trim()) throw new AgentOpError(t.errors.newStepNoTitle)
       const step: Step = { id: uid('st_'), title: op.title.trim(), text: (op.text ?? '').trim(), keyPoints: cleanList(op.keyPoints).slice(0, 3), warning: warningFrom(op.warningLevel, op.warningText), media: [] }
+      const scoped = op.variants ? stepVariantsOfAi(op.variants, content.variants) : undefined
+      if (scoped) step.variants = scoped
       if (op.id) ids.set(op.id, step.id)
       let at = content.steps.length
       if (op.after === 'start') at = 0
@@ -474,6 +499,12 @@ export function applyOp(content: InstructionContent, op: AgentOp, ids: IdMap): O
       if (op.title?.trim()) (next.title = op.title.trim()), changed.push(part.title)
       if (op.text !== undefined) (next.text = op.text.trim()), changed.push(part.text)
       if (op.keyPoints) (next.keyPoints = cleanList(op.keyPoints).slice(0, 3)), changed.push(part.keyPoints)
+      if (op.variants) {
+        const scoped = stepVariantsOfAi(op.variants, content.variants)
+        if (scoped) next.variants = scoped
+        else delete next.variants
+        changed.push(part.variants)
+      }
       if (op.warningLevel === 'none') (next.warning = null), changed.push(part.warningRemoved)
       else if (op.warningLevel || op.warningText) {
         const w = warningFrom(op.warningLevel ?? step.warning?.level ?? 'caution', op.warningText ?? step.warning?.text)

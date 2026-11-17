@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, Clock, Crop, FileText, Film, Image as ImageIcon, ImagePlay, ImagePlus, Library, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Clock, Crop, FileText, Film, Image as ImageIcon, ImagePlay, ImagePlus, Library, Loader2, Pencil, Plus, Shapes, SlidersHorizontal, Trash2, Wand2 } from 'lucide-react'
 import { useState } from 'react'
 import { MediaView, mediaThumb } from '@/components/media/MediaView'
 import { useSession } from '@/components/providers/Session'
@@ -104,6 +104,17 @@ export function StepMediaEditor({
         : null
 
   const set = (patch: Partial<Step>) => onChange({ ...step, ...patch })
+  // L'ordre des médias (toggle `mediaOrder`) : le média choisi passe avant ou après son voisin.
+  const orderOn = useToggle('mediaOrder')
+  const at = Math.min(mediaIndex, step.media.length - 1)
+  function moveMedia(dir: -1 | 1) {
+    const j = at + dir
+    if (at < 0 || j < 0 || j >= step.media.length) return
+    const next = [...step.media]
+    ;[next[at], next[j]] = [next[j], next[at]]
+    set({ media: next })
+    setMediaIndex(j)
+  }
 
   function applyFrame(url: string, at: number) {
     if (!frameSource || !media) return
@@ -219,6 +230,16 @@ export function StepMediaEditor({
 
           {/* Les gestes du média choisi */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
+            {orderOn && step.media.length > 1 && media && (
+              <span className="flex items-center gap-1">
+                <button type="button" disabled={at === 0} onClick={() => moveMedia(-1)} aria-label={te.moveEarlier} title={te.moveEarlier} className="btn-press glass-card flex h-11 w-11 items-center justify-center rounded-2xl disabled:opacity-30">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button type="button" disabled={at === step.media.length - 1} onClick={() => moveMedia(1)} aria-label={te.moveLater} title={te.moveLater} className="btn-press glass-card flex h-11 w-11 items-center justify-center rounded-2xl disabled:opacity-30">
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </span>
+            )}
             {media?.kind === 'image' && (
               <Button variant="dark" size="sm" onClick={() => setAnnotating(mediaIndex)} icon={<Pencil className="h-4 w-4" />}>
                 {te.annotate}

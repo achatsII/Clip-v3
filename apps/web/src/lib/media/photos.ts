@@ -105,6 +105,19 @@ export async function photoSrc(data: Pick<DataApi, 'get'> | null | undefined, va
   return doc?.json_data.url ?? doc?.json_data.dataUrl ?? null
 }
 
+/**
+ * Une photo prise au poste, en adresse du stockage, pour en faire un média d'étape (toggle
+ * `feedbackMedia`) : une photo déjà au stockage garde son adresse ; celle qui est dans la base (un lien
+ * public, `clip-photo:` ou `data:`) y est envoyée, car le poste ne lit que des adresses publiques.
+ */
+export async function photoToStorage(data: Pick<DataApi, 'get'>, files: Pick<FilesApi, 'upload'>, value: string, name: string): Promise<string> {
+  const src = await photoSrc(data, value)
+  if (!src) throw new Error('photo not found')
+  if (/^https?:/i.test(src)) return src
+  const blob = src.startsWith('data:') ? dataUrlToBlob(src) : await (await fetch(src)).blob()
+  return (await files.upload(blob, name, 'captures')).url
+}
+
 /** L'image d'une photo, pour l'écran (relue une fois, gardée en cache). */
 export function usePhotoSrc(value: string | null | undefined, data?: Pick<DataApi, 'get'> | null): { src: string | null; loading: boolean } {
   const ref = isPhotoRef(value) && !localPhoto(value) ? value : null

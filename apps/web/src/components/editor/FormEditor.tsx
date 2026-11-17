@@ -1,6 +1,6 @@
 'use client'
 
-import { Blocks, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, GripVertical, ImageOff, Images, Plus, TriangleAlert, Wrench } from 'lucide-react'
+import { Blocks, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, GripVertical, ImageOff, Images, Plus, Star, TriangleAlert, Wrench } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { CategoryIcon } from '@/components/icons'
 import { mediaThumb } from '@/components/media/MediaView'
@@ -10,6 +10,7 @@ import { useMessages } from '@/lib/i18n'
 import { CATEGORIES, WARNINGS } from '@/lib/model/catalog'
 import { liveChecks } from '@/lib/model/checks'
 import { placeStep, sectionGroups } from '@/lib/model/sections'
+import { isEssential, variantNames } from '@/lib/model/variants'
 import type { Step } from '@/lib/model/types'
 import { useToggle } from '@/lib/toggles'
 import { useWide } from '@/lib/ui/screen'
@@ -159,6 +160,8 @@ function OpenPane({ p }: { p: Inner }) {
       agentWorking={p.agentWorking}
       remoteNote={p.remoteNote}
       feedbackNote={p.feedbackNote}
+      feedbackPhoto={p.feedbackPhoto}
+      onUseFeedbackPhoto={p.onUseFeedbackPhoto}
       namingSection={p.namingSection}
       onChange={p.onChange}
       onSourceAdded={p.onSourceAdded}
@@ -191,6 +194,11 @@ function InstructionItem({ p, active }: { p: Inner; active: boolean }) {
 function StepItem({ p, step, index, active, drag }: { p: Inner; step: Step; index: number; active: boolean; drag: Drag }) {
   const t = useMessages()
   const mediaNav = useToggle('mediaNav')
+  // Les variantes de l'étape et sa marque « essentielle », dans la liste (toggles `variants`, `quickMode`).
+  const variantsOn = useToggle('variants')
+  const quickOn = useToggle('quickMode')
+  const only = variantsOn ? variantNames(p.content, step) : []
+  const star = quickOn && !!p.content.quick && isEssential(step)
   const thumb = mediaThumb(step.media[0])
   const change = p.changes?.[step.id]
   const fb = p.feedbackByStep?.[step.id] ?? 0
@@ -230,8 +238,15 @@ function StepItem({ p, step, index, active, drag }: { p: Inner; step: Step; inde
         </span>
         <span className="min-w-0 flex-1">
           <span className={cn('line-clamp-2 text-sm leading-snug font-black', step.title.trim() ? 'text-slate-900 dark:text-white' : 'text-rose-600 dark:text-rose-400')}>{step.title.trim() || t.editor.form.untitled}</span>
-          {(step.warning || change === 'added' || change === 'modified' || fb > 0 || step.fromBlock || checks > 0) && (
+          {(step.warning || change === 'added' || change === 'modified' || fb > 0 || step.fromBlock || checks > 0 || only.length > 0 || star) && (
             <span className="mt-1 flex flex-wrap gap-1">
+              {/* Une étape propre à une variante, une étape essentielle (version courte). */}
+              {only.length > 0 && <span className="rounded-lg bg-slate-900 px-1.5 py-0.5 text-[10px] font-black text-white uppercase dark:bg-white dark:text-slate-900" title={t.editor.variants.only(only.join(', '))}>{only.join(' · ')}</span>}
+              {star && (
+                <span className="inline-flex items-center gap-0.5 rounded-lg bg-amber-400 px-1.5 py-0.5 text-[10px] font-black text-amber-950 uppercase" title={t.editor.variants.essentialHint}>
+                  <Star className="h-3 w-3 fill-current" /> {t.editor.variants.essential}
+                </span>
+              )}
               {step.warning && (
                 <span className={cn('inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[10px] font-black uppercase', step.warning.level === 'danger' ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200' : step.warning.level === 'caution' ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200' : 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200')}>
                   <TriangleAlert className="h-3 w-3" /> {WARNINGS[step.warning.level].label}

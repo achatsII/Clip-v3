@@ -98,6 +98,7 @@ RÈGLES D’ÉCRITURE — le moins de texte possible : l’opérateur lit une é
 - N’invente JAMAIS une valeur (couple, pression, température, quantité, numéro de pièce, réglage) : si elle n’est ni dite ni visible, ne l’écris pas et pose une question.
 - Respecte l’ordre réel des gestes, tel qu’on le voit et l’entend dans les sources.
 - Au-delà de 8 étapes, regroupe-les en 3 à 8 phases (section : 1 à 3 mots, « Démontage », « Nettoyage », « Remontage ») : une phase est une opération, ses étapes en sont les actions ; elles se suivent et portent le même nom. 8 étapes ou moins : aucune section.
+- Variantes : seulement si les sources décrivent la même tâche pour plusieurs modèles ou cas aux étapes presque pareilles (« si c’est la pompe B… », « modèle 3196 : aller à l’étape 42 »), fais UNE instruction : nomme les variantes (variants, 2 à 6, et variantsLabel : ce qui les distingue), puis, sur chaque étape propre à certaines variantes, donne-les (variants de l’étape) ; une étape commune n’en a pas. Une seule tâche, ou des tâches vraiment différentes : aucune variante.
 ${checksRule(opts.checks !== false)}
 - Langue de sortie : ${opts.language === 'fr' ? 'français québécois clair, avec les termes du métier en usage au Québec (EPI, cadenassage, quart de travail…)' : opts.language === 'en' ? 'anglais nord-américain clair (English), avec les termes du métier en usage dans les usines (PPE, lockout/tagout, shift…)' : `la langue « ${opts.language} »`}.
 

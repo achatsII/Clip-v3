@@ -289,6 +289,28 @@ export const editor = {
     choose: 'Changer de vue',
   },
   /** La vue « Fiche » : la liste des étapes, et chaque outil à découvert. */
+  /** Les variantes d'une instruction (toggle `variants`) et sa version courte (toggle `quickMode`). */
+  variants: {
+    card: 'Variantes et version courte',
+    title: 'Variantes',
+    intro: 'Une seule instruction pour des tâches presque pareilles (pompe A, pompe B) : au poste, on touche la sienne au départ et on ne voit que ses étapes.',
+    label: 'Ce qui change',
+    labelPlaceholder: 'Modèle de pompe',
+    add: 'Ajouter',
+    addPlaceholder: 'Pompe A',
+    remove: (name: string) => `Retirer « ${name} »`,
+    needTwo: 'Ajoutez au moins deux variantes.',
+    stepHint: 'Sur chaque étape, « Pour » dit à quelle variante elle s’applique ; sans choix, à toutes.',
+    tooMany: (max: number) => `Au plus ${max} variantes.`,
+    forLabel: 'Pour',
+    all: 'Toutes',
+    quick: 'Offrir une version courte aux habitués',
+    quickHint: 'Au poste : « L’essentiel » pour qui connaît la tâche, « Tout en détail » pour les nouveaux. Marquez les étapes essentielles d’une étoile ; une étape avec un relevé ou une mise en garde l’est toujours.',
+    essential: 'Essentielle',
+    essentialHint: 'Dans la version courte pour les habitués',
+    alwaysEssential: 'Un relevé ou une mise en garde : toujours dans la version courte',
+    only: (names: string) => `Seulement : ${names}`,
+  },
   form: {
     outline: 'Les étapes de l’instruction',
     instruction: 'L’instruction',
@@ -408,8 +430,16 @@ export const editor = {
   },
   stepEditor: {
     operatorFeedback: (comment: string) => `Retour d’un opérateur : « ${comment} »`,
+    /** La photo jointe à un retour (toggle `feedbackMedia`) : elle peut devenir un média de l'étape. */
+    feedbackPhotoAlt: 'La photo de l’opérateur',
+    useFeedbackPhoto: 'Mettre cette photo à l’étape',
+    feedbackPhotoName: (who: string | null, date: string) => (who ? `Photo de ${who}, ${date}` : `Photo d’un opérateur, ${date}`),
+    feedbackPhotoFailed: 'La photo n’a pas pu être reprise',
     addMediaHint: 'Ajouter une photo, un extrait vidéo ou un plan',
     removeMedia: 'Retirer ce média',
+    /** L'ordre des médias d'une étape (toggle `mediaOrder`) : le premier est celui qu'on voit d'abord au poste. */
+    moveEarlier: 'Mettre ce média avant',
+    moveLater: 'Mettre ce média après',
     /** Le nom court d’un média, sur sa puce. */
     mediaKinds: {
       clip: 'Extrait',

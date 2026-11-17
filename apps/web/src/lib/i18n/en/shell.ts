@@ -21,6 +21,14 @@ export const shell: typeof Fr = {
   account: 'My account',
   appearance: 'Appearance',
   signOut: 'Sign out',
+  version: {
+    short: (v: string) => `CLIP ${v}`,
+    label: (v: string) => `Version ${v}`,
+    built: (date: string) => `released on ${date}`,
+    app: (platform: 'ios' | 'android', v: string, build?: string) => `${platform === 'ios' ? 'iPhone' : 'Android'} app ${v}${build ? ` (${build})` : ''}`,
+    title: 'About CLIP',
+    hint: 'The last number goes up with every update: compare it with the one you were told about.',
+  },
   aiConsent: {
     title: 'Before using AI',
     body: 'To write and edit your instructions, CLIP sends your photos, videos, voice notes and text to artificial intelligence services from Google and OpenAI, through the Intelligence Industrielle platform.',
