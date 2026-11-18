@@ -510,7 +510,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - Le catalogue (plans, prix, crédits) vit dans `billing.manifest.yaml`, à la racine. On ne le modifie
   qu'en passant par ce fichier, jamais par une écriture directe en base. Il doit passer la simulation
   de `billing-publish` avant d'être publié ; le verrou `billing.manifest.lock.json` dit ce qui est
-  publié : la version 1 en QA, le 2026-11-18 (Stripe en mode test : les produits Solo et Équipe, leurs 4 prix).
+  publié : la version 1 en QA, le 2026-11-18 (Stripe en mode test : les produits Solo et Équipe, leurs 4 prix), puis
+  le nom du produit, « Kiplo » (`product.name`, le titre du portail Stripe ; un nom change sans nouvelle version).
   La simulation annonçait « aucun prix Stripe » : l'écriture les a créés quand même. Le produit facturé est `clip-v2`, l'application de la connexion à la
   Gateway (`PRODUCT_SLUG`, `product.slug`) : les deux marques, un seul catalogue.
 - La grille (manifeste, décision du 2026-11-16, volume et essai du 2026-11-17) : sur le web seulement (Stripe),
@@ -661,7 +662,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   la plateforme) : « Essayer Équipe 7 jours », Stripe demande la carte (« Démarrer l'essai »), le retour
   `?merci=1` (`thanksUrl`, aussi depuis la fenêtre d'une limite), « Essai jusqu'au … », le portail (passer à Solo,
   annuler pendant l'essai : « se termine le … », sans « Renouvellement »). Reste à la plateforme : l'essai ouvre une
-  banque de 0 crédit d'IA (`granted: 0`, `overage_policy: block`), donc aucune génération pendant l'essai ; et les
-  pages Stripe disent « CLIP » et « Intelligence Industrielle » à un client de Kiplo. Le parcours se refait en local contre la QA (`next dev`
+  banque de 0 crédit d'IA (`granted: 0`, `overage_policy: block`), donc aucune génération pendant l'essai. Les pages
+  Stripe disent « Kiplo » (le produit) ; « Intelligence Industrielle » et le logo viennent du compte Stripe partagé, qu'on
+  ne touche pas (toutes les apps changeraient). Le parcours se refait en local contre la QA (`next dev`
   avec `NEXT_PUBLIC_GATEWAY_URL` de QA, `NEXT_PUBLIC_BILLING_V2=1`, `NEXT_PUBLIC_BRAND=kiplo` ; la QA accepte toute
   origine).
