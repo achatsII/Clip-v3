@@ -509,8 +509,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 
 - Le catalogue (plans, prix, crédits) vit dans `billing.manifest.yaml`, à la racine. On ne le modifie
   qu'en passant par ce fichier, jamais par une écriture directe en base. Il doit passer la simulation
-  de `billing-publish` avant d'être publié ; le verrou `billing.manifest.lock.json` dira ce qui est
-  publié (rien ne l'est encore). Le produit facturé est `clip-v2`, l'application de la connexion à la
+  de `billing-publish` avant d'être publié ; le verrou `billing.manifest.lock.json` dit ce qui est
+  publié : la version 1 en QA, le 2026-11-18 (Stripe en mode test : les produits Solo et Équipe, leurs 4 prix).
+  La simulation annonçait « aucun prix Stripe » : l'écriture les a créés quand même. Le produit facturé est `clip-v2`, l'application de la connexion à la
   Gateway (`PRODUCT_SLUG`, `product.slug`) : les deux marques, un seul catalogue.
 - La grille (manifeste, décision du 2026-11-16, volume et essai du 2026-11-17) : sur le web seulement (Stripe),
   seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : **Sans abonnement** (le plan par défaut :
@@ -646,5 +647,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   - La page achète par le pont, puis fait relire l'achat par `mobileSync`
     (`src/lib/billing/store.ts`, `src/components/billing/Store.tsx`).
   - Le module natif part dans une build EAS, jamais dans une mise à jour à distance seule.
-- Le drapeau reste éteint partout tant que le catalogue n'est pas publié ; on l'allume en QA quand
-  `GET /api/v2/billing/context` y répond pour `clip-v2`.
+- Le drapeau reste éteint en production : la Gateway de production n'a pas encore les routes de facturation v2
+  (`/api/v2/billing/*` répond 404 le 2026-11-18 ; en QA, 401 sans jeton). Encaisser pour vrai attend l'équipe
+  plateforme : les routes en production, Stripe en mode réel, le catalogue publié en production (`billing-publish`
+  ne publie qu'en QA). On allume `NEXT_PUBLIC_BILLING_V2` sur le projet de Kiplo une fois `GET /api/v2/billing/context`
+  servi en production pour `clip-v2`.
