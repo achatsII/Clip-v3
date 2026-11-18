@@ -320,7 +320,8 @@ export function Player(props: PlayerProps) {
   // Chaque étape s'ouvre en haut : sinon elle gardait le défilement de la précédente (un relevé coché faisait
   // défiler l'étape, et la suivante s'ouvrait avec le haut de sa vidéo sous l'en-tête).
   useLayoutEffect(() => {
-    if (view === 'steps') mainRef.current?.scrollTo({ top: 0 })
+    // `scrollTop`, pas `scrollTo` : jsdom n'a pas `scrollTo` sur un élément (les tests du lecteur).
+    if (view === 'steps' && mainRef.current) mainRef.current.scrollTop = 0
   }, [index, view])
   useLayoutEffect(() => {
     const main = mainRef.current
