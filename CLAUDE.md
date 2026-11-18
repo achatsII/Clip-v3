@@ -660,15 +660,16 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   - La page achète par le pont, puis fait relire l'achat par `mobileSync`
     (`src/lib/billing/store.ts`, `src/components/billing/Store.tsx`).
   - Le module natif part dans une build EAS, jamais dans une mise à jour à distance seule.
-- Le drapeau reste éteint en production : la Gateway de production n'a pas encore les routes de facturation v2
-  (`/api/v2/billing/*` répond 404 le 2026-11-18 ; en QA, 401 sans jeton). Encaisser pour vrai attend l'équipe
-  plateforme : les routes en production, Stripe en mode réel, le catalogue publié en production (`billing-publish`
-  ne publie qu'en QA). On allume `NEXT_PUBLIC_BILLING_V2` sur le projet de Kiplo une fois `GET /api/v2/billing/context`
-  servi en production pour `clip-v2`. En QA, le parcours marche de bout en bout (2026-11-18, après les correctifs de
+- Le drapeau reste éteint en production. Le 2026-11-18, la Gateway de production a reçu les routes de facturation
+  v2 (401 sans jeton), mais avec un jeton elles répondent 404 « Requested function was not found » : les fonctions de
+  facturation n'y sont pas encore déployées. Encaisser pour vrai attend l'équipe plateforme : ces fonctions, Stripe en
+  mode réel, le catalogue publié en production (`billing-publish` ne publie qu'en QA). On allume
+  `NEXT_PUBLIC_BILLING_V2` sur le projet de Kiplo seulement quand `GET /api/v2/billing/context` et `/plans` répondent
+  200 en production pour `clip-v2` : avant, un état illisible fermerait tout (aucune publication, aucun poste). En QA, le parcours marche de bout en bout (2026-11-18, après les correctifs de
   la plateforme) : « Essayer Équipe 7 jours », Stripe demande la carte (« Démarrer l'essai »), le retour
   `?merci=1` (`thanksUrl`, aussi depuis la fenêtre d'une limite), « Essai jusqu'au … », le portail (passer à Solo,
-  annuler pendant l'essai : « se termine le … », sans « Renouvellement »). Reste à la plateforme : l'essai ouvre une
-  banque de 0 crédit d'IA (`granted: 0`, `overage_policy: block`), donc aucune génération pendant l'essai. Les pages
+  annuler pendant l'essai : « se termine le … », sans « Renouvellement »). L'essai reçoit les 12 500 crédits d'Équipe
+  (corrigé par la plateforme le 2026-11-18 ; avant, une banque à 0 empêchait toute génération). Les pages
   Stripe disent « Kiplo » (le produit) ; « Intelligence Industrielle » et le logo viennent du compte Stripe partagé, qu'on
   ne touche pas (toutes les apps changeraient). Le parcours se refait en local contre la QA (`next dev`
   avec `NEXT_PUBLIC_GATEWAY_URL` de QA, `NEXT_PUBLIC_BILLING_V2=1`, `NEXT_PUBLIC_BRAND=kiplo` ; la QA accepte toute
