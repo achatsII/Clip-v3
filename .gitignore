@@ -22,3 +22,6 @@ apps/mobile/android/
 
 # Worktrees des agents
 .claude/worktrees/
+
+# Écrit par `next dev` à chaque démarrage : jamais commité (CLAUDE.md, « Pièges »)
+apps/web/AGENTS.md

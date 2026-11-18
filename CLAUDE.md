@@ -474,7 +474,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   `model/catalog`) importe `@/lib/i18n/core`.
 - jsdom n'a ni `matchMedia`, ni `ResizeObserver`, ni `scrollIntoView` : un test qui affiche une vue
   de l'éditeur les remplace (`tests/form-view.test.tsx`).
-- `next dev` écrit `apps/web/AGENTS.md` et retouche `next-env.d.ts` : ne pas les committer.
+- `next dev` écrit `apps/web/AGENTS.md` (ignoré par `.gitignore`) et retouche `next-env.d.ts` (il y met
+  `.next/dev/types`) : ne pas les committer ; `git checkout -- apps/web/next-env.d.ts` une fois le serveur arrêté.
 - Les enveloppes des routes Data ne sont pas uniformes (`result` sur `/one`, `count` sur `/count`) :
   passer par `dataApi`.
 - Une requête Data rend au plus 10 000 documents : un `limit` plus grand répond 400 (« limit must be
