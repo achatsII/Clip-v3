@@ -47,7 +47,7 @@ export function FeaturesPage({ lang }: { lang: SiteLang }) {
       return <GenerateDemo t={{ ...t.demo.generate, badge: t.demo.badge, accelerated: t.demo.accelerated, restart: t.demo.restart }} title={DEMO[demoLangOf(lang)].title} steps={DEMO[demoLangOf(lang)].steps} />
     if (kind === 'playerDemo') return <PlayerDemo instructions={DEMO} langs={demoLangsFor(lang)} ui={playerUi} siteLang={lang} />
     if (kind === 'annotateDemo') return <AnnotateDemo t={annotateUi} />
-    if (kind === 'plantPhoto') return <PhotoCard photo="plant" alt={t.solutionPages.translation.photoAlt} className="aspect-[4/3]" />
+    if (kind === 'plantPhoto') return <PhotoCard photo="plant" lang={lang} alt={t.solutionPages.translation.photoAlt} className="aspect-[4/3]" />
     return <LoopFrame loop={LOOP_MEDIA[kind] ?? 'capture'} label={label} lang={lang} />
   }
 

@@ -153,6 +153,10 @@ export const capture = {
     writtenNote: 'Note écrite',
     quote: (text: string) => `« ${text} »`,
     noTranscript: 'Sans transcription : l’IA écoutera l’enregistrement.',
+    /** Avant de générer : toucher une source capturée l’ouvre en grand, avec les autres (« Vos captures »). */
+    open: (name: string) => `Revoir ${name}`,
+    reviewTitle: 'Vos captures',
+    reviewIntro: 'Revoyez, réécoutez et relisez ce que vous avez capturé avant de générer l’instruction.',
     percent: (n: number) => `${n.toLocaleString('fr-CA')} %`,
     /** La note dite pendant une série de photos, et l'instant de chaque photo dans cette note. */
     narration: 'Commentaire des photos',

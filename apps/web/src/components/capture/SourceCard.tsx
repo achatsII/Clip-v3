@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, Check, Images, Loader2, Mic, RotateCcw, Trash2, WifiOff } from 'lucide-react'
+import { AlertCircle, Check, Images, Loader2, Mic, Play, RotateCcw, Trash2, WifiOff } from 'lucide-react'
 import { useState } from 'react'
 import { SourceIcon } from '@/components/icons'
 import { Textarea } from '@/components/ui/Field'
@@ -37,7 +37,7 @@ function Thumb({ url, kind }: { url?: string; kind: Source['kind'] }) {
  * `voiceAt` : une photo de cette série, et son instant dans la note.
  * `screenShots` : un enregistrement de l'écran, et combien d'images nettes il a gardées.
  */
-export function SourceCard({ source, onRemove, onEditText, narrated, voiceAt, screenShots }: { source: Source; onRemove?: () => void; onEditText?: (text: string) => void; narrated?: number; voiceAt?: number; screenShots?: number }) {
+export function SourceCard({ source, onRemove, onEditText, onOpen, narrated, voiceAt, screenShots }: { source: Source; onRemove?: () => void; onEditText?: (text: string) => void; onOpen?: () => void; narrated?: number; voiceAt?: number; screenShots?: number }) {
   const t = useMessages()
   const ts = t.capture.source
   const [editing, setEditing] = useState(false)
@@ -47,7 +47,19 @@ export function SourceCard({ source, onRemove, onEditText, narrated, voiceAt, sc
   const title = source.kind === 'note' ? ts.writtenNote : narrated ? ts.narration : (source.originalName ?? source.name ?? ts.kinds[source.kind])
   return (
     <div className="glass-card animate-pop-in flex items-start gap-4 rounded-[24px] p-3 pr-2">
-      <Thumb url={source.thumbnailUrl} kind={source.kind} />
+      {onOpen ? (
+        // Avant de générer : la vignette ouvre la source en grand (la vidéo jouée, la note vocale réécoutée).
+        <button type="button" onClick={onOpen} aria-label={ts.open(title)} title={ts.open(title)} className="btn-press relative shrink-0 rounded-2xl">
+          <Thumb url={source.thumbnailUrl} kind={source.kind} />
+          {(source.kind === 'video' || source.kind === 'audio') && (
+            <span className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-[var(--primary)] shadow-md dark:bg-slate-800">
+              <Play className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden />
+            </span>
+          )}
+        </button>
+      ) : (
+        <Thumb url={source.thumbnailUrl} kind={source.kind} />
+      )}
       <div className="min-w-0 flex-1 py-1">
         <p className="truncate text-[15px] font-black text-slate-900 dark:text-white">{title}</p>
         <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-bold text-slate-500">

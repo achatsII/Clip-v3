@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
 import { content } from '@/lib/site/content'
 import { crumbsFor, type Crumb } from '@/lib/site/crumbs'
 import { fmt, type SiteLang } from '@/lib/site/lang'
-import { loopsFor, PHOTOS, type LoopKey } from '@/lib/site/media'
+import { loopsFor, photoMotion, PHOTOS, type LoopKey } from '@/lib/site/media'
 import { primaryCta, type PageKey } from '@/lib/site/routes'
 import { LoopVideo } from './LoopVideo'
 import { ButtonLink, Container, cx, PrimaryCta } from './ui'
@@ -113,12 +113,20 @@ export function FinalCta({ lang, title, text, secondary }: { lang: SiteLang; tit
   )
 }
 
-/** Une photo d'illustration dans une carte arrondie, avec une étiquette de verre. */
-export function PhotoCard({ photo, alt, tag, className, priority, sizes }: { photo: keyof typeof PHOTOS; alt: string; tag?: ReactNode; className?: string; priority?: boolean; sizes?: string }) {
+/**
+ * Une photo d'illustration dans une carte arrondie, avec une étiquette de verre. Avec la langue de la
+ * page, le plan du film qui montre la même chose la remplace, en boucle muette (`photoMotion`).
+ */
+export function PhotoCard({ photo, alt, tag, className, priority, sizes, lang }: { photo: keyof typeof PHOTOS; alt: string; tag?: ReactNode; className?: string; priority?: boolean; sizes?: string; lang?: SiteLang }) {
   const p = PHOTOS[photo]
+  const motion = lang ? photoMotion(photo, lang) : null
   return (
     <div className={cx('relative overflow-hidden rounded-[32px] shadow-[0_40px_90px_-35px_rgba(15,23,42,0.5)] sm:rounded-[40px]', className)}>
-      <Image src={p.src} alt={alt} width={p.width} height={p.height} preload={priority} sizes={sizes ?? '(min-width: 1024px) 50vw, 100vw'} className="h-full w-full object-cover" />
+      {motion && lang ? (
+        <LoopVideo loop={motion} label={alt} labels={{ pause: content(lang).a11y.pause, play: content(lang).a11y.play }} priority={priority} className="h-full w-full" />
+      ) : (
+        <Image src={p.src} alt={alt} width={p.width} height={p.height} preload={priority} sizes={sizes ?? '(min-width: 1024px) 50vw, 100vw'} className="h-full w-full object-cover" />
+      )}
       {tag && <div className="glass-float absolute bottom-4 left-4 max-w-[80%] rounded-2xl px-4 py-3 text-sm font-black text-slate-900 dark:text-white">{tag}</div>}
     </div>
   )

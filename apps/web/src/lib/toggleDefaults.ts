@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate' | 'mediaOrder' | 'feedbackMedia' | 'variants' | 'quickMode' | 'gifInStep' | 'screenCapture' | 'learnFromEdits' | 'siteExperiments'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate' | 'mediaOrder' | 'feedbackMedia' | 'variants' | 'quickMode' | 'gifInStep' | 'screenCapture' | 'learnFromEdits' | 'siteExperiments' | 'capturePreview'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -149,6 +149,9 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // Les tests A/B du site (src/lib/site/experiments.ts) : seulement avec l'accord aux témoins, et pour
   // les tests ouverts dans le code ; le moteur marketing les décide et les lit (plan/experiences.md).
   siteExperiments: true,
+  // Avant de générer, dans « Nouvelle instruction » : toucher une source capturée l'ouvre en grand (la
+  // vidéo jouée, la note vocale réécoutée avec sa transcription, la note lue), avec les autres.
+  capturePreview: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -212,4 +215,5 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   screenCapture: false,
   learnFromEdits: false,
   siteExperiments: false,
+  capturePreview: false,
 }

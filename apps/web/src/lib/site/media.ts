@@ -161,6 +161,49 @@ export const STEP_CLIPS: Record<ClipKey, LoopVideo> = {
   },
 }
 
+/**
+ * Les plans du film sans texte (Jacques qui explique, l'allée de l'usine), en boucles muettes de 4,4 s qui
+ * se rejoignent en fondu : ils remplacent les photos du même plan (`photoMotion`).
+ */
+export type SceneKey = 'expert' | 'plant'
+
+export const SCENE_CLIPS: Record<SceneKey, LoopVideo> = {
+  expert: {
+    webm: `${STORE_EN}/plan-expert_1795003375007_9b98619c-4ea1-4ccc-97df-b42e6bb35463.webm`,
+    mp4: `${STORE_EN}/plan-expert_1795003375005_bb25216f-a0a1-4c03-a9ba-13890ad85c7b.mp4`,
+    poster: '/site/video/plan-expert.jpg',
+    seconds: 4.4,
+  },
+  plant: {
+    webm: `${STORE_EN}/plan-usine_1795003375010_575ca3cc-93e8-4384-97b0-d3e739b818ba.webm`,
+    mp4: `${STORE_EN}/plan-usine_1795003375008_42d26f74-5d2f-48a1-b3d3-4502d96045a9.mp4`,
+    poster: '/site/video/plan-usine.jpg',
+    seconds: 4.4,
+  },
+}
+
+/**
+ * Le plan du film qui montre la même chose qu'une photo, en mouvement : le geste (cadenas, copeaux,
+ * huile), le poste et la capture (les boucles du film de la page), Jacques et l'usine. Sans plan : la photo.
+ */
+export function photoMotion(photo: PhotoKey, lang: SiteLang): LoopVideo | null {
+  switch (photo) {
+    case 'lock':
+    case 'brushing':
+    case 'oiling':
+      return STEP_CLIPS[photo]
+    case 'expert':
+    case 'plant':
+      return SCENE_CLIPS[photo]
+    case 'filming':
+      return loopsFor(lang).capture
+    case 'tablet':
+      return loopsFor(lang).station
+    default:
+      return null
+  }
+}
+
 /** Un film du site (1 min 15 s) : avec le son et les sous-titres. */
 export interface Film {
   /** La langue de la voix. */

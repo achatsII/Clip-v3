@@ -56,7 +56,7 @@ export function SolutionPage({ lang, page }: { lang: SiteLang; page: SolutionKey
                 </ButtonLink>
               </div>
             </div>
-            <PhotoCard photo={s.photo as PhotoKey} alt={s.photoAlt} priority className="aspect-[4/3]" />
+            <PhotoCard photo={s.photo as PhotoKey} lang={lang} alt={s.photoAlt} priority className="aspect-[4/3]" />
           </div>
         </Container>
       </section>

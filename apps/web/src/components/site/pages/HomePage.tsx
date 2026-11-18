@@ -138,6 +138,7 @@ export function HomePage({ lang }: { lang: SiteLang }) {
             </div>
             <PhotoCard
               photo="expert"
+              lang={lang}
               alt={h.problem.photoAlt}
               className="site-reveal aspect-[4/3]"
               tag={

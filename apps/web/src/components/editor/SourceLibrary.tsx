@@ -39,10 +39,15 @@ export function SourceLibrary({
   onGoToStep,
   onUse,
   onSourceAdded,
+  title,
+  intro,
 }: {
   open: boolean
   onClose: () => void
   sources: Source[]
+  /** Ailleurs que dans l'éditeur (la capture, avant de générer) : le titre et la phrase de la fenêtre. */
+  title?: string
+  intro?: string
   /** Pour dire à quelles étapes sert chaque média. */
   content?: InstructionContent | null
   /** Le média à montrer d'abord (et, pour une vidéo, l'instant où la reprendre). */
@@ -108,8 +113,8 @@ export function SourceLibrary({
   )
 
   return (
-    <Modal open={open} onClose={onClose} size="xl" title={t.title}>
-      <p className="-mt-1 mb-5 text-sm font-medium text-slate-600 dark:text-slate-300">{t.intro}</p>
+    <Modal open={open} onClose={onClose} size="xl" title={title ?? t.title}>
+      <p className="-mt-1 mb-5 text-sm font-medium text-slate-600 dark:text-slate-300">{intro ?? t.intro}</p>
       {!groups.length ? (
         <EmptyState icon={<Images className="h-7 w-7" />} title={t.empty} description={t.emptyText} />
       ) : (
@@ -171,7 +176,7 @@ export function SourceLibrary({
               {g.kind === 'audio' && (
                 <div className="space-y-3">
                   {g.items.map((x) => (
-                    <div key={x.source.id} ref={focus?.sourceId === x.source.id ? focusRef : undefined} className="glass-card space-y-2 rounded-[24px] p-4">
+                    <div key={x.source.id} ref={focus?.sourceId === x.source.id ? focusRef : undefined} className={cn('glass-card space-y-2 rounded-[24px] p-4', focus?.sourceId === x.source.id && 'ring-4 ring-[var(--primary)]')}>
                       <div className="flex min-w-0 items-center gap-2">
                         {tag(x)}
                         <Mic className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
@@ -187,7 +192,7 @@ export function SourceLibrary({
               {g.kind === 'note' && (
                 <div className="grid gap-3 md:grid-cols-2">
                   {g.items.map((x) => (
-                    <div key={x.source.id} className="glass-card space-y-2 rounded-[24px] p-4">
+                    <div key={x.source.id} ref={focus?.sourceId === x.source.id ? focusRef : undefined} className={cn('glass-card space-y-2 rounded-[24px] p-4', focus?.sourceId === x.source.id && 'ring-4 ring-[var(--primary)]')}>
                       {tag(x)}
                       <LongText text={x.source.text ?? ''} more={t.readMore} less={t.readLess} />
                     </div>
@@ -199,7 +204,7 @@ export function SourceLibrary({
                   {g.items.map((x) => {
                     const s = x.source
                     return (
-                      <div key={s.id} className="glass-card space-y-3 rounded-[24px] p-4">
+                      <div key={s.id} ref={focus?.sourceId === s.id ? focusRef : undefined} className={cn('glass-card space-y-3 rounded-[24px] p-4', focus?.sourceId === s.id && 'ring-4 ring-[var(--primary)]')}>
                         <div className="flex min-w-0 items-center gap-2">
                           {tag(x)}
                           <FileText className="h-5 w-5 shrink-0 text-slate-500" aria-hidden />

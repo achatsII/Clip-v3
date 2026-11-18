@@ -1,7 +1,7 @@
 'use client'
 
 import { X } from 'lucide-react'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/util/cn'
 import { useMessages } from '@/lib/i18n'
@@ -26,6 +26,8 @@ export function Modal({
   dismissable?: boolean
   bare?: boolean
 }) {
+  // Le titre nomme la fenêtre pour les lecteurs d'écran (aria-labelledby).
+  const titleId = useId()
   const t = useMessages()
   const panelRef = useRef<HTMLDivElement>(null)
   // `onClose` change à chaque rendu du parent (fonction écrite sur place) : on le lit dans une
@@ -67,7 +69,7 @@ export function Modal({
   const widths = { sm: 'sm:max-w-md', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' }
 
   return createPortal(
-    <div className="kb-frame fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true">
+    <div className="kb-frame fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby={title && !bare ? titleId : undefined}>
       <div className="animate-fade-in absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => dismissable && onClose()} />
       <div
         ref={panelRef}
@@ -81,7 +83,7 @@ export function Modal({
         <div className="mx-auto mt-2.5 h-1.5 w-12 shrink-0 rounded-full bg-slate-300 sm:hidden dark:bg-slate-600" />
         {(title || dismissable) && !bare && (
           <div className="flex shrink-0 items-start justify-between gap-3 px-6 pt-4 pb-2 sm:pt-6">
-            <div className="min-w-0 text-xl font-black tracking-tight text-slate-900 dark:text-white">{title}</div>
+            <div id={titleId} className="min-w-0 text-xl font-black tracking-tight text-slate-900 dark:text-white">{title}</div>
             {dismissable && (
               <button type="button" onClick={onClose} aria-label={t.common.close} className="btn-press -mt-1 -mr-2 flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 hover:bg-slate-900/5 dark:hover:bg-white/10">
                 <X className="h-5 w-5" />

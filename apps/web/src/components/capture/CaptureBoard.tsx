@@ -26,6 +26,7 @@ import { AudioRecorder } from './AudioRecorder'
 import { DictateButton } from './DictateButton'
 import { PendingCard, SourceCard } from './SourceCard'
 import { MediaLibraryDialog } from './MediaLibraryDialog'
+import { SourceLibrary } from '@/components/editor/SourceLibrary'
 import { ScreenRecorder } from './ScreenRecorder'
 import { canRecordScreen } from '@/lib/media/screenRecorder'
 import { LockBadge } from '@/components/billing/Billing'
@@ -88,6 +89,9 @@ export function CaptureBoard({
   const recordsOn = useToggle('records')
   // Un PowerPoint se lit dans l'app : sa note et ses images deviennent des sources (toggle `slidesImport`).
   const slides = useToggle('slidesImport')
+  // Avant de générer : toucher une source l'ouvre en grand, avec les autres (toggle `capturePreview`).
+  const capturePreview = useToggle('capturePreview')
+  const [reviewing, setReviewing] = useState<string | null>(null)
   const [kind, setKind] = useState<ForceKind>('auto')
   const [dragging, setDragging] = useState(false)
   const [starting, setStarting] = useState(false)
@@ -375,6 +379,7 @@ export function CaptureBoard({
                   source={s}
                   onRemove={() => void session.remove(s.id)}
                   onEditText={(text) => void session.updateText(s.id, text)}
+                  onOpen={capturePreview ? () => setReviewing(s.id) : undefined}
                   narrated={narrated.get(s.id)?.length}
                   voiceAt={s.voice && narrated.has(s.voice.sourceId) ? s.voice.at : undefined}
                   screenShots={s.screen ? (shotsOf.get(s.id) ?? 0) : undefined}
@@ -414,6 +419,16 @@ export function CaptureBoard({
         </button>
         {wide && <p className="text-sm font-medium text-slate-400">{tb.dropHint}</p>}
       </div>
+      {capturePreview && (
+        <SourceLibrary
+          open={!!reviewing}
+          onClose={() => setReviewing(null)}
+          sources={snap.sources.filter((x) => x.url || x.text)}
+          focus={reviewing ? { sourceId: reviewing } : null}
+          title={t.capture.source.reviewTitle}
+          intro={t.capture.source.reviewIntro}
+        />
+      )}
       <MediaLibraryDialog
         open={libraryOpen}
         onClose={() => setLibraryOpen(false)}

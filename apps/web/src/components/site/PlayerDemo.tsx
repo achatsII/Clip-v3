@@ -63,6 +63,9 @@ export function PlayerDemo({
   const [kind, setKind] = useState<FeedbackKind | null>(null)
   const [quiz, setQuiz] = useState<{ i: number; picked: number | null; good: number }>({ i: 0, picked: null, good: 0 })
   const sheetTimer = useRef<number | null>(null)
+  // Le média de l'étape : ramené à l'écran quand on change d'étape (au téléphone, il est au-dessus du bouton).
+  const media = useRef<HTMLDivElement>(null)
+  const moved = useRef(false)
 
   const instr = instructions[lang]
   const w = instr.words
@@ -93,8 +96,20 @@ export function PlayerDemo({
   function go(to: number) {
     stopSpeech()
     setSheet('closed')
+    // Pendant le toucher : le lecteur gardé d'une étape à l'autre a le droit de jouer (iPhone en économie d'énergie).
+    void media.current?.querySelector('video')?.play().catch(() => undefined)
+    moved.current = true
     setIndex(Math.max(0, Math.min(steps.length - 1, to)))
   }
+
+  useEffect(() => {
+    if (!moved.current) return
+    moved.current = false
+    const el = media.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    if (r.top < 0 || r.bottom > window.innerHeight) el.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }, [index])
 
   function next() {
     if (last) {
@@ -231,11 +246,11 @@ export function PlayerDemo({
           {phase === 'steps' && step && (
             <>
               <div className="grid md:min-h-[430px] md:grid-cols-[1.35fr_1fr]">
-                <div className="relative aspect-video bg-slate-900 md:aspect-auto" dir="ltr">
+                <div ref={media} className="relative aspect-video bg-slate-900 md:aspect-auto" dir="ltr">
                   {step.clip ? (
                     // Le geste en vidéo, comme au poste : une boucle muette, seulement à l'écran, en pause sur demande.
+                    // Le même lecteur d'une étape à l'autre (il change de boucle) : ce que le toucher a permis reste permis.
                     <LoopVideo
-                      key={`${lang}-${index}`}
                       loop={STEP_CLIPS[step.clip]}
                       label={fmt(ui.stepPhoto, { n: index + 1 })}
                       labels={{ pause: ui.pause, play: ui.play }}

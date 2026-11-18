@@ -212,7 +212,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - **Capturer** (« Nouvelle instruction », `CaptureBoard`) : d'un seul écran au téléphone, qui prend tout
   l'écran comme l'éditeur ; « Filmer le geste » en grand, les quatre autres façons sur une ligne. « Générer »
   ne paraît qu'une fois quelque chose capturé (jamais grisé à vide), en bas, sans rien cacher. Les sources
-  restent dans l'ordre de prise, même quand un envoi finit avant un autre.
+  restent dans l'ordre de prise, même quand un envoi finit avant un autre. Avant de générer, toucher la vignette
+  d'une source l'ouvre en grand avec les autres (« Vos captures », toggle `capturePreview`) : la vidéo se joue, la
+  note vocale se réécoute avec sa transcription, la note se lit (`SourceLibrary` en lecture seule).
 - **Options de la génération** (« Options » de la capture) : le format, « Annoter les images », « Proposer
   des relevés » (module `records`, retenu sur l'appareil, `src/lib/ai/proposeChecks.ts` ; non : la consigne
   dit aucun et la fin les retire, `ServerJobContext.checks` au serveur ; rien dans n8n) et ce que l'IA lit
@@ -388,7 +390,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - **Le film du site** (`src/lib/site/media.ts`) : deux voix, `FILMS` et `filmFor` (le français sur la page
   française, l'anglais sur les dix-sept autres, avec les sous-titres de la page allumés : `public/site/video/en/`),
   et les boucles muettes tirées du film de la même voix (`loopsFor`) ; les MP4 au stockage, jamais dans git. Le film
-  anglais se refait dans `motion/en/` (son export : `scripts/export.sh`, sur la demande de la personne).
+  anglais se refait dans `motion/en/` (son export : `scripts/export.sh`, sur la demande de la personne). Une photo
+  dont le film a le plan se montre en mouvement (`photoMotion` : cadenas, copeaux, huile, poste, capture, Jacques,
+  l'usine ; `PhotoCard` avec la langue). La démo du poste garde un seul lecteur d'une étape à l'autre, lancé par le
+  toucher (un iPhone en économie d'énergie ne lance rien seul) et ramené à l'écran ; si l'appareil refuse, un grand
+  bouton de lecture le dit (`LoopVideo`).
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le
