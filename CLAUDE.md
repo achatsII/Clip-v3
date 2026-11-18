@@ -17,6 +17,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   là, Vercel ne fait que des aperçus de `main`, et la production de CLIP se déploie à la main (un
   déploiement de production de `main` par Vercel). Le site de la marque publique (projet Vercel à part)
   suit `main` tout seul.
+- **Le dépôt** (décision du 2026-11-18) : `intelligence-industrielle/Clip-v2`, dans l'organisation, avec tout
+  l'historique. L'ancien, `achatsII/Clip-v3`, en est une copie identique tant que les deux projets Vercel
+  (« clip-v2 » pour CLIP, « kiplo ») le suivent encore : chaque push part vers les deux (`git remote -v`).
+  Une fois Vercel rebranché sur le dépôt de l'organisation, l'ancien s'archive (lecture seule) et ne reçoit
+  plus rien. Une nouvelle session de Claude se lance sur `intelligence-industrielle/Clip-v2`.
 
 ## Repères
 
