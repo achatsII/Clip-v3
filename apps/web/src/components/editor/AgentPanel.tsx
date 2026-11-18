@@ -19,6 +19,7 @@ import type { InstructionContent, Source, SourceKind } from '@/lib/model/types'
 import { useToast } from '@/components/ui/Toast'
 import { suspendsInBackground } from '@/lib/ai/durableAsk'
 import { useToggle } from '@/lib/toggles'
+import { WIDE } from '@/lib/ui/screen'
 import { cn, formatDuration } from '@/lib/util/cn'
 import { LiveEditVoice } from './LiveEditVoice'
 import { usePersonalWriting } from '@/hooks/useWriting'
@@ -81,7 +82,19 @@ export function AgentPanel({
   variant = 'panel',
   open: openProp,
   instructionId,
+  aboveBar,
+  wake,
 }: {
+  /**
+   * Change à chaque appel de la page (le bouton Assistant de sa barre) : la conversation réduite se rouvre.
+   * Sans lui, ce bouton ne faisait rien pendant que le panneau était réduit (il était déjà « ouvert »).
+   */
+  wake?: number
+  /**
+   * Au téléphone, la page a sa barre en bas (l'éditeur : les étapes, l'Assistant) : réduite, la pastille se
+   * pose au-dessus d'elle, à droite (annuler est à gauche), sans la cacher.
+   */
+  aboveBar?: boolean
   /** L'instruction modifiée : au téléphone, la réponse se prépare au serveur sous son nom. */
   instructionId?: string
   content: InstructionContent
@@ -179,6 +192,9 @@ export function AgentPanel({
     void runTurn(request.text, 'text').then((r) => request.onDone?.(r.failed.length === 0 && !!r.reply))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request])
+  useEffect(() => {
+    if (wake) setMinimized(false)
+  }, [wake])
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
@@ -350,6 +366,31 @@ export function AgentPanel({
     patch(m.id, { undone: true })
   }
 
+  // Au téléphone, le panneau ouvert couvre le bas de la page : il dit ce qu'il cache (`--agent-inset` sur
+  // <html>, la classe `pb-agent` en tient compte) pour que la fin de la page défile au-dessus de lui.
+  const sheet = useRef<HTMLElement>(null)
+  const sheetShown = open && !minimized
+  useEffect(() => {
+    const el = sheet.current
+    if (!sheetShown || !el) return
+    const root = document.documentElement
+    const wide = typeof window.matchMedia === 'function' ? window.matchMedia(WIDE) : null
+    const measure = () => root.style.setProperty('--agent-inset', wide?.matches ? '0px' : `${Math.max(0, Math.round(window.innerHeight - el.getBoundingClientRect().top))}px`)
+    measure()
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    ro?.observe(el)
+    window.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('resize', measure)
+    wide?.addEventListener('change', measure)
+    return () => {
+      ro?.disconnect()
+      window.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('resize', measure)
+      wide?.removeEventListener('change', measure)
+      root.style.removeProperty('--agent-inset')
+    }
+  }, [sheetShown])
+
   const bubble = variant === 'bubble'
   if (!open) {
     // La bulle de l'aperçu est posée par la page, dans la barre du lecteur (`AgentBubble`) ; ouvert par
@@ -366,10 +407,26 @@ export function AgentPanel({
   }
 
   if (minimized) {
-    // Réduit : une pastille en bas (au bureau, dans le coin) ; l'éditeur reste tout entier visible.
+    // Réduit : une pastille ; la page reste tout entière visible. Au-dessus d'une barre (l'éditeur au téléphone,
+    // les boutons du lecteur dans l'aperçu), elle se pose à droite, au-dessus d'elle : posée sur la barre, elle en
+    // cachait les boutons, et celui de l'Assistant paraissait à travers le verre. Sans barre, elle prend le bas.
+    const lifted = bubble || aboveBar
     return (
-      <div className={cn('kb-bottom pb-safe fixed inset-x-0 bottom-0 px-3 pb-3 lg:inset-x-auto lg:right-6 lg:bottom-6 lg:px-0 lg:pb-0', bubble ? 'z-[60]' : 'z-50')}>
-        <button type="button" onClick={() => setMinimized(false)} aria-label={t.editorTools.agent.title} className="glass-float flex h-14 w-full items-center gap-3 rounded-full px-4 text-left lg:w-[320px]">
+      <div
+        className={cn(
+          'fixed',
+          !lifted && 'kb-bottom pb-safe inset-x-0 bottom-0 px-3 pb-3 lg:inset-x-auto lg:right-6 lg:bottom-6 lg:px-0 lg:pb-0',
+          lifted && 'kb-hide right-4 lg:right-6',
+          lifted && (bubble ? 'bottom-[calc(7.5rem+env(safe-area-inset-bottom))]' : 'bottom-[calc(5.25rem+env(safe-area-inset-bottom))] lg:bottom-6'),
+          bubble ? 'z-[60]' : 'z-50',
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => setMinimized(false)}
+          aria-label={t.editorTools.agent.title}
+          className={cn('glass-float btn-press flex items-center gap-3 rounded-full px-4 text-left', lifted ? 'h-12 max-w-[calc(100vw-9rem)] lg:w-[320px] lg:max-w-none' : 'h-14 w-full lg:w-[320px]')}
+        >
           {busy ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[var(--primary)]" /> : <Sparkles className="h-5 w-5 shrink-0 text-[var(--primary)]" />}
           <span className="min-w-0 flex-1 truncate text-sm font-black">{busy ? (current?.label ?? t.editorTools.agent.busy) : t.editorTools.agent.title}</span>
           <ChevronUp className="h-5 w-5 shrink-0 text-slate-400" />
@@ -380,6 +437,7 @@ export function AgentPanel({
 
   return (
     <section
+      ref={sheet}
       aria-label={t.editorTools.agent.label}
       // Ses champs gardent leur propre annulation : Ctrl+Z n'y annule pas l'instruction.
       data-own-undo=""

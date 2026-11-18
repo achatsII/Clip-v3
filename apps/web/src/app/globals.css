@@ -276,6 +276,12 @@ html[data-immersive] .shell-main {
     border-color: rgba(255, 255, 255, 0.06);
   }
 }
+/* Le bas d'un écran à barre du téléphone (l'éditeur) : la place de la barre, ou plus quand l'assistant est ouvert.
+   Son panneau couvre alors le bas de l'écran ; il pose sa hauteur dans --agent-inset (AgentPanel), et la fin de la
+   page (la dernière étape, « Insérer un bloc commun ») défile au-dessus de lui. */
+@utility pb-agent {
+  padding-bottom: max(7rem, calc(var(--agent-inset, 0px) + 1.5rem));
+}
 /* Barres qui flottent par-dessus le contenu (commande IA, « Générer ») : le texte dessous ne doit pas transparaître. */
 @utility glass-float {
   background: rgba(255, 255, 255, 0.95);

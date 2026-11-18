@@ -472,7 +472,7 @@ function StagePhone(p: Inner) {
     if (target) p.onSelect(target.id)
   })
   return (
-    <div className="pb-28" {...swipe}>
+    <div className="pb-agent" {...swipe}>
       <EditorHeader wide={false} top={top} readOnly={readOnly} badge={p.badge} assist={p.assist} showAssist={false} onAssistant={p.onAssistant} />
 
       <div className="space-y-3 px-3 pt-3">

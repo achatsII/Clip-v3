@@ -280,7 +280,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`clip_pref_editor_view` ; sans choix, la fiche au bureau, le poste au téléphone). Une fonction
   nouvelle de l'éditeur existe dans les deux. L'Aperçu (l'œil) est le lecteur du poste, pas une vue.
   En-tête commun : `src/components/editor/EditorBar.tsx`. L'assistant flotte par-dessus l'éditeur, dans
-  le coin, sans le tasser, et se réduit en pastille ; au bureau large (≥ 1280 px), la Fiche va sur deux
+  le coin, sans le tasser, et se réduit en pastille ; au téléphone, la pastille se pose au-dessus de la barre
+  du bas, à droite (annuler est à gauche ; `aboveBar`, au-dessus des boutons du lecteur dans l'aperçu), le
+  bouton Assistant de la barre la rouvre (`wake`), et ouvert, il dit ce qu'il cache (`--agent-inset`) pour que
+  la fin de la page défile au-dessus de lui (`pb-agent`) ; au bureau large (≥ 1280 px), la Fiche va sur deux
   colonnes (ce qu'on écrit à gauche, ce qu'on montre et relève à droite).
 - **Lire ou modifier** (`src/lib/ui/libraryMode.ts`) : dans la bibliothèque, qui rédige choisit ce que
   fait le toucher d'une carte (« Modifier » ou « Lire », retenu sur l'appareil, `clip_pref_library_mode`) ;
@@ -481,6 +484,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   de l'éditeur les remplace (`tests/form-view.test.tsx`).
 - `next dev` écrit `apps/web/AGENTS.md` (ignoré par `.gitignore`) et retouche `next-env.d.ts` (il y met
   `.next/dev/types`) : ne pas les committer ; `git checkout -- apps/web/next-env.d.ts` une fois le serveur arrêté.
+  Si `next dev` recharge une page en boucle (« HMR hash mismatch », un `restart` de Turbopack à chaque
+  connexion, des centaines de chargements ; novembre 2026, sans aucun changement du code), c'est son cache :
+  arrêter le serveur, effacer `apps/web/.next/dev`, relancer.
 - Les enveloppes des routes Data ne sont pas uniformes (`result` sur `/one`, `count` sur `/count`) :
   passer par `dataApi`.
 - Une requête Data rend au plus 10 000 documents : un `limit` plus grand répond 400 (« limit must be

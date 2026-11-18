@@ -468,6 +468,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
   // L'assistant amène l'écran à l'étape qu'il modifie, et l'entoure pendant qu'il travaille.
   const [agentStep, setAgentStep] = useState<string | null>(null)
   const [agentOpen, setAgentOpen] = useState(false)
+  // Le bouton Assistant rouvre aussi la conversation réduite (`wake` de l'AgentPanel).
+  const [agentWake, setAgentWake] = useState(0)
   const focusStep = useCallback((id: string | null) => {
     setFormFocus({ stepId: id, key: Date.now() })
     if (!id) {
@@ -1096,7 +1098,10 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
     feedbackByStep,
     changes: inReview ? changes : undefined,
     history,
-    onAssistant: () => setAgentOpen(true),
+    onAssistant: () => {
+      setAgentOpen(true)
+      setAgentWake((n) => n + 1)
+    },
     sections: sectionsToggle,
     records: recordsToggle,
     onSteps: (next: Step[]) => update({ ...content, steps: next }),
@@ -1160,6 +1165,8 @@ export function Editor({ doc, stations, onRegenerate }: { doc: Doc<Instruction>;
           onWorking={setAgentStep}
           open={agentOpen}
           onOpenChange={setAgentOpen}
+          aboveBar
+          wake={agentWake}
           request={agentRequest}
           onTurnStart={history.begin}
           onTurnEnd={history.end}

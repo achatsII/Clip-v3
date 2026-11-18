@@ -466,7 +466,7 @@ function FormPhone(p: Inner & { detail: boolean; onList: () => void }) {
     if (target) p.open(target.id)
   })
   return (
-    <div className="pb-28" {...swipe}>
+    <div className="pb-agent" {...swipe}>
       <EditorHeader wide={false} top={p.top} readOnly={readOnly} badge={p.badge} assist={null} showAssist={false} onAssistant={p.onAssistant} />
       <div className="space-y-3 px-3 pt-3">
         {top.questions > 0 && !readOnly && <QuestionsPill top={top} className="w-full justify-center" />}
