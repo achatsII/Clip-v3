@@ -317,6 +317,11 @@ export function Player(props: PlayerProps) {
   useEffect(() => {
     if (fitting && firstMedia?.kind === 'video' && firstMedia.posterUrl) probeImage(firstMedia.posterUrl)
   }, [fitting, firstMedia])
+  // Chaque étape s'ouvre en haut : sinon elle gardait le défilement de la précédente (un relevé coché faisait
+  // défiler l'étape, et la suivante s'ouvrait avec le haut de sa vidéo sous l'en-tête).
+  useLayoutEffect(() => {
+    if (view === 'steps') mainRef.current?.scrollTo({ top: 0 })
+  }, [index, view])
   useLayoutEffect(() => {
     const main = mainRef.current
     const text = textRef.current
