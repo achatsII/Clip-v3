@@ -45,9 +45,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'No subscription', solo: 'Solo', equipe: 'Team', usine: 'Plant' },
     trialNote: (days: number) => `${days}-day free trial on your first subscription`,
+    trialTerms: (after: string) => `Card required up front; then ${after}, unless you cancel before the trial ends.`,
     tryPlan: (plan: string, days: number) => `Try ${plan} for ${days} days`,
     pitch: {
-      free: 'No subscription: AI comes with Solo or Team, free to try for 7 days.',
+      free: 'No subscription: AI comes with Solo or Team; Team is free to try for 7 days.',
       solo: 'For the person who documents their work and shares it by QR code.',
       equipe: 'For a few people trying it on a line: the team writes, approves and translates.',
       usine: 'For the whole plant, or several: custom quote, with a guided rollout.',
@@ -260,6 +261,7 @@ export const billing: typeof Fr = {
       expired: 'Expired',
     },
     endsOn: (date: string) => `ends on ${date}`,
+    trialUntil: (date: string) => `Trial until ${date}: the subscription starts then, unless you cancel before.`,
     manage: 'Manage subscription and invoices',
     unreadable: 'Couldn’t read the subscription status',
     usage: 'What you’re using',

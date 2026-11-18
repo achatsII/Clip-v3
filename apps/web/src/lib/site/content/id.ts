@@ -484,11 +484,11 @@ export const id: SiteContent = {
       title: 'Pertanyaan tentang paket',
       items: [
         { q: 'Siapa yang dihitung dalam harga?', a: 'Editor dan penyetuju. Operator dan pembaca tidak pernah dihitung: terapkan Clip di seluruh lapangan.' },
-        { q: 'Bisakah saya mencoba sebelum membayar?', a: 'Bisa. {trialPlans} menyertakan uji coba {trialDays} hari, sekali per pabrik: seluruh alurnya, dari perekaman sampai stasiun kerja. Batalkan sebelum uji coba berakhir dan Anda tidak membayar apa pun.' },
+        { q: 'Bisakah saya mencoba sebelum membayar?', a: 'Bisa. {trialPlan} menyertakan uji coba {trialDays} hari, sekali per pabrik: seluruh alurnya, dari perekaman sampai stasiun kerja, bersama tim Anda. Kartu Anda diminta di awal; langganan dimulai saat uji coba berakhir, kecuali Anda membatalkannya sebelumnya: dengan begitu Anda tidak membayar apa pun.' },
         { q: 'Apa yang terjadi saat kredit saya habis?', a: 'Fitur AI menunggu bulan depan atau paket yang lebih tinggi. Yang lainnya tetap berjalan: instruksi Anda tetap tersedia di stasiun kerja.' },
         { q: 'Apakah kredit yang tidak terpakai dibawa ke bulan berikutnya?', a: 'Tidak: bank kredit diperbarui setiap bulan.' },
         { q: 'Bagaimana cara kerja penagihan tahunan?', a: 'Anda membayar {paidMonths} bulan dan memakai 12: gratis {freeMonths} bulan di setiap paket berbayar.' },
-        { q: 'Bagaimana cara membayar?', a: 'Online, dengan kartu kredit. Di aplikasi seluler, Anda juga bisa berlangganan lewat App Store atau Google Play.' },
+        { q: 'Bagaimana cara membayar?', a: 'Online, dengan kartu kredit. Aplikasi seluler tidak menjual apa pun: langganan yang diambil di situs terbuka di aplikasi dengan akun yang sama.' },
         { q: 'Apa yang terjadi pada instruksi saya jika saya berhenti?', a: 'Tetap milik Anda: setiap instruksi bisa diekspor ke PDF dan JSON, di setiap paket.' },
         { q: 'Bagaimana dengan beberapa pabrik?', a: 'Paket Enterprise disesuaikan untuk Anda: pesan pertemuan dan mari kita bicara.' },
       ],
@@ -790,7 +790,7 @@ export const id: SiteContent = {
 
   planNames: { free: 'Tanpa langganan', equipe: 'Tim', usine: 'Pabrik' },
   planPitch: {
-    free: '{freePlan}: AI termasuk dalam {trialPlansOr}, gratis dicoba {trialDays} hari.',
+    free: '{freePlan}: AI termasuk dalam {aiPlansOr}; {trialPlan} gratis dicoba {trialDays} hari.',
     solo: 'Untuk orang yang mendokumentasikan pekerjaannya dan membagikannya lewat kode QR.',
     equipe: 'Untuk beberapa orang yang mencobanya di satu lini: tim menulis, menyetujui, dan menerjemahkan.',
     usine: 'Untuk seluruh pabrik, atau beberapa pabrik: penerapan terpandu dan dukungan prioritas.',

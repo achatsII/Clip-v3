@@ -480,11 +480,11 @@ export const es: SiteContent = {
       title: 'Preguntas sobre los planes',
       items: [
         { q: '¿Quién cuenta para el precio?', a: 'Los editores y los aprobadores. Los operadores y los lectores nunca se cuentan: despliega Clip en todo el piso.' },
-        { q: '¿Puedo probar antes de pagar?', a: 'Sí. {trialPlans} incluyen una prueba de {trialDays} días, una vez por planta: todo el ciclo, de la captura al puesto. Cancela antes de que termine la prueba y no pagas nada.' },
+        { q: '¿Puedo probar antes de pagar?', a: 'Sí. {trialPlan} incluye una prueba de {trialDays} días, una vez por planta: todo el ciclo, de la captura al puesto, con tu equipo. Se pide tu tarjeta al empezar; la suscripción comienza al terminar la prueba, salvo que la canceles antes: entonces no pagas nada.' },
         { q: '¿Qué pasa cuando me quedo sin créditos?', a: 'Las funciones de IA esperan al mes siguiente o a un plan superior. Todo lo demás sigue funcionando: tus instrucciones siguen disponibles en el puesto.' },
         { q: '¿Los créditos no usados se acumulan?', a: 'No: el banco de créditos se renueva cada mes.' },
         { q: '¿Cómo funciona la facturación anual?', a: 'Pagas {paidMonths} meses y usas 12: {freeMonths} meses gratis en todos los planes de pago.' },
-        { q: '¿Cómo pago?', a: 'En línea, con tarjeta de crédito. En la app móvil, también puedes suscribirte a través de la App Store o de Google Play.' },
+        { q: '¿Cómo pago?', a: 'En línea, con tarjeta de crédito. La app móvil no vende nada: la suscripción que tomas en el sitio se abre en ella con la misma cuenta.' },
         { q: '¿Qué pasa con mis instrucciones si dejo de pagar?', a: 'Siguen siendo tuyas: cada instrucción se exporta a PDF y JSON, en todos los planes.' },
         { q: '¿Y si tengo varias plantas?', a: 'El plan Enterprise se hace a tu medida: reserva una reunión y hablemos.' },
       ],
@@ -786,7 +786,7 @@ export const es: SiteContent = {
 
   planNames: { free: 'Sin suscripción', equipe: 'Equipo', usine: 'Planta' },
   planPitch: {
-    free: '{freePlan}: la IA viene con {trialPlansOr}, con {trialDays} días de prueba gratis.',
+    free: '{freePlan}: la IA viene con {aiPlansOr}; {trialPlan} tiene {trialDays} días de prueba gratis.',
     solo: 'Para quien documenta su trabajo y lo comparte con un código QR.',
     equipe: 'Para unas cuantas personas que lo prueban en una línea: el equipo redacta, aprueba y traduce.',
     usine: 'Para toda la planta, o varias: despliegue guiado y soporte prioritario.',

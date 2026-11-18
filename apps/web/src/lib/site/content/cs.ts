@@ -480,11 +480,11 @@ export const cs: SiteContent = {
       title: 'Otázky k tarifům',
       items: [
         { q: 'Kdo se počítá do ceny?', a: 'Autoři a schvalovatelé. Operátoři a čtenáři se nikdy nepočítají: nasaďte Clip po celém provozu.' },
-        { q: 'Mohu si to vyzkoušet před zaplacením?', a: 'Ano. {trialPlans} mají zkušební dobu {trialDays} dní, jednou na závod: celý cyklus, od zachycení po pracoviště. Zrušíte-li před koncem zkušební doby, nezaplatíte nic.' },
+        { q: 'Mohu si to vyzkoušet před zaplacením?', a: 'Ano. Tarif {trialPlan} má zkušební dobu {trialDays} dní, jednou na závod: celý cyklus, od zachycení po pracoviště, s vaším týmem. Karta se zadává na začátku; předplatné začne po skončení zkušební doby, pokud ho předtím nezrušíte – pak nezaplatíte nic.' },
         { q: 'Co se stane, když mi dojdou kredity?', a: 'Funkce AI počkají na příští měsíc nebo vyšší tarif. Všechno ostatní funguje dál: vaše instrukce zůstávají dostupné na pracovišti.' },
         { q: 'Přenášejí se nevyužité kredity?', a: 'Ne: banka kreditů se každý měsíc obnovuje.' },
         { q: 'Jak funguje roční platba?', a: 'Zaplatíte {paidMonths} měsíců a používáte 12: {freeMonths} měsíce zdarma v každém placeném tarifu.' },
-        { q: 'Jak se platí?', a: 'Online, platební kartou. V mobilní aplikaci si můžete předplatné pořídit také přes App Store nebo Google Play.' },
+        { q: 'Jak se platí?', a: 'Online, platební kartou. Mobilní aplikace nic neprodává: předplatné pořízené na webu se v ní otevře se stejným účtem.' },
         { q: 'Co se stane s mými instrukcemi, když přestanu?', a: 'Zůstávají vaše: každou instrukci lze exportovat do PDF a JSON, v každém tarifu.' },
         { q: 'A co více závodů?', a: 'Tarif Enterprise je šitý na míru: domluvte si schůzku a promluvíme si.' },
       ],
@@ -786,7 +786,7 @@ export const cs: SiteContent = {
 
   planNames: { free: 'Bez předplatného', equipe: 'Tým', usine: 'Závod' },
   planPitch: {
-    free: '{freePlan}: AI je součástí tarifů {trialPlansOr}, {trialDays} dní zdarma na vyzkoušení.',
+    free: '{freePlan}: AI je součástí tarifů {aiPlansOr}; tarif {trialPlan} si můžete {trialDays} dní zdarma vyzkoušet.',
     solo: 'Pro toho, kdo dokumentuje svou práci a sdílí ji pomocí QR kódu.',
     equipe: 'Pro několik lidí, kteří to zkoušejí na lince: tým píše, schvaluje a překládá.',
     usine: 'Pro celý závod nebo několik: řízené zavedení a prioritní podpora.',

@@ -18,6 +18,7 @@ import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
 import { byQuote, FEATURED_PLAN, FREE_PLAN, LIMIT_FEATURES, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
+import { rememberCheckout } from '@/lib/billing/funnel'
 import { BILLING_INTERVAL, parsePlanIntent, type PlanIntent } from '@/lib/billing/intent'
 import { BillingError, creditsOf } from '@/lib/billing/client'
 import { amountOf, planFor } from '@/lib/billing/advice'
@@ -76,6 +77,10 @@ function Subscription() {
     setBusy(code)
     try {
       const back = `${window.location.origin}/reglages/abonnement`
+      // Pour la mesure au retour (avec l'accord seulement) : l'essai, ou l'abonnement payé tout de suite.
+      const plan = plans.data?.plans.find((p) => p.code === code)
+      const price = plan?.prices.find((x) => x.interval === period)
+      if (plan && price) rememberCheckout({ plan: code, interval: period, trial: !!plan.trial_days && (!state?.plan_code || state.plan_code === FREE_PLAN), value: price.amount_cents / 100, currency: price.currency })
       window.location.assign(await billingClient.checkout(code, period, { success: `${back}?merci=1`, cancel: back }))
     } catch (e) {
       if (e instanceof BillingError && e.code === 'checkout_refused') await manage()
@@ -137,6 +142,8 @@ function Subscription() {
               {stateLabel(state.state)}
               {state.cancel_at_period_end && state.current_period_end ? ` · ${w.endsOn(formatDate(state.current_period_end))}` : ''}
             </p>
+            {/* Pendant l'essai : quand il finit, et que l'abonnement commence ensuite (sauf annulation). */}
+            {state.state === 'trialing' && state.current_period_end && !state.cancel_at_period_end && <p className="mt-1 text-sm font-bold text-slate-500 dark:text-slate-400">{w.trialUntil(formatDate(state.current_period_end))}</p>}
             {!inShell && isAdmin && state.channel === 'web' && !preview && (
               <Button className="mt-4" icon={<ExternalLink className="h-4 w-4" />} onClick={manage}>
                 {w.manage}
@@ -218,8 +225,16 @@ function Subscription() {
                         </p>
                       )}
                       {price?.tax_behavior === 'exclusive' && <p className={cn('text-xs font-bold', highlight ? 'text-white/70' : 'text-slate-400')}>{w.beforeTax}</p>}
-                      {/* L'essai : offert une fois par organisation, au premier abonnement (Stripe l'applique). */}
-                      {!inShell && !current && !!p.trial_days && price && <p className={cn('mt-1 text-sm font-black', highlight ? 'text-white' : 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]')}>{t.billing.plans.trialNote(p.trial_days)}</p>}
+                      {/* L'essai : offert une fois par organisation, au premier abonnement (Stripe l'applique). La
+                          carte se donne au départ, et le prix suit à la fin de l'essai si on n'annule pas : on le dit. */}
+                      {!inShell && !current && !!p.trial_days && price && (
+                        <>
+                          <p className={cn('mt-1 text-sm font-black', highlight ? 'text-white' : 'text-[var(--primary-strong)] dark:text-[var(--primary-light)]')}>{t.billing.plans.trialNote(p.trial_days)}</p>
+                          <p className={cn('mt-0.5 text-xs font-bold', highlight ? 'text-white/80' : 'text-slate-500 dark:text-slate-400')}>
+                            {t.billing.plans.trialTerms(`${formatPrice(price.amount_cents, price.currency)} ${price.interval === 'yearly' ? t.billing.perYear : t.billing.perMonth}`)}
+                          </p>
+                        </>
+                      )}
                       <ul className="mt-5 space-y-2">
                         {entitlementLines(p).map((l) => (
                           <li key={l} className="flex items-start gap-2 text-sm font-bold">

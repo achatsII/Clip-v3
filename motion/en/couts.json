@@ -1,0 +1,30 @@
+{
+ "voix_usd": 0.04392,
+ "voix_cad": 0.0628,
+ "voix_appels": 19,
+ "fx_usd_cad": 1.4291,
+ "voix": [
+  {"seg": "v05 variante « Meet… Clip. » (retenue, choisie)", "usd": 0.001164, "car": 11},
+  {"seg": "v05 variante « Meet Clip. »", "usd": 0.001003, "car": 10},
+  {"seg": "v05 variante « Meet… Clip! »", "usd": 0.001124, "car": 11},
+  {"seg": "v01", "usd": 0.001868, "car": 45},
+  {"seg": "v02", "usd": 0.001327, "car": 22},
+  {"seg": "v03", "usd": 0.002856, "car": 80},
+  {"seg": "v04", "usd": 0.001631, "car": 43},
+  {"seg": "v06", "usd": 0.002857, "car": 75},
+  {"seg": "v07", "usd": 0.002696, "car": 65},
+  {"seg": "v08", "usd": 0.002553, "car": 59},
+  {"seg": "v09", "usd": 0.002917, "car": 74},
+  {"seg": "v10", "usd": 0.002855, "car": 62},
+  {"seg": "v11", "usd": 0.003138, "car": 83},
+  {"seg": "v12", "usd": 0.003583, "car": 97},
+  {"seg": "v13 (fin de phrase répétée : rejetée par timeline.py verify)", "usd": 0.003759, "car": 80},
+  {"seg": "v14", "usd": 0.00183, "car": 38},
+  {"seg": "v15", "usd": 0.002716, "car": 61},
+  {"seg": "v16", "usd": 0.000944, "car": 12},
+  {"seg": "v13", "usd": 0.003099, "car": 80, "reprise": true}
+ ],
+ "musique": "aucune génération : la musique de la version française (song_id K3ossto0Lj3qKP0M7H2e), recalée sur la voix anglaise par musique.py plan --garder puis cale",
+ "higgsfield_credits": {"total": 0, "note": "aucune génération : photos et clips de la version française"},
+ "duree_s": 74.96
+}

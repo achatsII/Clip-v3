@@ -12,6 +12,8 @@
  * Navigateur seulement : chaque fonction se contente de ne rien faire au serveur.
  */
 
+import { experiencesOf, readArms } from './experiments'
+
 export type ConsentChoice = 'granted' | 'denied'
 
 export const CONSENT_KEY = 'clip_site_consent'
@@ -19,6 +21,8 @@ export const CONSENT_KEY = 'clip_site_consent'
 export const CONSENT_VERSION = 2
 /** L'événement qui rouvre la bannière (lien « Témoins » du pied de page). */
 export const CONSENT_OPEN_EVENT = 'clip-site:consent-open'
+/** L'accord vient d'être donné : les tests A/B de la page tirent leur bras (`useArm`). */
+export const CONSENT_GRANTED_EVENT = 'clip-site:consent-granted'
 export const HUBSPOT_COOKIES = ['__hstc', 'hubspotutk', '__hssc', '__hssrc'] as const
 const LOADER_ID = 'hs-script-loader'
 
@@ -148,12 +152,15 @@ export function revokeGoogleAnalytics(gaId: string): void {
 /**
  * Les événements du site, aux noms du moteur marketing (plan/marquage-ga4.md de Marketing 2.0) :
  * `vue_prix` (la page des tarifs), `clic_essai` (un bouton d'essai), `clic_demo` (une démo avec
- * l'équipe), `video_start` (le film). Chacun porte `offre`, `type_page`, `langue` et `emplacement`.
- * Seulement avec l'accord et gtag chargé : sans accord, rien ne part, même plus tard.
+ * l'équipe), `video_start` (le film), `experience_vue` (un bras de test A/B tiré), et depuis l'app, au
+ * retour du paiement : `essai_commence` (un essai avec carte) ou `abonnement` (un abonnement payé tout de
+ * suite, puis la fin d'un essai qui se convertit). Chacun porte `offre`, `type_page`, `langue` et
+ * `emplacement`, et les bras des tests A/B vus (`experiences`). Seulement avec l'accord et gtag chargé :
+ * sans accord, rien ne part, même plus tard.
  */
-export type SiteEvent = 'vue_prix' | 'clic_essai' | 'clic_demo' | 'video_start'
+export type SiteEvent = 'vue_prix' | 'clic_essai' | 'clic_demo' | 'video_start' | 'experience_vue' | 'essai_commence' | 'abonnement'
 export function trackEvent(name: SiteEvent, params: { offre: string; type_page: string; langue: string; emplacement: string } & Record<string, string | number>): void {
   if (typeof window === 'undefined' || readConsent() !== 'granted' || !window.gtag) return
-  window.gtag('event', name, params)
+  const experiences = experiencesOf(readArms())
+  window.gtag('event', name, experiences ? { ...params, experiences } : params)
 }
-

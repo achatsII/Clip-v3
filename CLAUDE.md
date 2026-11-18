@@ -32,7 +32,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   gardent le jeton `CLIP` (`Clip` sur le site) :
   `brandify`/`brandText` y mettent le nom de la marque, une fois par dictionnaire chargé ; `APP_NAME` et
   `PRODUCT` partout ailleurs (métadonnées, consignes de l'IA). Kiplo n'a ni Découvrir (`src/proxy.ts`), ni
-  démo avec l'équipe (`BookPage`), ni Usine ni modules en vente ; son logo est le n° 3 « Filmer, puis lire »
+  démo avec l'équipe (`BookPage`), ni Usine ni modules en vente, ni le film du site (`PRODUCT.film` : sa voix dit
+  « Clip » ; ses boucles muettes restent) ; son logo est le n° 3 « Filmer, puis lire »
   (`PRODUCT.mark`), ses icônes dans `public/brands/kiplo/` (`npm run brand-icons` les refait pour les deux
   marques), son favicon par réécriture (`next.config.ts`), son manifeste par `src/app/manifest.ts`. L'app
   mobile aussi : `EXPO_PUBLIC_BRAND` (profil d'EAS au nom de la marque, `kiplo`), `apps/mobile/brands.json` (nom,
@@ -374,9 +375,20 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 - **Mesure du site** (`src/lib/site/consent.ts`, `SiteAnalytics`) : Google Analytics 4 en Consent Mode v2, mode
   de base : rien avant « Accepter » (la bannière nomme les outils branchés, `{tools}`) ; la mesure d'audience
   seulement, publicité refusée ; refuser efface `_ga`. Événements du moteur marketing : `vue_prix`, `clic_essai`,
-  `clic_demo`, chacun avec `offre`, `type_page`, `langue`, `emplacement`. Réglages de la build :
+  `clic_demo`, chacun avec `offre`, `type_page`, `langue`, `emplacement` ; depuis l'app, au retour du paiement,
+  `essai_commence` ou `abonnement`, puis `abonnement` quand l'app voit l'essai converti (`src/lib/billing/funnel.ts`,
+  jamais dans l'aperçu). **Tests A/B** (toggle `siteExperiments`, `src/lib/site/experiments.ts`, `useArm`) : un bras
+  par visiteur, tiré seulement avec l'accord et gardé dans le navigateur (`site_xp`, oublié au refus) ; sans
+  accord, le témoin. Chaque événement porte les bras vus (`experiences`) et le tirage envoie `experience_vue`. Le
+  moteur marketing décide, lit et tranche (`marketing-2.0`, `plan/experiences.md`) ; un test s'ouvre, se ferme ou
+  prend son gagnant (`winner`) dans le registre, et un test du catalogue (forfait ou durée de l'essai) ne se fait
+  qu'avant / après. Réglages de la build :
   `NEXT_PUBLIC_GA_ID` (le flux `G-…` de la marque : chaque marque a sa propriété), `NEXT_PUBLIC_GSC_VERIFICATION`
   et `NEXT_PUBLIC_BING_VERIFICATION` (les jetons de vérification), `NEXT_PUBLIC_HUBSPOT_ID` (CLIP seulement).
+- **Le film du site** (`src/lib/site/media.ts`) : deux voix, `FILMS` et `filmFor` (le français sur la page
+  française, l'anglais sur les dix-sept autres, avec les sous-titres de la page allumés : `public/site/video/en/`),
+  et les boucles muettes tirées du film de la même voix (`loopsFor`) ; les MP4 au stockage, jamais dans git. Le film
+  anglais se refait dans `motion/en/` (son export : `scripts/export.sh`, sur la demande de la personne).
 - **Feature toggles** : `GET /api/config` (`CLIP_TOGGLES`) ; une fonction nouvelle ou risquée y passe,
   et le repli n'active jamais une fonction nouvelle.
 - **Sections, relecture, exigences d'Apple** : `Step.section` (une longue instruction en phases, et le
@@ -498,8 +510,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   seulement des forfaits d'entrée, tous plafonnés, rien d'illimité : **Sans abonnement** (le plan par défaut :
   aucune IA, 1 rédacteur, 3 publiées, 1 poste ; plus de crédits offerts sans fin) · Solo 49 $/mois (1, 15, 3,
   2 500, l'écran) · Équipe 199 $/mois, mis en avant (5 rédacteurs, 75 publiées, 15 postes, 12 500, l'IA qui
-  apprend de l'équipe). **L'essai** : Solo et Équipe s'essaient 7 jours (`trial_days`), une fois par organisation,
-  au paiement Stripe (« Essayer Équipe 7 jours », `tryPlan`, `trialNote`).
+  apprend de l'équipe). **L'essai** (décision du 2026-11-18) : seule Équipe s'essaie 7 jours (`trial_days`), une
+  fois par organisation ; Solo s'achète sans essai (pas d'essais bon marché qui ne se convertissent pas). La carte se
+  donne au paiement Stripe et l'abonnement commence à la fin de l'essai, sauf annulation ; on le dit avant (la carte
+  du forfait, `trialTerms` ; les questions du site, jetons `{trialPlan}` et `{aiPlansOr}`) et pendant (« Essai
+  jusqu'au … », `trialUntil`). « Essayer Équipe 7 jours », `tryPlan`, `trialNote`.
   **Le volume** : Équipe donne 5 fois Solo pour 4 fois le prix, chaque poste, rédacteur, instruction et
   crédit y revient ~20 % moins cher (un test le tient) ; Usine descend encore, au contrat. **La durée** :
   annuel = 10 mois ; 3 et 5 ans (jusqu'à 25 %), au contrat d'Usine (`multiYear`, sur le web seulement).

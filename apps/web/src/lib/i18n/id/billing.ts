@@ -45,9 +45,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Tanpa langganan', solo: 'Solo', equipe: 'Tim', usine: 'Pabrik' },
     trialNote: (days: number) => `Uji coba gratis ${days} hari untuk langganan pertama Anda`,
+    trialTerms: (after: string) => `Kartu diminta di awal; lalu ${after}, kecuali Anda membatalkan sebelum uji coba berakhir.`,
     tryPlan: (plan: string, days: number) => `Coba ${plan} selama ${days} hari`,
     pitch: {
-      free: 'Tanpa langganan: AI termasuk dalam Solo atau Tim, gratis dicoba 7 hari.',
+      free: 'Tanpa langganan: AI termasuk dalam Solo atau Tim; Tim gratis dicoba 7 hari.',
       solo: 'Untuk orang yang mendokumentasikan pekerjaannya dan membagikannya lewat kode QR.',
       equipe: 'Untuk beberapa orang yang mencobanya di satu lini: tim menulis, menyetujui, dan menerjemahkan.',
       usine: 'Untuk seluruh pabrik, atau beberapa pabrik: penawaran khusus, dengan penerapan terpandu.',
@@ -260,6 +261,7 @@ export const billing: typeof Fr = {
       expired: 'Kedaluwarsa',
     },
     endsOn: (date: string) => `berakhir pada ${date}`,
+    trialUntil: (date: string) => `Uji coba hingga ${date}: lalu langganan dimulai, kecuali Anda membatalkannya sebelumnya.`,
     manage: 'Kelola langganan dan tagihan',
     unreadable: 'Status langganan tidak dapat dibaca',
     usage: 'Yang Anda pakai',

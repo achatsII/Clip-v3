@@ -1,0 +1,259 @@
+{
+ "title": "Clip · film en anglais",
+ "W": 1920,
+ "H": 1080,
+ "fps": "30",
+ "canvas": "#F4F7FB",
+ "timeline": "work/timeline.json",
+ "captions": false,
+ "final": "../out-en/clip-film-en.mp4",
+ "fade": 0,
+ "scenes": [
+  {
+   "id": "01",
+   "title": "Jacques à sa machine",
+   "line": "« Jacques knows his machine better than anyone. »",
+   "in": 0.0,
+   "out": 3.749,
+   "html": "dist/01-jacques.html",
+   "file": "out/01-jacques.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "02",
+   "title": "Ses mains, la retraite",
+   "line": "« In a year, he retires. »",
+   "in": 3.749,
+   "out": 6.316,
+   "html": "dist/02-retraite.html",
+   "file": "out/02-retraite.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "03",
+   "title": "20 à 30 % d’ici 2030",
+   "line": "« And by 2030, twenty to thirty percent of technologists will retire too. »",
+   "in": 6.316,
+   "out": 11.596,
+   "html": "dist/03-constat.html",
+   "file": "out/03-constat.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "04",
+   "title": "Nulle part par écrit → le logo",
+   "line": "« Their know-how isn’t written down anywhere. »",
+   "in": 11.596,
+   "out": 15.36,
+   "html": "dist/04-cartable.html",
+   "file": "out/04-cartable.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "05",
+   "title": "Voici Clip",
+   "line": "« Meet… Clip. »",
+   "in": 15.36,
+   "out": 18.234,
+   "html": "dist/05-voici.html",
+   "file": "out/05-voici.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "06",
+   "title": "Filmer l’expert → la caméra de Clip",
+   "line": "« Film the expert while he explains. Clip records it all, right on the phone. »",
+   "in": 18.234,
+   "out": 23.515,
+   "html": "dist/06-filmer.html",
+   "file": "out/06-filmer.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "07",
+   "title": "Photos, note vocale, PDF, Word",
+   "line": "« Add photos, a voice note, or your old procedures in PDF and Word. »",
+   "in": 23.515,
+   "out": 28.795,
+   "html": "dist/07-capture.html",
+   "file": "out/07-capture.mp4"
+  },
+  {
+   "id": "08",
+   "title": "Générer : l’IA rédige",
+   "line": "« Then, with a single button, AI writes the work instruction. »",
+   "in": 28.795,
+   "out": 33.596,
+   "html": "dist/08-generer.html",
+   "file": "out/08-generer.mp4"
+  },
+  {
+   "id": "09",
+   "title": "Étapes, extrait, mises en garde",
+   "line": "« One action per step, the right video clip, the warnings at the right time. »",
+   "in": 33.596,
+   "out": 39.836,
+   "html": "dist/09-etapes.html",
+   "file": "out/09-etapes.mp4"
+  },
+  {
+   "id": "10",
+   "title": "Retoucher, annoter, traduire",
+   "line": "« Edit with a word. Annotate with a click. Translate in seconds. »",
+   "in": 39.836,
+   "out": 45.128,
+   "html": "dist/10-retouches.html",
+   "file": "out/10-retouches.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "11",
+   "title": "Les anciennes instructions",
+   "line": "« And your old instructions? Drop them in by the dozen, and they come out modernized. »",
+   "in": 45.128,
+   "out": 51.372,
+   "html": "dist/11-moderniser.html",
+   "file": "out/11-moderniser.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "12",
+   "title": "Approuver, déployer au poste",
+   "line": "« Get it approved, then deploy it to the workstation, on a tablet or by QR code, no account needed. »",
+   "in": 51.372,
+   "out": 58.08,
+   "html": "dist/12-approuver.html",
+   "file": "out/12-approuver.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "13",
+   "title": "L’opérateur au poste",
+   "line": "« The operator follows each step, hears it read aloud, and flags what isn’t clear. »",
+   "in": 58.08,
+   "out": 63.53,
+   "html": "dist/13-poste.html",
+   "file": "out/13-poste.mp4"
+  },
+  {
+   "id": "14",
+   "title": "Export PDF",
+   "line": "« And with one click, it exports to PDF. »",
+   "in": 63.53,
+   "out": 66.8,
+   "html": "dist/14-pdf.html",
+   "file": "out/14-pdf.mp4",
+   "raccord": "franc"
+  },
+  {
+   "id": "15",
+   "title": "Clip, la promesse, la démo",
+   "line": "« Clip. Your experts’ know-how, at the workstation, in minutes. » « Book a demo. »",
+   "in": 66.8,
+   "out": 74.96,
+   "html": "dist/15-fin.html",
+   "file": "out/15-fin.mp4",
+   "raccord": "franc"
+  }
+ ],
+ "cast": {
+  "jacques": {
+   "fiche": "machiniste ~62 ans, cheveux gris courts, barbe grise taillée, lunettes de sécurité claires, chemise de travail marine aux manches roulées, alliance",
+   "ref_job_id": "09d146a6-ecbd-49ab-bbda-adb83a282ee9"
+  },
+  "melanie": {
+   "fiche": "technicienne en méthodes ~32 ans, cheveux bruns en queue de cheval basse, lunettes de sécurité, veste de travail gris clair",
+   "ref_job_id": "f3e9e3fc-fdba-4dce-b492-2659abd37ac2"
+  },
+  "kevin": {
+   "fiche": "opérateur ~28 ans, cheveux foncés courts, lunettes de sécurité, t-shirt vert foncé, gants anticoupure gris clair",
+   "ref_job_id": "bde31ad2-d215-4d9a-890b-dbbcc42fdfb4"
+  }
+ },
+ "media_jobs": {
+  "expert-machine": "09d146a6-ecbd-49ab-bbda-adb83a282ee9",
+  "usine-large": "0ceefbdd-572d-4f6a-90a9-b5da7e2ebb8f",
+  "cartable": "c22eb4b2-7884-4c3c-91d9-95b98ebd627b",
+  "filmer-noir": "f3e9e3fc-fdba-4dce-b492-2659abd37ac2",
+  "rails-brosse": "b9bc9406-7d98-4971-87ec-71ba235f03bd",
+  "rails-huile": "9842d59d-ca34-4b4a-ba09-c560d32424f9",
+  "cadenas": "ecdc2a1a-290a-40d2-96da-e811e15b1e84",
+  "panneau": "1b64855c-b682-41e2-a5ff-a1e8647bac25",
+  "poste-tablette-noire": "bde31ad2-d215-4d9a-890b-dbbcc42fdfb4",
+  "c1-expert": "5cfb89cf-1aec-4955-a7b7-730f9a430105",
+  "c2-brosse": "448367fd-7fef-4d9b-8fb9-19f2710b69fa",
+  "c3-usine": "421da8df-35cd-436c-8f12-1ee4450e4492",
+  "c4-huile": "6a5ceab2-abc3-44fa-bf19-e7a76adb1e49",
+  "c5-cadenas": "9057c4ad-c3dc-496b-9252-86d25086138a"
+ },
+ "notes": [
+  "Version anglaise du film de présentation de Clip : mêmes scènes, mêmes médias et même musique que la version française (motion/), voix Aoede en anglais nord-américain, écrans de l’app avec ses vrais libellés anglais (apps/web/src/lib/i18n/en).",
+  "Photos et clips générés par IA (Higgsfield) : usine, personnes et données illustratives, pas un client.",
+  "Les écrans viennent des maquettes du deck (presentation/build), traduites par build-ui-en.mjs avec les libellés de l’app."
+ ],
+ "remote": {
+  "inputs/gen/expert-machine.png": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_153525_09d146a6-ecbd-49ab-bbda-adb83a282ee9.png",
+  "inputs/gen/usine-large.png": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_153522_0ceefbdd-572d-4f6a-90a9-b5da7e2ebb8f.png",
+  "inputs/gen/cartable.png": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_153522_c22eb4b2-7884-4c3c-91d9-95b98ebd627b.png",
+  "inputs/gen/filmer-noir.png": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_153712_f3e9e3fc-fdba-4dce-b492-2659abd37ac2.png",
+  "inputs/gen/rails-brosse.png": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_153713_b9bc9406-7d98-4971-87ec-71ba235f03bd.png",
+  "inputs/gen/rails-huile.png": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_153715_9842d59d-ca34-4b4a-ba09-c560d32424f9.png",
+  "inputs/gen/cadenas.png": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_153713_ecdc2a1a-290a-40d2-96da-e811e15b1e84.png",
+  "inputs/gen/panneau.png": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_153714_1b64855c-b682-41e2-a5ff-a1e8647bac25.png",
+  "inputs/gen/poste-tablette-noire.png": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_153713_bde31ad2-d215-4d9a-890b-dbbcc42fdfb4.png",
+  "inputs/gen/c1-expert.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165526_5cfb89cf-1aec-4955-a7b7-730f9a430105.mp4",
+  "inputs/gen/c2-brosse.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165526_448367fd-7fef-4d9b-8fb9-19f2710b69fa.mp4",
+  "inputs/gen/c3-usine.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165525_421da8df-35cd-436c-8f12-1ee4450e4492.mp4",
+  "inputs/gen/c4-huile.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165525_6a5ceab2-abc3-44fa-bf19-e7a76adb1e49.mp4",
+  "inputs/gen/c5-cadenas.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_3HlnlK7YLGS7ig5n9uRbc1w46g5/hf_20261112_165525_9057c4ad-c3dc-496b-9252-86d25086138a.mp4",
+  "inputs/musique-source.mp3": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Musique-IA/music-2026-11-13T05-50-24-786-t9jvn5.mp3"
+ },
+ "music": {
+  "file": "inputs/musique-source.mp3",
+  "fade_in": 0.3,
+  "fade_out": 0.5,
+  "sous": -11.0,
+  "ouvert": -5.0,
+  "song_id": "K3ossto0Lj3qKP0M7H2e",
+  "empreinte": "3e5a07c6aac1",
+  "duree": 76.824,
+  "bpm": 124.99,
+  "offset": -0.062,
+  "sections": [
+   {
+    "nom": "Tension",
+    "debut": 0.0
+   },
+   {
+    "nom": "Tension · montée",
+    "debut": 11.582
+   },
+   {
+    "nom": "Révélation",
+    "debut": 15.422,
+    "franche": true,
+    "entree": 15.36
+   },
+   {
+    "nom": "Fonctions",
+    "debut": 40.382
+   },
+   {
+    "nom": "Au poste",
+    "debut": 51.902
+   },
+   {
+    "nom": "Fin",
+    "debut": 67.262
+   },
+   {
+    "nom": "Sortie",
+    "debut": 73.022,
+    "sortie": true,
+    "entree": 72.961
+   }
+  ],
+  "loop": false,
+  "voix_lufs": -19.8
+ }
+}

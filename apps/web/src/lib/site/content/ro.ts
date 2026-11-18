@@ -480,11 +480,11 @@ export const ro: SiteContent = {
       title: 'Întrebări despre planuri',
       items: [
         { q: 'Cine se numără în preț?', a: 'Redactorii și aprobatorii. Operatorii și cititorii nu se numără niciodată: implementați Clip în toată producția.' },
-        { q: 'Pot încerca înainte de a plăti?', a: 'Da. {trialPlans} vin cu o perioadă de probă de {trialDays} zile, o singură dată pe fabrică: întregul circuit, de la captură până la postul de lucru. Anulați înainte de sfârșitul perioadei de probă și nu plătiți nimic.' },
+        { q: 'Pot încerca înainte de a plăti?', a: 'Da. {trialPlan} vine cu o perioadă de probă de {trialDays} zile, o singură dată pe fabrică: întregul circuit, de la captură până la postul de lucru, cu echipa dumneavoastră. Cardul se cere la început; abonamentul pornește la sfârșitul perioadei de probă, dacă nu îl anulați înainte: atunci nu plătiți nimic.' },
         { q: 'Ce se întâmplă când rămân fără credite?', a: 'Funcțiile AI așteaptă luna următoare sau un plan superior. Restul continuă să funcționeze: instrucțiunile dumneavoastră rămân disponibile la postul de lucru.' },
         { q: 'Se reportează creditele nefolosite?', a: 'Nu: banca de credite se reînnoiește în fiecare lună.' },
         { q: 'Cum funcționează facturarea anuală?', a: 'Plătiți {paidMonths} luni și folosiți 12: {freeMonths} luni gratuite pe orice plan plătit.' },
-        { q: 'Cum plătesc?', a: 'Online, cu cardul. În aplicația mobilă, vă puteți abona și prin App Store sau Google Play.' },
+        { q: 'Cum plătesc?', a: 'Online, cu cardul. Aplicația mobilă nu vinde nimic: abonamentul luat pe site se deschide în ea cu același cont.' },
         { q: 'Ce se întâmplă cu instrucțiunile mele dacă mă opresc?', a: 'Rămân ale dumneavoastră: fiecare instrucțiune se exportă în PDF și JSON, pe orice plan.' },
         { q: 'Ce se întâmplă cu mai multe fabrici?', a: 'Planul Enterprise este croit pe măsura dumneavoastră: programați o întâlnire și discutăm.' },
       ],
@@ -786,7 +786,7 @@ export const ro: SiteContent = {
 
   planNames: { free: 'Fără abonament', equipe: 'Echipă', usine: 'Fabrică' },
   planPitch: {
-    free: '{freePlan}: AI vine cu {trialPlansOr}, de încercat gratuit {trialDays} zile.',
+    free: '{freePlan}: AI vine cu {aiPlansOr}; {trialPlan} se încearcă gratuit {trialDays} zile.',
     solo: 'Pentru cel care își documentează munca și o împarte printr-un cod QR.',
     equipe: 'Pentru câteva persoane care încearcă pe o linie: echipa redactează, aprobă și traduce.',
     usine: 'Pentru toată fabrica sau pentru mai multe: implementare ghidată și asistență prioritară.',

@@ -1,0 +1,1 @@
+../../clips/_thumbs.js

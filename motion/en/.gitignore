@@ -1,0 +1,9 @@
+# Comme motion/.gitignore : lourd et régénérable (voix et mixages, banque de sons, sondes, planches, clips .webm).
+# On garde ce qui reconstruit la version anglaise sans rien régénérer : la ligne de temps des mots, les sous-titres
+# anglais et l'état de la musique (musique.py cale, plan --garder).
+work/*
+!work/timeline.json
+!work/words.txt
+!work/captions.srt
+!work/musique-etat.json
+clips/assets/*.webm

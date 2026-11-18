@@ -480,11 +480,11 @@ export const nl: SiteContent = {
       title: 'Vragen over abonnementen',
       items: [
         { q: 'Wie telt mee voor de prijs?', a: 'Redacteuren en beoordelaars. Operators en lezers tellen nooit mee: rol Clip uit over de hele werkvloer.' },
-        { q: 'Kan ik het proberen voordat ik betaal?', a: 'Ja. {trialPlans} hebben een proefperiode van {trialDays} dagen, eenmaal per fabriek: de hele cyclus, van vastleggen tot het werkstation. Zeg op vóór het einde van de proefperiode en je betaalt niets.' },
+        { q: 'Kan ik het proberen voordat ik betaal?', a: 'Ja. {trialPlan} heeft een proefperiode van {trialDays} dagen, eenmaal per fabriek: de hele cyclus, van vastleggen tot het werkstation, met je team. Je kaart wordt bij de start gevraagd; het abonnement begint na de proefperiode, tenzij je vóór het einde opzegt: dan betaal je niets.' },
         { q: 'Wat gebeurt er als mijn credits op zijn?', a: 'AI-functies wachten tot volgende maand of een hoger abonnement. Al het andere blijft werken: je instructies blijven beschikbaar op het werkstation.' },
         { q: 'Worden ongebruikte credits overgedragen?', a: 'Nee: het tegoed aan credits wordt elke maand vernieuwd.' },
         { q: 'Hoe werkt jaarlijkse facturering?', a: 'Je betaalt {paidMonths} maanden en gebruikt er 12: {freeMonths} maanden gratis bij elk betaald abonnement.' },
-        { q: 'Hoe betaal ik?', a: 'Online, met een creditcard. In de mobiele app kun je ook abonneren via de App Store of Google Play.' },
+        { q: 'Hoe betaal ik?', a: 'Online, met een creditcard. De mobiele app verkoopt niets: het abonnement dat je op de website afsluit, opent daarin met hetzelfde account.' },
         { q: 'Wat gebeurt er met mijn instructies als ik stop?', a: 'Ze blijven van jou: elke instructie exporteert naar PDF en JSON, in elk abonnement.' },
         { q: 'En meerdere fabrieken?', a: 'Het abonnement Enterprise is op maat: plan een gesprek en laten we praten.' },
       ],
@@ -786,7 +786,7 @@ export const nl: SiteContent = {
 
   planNames: { free: 'Geen abonnement', equipe: 'Team', usine: 'Fabriek' },
   planPitch: {
-    free: '{freePlan}: AI hoort bij {trialPlansOr}, {trialDays} dagen gratis te proberen.',
+    free: '{freePlan}: AI hoort bij {aiPlansOr}; {trialPlan} is {trialDays} dagen gratis te proberen.',
     solo: 'Voor wie zijn eigen werk documenteert en met een QR-code deelt.',
     equipe: 'Voor een paar mensen die het op een lijn uitproberen: het team schrijft, keurt goed en vertaalt.',
     usine: 'Voor de hele fabriek, of meerdere: begeleide uitrol en prioritaire support.',

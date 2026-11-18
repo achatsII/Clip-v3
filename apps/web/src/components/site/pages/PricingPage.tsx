@@ -2,6 +2,7 @@
  * La page des tarifs, tirée du manifeste : forfaits (mensuel ou annuel), ce que chacun comprend,
  * tableau comparatif, modules, prix en crédits des opérations d'IA, questions sur les forfaits.
  */
+import { PRODUCT } from '@/lib/brand/product'
 import { Check } from 'lucide-react'
 import { content } from '@/lib/site/content'
 import { breadcrumbLd, faqLd, graph, softwareLd } from '@/lib/site/jsonld'
@@ -30,7 +31,7 @@ export function PricingPage({ lang }: { lang: SiteLang }) {
               <h1 className="mt-4 text-[2.4rem] leading-[1.03] font-black tracking-tighter text-balance text-slate-900 sm:text-6xl lg:text-7xl dark:text-white">{p.h1}</h1>
               <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed font-medium text-slate-600 sm:text-xl dark:text-slate-300">{p.sub}</p>
               <div className="mt-8 flex justify-center">
-                <IntervalToggle target={TARGET} labels={{ group: p.intervalLabel, month: p.monthly, year: p.yearly, bonus: p.yearlyBonus }} />
+                <IntervalToggle target={TARGET} lang={lang} offer={PRODUCT.id} labels={{ group: p.intervalLabel, month: p.monthly, year: p.yearly, bonus: p.yearlyBonus }} />
               </div>
             </div>
           </Container>

@@ -45,9 +45,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Abonelik yok', solo: 'Solo', equipe: 'Ekip', usine: 'Tesis' },
     trialNote: (days: number) => `İlk aboneliğinizde ${fmt(days)} gün ücretsiz deneme`,
+    trialTerms: (after: string) => `Başta kart gerekir; deneme bitmeden iptal etmezseniz ardından ${after}.`,
     tryPlan: (plan: string, days: number) => `${plan} planını ${fmt(days)} gün deneyin`,
     pitch: {
-      free: 'Abonelik yok: yapay zekâ Solo veya Ekip ile gelir, 7 gün ücretsiz denenir.',
+      free: 'Abonelik yok: yapay zekâ Solo veya Ekip ile gelir; Ekip 7 gün ücretsiz denenir.',
       solo: 'İşini belgeleyip QR kodla paylaşan kişi için.',
       equipe: 'Bir hatta denemek isteyen birkaç kişi için: ekip yazar, onaylar ve çevirir.',
       usine: 'Tüm tesis veya birkaç tesis için: özel teklif, rehberli kurulumla.',
@@ -255,6 +256,7 @@ export const billing: typeof Fr = {
       expired: 'Süresi doldu',
     },
     endsOn: (date: string) => `bitiş: ${date}`,
+    trialUntil: (date: string) => `Deneme bitişi: ${date}. Öncesinde iptal etmezseniz abonelik o zaman başlar.`,
     manage: 'Aboneliği ve faturaları yönet',
     unreadable: 'Abonelik durumu okunamadı',
     usage: 'Kullandıklarınız',

@@ -484,11 +484,11 @@ export const hu: SiteContent = {
       title: 'Kérdések a csomagokról',
       items: [
         { q: 'Ki számít az árba?', a: 'A szerkesztők és a jóváhagyók. Az operátorok és az olvasók soha nem számítanak: így az egész műhelyben bevezethető a Clip.' },
-        { q: 'Kipróbálhatom fizetés előtt?', a: 'Igen. A(z) {trialPlans} csomaghoz {trialDays} napos próbaidőszak jár, üzemenként egyszer: a teljes kör, a rögzítéstől a munkaállomásig. Ha a próbaidőszak vége előtt lemondja, nem fizet semmit.' },
+        { q: 'Kipróbálhatom fizetés előtt?', a: 'Igen. A(z) {trialPlan} csomaghoz {trialDays} napos próbaidőszak jár, üzemenként egyszer: a teljes kör, a rögzítéstől a munkaállomásig, a csapatával. A kártyáját az elején kérjük; az előfizetés a próbaidőszak végén indul, hacsak előtte le nem mondja – ekkor nem fizet semmit.' },
         { q: 'Mi történik, ha elfogynak a kreditek?', a: 'Az AI-funkciók várnak a következő hónapig vagy egy magasabb csomagig. Minden más tovább működik: az utasításai elérhetők maradnak a munkaállomáson.' },
         { q: 'A fel nem használt kreditek átvihetők?', a: 'Nem: a kreditkeret havonta megújul.' },
         { q: 'Hogyan működik az éves számlázás?', a: 'Fizessen {paidMonths} hónapot, használja 12-t: {freeMonths} hónap ingyen minden fizetős csomagban.' },
-        { q: 'Hogyan fizethetek?', a: 'Online, bankkártyával. A mobilalkalmazásban az App Store-on vagy a Google Play-en keresztül is előfizethet.' },
+        { q: 'Hogyan fizethetek?', a: 'Online, bankkártyával. A mobilalkalmazás nem árul semmit: a weboldalon vett előfizetés ugyanazzal a fiókkal nyílik meg benne.' },
         { q: 'Mi lesz az utasításaimmal, ha abbahagyom?', a: 'Az Öné maradnak: minden utasítás exportálható PDF-be és JSON-ba, minden csomagban.' },
         { q: 'És több üzem esetén?', a: 'Az Enterprise csomag egyedi igényekre szabott: foglaljon egy megbeszélést, és beszéljük meg.' },
       ],
@@ -790,7 +790,7 @@ export const hu: SiteContent = {
 
   planNames: { free: 'Nincs előfizetés', equipe: 'Csapat', usine: 'Üzem' },
   planPitch: {
-    free: '{freePlan}: az AI a(z) {trialPlansOr} csomaggal jár, {trialDays} napig ingyen kipróbálható.',
+    free: '{freePlan}: az AI a(z) {aiPlansOr} csomaggal jár; a(z) {trialPlan} {trialDays} napig ingyen kipróbálható.',
     solo: 'Annak, aki dokumentálja a saját munkáját, és QR-kóddal megosztja.',
     equipe: 'Néhány embernek, akik egy soron próbálják: a csapat ír, jóváhagy és fordít.',
     usine: 'Az egész üzemnek vagy több üzemnek: kísért bevezetés és kiemelt támogatás.',

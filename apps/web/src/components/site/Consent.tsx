@@ -2,7 +2,8 @@
 
 import { Cookie } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { CONSENT_OPEN_EVENT, loadGoogleAnalytics, loadHubSpot, readConsent, revokeGoogleAnalytics, revokeHubSpot, saveConsent } from '@/lib/site/consent'
+import { CONSENT_GRANTED_EVENT, CONSENT_OPEN_EVENT, loadGoogleAnalytics, loadHubSpot, readConsent, revokeGoogleAnalytics, revokeHubSpot, saveConsent } from '@/lib/site/consent'
+import { forgetArms } from '@/lib/site/experiments'
 
 /**
  * La bannière des témoins (Loi 25, RGPD) : rien n'est chargé avant « Accepter » ; refuser est aussi
@@ -33,9 +34,12 @@ export function ConsentBanner({ hubId, gaId, tools, t, privacyUrl }: { hubId: st
     if (granted) {
       loadGoogleAnalytics(gaId)
       loadHubSpot(hubId)
+      window.dispatchEvent(new Event(CONSENT_GRANTED_EVENT))
     } else {
       revokeGoogleAnalytics(gaId)
       revokeHubSpot()
+      // Les tests A/B oublient aussi leurs bras : plus rien de gardé sans accord.
+      forgetArms()
     }
     setOpen(false)
   }

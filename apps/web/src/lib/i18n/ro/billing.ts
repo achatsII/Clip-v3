@@ -41,9 +41,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Fără abonament', solo: 'Solo', equipe: 'Echipă', usine: 'Fabrică' },
     trialNote: (days: number) => `Perioadă de probă gratuită de ${fmt(days)} ${days === 1 ? 'zi' : `${de(days)}zile`} la primul abonament`,
+    trialTerms: (after: string) => `Cardul se cere la început; apoi ${after}, dacă nu anulați înainte de sfârșitul perioadei de probă.`,
     tryPlan: (plan: string, days: number) => `Încercați ${plan} ${fmt(days)} ${days === 1 ? 'zi' : `${de(days)}zile`}`,
     pitch: {
-      free: 'Fără abonament: AI vine cu Solo sau Echipă, de încercat gratuit 7 zile.',
+      free: 'Fără abonament: AI vine cu Solo sau Echipă; Echipă se încearcă gratuit 7 zile.',
       solo: 'Pentru cel care își documentează munca și o împarte printr-un cod QR.',
       equipe: 'Pentru câteva persoane care încearcă pe o linie: echipa redactează, aprobă și traduce.',
       usine: 'Pentru toată fabrica sau pentru mai multe: ofertă personalizată, cu o implementare ghidată.',
@@ -251,6 +252,7 @@ export const billing: typeof Fr = {
       expired: 'Expirat',
     },
     endsOn: (date: string) => `se încheie la ${date}`,
+    trialUntil: (date: string) => `Perioadă de probă până la ${date}: apoi pornește abonamentul, dacă nu îl anulați înainte.`,
     manage: 'Gestionați abonamentul și facturile',
     unreadable: 'Starea abonamentului nu a putut fi citită',
     usage: 'Ce folosiți',

@@ -36,6 +36,11 @@ export interface Product {
   /** L'espace Découvrir, pour les prospects de l'équipe de vente. */
   decouvrir: boolean
   /**
+   * Le film du site (« Voir le film », ses données structurées et le plan du site). Sa voix nomme CLIP et
+   * propose une démo : la marque publique attend le sien.
+   */
+  film: boolean
+  /**
    * Le site public se laisse trouver par les moteurs. Non pour CLIP (vendu par l'équipe, et ses textes
    * attendent l'approbation du moteur marketing, D115) : seule la marque publique se fait indexer, ce qui
    * évite aussi deux sites au même contenu.
@@ -64,6 +69,7 @@ export const PRODUCTS: Record<BrandId, Product> = {
     selfServePrices: false,
     enterprise: true,
     decouvrir: true,
+    film: true,
     siteIndexed: false,
     defaultLang: 'fr',
     legal: II_LEGAL,
@@ -79,6 +85,7 @@ export const PRODUCTS: Record<BrandId, Product> = {
     selfServePrices: true,
     enterprise: false,
     decouvrir: false,
+    film: false,
     siteIndexed: true,
     defaultLang: 'en',
     legal: II_LEGAL,

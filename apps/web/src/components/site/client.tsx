@@ -4,6 +4,7 @@
  * Les petits morceaux interactifs du site : script en ligne, langue du document, fermeture des menus
  * à la navigation, lien actif, choix mensuel ou annuel. Aucun texte ici (tout arrive par les props).
  */
+import { useArm } from './experiments'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
@@ -59,8 +60,14 @@ export function NavLink({ href, children, className, activeClassName }: { href: 
  * Mensuel ou annuel : les deux prix sont déjà dans la page ; ce bouton change l'attribut
  * `data-interval` du conteneur, et le CSS montre l'un ou l'autre (liens d'inscription compris).
  */
-export function IntervalToggle({ target, labels, initial = 'month' }: { target: string; labels: { group: string; month: string; year: string; bonus: string }; initial?: 'month' | 'year' }) {
+export function IntervalToggle({ target, labels, initial = 'month', lang, offer }: { target: string; labels: { group: string; month: string; year: string; bonus: string }; initial?: 'month' | 'year'; lang: SiteLang; offer: string }) {
   const [period, setPeriod] = useState<'month' | 'year'>(initial)
+  const [touched, setTouched] = useState(false)
+  // Test A/B « prix-intervalle » : les tarifs s'ouvrent au mois (témoin) ou à l'année, tant qu'on n'a pas choisi.
+  const arm = useArm('prix-intervalle', { lang, page: 'pricing', offer, place: 'page' })
+  useEffect(() => {
+    if (!touched) setPeriod(arm === 'annee' ? 'year' : initial)
+  }, [arm, initial, touched])
   useEffect(() => {
     document.getElementById(target)?.setAttribute('data-interval', period)
   }, [period, target])
@@ -71,7 +78,10 @@ export function IntervalToggle({ target, labels, initial = 'month' }: { target: 
           key={value}
           type="button"
           aria-pressed={period === value}
-          onClick={() => setPeriod(value)}
+          onClick={() => {
+            setTouched(true)
+            setPeriod(value)
+          }}
           className={cx(
             'btn-press inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-black',
             period === value ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white',

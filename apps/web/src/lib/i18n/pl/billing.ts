@@ -51,9 +51,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Brak subskrypcji', solo: 'Solo', equipe: 'Zespół', usine: 'Zakład' },
     trialNote: (days: number) => `${days}-dniowy bezpłatny okres próbny przy pierwszej subskrypcji`,
+    trialTerms: (after: string) => `Karta wymagana na początku; potem ${after}, chyba że zrezygnujesz przed końcem okresu próbnego.`,
     tryPlan: (plan: string, days: number) => `Wypróbuj plan ${plan} przez ${fmt(days)} ${dni(days)}`,
     pitch: {
-      free: 'Brak subskrypcji: AI wchodzi w skład planów Solo i Zespół, do wypróbowania za darmo przez 7 dni.',
+      free: 'Brak subskrypcji: AI wchodzi w skład planów Solo i Zespół; plan Zespół można wypróbować za darmo przez 7 dni.',
       solo: 'Dla osoby, która dokumentuje swoją pracę i udostępnia ją kodem QR.',
       equipe: 'Dla kilku osób testujących to na jednej linii: zespół pisze, zatwierdza i tłumaczy.',
       usine: 'Dla całego zakładu lub kilku: wycena indywidualna, z prowadzonym wdrożeniem.',
@@ -269,6 +270,7 @@ export const billing: typeof Fr = {
       expired: 'Wygasła',
     },
     endsOn: (date: string) => `kończy się ${date}`,
+    trialUntil: (date: string) => `Okres próbny do ${date}: potem zaczyna się subskrypcja, chyba że wcześniej zrezygnujesz.`,
     manage: 'Zarządzaj subskrypcją i fakturami',
     unreadable: 'Nie udało się odczytać stanu subskrypcji',
     usage: 'Z czego korzystasz',

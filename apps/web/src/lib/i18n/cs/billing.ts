@@ -50,9 +50,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Bez předplatného', solo: 'Solo', equipe: 'Tým', usine: 'Závod' },
     trialNote: (days: number) => `Zkušební doba ${fmt(days)} ${pl(days, 'den', 'dny', 'dní')} zdarma při prvním předplatném`,
+    trialTerms: (after: string) => `Karta se zadává na začátku; poté ${after}, pokud nezrušíte před koncem zkušební doby.`,
     tryPlan: (plan: string, days: number) => `Vyzkoušet ${plan} na ${fmt(days)} ${pl(days, 'den', 'dny', 'dní')}`,
     pitch: {
-      free: 'Bez předplatného: AI je součástí tarifů Solo a Tým, 7 dní zdarma na vyzkoušení.',
+      free: 'Bez předplatného: AI je součástí tarifů Solo a Tým; tarif Tým si můžete 7 dní zdarma vyzkoušet.',
       solo: 'Pro toho, kdo dokumentuje svou práci a sdílí ji pomocí QR kódu.',
       equipe: 'Pro několik lidí, kteří to zkoušejí na lince: tým píše, schvaluje a překládá.',
       usine: 'Pro celý závod nebo několik: cena na míru, s řízeným zavedením.',
@@ -268,6 +269,7 @@ export const billing: typeof Fr = {
       expired: 'Vypršelo',
     },
     endsOn: (date: string) => `končí ${date}`,
+    trialUntil: (date: string) => `Zkušební doba do ${date}: poté začne předplatné, pokud ho předtím nezrušíte.`,
     manage: 'Spravovat předplatné a faktury',
     unreadable: 'Stav předplatného se nepodařilo načíst',
     usage: 'Co využíváte',

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { content } from '@/lib/site/content'
 import { HREFLANG, SITE_LANGS } from '@/lib/site/lang'
-import { FILM } from '@/lib/site/media'
+import { filmFor } from '@/lib/site/media'
 import { PRODUCT } from '@/lib/brand/product'
 import { approvedGuides, guideAlternates, GUIDES_UPDATED, type GuideKey } from '@/lib/site/guides'
 import { absoluteUrl, PAGES, ROUTES, SITE_INDEXED, type PageKey } from '@/lib/site/routes'
@@ -51,16 +51,16 @@ function pageEntries(): MetadataRoute.Sitemap {
             'x-default': absoluteUrl(ROUTES[page][PRODUCT.defaultLang]),
           },
         },
-        ...(page === 'home'
+        ...(page === 'home' && PRODUCT.film
           ? {
               videos: [
                 {
                   title: t.film.title,
                   description: t.meta.home.description,
-                  thumbnail_loc: absoluteUrl(FILM.poster),
-                  content_loc: FILM.mp4_1080,
-                  duration: 75,
-                  publication_date: FILM.uploadDate,
+                  thumbnail_loc: absoluteUrl(filmFor(lang).poster),
+                  content_loc: filmFor(lang).mp4_1080,
+                  duration: filmFor(lang).seconds,
+                  publication_date: filmFor(lang).uploadDate,
                 },
               ],
             }

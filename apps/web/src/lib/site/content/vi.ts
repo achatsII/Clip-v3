@@ -480,11 +480,11 @@ export const vi: SiteContent = {
       title: 'Câu hỏi về các gói',
       items: [
         { q: 'Ai được tính vào giá?', a: 'Người soạn và người phê duyệt. Người vận hành và người xem không bao giờ được tính: hãy triển khai Clip cho cả xưởng.' },
-        { q: 'Tôi có thể dùng thử trước khi trả tiền không?', a: 'Có. {trialPlans} có {trialDays} ngày dùng thử, mỗi nhà máy một lần: trọn vòng, từ thu thập đến trạm làm việc. Hủy trước khi hết thời gian dùng thử và bạn không phải trả gì.' },
+        { q: 'Tôi có thể dùng thử trước khi trả tiền không?', a: 'Có. Gói {trialPlan} có {trialDays} ngày dùng thử, mỗi nhà máy một lần: trọn vòng, từ thu thập đến trạm làm việc, cùng đội của bạn. Bạn cần nhập thẻ khi bắt đầu; gói đăng ký bắt đầu khi hết thời gian dùng thử, trừ khi bạn hủy trước: khi đó bạn không phải trả gì.' },
         { q: 'Chuyện gì xảy ra khi tôi hết tín dụng?', a: 'Các tính năng AI chờ đến tháng sau hoặc một gói cao hơn. Mọi thứ khác vẫn hoạt động: hướng dẫn của bạn vẫn có sẵn tại trạm làm việc.' },
         { q: 'Tín dụng chưa dùng có được cộng dồn không?', a: 'Không: quỹ tín dụng được làm mới mỗi tháng.' },
         { q: 'Thanh toán theo năm hoạt động thế nào?', a: 'Bạn trả {paidMonths} tháng và dùng 12 tháng: tặng {freeMonths} tháng ở mọi gói trả phí.' },
-        { q: 'Tôi thanh toán bằng cách nào?', a: 'Trực tuyến, bằng thẻ tín dụng. Trong ứng dụng di động, bạn cũng có thể đăng ký qua App Store hoặc Google Play.' },
+        { q: 'Tôi thanh toán bằng cách nào?', a: 'Trực tuyến, bằng thẻ tín dụng. Ứng dụng di động không bán gì: gói đăng ký trên trang web sẽ mở trong ứng dụng với cùng tài khoản.' },
         { q: 'Hướng dẫn của tôi sẽ ra sao nếu tôi dừng dùng?', a: 'Chúng vẫn là của bạn: mọi hướng dẫn đều xuất được ra PDF và JSON, ở mọi gói.' },
         { q: 'Còn nhiều nhà máy thì sao?', a: 'Gói Doanh nghiệp được thiết kế riêng cho bạn: hãy đặt một cuộc hẹn và cùng trao đổi.' },
       ],
@@ -786,7 +786,7 @@ export const vi: SiteContent = {
 
   planNames: { free: 'Chưa đăng ký', equipe: 'Nhóm', usine: 'Nhà máy' },
   planPitch: {
-    free: '{freePlan}: AI đi kèm {trialPlansOr}, dùng thử miễn phí {trialDays} ngày.',
+    free: '{freePlan}: AI đi kèm {aiPlansOr}; gói {trialPlan} được dùng thử miễn phí {trialDays} ngày.',
     solo: 'Dành cho người tự lập tài liệu công việc của mình và chia sẻ bằng mã QR.',
     equipe: 'Dành cho một vài người thử trên một chuyền: nhóm cùng viết, phê duyệt và dịch.',
     usine: 'Dành cho cả nhà máy, hoặc nhiều nhà máy: triển khai có hướng dẫn và hỗ trợ ưu tiên.',

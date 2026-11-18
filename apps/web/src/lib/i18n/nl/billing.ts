@@ -45,9 +45,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Geen abonnement', solo: 'Solo', equipe: 'Team', usine: 'Fabriek' },
     trialNote: (days: number) => `Proefperiode van ${days} ${days === 1 ? 'dag' : 'dagen'} gratis bij je eerste abonnement`,
+    trialTerms: (after: string) => `Kaart vereist bij de start; daarna ${after}, tenzij je opzegt vóór het einde van de proefperiode.`,
     tryPlan: (plan: string, days: number) => `${plan} ${days} ${days === 1 ? 'dag' : 'dagen'} proberen`,
     pitch: {
-      free: 'Geen abonnement: AI hoort bij Solo of Team, 7 dagen gratis te proberen.',
+      free: 'Geen abonnement: AI hoort bij Solo of Team; Team is 7 dagen gratis te proberen.',
       solo: 'Voor wie zijn eigen werk documenteert en met een QR-code deelt.',
       equipe: 'Voor een paar mensen die het op een lijn uitproberen: het team schrijft, keurt goed en vertaalt.',
       usine: 'Voor de hele fabriek, of meerdere: offerte op maat, met begeleide uitrol.',
@@ -260,6 +261,7 @@ export const billing: typeof Fr = {
       expired: 'Verlopen',
     },
     endsOn: (date: string) => `eindigt op ${date}`,
+    trialUntil: (date: string) => `Proefperiode tot ${date}: daarna begint het abonnement, tenzij je eerder opzegt.`,
     manage: 'Abonnement en facturen beheren',
     unreadable: 'De status van het abonnement kon niet worden gelezen',
     usage: 'Wat je gebruikt',

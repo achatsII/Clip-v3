@@ -484,11 +484,11 @@ export const it: SiteContent = {
       title: 'Domande sui piani',
       items: [
         { q: 'Chi conta nel prezzo?', a: 'Redattori e approvatori. Operatori e lettori non si contano mai: distribuisci Clip a tutto il reparto.' },
-        { q: 'Posso provare prima di pagare?', a: 'Sì. {trialPlans} includono una prova di {trialDays} giorni, una volta per stabilimento: tutto il ciclo, dall’acquisizione alla postazione. Disdici prima della fine della prova e non paghi nulla.' },
+        { q: 'Posso provare prima di pagare?', a: 'Sì. {trialPlan} include una prova di {trialDays} giorni, una volta per stabilimento: tutto il ciclo, dall’acquisizione alla postazione, con il tuo team. La carta viene richiesta all’inizio; l’abbonamento parte alla fine della prova, a meno che tu non lo disdica prima: in quel caso non paghi nulla.' },
         { q: 'Cosa succede quando finisco i crediti?', a: 'Le funzioni IA aspettano il mese prossimo o un piano superiore. Tutto il resto continua a funzionare: le tue istruzioni restano disponibili in postazione.' },
         { q: 'I crediti non usati si riportano?', a: 'No: la dotazione di crediti si rinnova ogni mese.' },
         { q: 'Come funziona la fatturazione annuale?', a: 'Paghi {paidMonths} mesi e ne usi 12: {freeMonths} mesi gratis su ogni piano a pagamento.' },
-        { q: 'Come si paga?', a: 'Online, con carta di credito. Nell’app mobile, puoi anche abbonarti tramite l’App Store o Google Play.' },
+        { q: 'Come si paga?', a: 'Online, con carta di credito. L’app mobile non vende nulla: l’abbonamento sottoscritto sul sito si apre lì con lo stesso account.' },
         { q: 'Cosa succede alle mie istruzioni se smetto?', a: 'Restano tue: ogni istruzione si esporta in PDF e JSON, in ogni piano.' },
         { q: 'E se ho più stabilimenti?', a: 'Il piano Enterprise è su misura: prenota un incontro e ne parliamo.' },
       ],
@@ -790,7 +790,7 @@ export const it: SiteContent = {
 
   planNames: { free: 'Nessun abbonamento', equipe: 'Team', usine: 'Stabilimento' },
   planPitch: {
-    free: '{freePlan}: l’IA è inclusa con {trialPlansOr}, da provare gratis per {trialDays} giorni.',
+    free: '{freePlan}: l’IA è inclusa con {aiPlansOr}; {trialPlan} si prova gratis per {trialDays} giorni.',
     solo: 'Per chi documenta il proprio lavoro e lo condivide con un codice QR.',
     equipe: 'Per poche persone che provano su una linea: il team scrive, approva e traduce.',
     usine: 'Per tutto lo stabilimento, o più stabilimenti: adozione guidata e assistenza prioritaria.',

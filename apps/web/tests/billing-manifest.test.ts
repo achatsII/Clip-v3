@@ -54,7 +54,7 @@ describe('billing.manifest.yaml ↔ code de l’app', () => {
     }
   })
 
-  it('l’offre en ligne : sur le web seulement, Solo et Équipe à l’essai 7 jours, aucun produit des magasins', () => {
+  it('l’offre en ligne : sur le web seulement, Équipe seule à l’essai 7 jours, aucun produit des magasins', () => {
     expect(manifest.product.channels).toEqual(['web'])
     expect((manifest.product as { providers: Record<string, unknown> }).providers.revenuecat).toBeUndefined()
     for (const p of manifest.plans) {
@@ -62,7 +62,8 @@ describe('billing.manifest.yaml ↔ code de l’app', () => {
       for (const price of p.prices ?? []) expect((price as { store_product_id?: string }).store_product_id, p.code).toBeUndefined()
     }
     const trial = (code: string) => (manifest.plans.find((p) => p.code === code && p.status === 'active') as { trial_days?: number }).trial_days
-    expect([trial('solo'), trial('equipe'), trial('usine'), trial(FREE_PLAN)]).toEqual([7, 7, undefined, undefined])
+    // L'essai est sur Équipe seulement (2026-11-18) : Solo s'achète sans essai.
+    expect([trial('solo'), trial('equipe'), trial('usine'), trial(FREE_PLAN)]).toEqual([undefined, 7, undefined, undefined])
   })
 
   it('chaque feature du manifeste a son libellé, et l’ordre d’affichage les couvre toutes', () => {

@@ -4,7 +4,7 @@
  * une fonction, jours d'essai, mois offerts). L'IA n'a pas de prix fixe : aucun coût d'opération ne
  * s'annonce. Au serveur seulement : le manifeste se lit au build.
  *
- * Jetons remplis ici : `{languages}`, `{uiLanguages}`, `{trialDays}`, `{trialPlans}`, `{trialPlansOr}`, `{freeMonths}`, `{paidMonths}`, `{freePlan}`,
+ * Jetons remplis ici : `{languages}`, `{uiLanguages}`, `{trialDays}`, `{trialPlans}`, `{trialPlansOr}`, `{trialPlan}`, `{aiPlansOr}`, `{freeMonths}`, `{paidMonths}`, `{freePlan}`,
  * `{modulePlans}` et `{plans:<feature>}` (les forfaits qui donnent cette fonction). Les autres (`{count}`,
  * `{plan}`…) se remplissent au rendu, avec `fmt`.
  */
@@ -63,6 +63,10 @@ export function siteFacts(lang: SiteLang, c: SiteCatalog = siteCatalog()): Recor
     // Les forfaits qui s'essaient (`trial_days` du manifeste), liés par « et » ou par « ou ».
     trialPlans: listOf(c.plans.filter((p) => p.trialDays > 0).map((p) => planName(p.code, lang, c)), lang),
     trialPlansOr: listOf(c.plans.filter((p) => p.trialDays > 0).map((p) => planName(p.code, lang, c)), lang, 'disjunction'),
+    // Le forfait qu'on essaie : le plus complet de ceux qui s'essaient (un seul depuis le 2026-11-18).
+    trialPlan: planName(c.plans.filter((p) => p.trialDays > 0).at(-1)?.code ?? '', lang, c),
+    // Les forfaits qui donnent l'IA (une banque de crédits), liés par « ou ».
+    aiPlansOr: listOf(c.plans.filter((p) => p.credits > 0).map((p) => planName(p.code, lang, c)), lang, 'disjunction'),
     modulePlans: listOf(
       moduleBases.map((code) => planName(code, lang, c)),
       lang,

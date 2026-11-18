@@ -1,0 +1,117 @@
+{
+ "voice": {
+  "provider": "gemini",
+  "voice": "Aoede",
+  "gender": "female",
+  "accent": "qc",
+  "pace": "medium_fast",
+  "tone": "narrator",
+  "energy": "high",
+  "language": "en-US"
+ },
+ "variantes_nom": {
+  "1 « Meet… Clip. » (retenue, choisie : pause de 0,40 s, comme « Voici… Clip. »)": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-07-59-574-bv7tzn.wav",
+  "2 « Meet Clip. »": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-02-932-born39.wav",
+  "3 « Meet… Clip! »": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-07-145-32rhjn.wav"
+ },
+ "cues": [
+  {
+   "id": "v01",
+   "text": "Jacques knows his machine better than anyone.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-10-919-gil9h5.wav",
+   "gap_after": 0.719
+  },
+  {
+   "id": "v02",
+   "text": "In a year, he retires.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-22-277-7e8xwk.wav",
+   "gap_after": 0.817
+  },
+  {
+   "id": "v03",
+   "text": "And by 2030, twenty to thirty percent of technologists will retire too.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-27-972-zyhjbp.wav",
+   "gap_after": 0.719,
+   "speech": "And by twenty-thirty, twenty to thirty percent of technologists will retire too."
+  },
+  {
+   "id": "v04",
+   "text": "Their know-how isn't written down anywhere.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-31-656-vzx3qn.wav",
+   "gap_after": 1.724
+  },
+  {
+   "id": "v05",
+   "text": "Meet Clip.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-07-59-574-bv7tzn.wav",
+   "gap_after": 1.196,
+   "speech": "Meet… Clip."
+  },
+  {
+   "id": "v06",
+   "text": "Film the expert while he explains. Clip records it all, right on the phone.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-37-048-xb1g99.wav",
+   "gap_after": 0.698
+  },
+  {
+   "id": "v07",
+   "text": "Add photos, a voice note, or your old procedures in PDF and Word.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-50-008-piff70.wav",
+   "gap_after": 0.698
+  },
+  {
+   "id": "v08",
+   "text": "Then, with a single button, AI writes the work instruction.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-54-243-fvsswz.wav",
+   "gap_after": 0.698
+  },
+  {
+   "id": "v09",
+   "text": "One action per step, the right video clip, the warnings at the right time.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-08-59-613-cf0x0d.wav",
+   "gap_after": 1.196
+  },
+  {
+   "id": "v10",
+   "text": "Edit with a word. Annotate with a click. Translate in seconds.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-09-05-929-paj103.wav",
+   "gap_after": 0.66
+  },
+  {
+   "id": "v11",
+   "text": "And your old instructions? Drop them in by the dozen, and they come out modernized.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-09-18-552-q2w8us.wav",
+   "gap_after": 0.794
+  },
+  {
+   "id": "v12",
+   "text": "Get it approved, then deploy it to the workstation, on a tablet or by QR code, no account needed.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-09-23-837-hn19i3.wav",
+   "gap_after": 0.24
+  },
+  {
+   "id": "v13",
+   "text": "The operator follows each step, hears it read aloud, and flags what isn't clear.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-13-24-309-e1xwlm.wav",
+   "gap_after": 0.411
+  },
+  {
+   "id": "v14",
+   "text": "And with one click, it exports to PDF.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-09-33-199-kpy03x.wav",
+   "gap_after": 0.48
+  },
+  {
+   "id": "v15",
+   "text": "Clip. Your experts' know-how, at the workstation, in minutes.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-09-41-459-mzab5n.wav",
+   "gap_after": 0.49
+  },
+  {
+   "id": "v16",
+   "text": "Book a demo.",
+   "url": "https://ii-file.tor1.cdn.digitaloceanspaces.com/Audio-IA/tts-gemini-2026-11-18T03-09-45-004-7vh1rj.wav",
+   "gap_after": 0
+  }
+ ]
+}

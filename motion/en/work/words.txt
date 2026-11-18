@@ -1,0 +1,16 @@
+[v01] 0.63–3.16  0.63:Jacques 0.92:knows 1.30:his 1.50:machine 1.96:better 2.40:than 2.66:anyone.
+[v02] 4.15–5.61  4.15:In 4.27:a 4.39:year, 5.01:he 5.11:retires.
+[v03] 6.68–11.32  6.68:And 6.78:by 7.32:2030, 7.71:twenty 8.10:to 8.48:thirty 8.87:percent 9.26:of 9.48:technologists 10.22:will 10.54:retire 11.02:too.
+[v04] 12.34–14.34  12.34:Their 12.68:know-how 13.02:isn't 13.52:written 13.68:down 14.00:anywhere.
+[v05] 16.36–17.38  16.36:Meet 17.22:Clip.
+[v06] 18.86–23.39  18.86:Film 19.13:the 19.35:expert 19.77:while 20.03:he 20.21:explains. 21.35:Clip 21.65:records 21.93:it 22.23:all, 22.73:right 22.93:on 23.09:the 23.17:phone.
+[v07] 24.25–28.44  24.25:Add 24.42:photos, 25.32:a 25.38:voice 25.62:note, 26.20:or 26.42:your 26.60:old 26.78:procedures 27.26:in 27.56:PDF 27.92:and 28.22:Word.
+[v08] 29.38–33.21  29.38:Then, 30.01:with 30.11:a 30.25:single 30.59:button, 31.54:AI 31.79:writes 32.37:the 32.61:work 32.79:instruction.
+[v09] 34.19–38.90  34.19:One 34.42:action 34.90:per 35.20:step, 36.02:the 36.10:right 36.34:video 36.70:clip, 37.42:the 37.52:warnings 37.86:at 38.24:the 38.34:right 38.60:time.
+[v10] 40.31–44.70  40.31:Edit 40.48:with 40.74:a 40.88:word. 41.81:Annotate 42.28:with 42.42:a 42.56:click. 43.45:Translate 44.04:in 44.28:seconds.
+[v11] 45.69–50.86  45.69:And 45.90:your 46.06:old 46.38:instructions? 47.65:Drop 47.92:them 48.16:in 48.30:by 48.46:the 48.62:dozen, 48.98:and 49.46:they 49.58:come 49.80:out 49.96:modernized.
+[v12] 51.84–57.79  51.84:Get 52.03:it 52.15:approved, 52.99:then 53.19:deploy 53.59:it 53.79:to 53.91:the 53.99:workstation, 54.51:on 55.01:a 55.13:tablet 55.49:or 55.83:by 56.03:QR 56.33:code, 56.99:no 57.23:account 57.51:needed.
+[v13] 58.29–63.29  58.29:The 58.43:operator 58.85:follows 59.55:each 59.93:step, 60.80:hears 61.07:it 61.17:read 61.31:aloud, 61.59:and 62.15:flags 62.49:what 62.79:isn't 63.13:clear.
+[v14] 63.93–66.30  63.93:And 64.04:with 64.20:one 64.50:click, 64.86:it 65.20:exports 65.66:to 65.98:PDF.
+[v15] 67.20–71.28  67.20:Clip. 67.98:Your 68.18:experts' 69.05:know-how, 69.38:at 69.78:the 69.88:workstation, 70.42:in 70.92:minutes.
+[v16] 72.14–72.82  72.14:Book 72.42:a 72.56:demo.

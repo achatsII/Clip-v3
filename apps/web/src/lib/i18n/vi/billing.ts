@@ -45,9 +45,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Chưa đăng ký', solo: 'Solo', equipe: 'Nhóm', usine: 'Nhà máy' },
     trialNote: (days: number) => `Dùng thử miễn phí ${days} ngày cho gói đăng ký đầu tiên`,
+    trialTerms: (after: string) => `Cần thẻ khi bắt đầu; sau đó ${after}, trừ khi bạn hủy trước khi hết thời gian dùng thử.`,
     tryPlan: (plan: string, days: number) => `Dùng thử ${plan} ${days} ngày`,
     pitch: {
-      free: 'Chưa đăng ký: AI đi kèm Solo hoặc Nhóm, dùng thử miễn phí 7 ngày.',
+      free: 'Chưa đăng ký: AI đi kèm Solo hoặc Nhóm; gói Nhóm được dùng thử miễn phí 7 ngày.',
       solo: 'Dành cho người tự lập tài liệu công việc của mình và chia sẻ bằng mã QR.',
       equipe: 'Dành cho một vài người thử trên một chuyền: nhóm cùng viết, phê duyệt và dịch.',
       usine: 'Dành cho cả nhà máy, hoặc nhiều nhà máy: báo giá riêng, có hướng dẫn triển khai.',
@@ -256,6 +257,7 @@ export const billing: typeof Fr = {
       expired: 'Đã hết hạn',
     },
     endsOn: (date: string) => `kết thúc ngày ${date}`,
+    trialUntil: (date: string) => `Dùng thử đến ${date}: sau đó gói đăng ký bắt đầu, trừ khi bạn hủy trước.`,
     manage: 'Quản lý gói đăng ký và hóa đơn',
     unreadable: 'Không đọc được trạng thái gói đăng ký',
     usage: 'Những gì bạn đang dùng',

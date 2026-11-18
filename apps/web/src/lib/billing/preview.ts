@@ -52,7 +52,7 @@ const addon = (code: string, name: string, feature: 'academy' | 'records_plus'):
  * s'achètent nulle part. */
 export const PREVIEW_PLANS: readonly PublicPlan[] = [
   base('free', 'Sans abonnement', [], {}, { published_instructions: 3, stations: 1, editors: 1 }, null),
-  base('solo', 'Solo', cad(4900, 49000), { adoption_stats: true, screen_capture: true }, { published_instructions: 15, stations: 3, editors: 1 }, 2500, 7),
+  base('solo', 'Solo', cad(4900, 49000), { adoption_stats: true, screen_capture: true }, { published_instructions: 15, stations: 3, editors: 1 }, 2500),
   base('equipe', 'Équipe', cad(19900, 199000), { translations: true, adoption_stats: true, approvals: true, brand_kit: true, shared_blocks: true, screen_capture: true, ai_learning: true }, { published_instructions: 75, stations: 15, editors: 5 }, 12500, 7),
   base('usine', 'Usine', [], { translations: true, adoption_stats: true, approvals: true, bulk_import: true, voice_assistant: true, brand_kit: true, full_export: true, shared_blocks: true, screen_capture: true, ai_learning: true }, { published_instructions: null, stations: 100, editors: 15 }, 40000),
   addon('academie-usine', 'Académie', 'academy'),

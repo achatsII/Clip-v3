@@ -36,6 +36,6 @@ describe('les illustrations de « Comment ça marche »', () => {
       expect(art.generate.steps).toHaveLength(3)
       expect(art.deploy.list).toHaveLength(3)
     }
-    expect(Object.keys(LOOPS)).not.toContain('generate')
+    for (const loops of Object.values(LOOPS)) expect(Object.keys(loops)).not.toContain('generate')
   })
 })

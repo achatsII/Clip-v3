@@ -484,11 +484,11 @@ export const en: SiteContent = {
       title: 'Questions about plans',
       items: [
         { q: 'Who counts toward the price?', a: 'Editors and approvers. Operators and readers are never counted: roll Clip out across the whole floor.' },
-        { q: 'Can I try before I pay?', a: 'Yes. {trialPlans} come with a {trialDays}-day trial, once per plant: the whole loop, from capture to the workstation. Cancel before the trial ends and you pay nothing.' },
+        { q: 'Can I try before I pay?', a: 'Yes. {trialPlan} comes with a {trialDays}-day trial, once per plant: the whole loop, from capture to the workstation, with your team. Your card is required up front; the subscription starts when the trial ends unless you cancel before, and then you pay nothing.' },
         { q: 'What happens when I run out of credits?', a: 'AI features wait for next month or a higher plan. Everything else keeps working: your instructions stay available at the workstation.' },
         { q: 'Do unused credits roll over?', a: 'No: the credit bank renews every month.' },
         { q: 'How does yearly billing work?', a: 'You pay for {paidMonths} months and use 12: {freeMonths} months free on every paid plan.' },
-        { q: 'How do I pay?', a: 'Online, by credit card. In the mobile app, you can also subscribe through the App Store or Google Play.' },
+        { q: 'How do I pay?', a: 'Online, by credit card. The mobile app sells nothing: the subscription you take on the site opens there with the same account.' },
         { q: 'What happens to my instructions if I stop?', a: 'They stay yours: every instruction exports to PDF and JSON, on every plan.' },
         { q: 'What about several plants?', a: 'The Enterprise plan is tailored to you: book a meeting and let’s talk.' },
       ],
@@ -790,7 +790,7 @@ export const en: SiteContent = {
 
   planNames: { free: 'No subscription', equipe: 'Team', usine: 'Plant' },
   planPitch: {
-    free: '{freePlan}: AI comes with {trialPlansOr}, free to try for {trialDays} days.',
+    free: '{freePlan}: AI comes with {aiPlansOr}; {trialPlan} is free to try for {trialDays} days.',
     solo: 'For the person who documents their work and shares it by QR code.',
     equipe: 'For a few people trying it on a line: the team writes, approves and translates.',
     usine: 'For the whole plant, or several: guided rollout and priority support.',

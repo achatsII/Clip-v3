@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
 import { content } from '@/lib/site/content'
 import { crumbsFor, type Crumb } from '@/lib/site/crumbs'
 import { fmt, type SiteLang } from '@/lib/site/lang'
-import { LOOPS, PHOTOS, type LoopKey } from '@/lib/site/media'
+import { loopsFor, PHOTOS, type LoopKey } from '@/lib/site/media'
 import { primaryCta, type PageKey } from '@/lib/site/routes'
 import { LoopVideo } from './LoopVideo'
 import { ButtonLink, Container, cx, PrimaryCta } from './ui'
@@ -82,7 +82,7 @@ export function LoopFrame({ loop, label, lang, priority, className }: { loop: Lo
   const t = content(lang)
   return (
     <MediaFrame className={className}>
-      <LoopVideo loop={LOOPS[loop]} label={label} labels={{ pause: t.a11y.pause, play: t.a11y.play }} priority={priority} className="aspect-video rounded-[22px] sm:rounded-[28px]" />
+      <LoopVideo loop={loopsFor(lang)[loop]} label={label} labels={{ pause: t.a11y.pause, play: t.a11y.play }} priority={priority} className="aspect-video rounded-[22px] sm:rounded-[28px]" />
     </MediaFrame>
   )
 }

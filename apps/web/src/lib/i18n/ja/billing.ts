@@ -45,9 +45,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'サブスクリプションなし', solo: 'Solo', equipe: 'チーム', usine: 'ファクトリー' },
     trialNote: (days: number) => `最初のサブスクリプションは${fmt(days)}日間無料`,
+    trialTerms: (after: string) => `開始時にカードの登録が必要です。トライアル終了前に解約しない限り、その後は${after}です。`,
     tryPlan: (plan: string, days: number) => `${plan}を${fmt(days)}日間試す`,
     pitch: {
-      free: 'サブスクリプションなし：AIはSoloまたはチームに含まれ、7日間無料でお試しいただけます。',
+      free: 'サブスクリプションなし：AIはSoloまたはチームに含まれます。チームは7日間無料でお試しいただけます。',
       solo: '自分の作業を文書にして、QRコードで共有する人向け。',
       equipe: 'ラインで試す少人数のチーム向け。チームで書き、承認し、翻訳します。',
       usine: '1つまたは複数の工場向け：見積もりで、導入サポートつき。',
@@ -260,6 +261,7 @@ export const billing: typeof Fr = {
       expired: '期限切れ',
     },
     endsOn: (date: string) => `${date}に終了`,
+    trialUntil: (date: string) => `トライアルは${date}まで：その前に解約しない限り、サブスクリプションが始まります。`,
     manage: 'サブスクリプションと請求書を管理',
     unreadable: 'サブスクリプションの状態を読み取れませんでした',
     usage: '利用状況',

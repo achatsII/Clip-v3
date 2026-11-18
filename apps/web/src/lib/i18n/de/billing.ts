@@ -41,9 +41,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Kein Abonnement', solo: 'Solo', equipe: 'Team', usine: 'Werk' },
     trialNote: (days: number) => `${days} ${days === 1 ? 'Tag' : 'Tage'} kostenlos testen bei Ihrem ersten Abonnement`,
+    trialTerms: (after: string) => `Karte zu Beginn erforderlich; danach ${after}, außer Sie kündigen vor Ende der Testphase.`,
     tryPlan: (plan: string, days: number) => `${plan} ${days} ${days === 1 ? 'Tag' : 'Tage'} lang testen`,
     pitch: {
-      free: 'Kein Abonnement: Die KI gehört zu Solo oder Team, 7 Tage kostenlos testen.',
+      free: 'Kein Abonnement: Die KI gehört zu Solo oder Team; Team können Sie 7 Tage kostenlos testen.',
       solo: 'Für alle, die ihre Arbeit dokumentieren und per QR-Code teilen.',
       equipe: 'Zum gemeinsamen Ausprobieren an einer Linie: Das Team schreibt, gibt frei und übersetzt.',
       usine: 'Für das ganze Werk oder mehrere: auf Anfrage, mit begleitetem Start.',
@@ -251,6 +252,7 @@ export const billing: typeof Fr = {
       expired: 'Abgelaufen',
     },
     endsOn: (date: string) => `endet am ${date}`,
+    trialUntil: (date: string) => `Testphase bis ${date}: Danach beginnt das Abo, außer Sie kündigen vorher.`,
     manage: 'Abonnement und Rechnungen verwalten',
     unreadable: 'Der Abonnementstatus konnte nicht gelesen werden',
     usage: 'Was Sie nutzen',

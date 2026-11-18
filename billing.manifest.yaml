@@ -30,7 +30,7 @@ product:
   # crédits du produit (CLIP n'en a qu'une, ai_credits).
   enforce_denial: false
   org_model: { on_signup: personal, team_join: none }
-  # Sans abonnement : pas d'IA (pas de crédits offerts sans fin). On essaie Solo ou Équipe 7 jours.
+  # Sans abonnement : pas d'IA (pas de crédits offerts sans fin). On essaie Équipe 7 jours.
   default_plan_code: free
   default_overage_policy: block
   providers:
@@ -120,8 +120,11 @@ plans:
   # rien qu'une usine entière pourrait utiliser. Toute l'usine passe par l'équipe de CLIP : Usine n'a
   # aucun prix, ne s'achète nulle part et s'attribue à l'organisation après la vente.
   #
-  # L'ESSAI (décision du 2026-11-17) : plus de forfait gratuit avec des crédits (l'IA a un coût réel) ;
-  # Solo et Équipe s'essaient 7 jours, une fois par organisation (Stripe l'applique au paiement).
+  # L'ESSAI (décisions du 2026-11-17 et du 2026-11-18) : plus de forfait gratuit avec des crédits (l'IA a
+  # un coût réel). Seule Équipe s'essaie 7 jours, une fois par organisation : la carte se donne au
+  # paiement Stripe et l'abonnement commence à la fin de l'essai, sauf annulation avant (comme tout
+  # logiciel en ligne). Solo s'achète sans essai : pas d'essais à bas prix qui ne se convertissent pas.
+  # Le moteur marketing mesure l'essai et ses tests A/B (marketing-2.0, plan/experiences.md).
   #
   # Crédits et limites concordent : une génération coûte en réalité 16 à 55 crédits (mesuré en QA,
   # novembre 2026, vidéo courte ou moyenne), environ 150 pour 30 minutes de vidéo. Chaque banque
@@ -151,7 +154,6 @@ plans:
     version: 1
     status: active
     sort_order: 20
-    trial_days: 7
     availability: { channels: [web], audience: personal }
     prices:
       - { interval: monthly, currency: CAD, amount_cents: 4900 }

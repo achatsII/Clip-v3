@@ -484,11 +484,11 @@ export const pt: SiteContent = {
       title: 'Perguntas sobre os planos',
       items: [
         { q: 'Quem conta no preço?', a: 'Redatores e aprovadores. Operadores e leitores nunca são contados: implante o Clip em todo o chão de fábrica.' },
-        { q: 'Posso experimentar antes de pagar?', a: 'Sim. Os planos {trialPlans} têm um teste de {trialDays} dias, uma vez por fábrica: todo o ciclo, da captura ao posto de trabalho. Cancele antes do fim do teste e você não paga nada.' },
+        { q: 'Posso experimentar antes de pagar?', a: 'Sim. O plano {trialPlan} tem um teste de {trialDays} dias, uma vez por fábrica: todo o ciclo, da captura ao posto de trabalho, com a sua equipe. O cartão é pedido no início; a assinatura começa no fim do teste, a menos que você cancele antes: aí você não paga nada.' },
         { q: 'O que acontece quando os meus créditos acabam?', a: 'Os recursos de IA esperam o mês seguinte ou um plano superior. Todo o resto continua funcionando: as suas instruções permanecem disponíveis no posto de trabalho.' },
         { q: 'Os créditos não usados acumulam?', a: 'Não: o banco de créditos é renovado todo mês.' },
         { q: 'Como funciona a cobrança anual?', a: 'Você paga {paidMonths} meses e usa 12: {freeMonths} meses grátis em todo plano pago.' },
-        { q: 'Como eu pago?', a: 'Online, por cartão de crédito. No app, você também pode assinar pela App Store ou pelo Google Play.' },
+        { q: 'Como eu pago?', a: 'Online, por cartão de crédito. O app não vende nada: a assinatura feita no site abre nele com a mesma conta.' },
         { q: 'O que acontece com as minhas instruções se eu parar?', a: 'Elas continuam suas: toda instrução pode ser exportada em PDF e JSON, em todos os planos.' },
         { q: 'E várias fábricas?', a: 'O plano Empresa é sob medida para você: agende uma reunião e vamos conversar.' },
       ],
@@ -790,7 +790,7 @@ export const pt: SiteContent = {
 
   planNames: { free: 'Sem assinatura', equipe: 'Equipe', usine: 'Fábrica' },
   planPitch: {
-    free: '{freePlan}: a IA vem com {trialPlansOr}, com {trialDays} dias de teste grátis.',
+    free: '{freePlan}: a IA vem com {aiPlansOr}; o plano {trialPlan} tem {trialDays} dias de teste grátis.',
     solo: 'Para quem documenta o próprio trabalho e o compartilha por QR code.',
     equipe: 'Para algumas pessoas testando em uma linha: a equipe redige, aprova e traduz.',
     usine: 'Para a fábrica toda, ou várias: implantação guiada e suporte prioritário.',

@@ -3,9 +3,9 @@
  * les fonctions en vitrine (dont le poste, en démo), pour qui, ce qui est vrai, les tarifs, la FAQ et
  * l'appel final. Une seule action principale : essayer ou réserver une démo (`primaryCta`).
  */
-import { SITE_LANG_NAMES } from '@/lib/site/lang'
 import { Brain, Check, Clock, Languages, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { PRODUCT } from '@/lib/brand/product'
 import { content, SITE_DICTS } from '@/lib/site/content'
 import { DEMO, demoLangOf, demoLangsFor } from '@/lib/site/content/demo'
 import { faqLd, graph, organizationLd, softwareLd, videoLd, websiteLd } from '@/lib/site/jsonld'
@@ -36,7 +36,7 @@ export function HomePage({ lang }: { lang: SiteLang }) {
   const t = content(lang)
   const h = t.home
   const cta = primaryCta(lang)
-  const json = graph([organizationLd(lang), websiteLd(), softwareLd(lang), videoLd(lang), faqLd(h.faq.items)])
+  const json = graph([organizationLd(lang), websiteLd(), softwareLd(lang), ...(PRODUCT.film ? [videoLd(lang)] : []), faqLd(h.faq.items)])
   const playerUi = {
     operatorLanguage: t.demo.player.operatorLanguage,
     close: t.a11y.close,
@@ -70,18 +70,19 @@ export function HomePage({ lang }: { lang: SiteLang }) {
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed font-medium text-pretty text-slate-600 sm:text-xl dark:text-slate-300">{h.hero.sub}</p>
           <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <PrimaryCta cta={cta} labels={t.cta} size="lg" />
-            <FilmButton
-              lang={lang}
-              labels={{
-                button: t.cta.film,
-                length: t.cta.filmLength,
-                title: t.film.title,
-                note: t.film.note,
-                close: t.a11y.close,
-                poster: t.film.poster,
-                tracks: { fr: SITE_LANG_NAMES.fr, en: SITE_LANG_NAMES.en },
-              }}
-            />
+            {PRODUCT.film && (
+              <FilmButton
+                lang={lang}
+                labels={{
+                  button: t.cta.film,
+                  length: t.cta.filmLength,
+                  title: t.film.title,
+                  note: t.film.note,
+                  close: t.a11y.close,
+                  poster: t.film.poster,
+                }}
+              />
+            )}
           </div>
           <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-bold text-slate-500 dark:text-slate-400">
             {h.hero.trust.map((item) => (

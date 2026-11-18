@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { content, planName } from './content'
 import { PRODUCT } from '@/lib/brand/product'
 import { HREFLANG, SITE_LANGS, type SiteLang } from './lang'
-import { FILM, II_LOGO } from './media'
+import { filmFor, II_LOGO, PHOTOS } from './media'
 import { siteCatalog } from './pricing'
 import { crumbsFor, type Crumb } from './crumbs'
 import { absoluteUrl, pathOf, SITE_URL, type PageKey } from './routes'
@@ -68,7 +68,7 @@ export function softwareLd(lang: SiteLang): Node {
     operatingSystem: 'Web, iOS, Android',
     description: t.meta.home.description,
     url: absoluteUrl(pathOf('home', lang)),
-    image: absoluteUrl(FILM.poster),
+    image: absoluteUrl(PRODUCT.film ? filmFor(lang).poster : PHOTOS.filming.src),
     inLanguage: SITE_LANGS.map((l) => HREFLANG[l]),
     publisher: { '@id': ORG_ID },
     offers,
@@ -85,27 +85,31 @@ export function transcriptOf(vtt: string): string {
     .replace(/\s+/g, ' ')
 }
 
-/** Le film : narration en français ; la page anglaise donne ses sous-titres anglais. */
+/**
+ * Le film de la page : la voix française en français, l'anglaise ailleurs. Les sous-titres de la page, et
+ * la transcription de la voix (ses propres sous-titres).
+ */
 export function videoLd(lang: SiteLang): Node {
   const t = content(lang)
-  // Les sous-titres du film : français ou anglais (les autres langues prennent l'anglais).
-  const caption = FILM.subtitles[lang === 'fr' ? 'fr' : 'en']
+  const film = filmFor(lang)
+  const captionLang: SiteLang = film.subtitles[lang] ? lang : film.voice
   const node: Node = {
     '@type': 'VideoObject',
     name: t.film.title,
     description: t.meta.home.description,
-    thumbnailUrl: [absoluteUrl(FILM.poster)],
-    uploadDate: FILM.uploadDate,
-    duration: FILM.duration,
-    contentUrl: FILM.mp4_1080,
-    width: FILM.width,
-    height: FILM.height,
-    inLanguage: HREFLANG.fr,
-    caption: { '@type': 'MediaObject', contentUrl: absoluteUrl(caption), encodingFormat: 'text/vtt', inLanguage: HREFLANG[lang] },
+    thumbnailUrl: [absoluteUrl(film.poster)],
+    uploadDate: film.uploadDate,
+    duration: film.duration,
+    contentUrl: film.mp4_1080,
+    width: film.width,
+    height: film.height,
+    inLanguage: HREFLANG[film.voice],
+    caption: { '@type': 'MediaObject', contentUrl: absoluteUrl(film.subtitles[captionLang]!), encodingFormat: 'text/vtt', inLanguage: HREFLANG[captionLang] },
     publisher: { '@id': ORG_ID },
   }
   // Le dossier public de l'app web : `public` au build (apps/web), `apps/web/public` depuis la racine.
-  const file = [join(process.cwd(), 'public', FILM.subtitles.fr), join(process.cwd(), 'apps/web/public', FILM.subtitles.fr)].find((f) => existsSync(f))
+  const words = film.subtitles[film.voice]!
+  const file = [join(process.cwd(), 'public', words), join(process.cwd(), 'apps/web/public', words)].find((f) => existsSync(f))
   if (file) node.transcript = transcriptOf(readFileSync(file, 'utf8'))
   return node
 }

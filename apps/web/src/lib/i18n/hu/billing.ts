@@ -45,9 +45,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Nincs előfizetés', solo: 'Solo', equipe: 'Csapat', usine: 'Üzem' },
     trialNote: (days: number) => `${days} napos ingyenes próbaidőszak az első előfizetésen`,
+    trialTerms: (after: string) => `A kártya az elején szükséges; utána ${after}, hacsak a próbaidőszak vége előtt le nem mondja.`,
     tryPlan: (plan: string, days: number) => `${plan} kipróbálása ${days} napig`,
     pitch: {
-      free: 'Nincs előfizetés: az AI a Solo vagy a Csapat csomaggal jár, 7 napig ingyen kipróbálható.',
+      free: 'Nincs előfizetés: az AI a Solo vagy a Csapat csomaggal jár; a Csapat 7 napig ingyen kipróbálható.',
       solo: 'Annak, aki dokumentálja a saját munkáját, és QR-kóddal megosztja.',
       equipe: 'Néhány embernek, akik egy soron próbálják: a csapat ír, jóváhagy és fordít.',
       usine: 'Az egész üzemnek vagy több üzemnek: egyedi ajánlat, kísért bevezetéssel.',
@@ -260,6 +261,7 @@ export const billing: typeof Fr = {
       expired: 'Lejárt',
     },
     endsOn: (date: string) => `vége: ${date}`,
+    trialUntil: (date: string) => `Próbaidőszak eddig: ${date}. Utána indul az előfizetés, hacsak előbb le nem mondja.`,
     manage: 'Előfizetés és számlák kezelése',
     unreadable: 'Az előfizetés állapota nem olvasható',
     usage: 'Amit használ',

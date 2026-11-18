@@ -2,14 +2,15 @@
 
 import { Play, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
-import { FILM } from '@/lib/site/media'
-import type { SiteLang } from '@/lib/site/lang'
+import { filmFor } from '@/lib/site/media'
+import { HREFLANG, SITE_LANG_NAMES, type SiteLang } from '@/lib/site/lang'
 import { cx } from './ui'
 
 /**
- * « Voir le film » : le film d'une minute, avec le son et les sous-titres (français et anglais), dans
- * une fenêtre (`<dialog>` : le focus y reste, Échap la ferme). La vidéo ne se charge qu'à l'ouverture,
- * en 1080p sur un grand écran, 720p ailleurs.
+ * « Voir le film » : le film d'une minute, avec le son et les sous-titres, dans une fenêtre (`<dialog>` :
+ * le focus y reste, Échap la ferme). La voix française sur la page française, l'anglaise ailleurs, les
+ * sous-titres dans la langue de la page (en tête de la liste, et allumés). La vidéo ne se charge qu'à
+ * l'ouverture, en 1080p sur un grand écran, 720p ailleurs.
  */
 export function FilmButton({
   lang,
@@ -17,13 +18,16 @@ export function FilmButton({
   className,
 }: {
   lang: SiteLang
-  labels: { button: string; length: string; title: string; note: string; close: string; poster: string; tracks: { fr: string; en: string } }
+  labels: { button: string; length: string; title: string; note: string; close: string; poster: string }
   className?: string
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const titleId = useId()
   const [src, setSrc] = useState<string | null>(null)
+  const film = filmFor(lang)
+  // La langue de la page d'abord : c'est elle qui s'allume.
+  const tracks = (Object.entries(film.subtitles) as Array<[SiteLang, string]>).sort(([a], [b]) => Number(b === lang) - Number(a === lang))
 
   useEffect(() => {
     const d = dialog.current
@@ -39,7 +43,7 @@ export function FilmButton({
 
   function open() {
     dialog.current?.showModal()
-    if (!src) setSrc(window.matchMedia('(min-width: 1024px)').matches ? FILM.mp4_1080 : FILM.mp4_720)
+    if (!src) setSrc(window.matchMedia('(min-width: 1024px)').matches ? film.mp4_1080 : film.mp4_720)
     else void video.current?.play().catch(() => undefined)
   }
 
@@ -81,9 +85,10 @@ export function FilmButton({
               <X className="h-5 w-5" aria-hidden />
             </button>
           </div>
-          <video ref={video} className="block aspect-video w-full bg-black" controls playsInline preload="none" poster={FILM.poster} src={src ?? undefined} aria-label={labels.poster}>
-            <track kind="subtitles" srcLang="fr" label={labels.tracks.fr} src={FILM.subtitles.fr} default={lang === 'fr'} />
-            <track kind="subtitles" srcLang="en" label={labels.tracks.en} src={FILM.subtitles.en} default={lang === 'en'} />
+          <video ref={video} className="block aspect-video w-full bg-black" controls playsInline preload="none" poster={film.poster} src={src ?? undefined} aria-label={labels.poster}>
+            {tracks.map(([l, file]) => (
+              <track key={l} kind="subtitles" srcLang={HREFLANG[l]} label={SITE_LANG_NAMES[l]} src={file} default={l === lang} />
+            ))}
           </video>
           <p className="px-5 py-3 text-sm font-bold text-slate-400">{labels.note}</p>
         </div>

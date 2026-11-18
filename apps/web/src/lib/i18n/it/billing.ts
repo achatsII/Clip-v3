@@ -47,9 +47,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Nessun abbonamento', solo: 'Solo', equipe: 'Team', usine: 'Stabilimento' },
     trialNote: (days: number) => `Prova gratuita di ${days} ${days === 1 ? 'giorno' : 'giorni'} sul tuo primo abbonamento`,
+    trialTerms: (after: string) => `Carta richiesta all’inizio; poi ${after}, a meno che tu non disdica prima della fine della prova.`,
     tryPlan: (plan: string, days: number) => `Prova ${plan} per ${days} ${days === 1 ? 'giorno' : 'giorni'}`,
     pitch: {
-      free: 'Nessun abbonamento: l’IA è inclusa con Solo o Team, da provare gratis per 7 giorni.',
+      free: 'Nessun abbonamento: l’IA è inclusa con Solo o Team; Team si prova gratis per 7 giorni.',
       solo: 'Per chi documenta il proprio lavoro e lo condivide con un codice QR.',
       equipe: 'Per poche persone che provano su una linea: il team scrive, approva e traduce.',
       usine: 'Per tutto lo stabilimento, o più stabilimenti: preventivo personalizzato, con un’adozione guidata.',
@@ -259,6 +260,7 @@ export const billing: typeof Fr = {
       expired: 'Scaduto',
     },
     endsOn: (date: string) => `termina il ${date}`,
+    trialUntil: (date: string) => `Prova fino al ${date}: poi parte l’abbonamento, a meno che tu non lo disdica prima.`,
     manage: 'Gestisci abbonamento e fatture',
     unreadable: 'Non è stato possibile leggere lo stato dell’abbonamento',
     usage: 'Cosa stai usando',

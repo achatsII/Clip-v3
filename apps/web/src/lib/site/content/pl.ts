@@ -480,11 +480,11 @@ export const pl: SiteContent = {
       title: 'Pytania o plany',
       items: [
         { q: 'Kto liczy się do ceny?', a: 'Autorzy i zatwierdzający. Operatorzy i czytelnicy nigdy nie są liczeni: wdróż Clip na całej hali.' },
-        { q: 'Czy mogę wypróbować przed zapłatą?', a: 'Tak. {trialPlans} mają {trialDays}-dniowy okres próbny, raz na zakład: cała pętla, od nagrania po stanowisko. Zrezygnuj przed końcem okresu próbnego, a nic nie zapłacisz.' },
+        { q: 'Czy mogę wypróbować przed zapłatą?', a: 'Tak. Plan {trialPlan} ma {trialDays}-dniowy okres próbny, raz na zakład: cała pętla, od nagrania po stanowisko, z Twoim zespołem. Karta jest wymagana na początku; subskrypcja zaczyna się po okresie próbnym, chyba że zrezygnujesz wcześniej – wtedy nic nie zapłacisz.' },
         { q: 'Co się dzieje, gdy skończą mi się kredyty?', a: 'Funkcje AI czekają do następnego miesiąca lub wyższego planu. Wszystko inne działa dalej: Twoje instrukcje pozostają dostępne na stanowisku.' },
         { q: 'Czy niewykorzystane kredyty przechodzą na kolejny miesiąc?', a: 'Nie: pula kredytów odnawia się co miesiąc.' },
         { q: 'Jak działa rozliczanie roczne?', a: 'Płacisz za {paidMonths} miesięcy, a korzystasz przez 12: {freeMonths} miesięcy gratis w każdym płatnym planie.' },
-        { q: 'Jak zapłacić?', a: 'Online, kartą kredytową. W aplikacji mobilnej możesz też subskrybować przez App Store lub Google Play.' },
+        { q: 'Jak zapłacić?', a: 'Online, kartą kredytową. Aplikacja mobilna niczego nie sprzedaje: subskrypcja wykupiona na stronie otwiera się w niej na tym samym koncie.' },
         { q: 'Co stanie się z moimi instrukcjami, jeśli przestanę?', a: 'Pozostają Twoje: każda instrukcja eksportuje się do PDF i JSON, w każdym planie.' },
         { q: 'A kilka zakładów?', a: 'Plan Enterprise jest szyty na miarę: umów spotkanie i porozmawiajmy.' },
       ],
@@ -786,7 +786,7 @@ export const pl: SiteContent = {
 
   planNames: { free: 'Brak subskrypcji', equipe: 'Zespół', usine: 'Zakład' },
   planPitch: {
-    free: '{freePlan}: AI wchodzi w skład planów {trialPlansOr}, do wypróbowania za darmo przez {trialDays} dni.',
+    free: '{freePlan}: AI wchodzi w skład planów {aiPlansOr}; plan {trialPlan} można wypróbować za darmo przez {trialDays} dni.',
     solo: 'Dla osoby, która dokumentuje swoją pracę i udostępnia ją kodem QR.',
     equipe: 'Dla kilku osób testujących to na jednej linii: zespół pisze, zatwierdza i tłumaczy.',
     usine: 'Dla całego zakładu lub kilku: prowadzone wdrożenie i priorytetowe wsparcie.',

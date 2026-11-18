@@ -49,9 +49,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: 'Sem assinatura', solo: 'Solo', equipe: 'Equipe', usine: 'Fábrica' },
     trialNote: (days: number) => `${days} ${days !== 1 ? 'dias' : 'dia'} de teste grátis na sua primeira assinatura`,
+    trialTerms: (after: string) => `Cartão pedido no início; depois ${after}, a menos que você cancele antes do fim do teste.`,
     tryPlan: (plan: string, days: number) => `Experimentar ${plan} por ${days} ${days !== 1 ? 'dias' : 'dia'}`,
     pitch: {
-      free: 'Sem assinatura: a IA vem com o Solo ou o Equipe, com 7 dias de teste grátis.',
+      free: 'Sem assinatura: a IA vem com o Solo ou o Equipe; o Equipe tem 7 dias de teste grátis.',
       solo: 'Para quem documenta o próprio trabalho e o compartilha por QR code.',
       equipe: 'Para algumas pessoas testando em uma linha: a equipe redige, aprova e traduz.',
       usine: 'Para a fábrica toda, ou várias: sob consulta, com uma implantação guiada.',
@@ -264,6 +265,7 @@ export const billing: typeof Fr = {
       expired: 'Expirada',
     },
     endsOn: (date: string) => `termina em ${date}`,
+    trialUntil: (date: string) => `Teste até ${date}: a assinatura começa então, a menos que você cancele antes.`,
     manage: 'Gerenciar assinatura e faturas',
     unreadable: 'Não foi possível ler o status da assinatura',
     usage: 'O que você está usando',

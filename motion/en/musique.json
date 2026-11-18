@@ -1,0 +1,103 @@
+{
+ "description": "Électro moderne et brillante, façon lancement de produit : tension au départ, puis le groove complet qui tombe sur « Voici Clip », batterie nette, basse profonde, accords qui pompent.",
+ "styles": [
+  "modern tech product launch film music",
+  "punchy sidechained synth chords",
+  "deep sub bass",
+  "tight crisp electronic drums",
+  "bright plucked synth hook",
+  "glossy 2020s production, wide stereo",
+  "energetic and confident"
+ ],
+ "eviter": [
+  "cheesy corporate",
+  "ukulele",
+  "lo-fi",
+  "dark",
+  "distorted guitar",
+  "vocals"
+ ],
+ "tonalite": "A major",
+ "bpm": [
+  112,
+  126
+ ],
+ "sous": -11,
+ "ouvert": -5,
+ "sections": [
+  {
+   "nom": "Tension",
+   "styles": [
+    "sparse tense intro",
+    "ticking muted synth pulse",
+    "filtered arpeggio slowly opening",
+    "sense of urgency and anticipation"
+   ],
+   "eviter": [
+    "drums",
+    "percussion",
+    "kick drum",
+    "snare",
+    "hi-hat",
+    "bassline",
+    "beat",
+    "main hook"
+   ]
+  },
+  {
+   "nom": "Révélation",
+   "debut": {
+    "avant": "v05"
+   },
+   "entree": "franche",
+   "styles": [
+    "the full groove drops on the downbeat",
+    "big impact hit on the first beat",
+    "full drums and deep bass",
+    "main hook enters",
+    "high energy"
+   ]
+  },
+  {
+   "nom": "Fonctions",
+   "debut": {
+    "phrase": "v10"
+   },
+   "styles": [
+    "lift",
+    "extra claps and percussion layer",
+    "brighter and wider",
+    "same groove"
+   ]
+  },
+  {
+   "nom": "Au poste",
+   "debut": {
+    "phrase": "v12"
+   },
+   "styles": [
+    "peak energy",
+    "soaring synth lead layer",
+    "fullest arrangement",
+    "same groove"
+   ]
+  },
+  {
+   "nom": "Fin",
+   "debut": {
+    "phrase": "v15"
+   },
+   "styles": [
+    "same full groove continues to the very end",
+    "confident and driving"
+   ],
+   "eviter": [
+    "fade out",
+    "outro",
+    "breakdown",
+    "quiet",
+    "ring out"
+   ]
+  }
+ ]
+}

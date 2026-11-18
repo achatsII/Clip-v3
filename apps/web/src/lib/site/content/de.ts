@@ -480,11 +480,11 @@ export const de: SiteContent = {
       title: 'Fragen zu den Tarifen',
       items: [
         { q: 'Wer zählt für den Preis?', a: 'Autoren und Freigaben. Werker und Leser werden nie mitgezählt: Rollen Sie Clip in der ganzen Halle aus.' },
-        { q: 'Kann ich es vor dem Bezahlen ausprobieren?', a: 'Ja. {trialPlans} enthalten eine Testphase von {trialDays} Tagen, einmal pro Werk: der ganze Ablauf, von der Aufnahme bis zum Arbeitsplatz. Kündigen Sie vor Ende der Testphase, und Sie zahlen nichts.' },
+        { q: 'Kann ich es vor dem Bezahlen ausprobieren?', a: 'Ja. {trialPlan} enthält eine Testphase von {trialDays} Tagen, einmal pro Werk: der ganze Ablauf, von der Aufnahme bis zum Arbeitsplatz, mit Ihrem Team. Ihre Karte wird zu Beginn erfasst; das Abo beginnt am Ende der Testphase, außer Sie kündigen vorher – dann zahlen Sie nichts.' },
         { q: 'Was passiert, wenn mir die Credits ausgehen?', a: 'KI-Funktionen warten auf den nächsten Monat oder einen höheren Tarif. Alles andere funktioniert weiter: Ihre Anweisungen bleiben am Arbeitsplatz verfügbar.' },
         { q: 'Werden nicht verbrauchte Credits übertragen?', a: 'Nein: Das Creditkontingent erneuert sich jeden Monat.' },
         { q: 'Wie funktioniert die jährliche Abrechnung?', a: 'Sie zahlen {paidMonths} Monate und nutzen 12: {freeMonths} Monate geschenkt bei jedem kostenpflichtigen Tarif.' },
-        { q: 'Wie bezahle ich?', a: 'Online, per Kreditkarte. In der Mobil-App können Sie auch über den App Store oder Google Play abonnieren.' },
+        { q: 'Wie bezahle ich?', a: 'Online, per Kreditkarte. Die Mobil-App verkauft nichts: Das auf der Website abgeschlossene Abo öffnet sich dort mit demselben Konto.' },
         { q: 'Was passiert mit meinen Anweisungen, wenn ich aufhöre?', a: 'Sie bleiben Ihre: Jede Anweisung lässt sich als PDF und JSON exportieren, in jedem Tarif.' },
         { q: 'Und bei mehreren Werken?', a: 'Der Tarif Enterprise wird individuell für Sie zugeschnitten: Buchen Sie einen Termin, und wir sprechen darüber.' },
       ],
@@ -786,7 +786,7 @@ export const de: SiteContent = {
 
   planNames: { free: 'Kein Abonnement', equipe: 'Team', usine: 'Werk' },
   planPitch: {
-    free: '{freePlan}: Die KI gehört zu {trialPlansOr}, {trialDays} Tage kostenlos testen.',
+    free: '{freePlan}: Die KI gehört zu {aiPlansOr}; {trialPlan} können Sie {trialDays} Tage kostenlos testen.',
     solo: 'Für alle, die ihre Arbeit dokumentieren und per QR-Code teilen.',
     equipe: 'Zum gemeinsamen Ausprobieren an einer Linie: Das Team schreibt, gibt frei und übersetzt.',
     usine: 'Für das ganze Werk oder mehrere: begleiteter Rollout und vorrangiger Support.',

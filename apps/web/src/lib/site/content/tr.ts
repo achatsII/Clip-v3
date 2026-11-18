@@ -483,11 +483,11 @@ export const tr: SiteContent = {
       title: 'Planlar hakkında sorular',
       items: [
         { q: 'Fiyata kimler dahil?', a: 'Yazarlar ve onaylayanlar. Operatörler ve okuyucular asla sayılmaz: Clip’i tüm sahaya yayın.' },
-        { q: 'Ödemeden önce deneyebilir miyim?', a: 'Evet. {trialPlans}, tesis başına bir kez olmak üzere {trialDays} günlük deneme ile gelir: kayıttan iş istasyonuna kadar tüm döngü. Deneme bitmeden iptal ederseniz hiçbir şey ödemezsiniz.' },
+        { q: 'Ödemeden önce deneyebilir miyim?', a: 'Evet. {trialPlan}, tesis başına bir kez olmak üzere {trialDays} günlük deneme ile gelir: kayıttan iş istasyonuna kadar tüm döngü, ekibinizle birlikte. Kartınız başta istenir; abonelik deneme bitince başlar, öncesinde iptal ederseniz hiçbir şey ödemezsiniz.' },
         { q: 'Kredim bittiğinde ne olur?', a: 'Yapay zekâ özellikleri gelecek ayı veya daha yüksek bir planı bekler. Geri kalan her şey çalışmaya devam eder: talimatlarınız iş istasyonunda kullanılabilir kalır.' },
         { q: 'Kullanılmayan krediler devreder mi?', a: 'Hayır: kredi bankası her ay yenilenir.' },
         { q: 'Yıllık faturalama nasıl işler?', a: '{paidMonths} ay ödersiniz ve 12 ay kullanırsınız: her ücretli planda {freeMonths} ay bedava.' },
-        { q: 'Nasıl ödeme yapılır?', a: 'Çevrimiçi, kredi kartıyla. Mobil uygulamada App Store veya Google Play üzerinden de abone olabilirsiniz.' },
+        { q: 'Nasıl ödeme yapılır?', a: 'Çevrimiçi, kredi kartıyla. Mobil uygulama hiçbir şey satmaz: sitede aldığınız abonelik aynı hesapla orada açılır.' },
         { q: 'Bırakırsam talimatlarıma ne olur?', a: 'Sizin kalırlar: her talimat, her planda PDF ve JSON olarak dışa aktarılır.' },
         { q: 'Birden fazla tesis için ne olacak?', a: 'Kurumsal plan size göre hazırlanır: bir görüşme planlayın, konuşalım.' },
       ],
@@ -789,7 +789,7 @@ export const tr: SiteContent = {
 
   planNames: { free: 'Abonelik yok', equipe: 'Ekip', usine: 'Tesis' },
   planPitch: {
-    free: '{freePlan}: yapay zekâ {trialPlansOr} ile gelir, {trialDays} gün ücretsiz denenir.',
+    free: '{freePlan}: yapay zekâ {aiPlansOr} ile gelir; {trialPlan} {trialDays} gün ücretsiz denenir.',
     solo: 'İşini belgeleyip QR kodla paylaşan kişi için.',
     equipe: 'Bir hatta denemek isteyen birkaç kişi için: ekip yazar, onaylar ve çevirir.',
     usine: 'Tüm tesis veya birkaç tesis için: rehberli kurulum ve öncelikli destek.',

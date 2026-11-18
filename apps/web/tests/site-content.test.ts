@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createRequire } from 'node:module'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { LANGUAGES } from '@/lib/model/catalog'
@@ -8,6 +8,7 @@ import { content, OPERATOR_LANGUAGE_COUNT, SITE_DICTS } from '@/lib/site/content
 import { DEMO, DEMO_LANGS } from '@/lib/site/content/demo'
 import { breadcrumbLd, faqLd, graph, organizationLd, softwareLd, transcriptOf, videoLd, websiteLd } from '@/lib/site/jsonld'
 import { HREFLANG, SITE_LANGS } from '@/lib/site/lang'
+import { filmFor, FILMS, LOOPS } from '@/lib/site/media'
 import { pageMetadata } from '@/lib/site/metadata'
 import { siteCatalog } from '@/lib/site/pricing'
 import { APP_PATHS, PAGES, ROUTES } from '@/lib/site/routes'
@@ -172,7 +173,10 @@ describe('les adresses et le référencement', () => {
       }
       const video = json['@graph'][3]
       expect(video.duration).toBe('PT1M15S')
-      expect(video.transcript).toMatch(/Voici Clip/)
+      // La voix de la page : le français en français, l'anglais ailleurs ; les sous-titres dans la langue de la page.
+      expect(video.transcript).toMatch(lang === 'fr' ? /Voici Clip/ : /Meet Clip/)
+      expect(video.inLanguage).toBe(lang === 'fr' ? 'fr-CA' : 'en')
+      expect(video.caption.inLanguage).toBe(HREFLANG[lang])
       expect(json['@graph'][5].itemListElement.map((i: { position: number }) => i.position)).toEqual([1, 2])
     }
   })
@@ -184,5 +188,38 @@ describe('les adresses et le référencement', () => {
     expect(text).not.toMatch(/-->|WEBVTT/)
     const en = readFileSync(resolve(__dirname, '../public/site/video/clip-film.en.vtt'), 'utf8')
     expect(en.match(/-->/g)?.length).toBe(vtt.match(/-->/g)?.length)
+  })
+
+  it('chaque film et chaque boucle sont au stockage, avec leur image d’attente dans le site', () => {
+    const store = /^https:\/\/ii-file\.tor1\.digitaloceanspaces\.com\/.+\.(mp4|webm)$/
+    for (const film of Object.values(FILMS)) {
+      expect(film.mp4_1080).toMatch(store)
+      expect(film.mp4_720).toMatch(store)
+      expect(existsSync(resolve(__dirname, '../public', `.${film.poster}`)), film.poster).toBe(true)
+    }
+    for (const [voice, loops] of Object.entries(LOOPS)) {
+      for (const [key, loop] of Object.entries(loops)) {
+        expect(loop.webm, `${voice} ${key}`).toMatch(store)
+        expect(loop.mp4, `${voice} ${key}`).toMatch(store)
+        expect(existsSync(resolve(__dirname, '../public', `.${loop.poster}`)), loop.poster).toBe(true)
+      }
+      // Les mêmes boucles dans les deux voix.
+      expect(Object.keys(loops).sort()).toEqual(Object.keys(LOOPS.fr).sort())
+    }
+  })
+
+  it('le film anglais a ses sous-titres dans chacune des dix-sept langues, calés sur sa voix', () => {
+    const voice = readFileSync(resolve(__dirname, '../public/site/video/en/clip-film.en.vtt'), 'utf8')
+    expect(transcriptOf(voice).startsWith('Jacques knows his machine better than anyone.')).toBe(true)
+    const times = voice.split(/\r?\n/).filter((l) => l.includes('-->'))
+    for (const lang of SITE_LANGS) {
+      const film = filmFor(lang)
+      expect(film.voice, lang).toBe(lang === 'fr' ? 'fr' : 'en')
+      const file = film.subtitles[lang]
+      expect(file, lang).toBeTruthy()
+      const vtt = readFileSync(resolve(__dirname, '../public', `.${file}`), 'utf8')
+      // Mêmes temps que la voix : chaque sous-titre tombe avec sa phrase.
+      if (film.voice === 'en') expect(vtt.split(/\r?\n/).filter((l) => l.includes('-->')), lang).toEqual(times)
+    }
   })
 })

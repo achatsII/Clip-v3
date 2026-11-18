@@ -43,9 +43,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: '구독 없음', solo: 'Solo', equipe: '팀', usine: '공장' },
     trialNote: (days: number) => `첫 구독 시 ${fmt(days)}일 무료 체험`,
+    trialTerms: (after: string) => `시작할 때 카드가 필요합니다. 체험이 끝나기 전에 해지하지 않으면 이후 ${after}입니다.`,
     tryPlan: (plan: string, days: number) => `${plan} ${fmt(days)}일 체험`,
     pitch: {
-      free: '구독 없음: AI는 Solo 또는 팀 요금제에 포함되며, 7일 무료로 써 볼 수 있습니다.',
+      free: '구독 없음: AI는 Solo 또는 팀 요금제에 포함됩니다. 팀 요금제는 7일 무료로 써 볼 수 있습니다.',
       solo: '자기 작업을 문서화하고 QR 코드로 공유하는 한 사람을 위해.',
       equipe: '한 라인에서 써 보는 소규모 팀을 위해: 팀이 작성, 승인, 번역합니다.',
       usine: '공장 전체 또는 여러 공장을 위해: 견적 문의, 단계별 도입 지원.',
@@ -258,6 +259,7 @@ export const billing: typeof Fr = {
       expired: '만료됨',
     },
     endsOn: (date: string) => `${date}에 종료`,
+    trialUntil: (date: string) => `${date}까지 체험: 그 전에 해지하지 않으면 이후 구독이 시작됩니다.`,
     manage: '구독 및 청구서 관리',
     unreadable: '구독 상태를 읽지 못했습니다',
     usage: '사용 현황',

@@ -6,10 +6,11 @@ import { useToast } from '@/components/ui/Toast'
 import { callNative, hasCapability, nativeEnv } from '@/lib/bridge/native'
 import { createBillingClient, type BillingClient } from '@/lib/billing/client'
 import { useBillingMode } from '@/lib/billing/mode'
+import { measureCheckoutReturn, measureTrialOutcome } from '@/lib/billing/funnel'
 import { createPreviewClient, PREVIEW_PARAM, previewName } from '@/lib/billing/preview'
-import { BillingProvider } from '@/lib/billing/state'
+import { BillingProvider, useBilling } from '@/lib/billing/state'
 import { BILLING_V2 } from '@/lib/config'
-import { useMessages } from '@/lib/i18n'
+import { useLang, useMessages } from '@/lib/i18n'
 import { Paywall } from './Billing'
 import { CostChip } from './CostChip'
 
@@ -50,6 +51,7 @@ export function BillingRoot({ children }: { children: ReactNode }) {
       <Paywall client={billingClient} />
       {(mode === 'live' || mode === 'preview') && <CostChip mode={mode} />}
       {mode === 'preview' && <PreviewReturn />}
+      {mode === 'live' && <TrialFunnel />}
     </BillingProvider>
   )
 }
@@ -67,5 +69,21 @@ function PreviewReturn() {
     window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
     toast.success(t.taken(previewName(code) ?? code), t.takenHint)
   }, [t, toast])
+  return null
+}
+
+/**
+ * La mesure de l'essai, en facturation réelle seulement (`src/lib/billing/funnel.ts`) : au retour du
+ * paiement (`?merci=1`), l'essai ou l'abonnement ; ensuite, l'essai devenu abonnement actif.
+ */
+function TrialFunnel() {
+  const lang = useLang()
+  const { state } = useBilling()
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('merci') === '1') measureCheckoutReturn(lang)
+  }, [lang])
+  useEffect(() => {
+    measureTrialOutcome(state?.state, lang)
+  }, [state?.state, lang])
   return null
 }

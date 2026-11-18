@@ -49,10 +49,12 @@ export const billing = {
     names: { free: 'Sans abonnement', solo: 'Solo', equipe: 'Équipe', usine: 'Usine' },
     /** L’essai d’un plan payant, offert une fois par organisation (Stripe l’applique au paiement). */
     trialNote: (days: number) => `${days} jours d’essai gratuit à votre premier abonnement`,
+    /** Sous l’essai : la carte, et le prix qui suit si on n’annule pas (Stripe débite à la fin de l’essai). */
+    trialTerms: (after: string) => `Carte demandée au départ ; ensuite ${after}, sauf si vous annulez avant la fin de l’essai.`,
     tryPlan: (plan: string, days: number) => `Essayer ${plan} ${days} jours`,
     /** Phrase de présentation de chaque plan (le manifeste n’a pas de champ de description). */
     pitch: {
-      free: 'Sans abonnement : l’IA vient avec Solo ou Équipe, à essayer 7 jours.',
+      free: 'Sans abonnement : l’IA vient avec Solo ou Équipe ; Équipe s’essaie 7 jours.',
       solo: 'Pour la personne qui documente son travail et le partage par code QR.',
       equipe: 'Pour essayer à quelques-uns sur une ligne : l’équipe rédige, approuve et traduit.',
       usine: 'Pour toute l’usine, ou plusieurs : sur devis, avec un démarrage accompagné.',
@@ -297,6 +299,8 @@ export const billing = {
       expired: 'Expiré',
     },
     endsOn: (date: string) => `se termine le ${date}`,
+    /** Pendant l’essai : sa fin, et l’abonnement qui commence ensuite. */
+    trialUntil: (date: string) => `Essai jusqu’au ${date} : l’abonnement commence ensuite, sauf si vous l’annulez avant.`,
     manage: 'Gérer l’abonnement et les factures',
     unreadable: 'L’état de l’abonnement n’a pas pu être lu',
     usage: 'Ce que vous utilisez',

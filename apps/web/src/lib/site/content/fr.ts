@@ -511,14 +511,14 @@ export const fr = {
       title: 'Questions sur les forfaits',
       items: [
         { q: 'Qui est compté dans le prix ?', a: 'Les rédacteurs et les approbateurs. Les opérateurs et les lecteurs ne sont jamais comptés : déployez Clip sur tout le plancher.' },
-        { q: 'Puis-je essayer avant de payer ?', a: 'Oui. {trialPlans} s’essaient {trialDays} jours, une fois par usine : toute la boucle, de la capture au poste. Annulez avant la fin de l’essai et rien n’est facturé.' },
+        { q: 'Puis-je essayer avant de payer ?', a: 'Oui. {trialPlan} s’essaie {trialDays} jours, une fois par usine : toute la boucle, de la capture au poste, avec votre équipe. Votre carte est demandée au départ ; l’abonnement commence à la fin de l’essai, sauf si vous l’annulez avant : rien n’est alors facturé.' },
         {
           q: 'Que se passe-t-il quand mes crédits sont épuisés ?',
           a: 'Les fonctions d’IA attendent le mois suivant ou un forfait supérieur. Tout le reste fonctionne : vos instructions restent consultables au poste.',
         },
         { q: 'Les crédits non utilisés se reportent-ils ?', a: 'Non : la banque de crédits se renouvelle chaque mois.' },
         { q: 'Comment fonctionne le forfait annuel ?', a: 'Vous payez {paidMonths} mois et profitez de 12 : {freeMonths} mois offerts sur chaque forfait payant.' },
-        { q: 'Comment paie-t-on ?', a: 'En ligne, par carte de crédit. Dans l’app mobile, l’abonnement se prend aussi dans l’App Store ou Google Play.' },
+        { q: 'Comment paie-t-on ?', a: 'En ligne, par carte de crédit. L’app mobile ne vend rien : l’abonnement pris sur le site s’y ouvre avec le même compte.' },
         { q: 'Que deviennent mes instructions si j’arrête ?', a: 'Elles restent à vous : chaque instruction s’exporte en PDF et en JSON, à tous les forfaits.' },
         { q: 'Et pour plusieurs usines ?', a: 'Le forfait Entreprise se prépare sur mesure : réservez une rencontre et parlons-en.' },
       ],
@@ -829,7 +829,7 @@ export const fr = {
   planNames: {} as Record<string, string>,
   /** Une phrase par forfait, par code ; un forfait sans phrase n'en montre pas. */
   planPitch: {
-    free: '{freePlan} : l’IA vient avec {trialPlansOr}, à essayer {trialDays} jours.',
+    free: '{freePlan} : l’IA vient avec {aiPlansOr} ; {trialPlan} s’essaie {trialDays} jours.',
     solo: 'Pour la personne qui documente son travail et le partage par code QR.',
     equipe: 'Pour essayer à quelques-uns sur une ligne : l’équipe rédige, approuve et traduit.',
     usine: 'Pour toute l’usine, ou plusieurs : déploiement accompagné et support prioritaire.',

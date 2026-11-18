@@ -45,9 +45,10 @@ export const billing: typeof Fr = {
   plans: {
     names: { free: '未订阅', solo: 'Solo', equipe: '团队版', usine: '工厂版' },
     trialNote: (days: number) => `首次订阅可免费试用 ${days} 天`,
+    trialTerms: (after: string) => `开始时需绑定信用卡；试用结束后为 ${after}，除非你在试用结束前取消。`,
     tryPlan: (plan: string, days: number) => `试用 ${plan} ${days} 天`,
     pitch: {
-      free: '未订阅：AI 功能包含在 Solo 或团队版中，可免费试用 7 天。',
+      free: '未订阅：AI 功能包含在 Solo 或团队版中；团队版可免费试用 7 天。',
       solo: '适合独自整理自己的作业，并通过二维码分享的人。',
       equipe: '适合在一条产线上试用的几个人：团队可以编写、审批和翻译。',
       usine: '适合整个工厂或多家工厂：按需报价，并提供有指导的上线服务。',
@@ -255,6 +256,7 @@ export const billing: typeof Fr = {
       expired: '已过期',
     },
     endsOn: (date: string) => `将于 ${date} 结束`,
+    trialUntil: (date: string) => `试用至 ${date}：之后订阅开始，除非你提前取消。`,
     manage: '管理订阅和账单',
     unreadable: '无法读取订阅状态',
     usage: '你的使用情况',
