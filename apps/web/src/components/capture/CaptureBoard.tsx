@@ -99,12 +99,14 @@ export function CaptureBoard({
   const [queued, setQueued] = useState(false)
   const launch = useLaunchGeneration()
   const mounted = useRef(true)
-  useEffect(
-    () => () => {
+  // Remis à vrai au montage : en développement, React démonte puis remonte une fois (StrictMode), et
+  // « Générer » restait sur la capture parce que le drapeau était resté à faux.
+  useEffect(() => {
+    mounted.current = true
+    return () => {
       mounted.current = false
-    },
-    [],
-  )
+    }
+  }, [])
   const fileInput = useRef<HTMLInputElement>(null)
   const wide = useWide()
   // Au téléphone, la capture prend tout l'écran : une seule chose à faire, rien autour.

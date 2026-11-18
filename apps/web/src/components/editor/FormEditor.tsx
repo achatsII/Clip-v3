@@ -410,6 +410,8 @@ function Outline({ p, addAtEnd = true }: { p: Inner; addAtEnd?: boolean }) {
           <Blocks className="h-4 w-4" /> {t.blocks.insert}
         </button>
       )}
+      {/* Au téléphone, la pastille de l'assistant flotte en bas : de quoi faire défiler le dernier bouton au-dessus. */}
+      {!p.readOnly && <div aria-hidden className="h-20 shrink-0 sm:hidden" />}
     </nav>
   )
 }

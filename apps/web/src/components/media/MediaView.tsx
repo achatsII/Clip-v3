@@ -269,18 +269,41 @@ export function VideoSegment({
       if (off) v.currentTime = start
       if (auto && v.paused) play()
     }
+    // Au bout de l'extrait : on reboucle, ou on s'arrête.
+    const atEnd = () => {
+      if (loops()) v.currentTime = start
+      else {
+        v.pause()
+        setPlaying(false)
+        setEnded(true)
+      }
+    }
     const onTime = () => {
       // Un début au-delà de la fin de la vidéo ne se rattrape pas : on n'y saute pas sans fin.
       if (v.currentTime < start - 0.5 && !(v.duration && start >= v.duration)) v.currentTime = start
-      if (v.currentTime >= end - 0.05) {
-        if (loops()) v.currentTime = start
-        else {
-          v.pause()
-          setPlaying(false)
-          setEnded(true)
-        }
-      }
+      if (v.currentTime >= end - 0.05) atEnd()
       setT(v.currentTime)
+    }
+    // `timeupdate` ne passe que toutes les 250 ms environ : la boucle laissait voir jusqu'à un quart de
+    // seconde de l'étape suivante. Tant que la vidéo joue, on regarde donc chaque image (la vidéo elle-même
+    // quand le navigateur le permet, sinon chaque rafraîchissement de l'écran).
+    const byFrame = 'requestVideoFrameCallback' in v
+    let frame = 0
+    const stopWatch = () => {
+      if (!frame) return
+      if (byFrame) v.cancelVideoFrameCallback(frame)
+      else cancelAnimationFrame(frame)
+      frame = 0
+    }
+    const watch = () => {
+      frame = 0
+      if (v.paused || v.ended) return
+      if (v.currentTime >= end - 0.04) atEnd()
+      frame = byFrame ? v.requestVideoFrameCallback(watch) : requestAnimationFrame(watch)
+    }
+    const startWatch = () => {
+      stopWatch()
+      watch()
     }
     // L'extrait finit avec la vidéo : arrivée au bout, elle s'arrête d'elle-même ; la boucle la relance.
     const onEnded = () => {
@@ -292,8 +315,14 @@ export function VideoSegment({
         setEnded(true)
       }
     }
-    const onPause = () => setPlaying(false)
-    const onPlay = () => setPlaying(true)
+    const onPause = () => {
+      stopWatch()
+      setPlaying(false)
+    }
+    const onPlay = () => {
+      setPlaying(true)
+      startWatch()
+    }
     v.addEventListener('loadedmetadata', onMeta)
     v.addEventListener('timeupdate', onTime)
     v.addEventListener('ended', onEnded)
@@ -301,7 +330,10 @@ export function VideoSegment({
     v.addEventListener('play', onPlay)
     if (v.readyState >= 1) onMeta()
     else if (auto && v.getAttribute('src')) play()
+    // Repris d'une autre étape, le lecteur joue peut-être déjà : la surveillance part tout de suite.
+    if (!v.paused) startWatch()
     return () => {
+      stopWatch()
       v.removeEventListener('loadedmetadata', onMeta)
       v.removeEventListener('timeupdate', onTime)
       v.removeEventListener('ended', onEnded)

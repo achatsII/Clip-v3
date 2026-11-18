@@ -1,0 +1,302 @@
+[
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 1,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-iphone-01-capture_1795029474439_2a1d570d-b527-43bc-bb65-b05da5bbe71e.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 2,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-iphone-02-editeur_1795029474439_5af2ffa1-0b34-4ca1-9a21-2caa26b07b32.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 3,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-iphone-03-poste_1795029474439_6534653c-4deb-4600-8ba1-6c8a305c58e1.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 4,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-iphone-04-langue_1795029474439_0f46c3c3-df34-4476-98cf-38ca7a69b7fe.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 5,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-iphone-05-qr_1795029474439_34181d49-4489-42c6-9253-9ce35c0c2583.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 1,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-ipad-01-capture_1795029474439_41286873-569a-40ad-8a7b-60f44734d775.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 2,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-ipad-02-editeur_1795029474439_b35c06c6-1e82-4491-a424-3ada21644735.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 3,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-ipad-03-poste_1795029474439_89d625a0-e29a-4155-a1f2-d6cf84c77be1.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 4,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-ipad-04-langue_1795029474440_00f194a5-7f89-44b8-8619-e4713f1ae5e2.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 5,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-ipad-05-qr_1795029474440_9dd36977-c9d7-43a3-a843-8a53d0e277ce.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 1,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-android-01-capture_1795029474440_a79b0fbb-2e7e-4110-898e-9828550b3d47.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 2,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-android-02-editeur_1795029474440_90f5a72b-2454-45bb-9d36-263f095f39b8.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 3,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-android-03-poste_1795029474440_b994907c-798d-4616-be43-ea25806b535d.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 4,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-android-04-langue_1795029474440_4e3a52d2-4799-4bca-976f-c9f4957ded78.png"
+  },
+  {
+    "lang": "fr-CA",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 5,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-fr-CA-android-05-qr_1795029474440_28b6a3e7-33f6-4213-9ae0-ae287b5aecb4.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 1,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-iphone-01-capture_1795029537209_bcb3d1d4-d39b-4fca-b6f3-4885e6eb4e52.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 2,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-iphone-02-editeur_1795029537209_1ad3ac6e-2f41-4b2e-8243-bc0b0ff8e4bc.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 3,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-iphone-03-poste_1795029537209_32d77b33-d0f4-4d86-8072-cff7fc0f408d.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 4,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-iphone-04-langue_1795029537209_87d23eda-6111-4f1a-9f4c-a8efc166cb14.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "iphone",
+    "type": "screenshot",
+    "order": 5,
+    "width": 1290,
+    "height": 2796,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-iphone-05-qr_1795029537209_619f9c2f-334b-4916-95be-3e37109e2c56.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 1,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-ipad-01-capture_1795029537209_126fa9e1-80ed-4b2c-935a-45ff991f1589.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 2,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-ipad-02-editeur_1795029537209_ddd23839-21c0-4a2c-ab37-7393c40ae96f.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 3,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-ipad-03-poste_1795029537209_708b9f38-bb91-4f32-8906-3ded8608f81d.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 4,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-ipad-04-langue_1795029537209_d4253912-06b6-4710-9846-a7d721465346.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "apple",
+    "device": "ipad",
+    "type": "screenshot",
+    "order": 5,
+    "width": 2064,
+    "height": 2752,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-ipad-05-qr_1795029537209_04f67763-e048-4449-95cb-169b25277439.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 1,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-android-01-capture_1795029537210_7f5c08b3-66ee-476e-8b17-4cf9a88bb873.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 2,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-android-02-editeur_1795029537210_fd2f1e31-138f-4752-b049-2ff8e8f1ed07.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 3,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-android-03-poste_1795029537210_7d44d9b0-d21c-46cf-a128-79206d35b3c6.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 4,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-android-04-langue_1795029537210_57e5b3f7-cdf1-4963-b091-6f609674076d.png"
+  },
+  {
+    "lang": "en-US",
+    "store": "google",
+    "device": "android",
+    "type": "screenshot",
+    "order": 5,
+    "width": 1080,
+    "height": 1920,
+    "url": "https://ii-file.tor1.digitaloceanspaces.com/mcp-octopus/8c7d2142-22a5-4a71-805e-c5088981d6d0/kiplo-store/captures/2026-11-18/kiplo-en-US-android-05-qr_1795029537210_9e9eedd0-5b47-4fb2-8cb0-ca7252a7efff.png"
+  }
+]

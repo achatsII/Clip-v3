@@ -607,14 +607,16 @@ export function Player(props: PlayerProps) {
             preview={preview}
           />
         ) : step ? (
-          <div key={step.id} className={cn('animate-fade-in flex h-full min-h-full', step.media[0] && layout === 'row' ? 'flex-row' : 'flex-col', step.media[0] && 'lg:flex-row')}>
+          // Côte à côte sur grand écran couché seulement : une tablette tenue droite (iPad 13 po, 1032 px) garde
+          // le média au-dessus du texte, sans bandes noires autour d'une vidéo 16:9 dans une colonne haute.
+          <div key={step.id} className={cn('animate-fade-in flex h-full min-h-full', step.media[0] && layout === 'row' ? 'flex-row' : 'flex-col', step.media[0] && 'lg:landscape:flex-row')}>
             {/* Sans photo ni vidéo, pas de panneau : le texte prend la place, en haut de l'écran. */}
             {step.media[0] && (
               <div
                 // Une vidéo à sa juste hauteur garde sous l'image la bande de ses commandes.
                 data-fit={mediaBox !== null && focusLayout && step.media[0].kind === 'video' ? 'top' : undefined}
                 style={mediaBox !== null ? { height: mediaBox } : undefined}
-                className={cn('relative shrink-0 bg-slate-900 lg:h-auto lg:flex-[1.5]', layout === 'row' ? 'min-w-0 flex-[1.2]' : mediaBox !== null ? 'transition-[height] duration-300 ease-out' : 'h-[46dvh] sm:h-[52dvh]')}
+                className={cn('relative shrink-0 bg-slate-900 lg:landscape:h-auto lg:landscape:flex-[1.5]', layout === 'row' ? 'min-w-0 flex-[1.2]' : mediaBox !== null ? 'transition-[height] duration-300 ease-out' : 'h-[46dvh] sm:h-[52dvh]')}
               >
                 <StepMediaArea step={step} labels={{ zoom: t.zoom, doIt: t.doIt, avoid: t.avoid, previousMedia: t.previousMedia, nextMedia: t.nextMedia, mediaOf: t.mediaOf }} nav={mediaNav} />
               </div>
@@ -625,7 +627,7 @@ export function Player(props: PlayerProps) {
               className={cn(
                 'flex min-w-0 flex-col',
                 layout === 'legacy' ? 'flex-1 gap-4 p-5 sm:p-8' : layout === 'row' ? 'flex-1 gap-3 overflow-y-auto p-4' : 'gap-3 p-4 sm:gap-4 sm:p-8',
-                !step.media[0] ? cn('mx-auto w-full max-w-3xl', layout === 'legacy' ? 'pt-8 sm:pt-12' : 'flex-1 pt-6 sm:pt-12') : layout === 'legacy' ? 'lg:max-w-[560px] lg:overflow-y-auto' : layout === 'row' && 'max-w-[48%]',
+                !step.media[0] ? cn('mx-auto w-full max-w-3xl', layout === 'legacy' ? 'pt-8 sm:pt-12' : 'flex-1 pt-6 sm:pt-12') : layout === 'legacy' ? 'lg:landscape:max-w-[560px] lg:landscape:overflow-y-auto' : layout === 'row' && 'max-w-[48%]',
               )}
             >
               {sectionsOn && step.section && <p className="label-caps -mb-2 text-[var(--primary-strong)] dark:text-[var(--primary-light)]">{step.section}</p>}
