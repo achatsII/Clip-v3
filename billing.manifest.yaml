@@ -10,7 +10,9 @@ product:
   # L'application de la Gateway avec laquelle l'app se connecte (`clip-v2`, NEXT_PUBLIC_APP_IDENTIFIER) :
   # le produit facturé porte l'identifiant de la connexion (décision du 2026-11-17).
   slug: clip-v2
-  name: CLIP
+  # Le nom que voit le client chez Stripe (titre du portail) : Kiplo, la seule marque qui vend en libre-service.
+  # CLIP ne passe jamais par Stripe (tout y est sur devis). Un nom, pas un identifiant : il change sans version.
+  name: Kiplo
   # Le web seulement (Stripe), décision du 2026-11-17 : on s'abonne sur le site, une seule facturation.
   # L'app mobile est une app compagnon : elle ne vend rien (ni prix, ni bouton, ni lien d'achat) et ouvre
   # ce que l'organisation a acheté sur le web. Si Apple exige l'achat dans l'app (règle 3.1.3(b)),
