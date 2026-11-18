@@ -173,7 +173,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Modüller',
-    subtitle: 'Tesisin ihtiyacı olduğunda Ekip veya Tesis planına ekleyin.',
+    subtitle: 'Tesisin ihtiyacı olduğunda Tesis planına ekleyin.',
     eyebrow: 'Modül',
     trial: (days: number) => `${fmt(days)} gün ücretsiz`,
     tryFree: (days: number) => `${fmt(days)} gün ücretsiz dene`,

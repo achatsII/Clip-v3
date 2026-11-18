@@ -175,7 +175,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Modulok',
-    subtitle: 'Adja hozzá a Csapat vagy az Üzem csomaghoz, amikor az üzemnek szüksége van rájuk.',
+    subtitle: 'Adja hozzá az Üzem csomaghoz, amikor az üzemnek szüksége van rájuk.',
     eyebrow: 'Modul',
     trial: (days: number) => `${fmt(days)} nap ingyen`,
     tryFree: (days: number) => `${fmt(days)} nap ingyenes kipróbálás`,

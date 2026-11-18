@@ -17,7 +17,8 @@ import { ErrorState, Skeleton } from '@/components/ui/States'
 import { PageHeader, Panel } from '@/components/ui/Surface'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
-import { byQuote, FEATURED_PLAN, FREE_PLAN, LIMIT_FEATURES, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
+import { byQuote, FEATURED_PLAN, FREE_PLAN, LIMIT_FEATURES, onFreePlan, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
+import { PRODUCT } from '@/lib/brand/product'
 import { rememberCheckout } from '@/lib/billing/funnel'
 import { BILLING_INTERVAL, parsePlanIntent, type PlanIntent } from '@/lib/billing/intent'
 import { BillingError, creditsOf } from '@/lib/billing/client'
@@ -268,7 +269,7 @@ function Subscription() {
                       <div className="relative mt-6">
                         {isAdmin ? (
                           <Button variant={highlight ? 'dark' : intentPlan ? 'glass' : 'primary'} block size="lg" loading={busy === p.code} icon={<Sparkles className="h-4 w-4" />} onClick={() => buy(p.code)}>
-                            {state?.plan_code === FREE_PLAN && p.trial_days ? t.billing.plans.tryPlan(p.name, p.trial_days) : w.choose(p.name)}
+                            {onFreePlan(state) && p.trial_days ? t.billing.plans.tryPlan(p.name, p.trial_days) : w.choose(p.name)}
                           </Button>
                         ) : (
                           <p className={cn('rounded-2xl p-3 text-center text-sm font-bold', highlight ? 'bg-white/15' : 'bg-slate-900/5')}>{w.askAdmin}</p>
@@ -298,7 +299,8 @@ function Subscription() {
           </div>
         </section>
       )}
-      {!inShell && <p className="text-sm font-medium text-slate-500">{w.enterprise}</p>}
+      {/* Usine se prépare avec l'équipe de CLIP : la marque publique ne la vend pas. */}
+      {!inShell && PRODUCT.enterprise && <p className="text-sm font-medium text-slate-500">{w.enterprise}</p>}
     </div>
   )
 }

@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
 import { creditsReason, moduleOffer, planFor, renewalText } from '@/lib/billing/advice'
-import { byQuote, FREE_PLAN, FEATURE_LABELS, FEATURE_ORDER, type FeatureKey, featureCount, featureLabel, isLimitFeature, moduleOf, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
+import { byQuote, FEATURE_LABELS, FEATURE_ORDER, type FeatureKey, featureCount, featureLabel, isLimitFeature, moduleOf, onFreePlan, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
 import { formatPrice } from '@/lib/billing/format'
 import { BillingError, creditsOf, limitOf, type BillingClient, type PublicPlan } from '@/lib/billing/client'
 import { limitReason } from '@/lib/billing/usage'
@@ -351,7 +351,7 @@ export function Paywall({ client }: { client: BillingClient }) {
           <p className="rounded-2xl bg-slate-900/5 p-4 text-sm font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">{w.managedByAdmin}</p>
         ) : isAdmin ? (
           <Button variant="primary" size="lg" block loading={busy} onClick={buy}>
-            {previewInApp ? t.billing.preview.seeWith(plan.name) : state?.plan_code === FREE_PLAN && plan.trial_days ? t.billing.plans.tryPlan(plan.name, plan.trial_days) : w.upgradeTo(plan.name)}
+            {previewInApp ? t.billing.preview.seeWith(plan.name) : onFreePlan(state) && plan.trial_days ? t.billing.plans.tryPlan(plan.name, plan.trial_days) : w.upgradeTo(plan.name)}
           </Button>
         ) : (
           <>

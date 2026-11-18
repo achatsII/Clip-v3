@@ -177,7 +177,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Moduli',
-    subtitle: 'Aggiungili a Team o Stabilimento quando lo stabilimento ne ha bisogno.',
+    subtitle: 'Aggiungili a Stabilimento quando lo stabilimento ne ha bisogno.',
     eyebrow: 'Modulo',
     trial: (days: number) => `${fmt(days)} giorni gratis`,
     tryFree: (days: number) => `Prova ${fmt(days)} giorni gratis`,

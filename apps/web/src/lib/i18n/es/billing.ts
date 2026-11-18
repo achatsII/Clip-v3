@@ -173,7 +173,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Módulos',
-    subtitle: 'Agrégalos a Equipo o Planta cuando la planta los necesite.',
+    subtitle: 'Agrégalos a Planta cuando la planta los necesite.',
     eyebrow: 'Módulo',
     trial: (days: number) => `${fmt(days)} días gratis`,
     tryFree: (days: number) => `Probar ${fmt(days)} días gratis`,

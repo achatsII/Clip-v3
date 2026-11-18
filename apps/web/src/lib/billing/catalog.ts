@@ -104,6 +104,15 @@ export const FEATURED_PLAN = 'equipe'
 export const FREE_PLAN = 'free'
 
 /**
+ * Sans abonnement : le plan gratuit, ou aucun plan. Une organisation qui ne s'est jamais abonnée n'a pas de
+ * plan à la plateforme (`state: 'none'`, `plan_code: null`, vu en QA le 2026-11-18) : c'est le même cas, et
+ * c'est elle qui a droit à l'essai (« Essayer Équipe 7 jours »). État illisible : on ne sait pas.
+ */
+export function onFreePlan(s: { plan_code: string | null } | null | undefined): boolean {
+  return !!s && (!s.plan_code || s.plan_code === FREE_PLAN)
+}
+
+/**
  * Sur devis : un plan ou un module sans prix, autre que le gratuit. Il ne s'achète nulle part (ni sur le
  * site ni dans les magasins) ; l'équipe de CLIP l'attribue à l'organisation une fois la vente faite. Sur
  * le web, « Parler à l'équipe CLIP » mène à la prise de rendez-vous ; dans l'app mobile, une phrase sans
@@ -148,6 +157,14 @@ export const MODULES: readonly ModuleDef[] = [
   { key: 'academy', feature: 'academy', toggle: 'academy', addons: { usine: 'academie-usine' } },
   { key: 'records', feature: 'records_plus', toggle: 'recordsPlus', addons: { usine: 'releves-usine' } },
 ]
+
+/**
+ * Les modules que la marque propose, une fois bâtis (leur toggle allumé). Aucun pour la marque publique : ils
+ * viennent avec Usine, et Kiplo ne vend ni Usine ni modules (ni page Abonnement, ni fenêtre, ni conseiller).
+ */
+export function sellableModules(on: Partial<Record<string, boolean>>, p: Product = PRODUCT): ModuleDef[] {
+  return p.enterprise ? MODULES.filter((m) => on[m.toggle]) : []
+}
 
 /** Le module qui ouvre cette feature, s'il y en a un. */
 export const moduleOf = (feature: string | null | undefined): ModuleDef | null => MODULES.find((m) => m.feature === feature) ?? null

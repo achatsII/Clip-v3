@@ -173,7 +173,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: '模块',
-    subtitle: '当工厂需要时，可添加到团队版或工厂版。',
+    subtitle: '当工厂需要时，可添加到工厂版。',
     eyebrow: '模块',
     trial: (days: number) => `免费 ${fmt(days)} 天`,
     tryFree: (days: number) => `免费试用 ${fmt(days)} 天`,

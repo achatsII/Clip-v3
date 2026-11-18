@@ -202,7 +202,7 @@ export const billing = {
   /** Les modules en option (Académie, Relevés), à ajouter à Équipe ou à Usine. */
   modules: {
     title: 'Modules',
-    subtitle: 'À ajouter à Équipe ou à Usine, quand l’usine en a besoin.',
+    subtitle: 'À ajouter à Usine, quand l’usine en a besoin.',
     eyebrow: 'Module',
     trial: (days: number) => `${fmt(days)} jours offerts`,
     tryFree: (days: number) => `Essayer ${fmt(days)} jours`,

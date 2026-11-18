@@ -175,7 +175,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'モジュール',
-    subtitle: '工場に必要になったら、チームまたはファクトリーに追加できます。',
+    subtitle: '工場に必要になったら、ファクトリーに追加できます。',
     eyebrow: 'モジュール',
     trial: (days: number) => `${fmt(days)}日間無料`,
     tryFree: (days: number) => `${fmt(days)}日間無料で試す`,

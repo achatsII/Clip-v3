@@ -173,7 +173,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: '모듈',
-    subtitle: '공장에 필요할 때 팀 또는 공장 요금제에 추가하세요.',
+    subtitle: '공장에 필요할 때 공장 요금제에 추가하세요.',
     eyebrow: '모듈',
     trial: (days: number) => `${fmt(days)}일 무료`,
     tryFree: (days: number) => `${fmt(days)}일 무료 체험`,

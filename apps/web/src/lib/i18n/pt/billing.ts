@@ -179,7 +179,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Módulos',
-    subtitle: 'Adicione-os aos planos Equipe ou Fábrica quando a fábrica precisar.',
+    subtitle: 'Adicione-os ao plano Fábrica quando a fábrica precisar.',
     eyebrow: 'Módulo',
     trial: (days: number) => `${fmt(days)} dias grátis`,
     tryFree: (days: number) => `Testar ${fmt(days)} dias grátis`,

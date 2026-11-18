@@ -169,7 +169,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Module',
-    subtitle: 'Adăugați-le la Echipă sau la Fabrică când fabrica are nevoie de ele.',
+    subtitle: 'Adăugați-le la Fabrică când fabrica are nevoie de ele.',
     eyebrow: 'Modul',
     trial: (days: number) => `${fmt(days)} ${de(days)}zile gratuite`,
     tryFree: (days: number) => `Încercați ${fmt(days)} ${de(days)}zile gratuit`,

@@ -175,7 +175,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Modul',
-    subtitle: 'Tambahkan ke paket Tim atau Pabrik saat pabrik membutuhkannya.',
+    subtitle: 'Tambahkan ke paket Pabrik saat pabrik membutuhkannya.',
     eyebrow: 'Modul',
     trial: (days: number) => `Gratis ${fmt(days)} hari`,
     tryFree: (days: number) => `Coba gratis ${fmt(days)} hari`,

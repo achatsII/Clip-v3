@@ -175,7 +175,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Modules',
-    subtitle: 'Add them to Team or Plant when the plant needs them.',
+    subtitle: 'Add them to Plant when the plant needs them.',
     eyebrow: 'Module',
     trial: (days: number) => `${fmt(days)} days free`,
     tryFree: (days: number) => `Try ${fmt(days)} days free`,

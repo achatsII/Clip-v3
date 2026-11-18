@@ -167,7 +167,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'โมดูล',
-    subtitle: 'เพิ่มกับ Team หรือ Plant เมื่อโรงงานต้องการ',
+    subtitle: 'เพิ่มกับ Plant เมื่อโรงงานต้องการ',
     eyebrow: 'โมดูล',
     trial: (days: number) => `ฟรี ${fmt(days)} วัน`,
     tryFree: (days: number) => `ทดลองฟรี ${fmt(days)} วัน`,

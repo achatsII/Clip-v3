@@ -11,7 +11,7 @@
  *   seulement l'aperçu. L'IA garde sa route d'avant ; le serveur ne vérifie rien de plus.
  */
 import { PRODUCT_SLUG } from '../config'
-import { addonFor, MODULES, presentOffer, type FeatureKey, type ModuleKey } from './catalog'
+import { addonFor, FREE_PLAN, MODULES, presentOffer, type FeatureKey, type ModuleKey } from './catalog'
 import type { BillingClient, BillingState, CheckResult, PlansOffer, PublicPlan } from './client'
 
 export const PREVIEW_BASE_PLANS = ['free', 'solo', 'equipe', 'usine'] as const
@@ -120,6 +120,19 @@ export function previewState(sel: PreviewSelection, now = new Date()): BillingSt
     cancel_at_period_end: false,
     channel: 'web',
   }
+}
+
+/**
+ * Sans abonnement, la plateforme rend `state: 'none'`, `plan_code: null` et aucune limite (QA, 2026-11-18). L'organisation
+ * est pourtant au plan par défaut du manifeste (`default_plan_code`) : ses plafonds viennent alors de ce plan (cette copie
+ * du manifeste, tenue par un test). Sans cela, tout serait « 0 sur 0 » : ni instruction publiée, ni poste, ni rédacteur.
+ * Un état qui porte un plan ou des limites reste tel quel.
+ */
+export function withDefaultPlan(s: BillingState): BillingState {
+  if (s.plan_code || s.limits.length > 0) return s
+  const free = PREVIEW_PLANS.find((p) => p.code === FREE_PLAN)
+  if (!free) return s
+  return { ...s, limits: Object.entries(free.entitlements.limits ?? {}).map(([feature_key, limit]) => ({ feature_key, used: 0, limit })) }
 }
 
 /** « Acheter » dans l'aperçu : un plan remplace le plan (les modules qu'il ne reçoit pas tombent), un module s'ajoute. */

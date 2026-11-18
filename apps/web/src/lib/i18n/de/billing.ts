@@ -169,7 +169,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Module',
-    subtitle: 'Fügen Sie sie zu Team oder Werk hinzu, wenn das Werk sie braucht.',
+    subtitle: 'Fügen Sie sie zu Werk hinzu, wenn das Werk sie braucht.',
     eyebrow: 'Modul',
     trial: (days: number) => `${fmt(days)} Tage kostenlos`,
     tryFree: (days: number) => `${fmt(days)} Tage kostenlos testen`,

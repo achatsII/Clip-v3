@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { errorText } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { moduleOffer } from '@/lib/billing/advice'
-import { addonFor, byQuote, FEATURE_LABELS, featureLabel, MODULES, salesHref, type FeatureKey, type ModuleDef, type ModuleKey } from '@/lib/billing/catalog'
+import { addonFor, byQuote, FEATURE_LABELS, featureLabel, salesHref, sellableModules, type FeatureKey, type ModuleDef, type ModuleKey } from '@/lib/billing/catalog'
 import type { BillingState, PublicPlan } from '@/lib/billing/client'
 import { useMessages } from '@/lib/i18n'
 import { logUsage } from '@/lib/model/repo'
@@ -27,12 +27,11 @@ export const MODULE_ICONS: Record<ModuleKey, ReactNode> = {
 /** Où vit chaque module dans l'app : « Ouvrir » y mène. */
 export const MODULE_HREF: Record<ModuleKey, string> = { academy: '/equipe?vue=competences', records: '/registre' }
 
-/** Les modules bâtis (leur toggle allumé) : on ne montre, ni ne vend, ce qui n'existe pas encore. */
+/** Les modules bâtis (leur toggle allumé) : on ne montre, ni ne vend, ce qui n'existe pas encore ; aucun pour Kiplo. */
 export function useModules(): ModuleDef[] {
   const academy = useToggle('academy')
   const records = useToggle('recordsPlus')
-  const on: Partial<Record<string, boolean>> = { academy, recordsPlus: records }
-  return MODULES.filter((m) => on[m.toggle])
+  return sellableModules({ academy, recordsPlus: records })
 }
 
 /**

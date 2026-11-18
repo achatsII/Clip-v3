@@ -183,7 +183,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Moduly',
-    subtitle: 'Přidejte je k tarifu Tým nebo Závod, když je závod potřebuje.',
+    subtitle: 'Přidejte je k tarifu Závod, když je závod potřebuje.',
     eyebrow: 'Modul',
     trial: (days: number) => `${fmt(days)} ${pl(days, 'den', 'dny', 'dní')} zdarma`,
     tryFree: (days: number) => `Vyzkoušet ${fmt(days)} ${pl(days, 'den', 'dny', 'dní')} zdarma`,

@@ -174,7 +174,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Mô-đun',
-    subtitle: 'Thêm vào gói Nhóm hoặc Nhà máy khi nhà máy cần.',
+    subtitle: 'Thêm vào gói Nhà máy khi nhà máy cần.',
     eyebrow: 'Mô-đun',
     trial: (days: number) => `${fmt(days)} ngày miễn phí`,
     tryFree: (days: number) => `Dùng thử miễn phí ${fmt(days)} ngày`,

@@ -541,7 +541,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   Académie (feature `academy`, `academie-usine`) et Relevés (`records_plus`, `releves-usine`). L'app ne
   propose que le module de son plan (`MODULES`, comparé au manifeste par le test). Le rattachement au
   plan de base n'a pas de champ documenté : la simulation de `billing-publish` le confirme. Un module se
-  montre seulement une fois bâti (toggles `academy` et `recordsPlus`, allumés : les deux le sont).
+  montre seulement une fois bâti (toggles `academy` et `recordsPlus`, allumés : les deux le sont). Kiplo n'en
+  propose aucun, ni la phrase d'Usine (`sellableModules`, `PRODUCT.enterprise`).
 - Ce qui se facture : `ai_credits`, une banque de crédits d'IA par mois · `published_instructions`,
   `stations` et `editors`, des limites par plan (comptées par l'app, `capacity_source: reported`) ·
   `translations`, `adoption_stats`, `approvals`, `bulk_import`, `voice_assistant`, `brand_kit`,
@@ -577,7 +578,9 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   compte et compare au plafond lu dans l'état (`limitOf`), et le verrou de l'écran n'est alors pas une
   protection. Un état illisible ferme la fonction (`useEntitlement` rend `locked`, `useLimit` une
   limite atteinte) et `useGate` relit l'état avant de servir une fonction encore « pending » ;
-  drapeau éteint, rien n'est verrouillé.
+  drapeau éteint, rien n'est verrouillé. Une organisation jamais abonnée : la plateforme rend `state: 'none'`,
+  `plan_code: null` et aucune limite (QA, 2026-11-18) ; l'app lui applique les plafonds du plan par défaut
+  (`withDefaultPlan`, sinon « 0 sur 0 » bloquait tout) et lui propose l'essai (`onFreePlan`).
 - Un refus de facturation se montre tel quel par la fenêtre `Paywall`
   (`src/components/billing/Billing.tsx`, alimentée par `src/lib/billing/bus.ts`) et par la page
   `/reglages/abonnement` : 402 faute de crédits, 403 faute de droit. Il ne se transforme jamais en
@@ -654,4 +657,8 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`/api/v2/billing/*` répond 404 le 2026-11-18 ; en QA, 401 sans jeton). Encaisser pour vrai attend l'équipe
   plateforme : les routes en production, Stripe en mode réel, le catalogue publié en production (`billing-publish`
   ne publie qu'en QA). On allume `NEXT_PUBLIC_BILLING_V2` sur le projet de Kiplo une fois `GET /api/v2/billing/context`
-  servi en production pour `clip-v2`.
+  servi en production pour `clip-v2`. En QA, le paiement (`POST /api/v2/billing/checkout`) répond 500
+  `internal_error` pour tout plan, tout intervalle et toute adresse de retour (2026-11-18), alors que la simulation
+  du catalogue ne voit aucun écart : à l'équipe plateforme. Le parcours se refait en local contre la QA (`next dev`
+  avec `NEXT_PUBLIC_GATEWAY_URL` de QA, `NEXT_PUBLIC_BILLING_V2=1`, `NEXT_PUBLIC_BRAND=kiplo` ; la QA accepte toute
+  origine).

@@ -11,6 +11,7 @@ import { onRefusal, onSettled, type Refusal } from './bus'
 import { recordTry } from './advisorStore'
 import { limitOf, type BillingClient, type BillingState, type LimitStatus } from './client'
 import type { FeatureKey } from './catalog'
+import { withDefaultPlan } from './preview'
 
 export interface PaywallRequest {
   feature?: FeatureKey
@@ -65,8 +66,10 @@ export function BillingProvider({ client, session, enabled = BILLING_V2, preview
     const s = session
     const id = ++latest.current
     return client.context().then(
-      (fresh) => {
+      (read) => {
         if (id !== latest.current) return null
+        // Jamais abonnée : le plan par défaut, pas « 0 sur 0 » (`withDefaultPlan`).
+        const fresh = withDefaultPlan(read)
         setRead({ session: s, state: fresh })
         return fresh
       },

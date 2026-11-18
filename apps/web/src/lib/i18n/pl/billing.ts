@@ -184,7 +184,7 @@ export const billing: typeof Fr = {
   },
   modules: {
     title: 'Moduły',
-    subtitle: 'Dodaj je do planu Zespół lub Zakład, gdy zakład ich potrzebuje.',
+    subtitle: 'Dodaj je do planu Zakład, gdy zakład ich potrzebuje.',
     eyebrow: 'Moduł',
     trial: (days: number) => `${fmt(days)} ${dni(days)} gratis`,
     tryFree: (days: number) => `Wypróbuj za darmo przez ${fmt(days)} ${dni(days)}`,
