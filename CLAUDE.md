@@ -32,7 +32,13 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   Kiplo ne nomme jamais Intelligence Industrielle dans ses textes, sauf dans sa politique de confidentialité
   (`PRODUCT.legal`, exigée par la loi). Les deux apps se publient dans le compte développeur principal
   d'Intelligence Industrielle, que les magasins affichent comme vendeur (décision du 2026-11-17). Kiplo y est
-  une app à part, au même code, avec ses identifiants neutres (`app.kiplo`). La build choisit
+  une app à part, au même code, avec ses identifiants neutres (`app.kiplo`). **Deux apps au même code** (décision
+  du 2026-11-18) : Apple refuse la deuxième comme doublon (règle 4.3, « spam »), quel que soit l'ordre. Kiplo est
+  donc publique et part à l'examen la première (App Store « Kiplo – Work Instructions », 6836518892 ; Google Play,
+  app 4975161168195830633) ; CLIP est « non répertoriée » (examinée, absente des recherches, ouverte par le lien que
+  l'équipe donne à ses clients ; repli : Apple Business Manager), app privée ou test fermé sur Google Play. Les
+  notes à l'examinateur de chacune expliquent les deux publics. Les noms de la fiche (`apps/mobile/store/kiplo/
+  fiche.json`) : « Kiplo – … », 30 caractères au plus (« Kiplo » seul est pris sur l'App Store). La build choisit
   (`NEXT_PUBLIC_BRAND=kiplo` ; l'ancien `gesto` vaut encore Kiplo, `brandIdOf` ; sans valeur, CLIP). Les textes
   gardent le jeton `CLIP` (`Clip` sur le site) :
   `brandify`/`brandText` y mettent le nom de la marque, une fois par dictionnaire chargé ; `APP_NAME` et
