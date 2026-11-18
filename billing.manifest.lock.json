@@ -1,7 +1,7 @@
 {
   "generated_by": "octopus billing sync — ne pas modifier à la main",
   "product": "clip-v2",
-  "manifest_checksum": "sha256:de1d35fbab93f1a0867f447d7248facc3a8d424062a81878a272b82d5855e661",
+  "manifest_checksum": "sha256:2fb3cb892aec8bf7d300987c2aeb4f8d928a2828a0de97bf89f382de0ca56730",
   "stripe_mode": "test",
   "prices": {
     "equipe v1 / stripe web monthly CAD": {
