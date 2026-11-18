@@ -3,7 +3,7 @@
  * fois tranché ; et la mesure de l'essai (l'événement du retour de paiement).
  */
 import { describe, expect, it } from 'vitest'
-import { checkoutEvent } from '@/lib/billing/funnel'
+import { checkoutEvent, thanksUrl } from '@/lib/billing/funnel'
 import { armOf, assign, EXPERIMENTS, experiencesOf, pickArm, type Experiment } from '@/lib/site/experiments'
 
 const open: Experiment = { id: 'essai', arms: ['a', 'b'], open: true }
@@ -53,5 +53,12 @@ describe('les tests A/B du site', () => {
   it('le retour du paiement : l’essai avec carte, ou l’abonnement payé tout de suite', () => {
     expect(checkoutEvent({ plan: 'equipe', interval: 'monthly', trial: true, value: 199, currency: 'CAD' })).toBe('essai_commence')
     expect(checkoutEvent({ plan: 'solo', interval: 'monthly', trial: false, value: 49, currency: 'CAD' })).toBe('abonnement')
+  })
+
+  it('le retour d’un paiement réussi porte `merci=1`, d’où que l’on parte', () => {
+    expect(thanksUrl('https://kiplo.vercel.app/reglages/abonnement')).toBe('https://kiplo.vercel.app/reglages/abonnement?merci=1')
+    // La fenêtre d'une limite : la page où l'on était, avec ses paramètres et son ancre.
+    expect(thanksUrl('https://kiplo.vercel.app/postes?vue=liste#p2')).toBe('https://kiplo.vercel.app/postes?vue=liste&merci=1#p2')
+    expect(thanksUrl('https://kiplo.vercel.app/x?merci=1')).toBe('https://kiplo.vercel.app/x?merci=1')
   })
 })

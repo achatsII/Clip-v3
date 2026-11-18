@@ -657,8 +657,11 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   (`/api/v2/billing/*` répond 404 le 2026-11-18 ; en QA, 401 sans jeton). Encaisser pour vrai attend l'équipe
   plateforme : les routes en production, Stripe en mode réel, le catalogue publié en production (`billing-publish`
   ne publie qu'en QA). On allume `NEXT_PUBLIC_BILLING_V2` sur le projet de Kiplo une fois `GET /api/v2/billing/context`
-  servi en production pour `clip-v2`. En QA, le paiement (`POST /api/v2/billing/checkout`) répond 500
-  `internal_error` pour tout plan, tout intervalle et toute adresse de retour (2026-11-18), alors que la simulation
-  du catalogue ne voit aucun écart : à l'équipe plateforme. Le parcours se refait en local contre la QA (`next dev`
+  servi en production pour `clip-v2`. En QA, le parcours marche de bout en bout (2026-11-18, après les correctifs de
+  la plateforme) : « Essayer Équipe 7 jours », Stripe demande la carte (« Démarrer l'essai »), le retour
+  `?merci=1` (`thanksUrl`, aussi depuis la fenêtre d'une limite), « Essai jusqu'au … », le portail (passer à Solo,
+  annuler pendant l'essai : « se termine le … », sans « Renouvellement »). Reste à la plateforme : l'essai ouvre une
+  banque de 0 crédit d'IA (`granted: 0`, `overage_policy: block`), donc aucune génération pendant l'essai ; et les
+  pages Stripe disent « CLIP » et « Intelligence Industrielle » à un client de Kiplo. Le parcours se refait en local contre la QA (`next dev`
   avec `NEXT_PUBLIC_GATEWAY_URL` de QA, `NEXT_PUBLIC_BILLING_V2=1`, `NEXT_PUBLIC_BRAND=kiplo` ; la QA accepte toute
   origine).

@@ -19,7 +19,7 @@ import { useToast } from '@/components/ui/Toast'
 import { nativeEnv } from '@/lib/bridge/native'
 import { byQuote, FEATURED_PLAN, FREE_PLAN, LIMIT_FEATURES, onFreePlan, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
 import { PRODUCT } from '@/lib/brand/product'
-import { rememberCheckout } from '@/lib/billing/funnel'
+import { rememberCheckout, thanksUrl } from '@/lib/billing/funnel'
 import { BILLING_INTERVAL, parsePlanIntent, type PlanIntent } from '@/lib/billing/intent'
 import { BillingError, creditsOf } from '@/lib/billing/client'
 import { amountOf, planFor } from '@/lib/billing/advice'
@@ -82,7 +82,7 @@ function Subscription() {
       const plan = plans.data?.plans.find((p) => p.code === code)
       const price = plan?.prices.find((x) => x.interval === period)
       if (plan && price) rememberCheckout({ plan: code, interval: period, trial: !!plan.trial_days && (!state?.plan_code || state.plan_code === FREE_PLAN), value: price.amount_cents / 100, currency: price.currency })
-      window.location.assign(await billingClient.checkout(code, period, { success: `${back}?merci=1`, cancel: back }))
+      window.location.assign(await billingClient.checkout(code, period, { success: thanksUrl(back), cancel: back }))
     } catch (e) {
       if (e instanceof BillingError && e.code === 'checkout_refused') await manage()
       else if (e instanceof BillingError && e.status === 403) toast.error(e.reason === 'plan_not_on_sale' ? t.billing.checkout.notOnSale : t.billing.checkout.adminOnly)
@@ -163,7 +163,8 @@ function Subscription() {
               <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-900/10 dark:bg-white/10">
                 <div className="bg-gradient-primary h-full rounded-full" style={{ width: `${Math.min(100, (c.available / Math.max(1, c.granted)) * 100)}%` }} />
               </div>
-              {c.period_end && <p className="mt-2 text-sm font-bold text-slate-500">{t.billing.renewsOn(formatDate(c.period_end))}</p>}
+              {/* Annulé : rien ne se renouvelle (le plan dit déjà « se termine le … »). */}
+              {c.period_end && !state.cancel_at_period_end && <p className="mt-2 text-sm font-bold text-slate-500">{t.billing.renewsOn(formatDate(c.period_end))}</p>}
               {/* À ce rythme : quand ils seront épuisés, et le plan qui en donne plus (sans rien acheter d'ici). */}
               {forecast && (
                 <p className="mt-2 text-sm font-bold text-amber-700 dark:text-amber-300">

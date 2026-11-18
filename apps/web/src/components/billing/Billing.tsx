@@ -12,6 +12,7 @@ import { nativeEnv } from '@/lib/bridge/native'
 import { creditsReason, moduleOffer, planFor, renewalText } from '@/lib/billing/advice'
 import { byQuote, FEATURE_LABELS, FEATURE_ORDER, type FeatureKey, featureCount, featureLabel, isLimitFeature, moduleOf, onFreePlan, PLAN_PITCH, salesHref } from '@/lib/billing/catalog'
 import { formatPrice } from '@/lib/billing/format'
+import { rememberCheckout, thanksUrl } from '@/lib/billing/funnel'
 import { BillingError, creditsOf, limitOf, type BillingClient, type PublicPlan } from '@/lib/billing/client'
 import { limitReason } from '@/lib/billing/usage'
 import { useBilling, useEntitlement } from '@/lib/billing/state'
@@ -81,7 +82,7 @@ export function CreditPill() {
             <p className="tabular-nums">{num(c.consumed)}</p>
           </div>
         </div>
-        {c.period_end && <p className="mt-4 text-sm font-bold text-slate-500">{t.billing.renewsOn(formatDate(c.period_end))}</p>}
+        {c.period_end && !state.cancel_at_period_end && <p className="mt-4 text-sm font-bold text-slate-500">{t.billing.renewsOn(formatDate(c.period_end))}</p>}
         <p className="mt-2 text-sm font-medium text-slate-500">{t.billing.pill.howItWorks}</p>
         <Link href="/reglages/abonnement" onClick={() => setOpen(false)} className="btn-press glass-card mt-5 flex h-12 items-center justify-center rounded-full font-black">
           {t.billing.pill.viewSubscription}
@@ -224,7 +225,9 @@ export function Paywall({ client }: { client: BillingClient }) {
     setBusy(true)
     try {
       const back = window.location.href
-      const url = await client.checkout(offer.code, price.interval, { success: back, cancel: back })
+      // Comme la page Abonnement : ce qu'on achète, pour le mesurer au retour (`?merci=1`, avec l'accord seulement).
+      rememberCheckout({ plan: offer.code, interval: price.interval, trial: !!offer.trial_days && onFreePlan(state), value: price.amount_cents / 100, currency: price.currency })
+      const url = await client.checkout(offer.code, price.interval, { success: thanksUrl(back), cancel: back })
       window.location.assign(url)
     } catch (e) {
       if (e instanceof BillingError && e.status === 403) toast.error(t.billing.checkout.adminOnly, t.billing.checkout.askToUpgrade)

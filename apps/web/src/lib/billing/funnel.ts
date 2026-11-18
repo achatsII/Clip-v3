@@ -58,6 +58,16 @@ export function rememberCheckout(note: CheckoutNote): void {
   write(session(), CHECKOUT_KEY, note)
 }
 
+/**
+ * L'adresse de retour d'un paiement réussi : la page d'où l'on part, avec `merci=1`, que `measureCheckoutReturn` lit
+ * puis efface. Toute page qui envoie payer passe par elle (la page Abonnement comme la fenêtre d'une limite).
+ */
+export function thanksUrl(href: string): string {
+  const u = new URL(href)
+  u.searchParams.set('merci', '1')
+  return u.toString()
+}
+
 /** L'événement qu'un retour de paiement envoie : l'essai, ou l'abonnement payé tout de suite. */
 export const checkoutEvent = (note: CheckoutNote) => (note.trial ? 'essai_commence' : 'abonnement')
 
