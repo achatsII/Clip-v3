@@ -636,7 +636,10 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   courriel ou sur le téléphone si l'usine avertit (`/api/notify`, `request`).
 - **Dans l'app mobile, on ne vend rien** (décision du 2026-11-17, modèle « Spotify ») : l'app est une app
   compagnon (règle Apple 3.1.3(f)) ; on s'abonne sur le site, une seule facturation. Ni prix, ni bouton, ni lien
-  d'achat dans la coquille (sans capacité `store.*`, la page Abonnement n'y montre qu'une phrase). **Si Apple
+  d'achat dans la coquille (sans capacité `store.*`, la page Abonnement n'y montre qu'une phrase ; la connexion n'y
+  dit ni « gratuit » ni « carte », `inApp` de `/connexion`, `tests/signin-in-app.test.tsx`). La fiche des magasins
+  de Kiplo : `apps/mobile/store/kiplo/fiche.json`, 18 langues ; son URL de soutien est la page de confidentialité,
+  la seule où Kiplo peut donner l'adresse d'Intelligence Industrielle. **Si Apple
   exige l'achat dans l'app** (3.1.3(b), la règle du skill `billing` pour une app grand public), la version
   suivante du manifeste ajoute `ios`/`android`, `providers.revenuecat` (posture `in_app_purchase`, projet
   `clip-v2`) et les `store_product_id` : le code sait déjà vendre dans le magasin.

@@ -2,7 +2,7 @@
 
 import { ArrowRight, Factory, Mail, QrCode, Sparkles, Video } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/Button'
 import { FieldError, Input, Label } from '@/components/ui/Field'
@@ -16,14 +16,20 @@ import { setLang, useLang, useMessages } from '@/lib/i18n'
 import { isLang } from '@/lib/i18n/core'
 import { PRIVACY_URL } from '@/lib/billing/store'
 import { useToggle } from '@/lib/toggles'
+import { inNativeShell } from '@/lib/bridge/native'
 
 type Mode = 'login' | 'signup' | 'forgot'
+
+const noSubscribe = () => () => {}
 
 export default function ConnexionPage() {
   const router = useRouter()
   const t = useMessages().auth.login
   const lang = useLang()
   const aiAtSignIn = useToggle('aiConsentAtSignIn')
+  // Dans l'app des magasins, rien ne parle de gratuit ni de carte : on n'y vend rien (règles d'Apple et de Google).
+  // Lu après l'hydratation : la page rendue au serveur ne sait pas qu'elle sera dans la coquille.
+  const inApp = useSyncExternalStore(noSubscribe, inNativeShell, () => false)
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -115,9 +121,11 @@ export default function ConnexionPage() {
           <Logo subtitle={t.tagline} />
         </div>
         <h2 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">{t.titles[mode]}</h2>
-        <p className="mt-1 font-medium text-slate-500 dark:text-slate-400">
-          {t.intros[mode]}
-        </p>
+        {!(inApp && mode === 'signup') && (
+          <p className="mt-1 font-medium text-slate-500 dark:text-slate-400">
+            {t.intros[mode]}
+          </p>
+        )}
 
         {sent ? (
           <div className="mt-8 rounded-3xl bg-emerald-50 p-5 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
@@ -185,7 +193,7 @@ export default function ConnexionPage() {
               <>
                 {t.newHere}{' '}
                 <button type="button" className="font-black text-[var(--primary)]" onClick={() => { setMode('signup'); setError(null) }}>
-                  {t.createFreeAccount}
+                  {inApp ? t.submit.signup : t.createFreeAccount}
                 </button>
               </>
             ) : (
