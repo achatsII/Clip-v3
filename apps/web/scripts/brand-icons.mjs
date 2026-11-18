@@ -1,4 +1,4 @@
-// Refait les icônes fixes de chaque marque (CLIP et Gesto, src/lib/brand/product.ts) à partir de son symbole
+// Refait les icônes fixes de chaque marque (CLIP et Kiplo, src/lib/brand/product.ts) à partir de son symbole
 // (banque de src/lib/brand/marks.ts) et de la couleur par défaut (src/lib/brand/colors.ts) : le favicon,
 // l'icône d'accueil et les icônes du manifeste du web (public/brands/<marque>/), les icônes de l'app mobile
 // (apps/mobile/assets/brands/<marque>/). Depuis apps/web : `npm run brand-icons`. Il faut Node 22.18+ (il lit

@@ -4,10 +4,10 @@
  * - **CLIP** : la version des clients d'Intelligence Industrielle, vendue par son équipe. Aucun prix du
  *   libre-service ne s'y montre (tout y est « sur devis ») : la version publique coûte bien moins cher
  *   et ne doit pas faire concurrence aux contrats en cours.
- * - **Gesto** : la version publique, en libre-service (site, App Store), qui ne nomme jamais
- *   Intelligence Industrielle. « Filmez le geste. L'IA écrit l'instruction. »
+ * - **Kiplo** (nom choisi le 2026-11-17, à la place de Gesto) : la version publique, en libre-service (site,
+ *   App Store), qui ne nomme jamais Intelligence Industrielle dans ses textes. « Filmez le geste. L'IA écrit l'instruction. »
  *
- * La build choisit la marque (`NEXT_PUBLIC_BRAND=gesto`) ; sans valeur, CLIP. Le code, les données et la
+ * La build choisit la marque (`NEXT_PUBLIC_BRAND=kiplo` ; l'ancien `gesto` vaut encore Kiplo) ; sans valeur, CLIP. Le code, les données et la
  * Gateway sont les mêmes : seuls changent le nom, le logo, ce qui se vend en ligne et ce qui se montre.
  * Le nom se change ici (un seul endroit) : les textes gardent le jeton `CLIP` (`Clip` sur le site), que
  * `brandify` remplace une fois par dictionnaire chargé.
@@ -16,7 +16,7 @@
  */
 import type { MarkId } from './marks'
 
-export type BrandId = 'clip' | 'gesto'
+export type BrandId = 'clip' | 'kiplo'
 
 export interface Product {
   id: BrandId
@@ -45,8 +45,8 @@ export interface Product {
   defaultLang: 'fr' | 'en'
   /**
    * Qui exploite le produit, nommé seulement là où la loi l'exige (la politique de confidentialité :
-   * Loi 25, RGPD). En attendant la décision sur l'entité qui vend la marque publique (D124 du moteur
-   * marketing), Intelligence Industrielle ; se change ici, en un seul endroit.
+   * Loi 25, RGPD). Intelligence Industrielle : Kiplo se publie dans son compte développeur principal,
+   * à côté de CLIP (décision du 2026-11-17) ; se change ici, en un seul endroit.
    */
   legal: { entity: string; address: string; email: string }
 }
@@ -68,9 +68,9 @@ export const PRODUCTS: Record<BrandId, Product> = {
     defaultLang: 'fr',
     legal: II_LEGAL,
   },
-  gesto: {
-    id: 'gesto',
-    name: 'Gesto',
+  kiplo: {
+    id: 'kiplo',
+    name: 'Kiplo',
     // « Filmer, puis lire » : le point qui enregistre, puis la lecture. Le geste filmé devient l'instruction.
     mark: 'filmer',
     wordmark: 'text',
@@ -85,19 +85,22 @@ export const PRODUCTS: Record<BrandId, Product> = {
   },
 }
 
-/** La politique de confidentialité de la marque : celle d'Intelligence Industrielle pour CLIP ; la page du site pour Gesto. */
+/** La politique de confidentialité de la marque : celle d'Intelligence Industrielle pour CLIP ; la page du site pour Kiplo. */
 export function privacyHref(lang: string): string {
   if (PRODUCT.company) return 'https://www.intelligenceindustrielle.com/privacy-policy'
   return lang === 'fr' ? '/confidentialite' : lang === 'en' ? '/en/privacy' : `/${lang}/privacy`
 }
 
-export const brandIdOf = (value: string | undefined): BrandId => (value?.trim().toLowerCase() === 'gesto' ? 'gesto' : 'clip')
+/** Les noms que la build accepte pour la marque publique : `kiplo`, et `gesto`, son nom d'avant le 2026-11-17. */
+const PUBLIC_BRAND_IDS = new Set(['kiplo', 'gesto'])
+
+export const brandIdOf = (value: string | undefined): BrandId => (PUBLIC_BRAND_IDS.has(value?.trim().toLowerCase() ?? '') ? 'kiplo' : 'clip')
 
 /** La marque de cette build. */
 export const PRODUCT: Product = PRODUCTS[brandIdOf(process.env.NEXT_PUBLIC_BRAND)]
 
 const TOKEN = /\b(?:CLIP|Clip)\b/g
-// L'entreprise, quand la marque ne la nomme pas : « d’Intelligence Industrielle » devient « de Gesto ».
+// L'entreprise, quand la marque ne la nomme pas : « d’Intelligence Industrielle » devient « de Kiplo ».
 const COMPANY_ELIDED = /\b([dD])[’']Intelligence Industrielle\b/g
 const COMPANY = /\bIntelligence Industrielle\b/g
 

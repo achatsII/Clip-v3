@@ -98,7 +98,7 @@ export function content(lang: SiteLang): SiteContent {
   if (!t) {
     const c = siteCatalog()
     const facts = siteFacts(lang, c)
-    // Les faits du catalogue, puis le nom de la marque de la build (`Clip` → « Gesto » ; CLIP : tel quel).
+    // Les faits du catalogue, puis le nom de la marque de la build (`Clip` → « Kiplo » ; CLIP : tel quel).
     t = deepFill(SITE_DICTS[lang], (s) => brandText(fillFacts(s, lang, facts, c)))
     filled.set(lang, t)
   }

@@ -1,5 +1,5 @@
 /**
- * Deux marques, un seul produit (CLIP pour les clients de l'équipe, Gesto en libre-service), et dix-huit
+ * Deux marques, un seul produit (CLIP pour les clients de l'équipe, Kiplo en libre-service), et dix-huit
  * langues : le nom de la marque dans les textes, ce que chaque marque vend, les langues chargées à la
  * demande (l'outil, le lecteur du poste, le site), et la mesure du site qui attend l'accord.
  */
@@ -15,41 +15,44 @@ import { INTL_LANGS, SITE_LANGS } from '@/lib/site/lang'
 import { forBrand, siteCatalog } from '@/lib/site/pricing'
 import { ROUTES, SITE_INDEXED } from '@/lib/site/routes'
 
-const gesto = PRODUCTS.gesto
+const kiplo = PRODUCTS.kiplo
 const clip = PRODUCTS.clip
 
 describe('la marque', () => {
   it('se choisit à la build (NEXT_PUBLIC_BRAND) ; sans valeur, CLIP', () => {
     expect(brandIdOf(undefined)).toBe('clip')
-    expect(brandIdOf('gesto')).toBe('gesto')
-    expect(brandIdOf(' Gesto ')).toBe('gesto')
+    expect(brandIdOf('kiplo')).toBe('kiplo')
+    expect(brandIdOf(' Kiplo ')).toBe('kiplo')
+    // Son nom d'avant le 2026-11-17 : une build encore réglée sur « gesto » reste la marque publique, jamais CLIP.
+    expect(brandIdOf('gesto')).toBe('kiplo')
+    expect(brandIdOf(undefined)).toBe('clip')
     expect(brandIdOf('autre')).toBe('clip')
   })
 
-  it('Gesto remplace le jeton CLIP et ne nomme jamais Intelligence Industrielle ; CLIP reste tel quel', () => {
+  it('Kiplo remplace le jeton CLIP et ne nomme jamais Intelligence Industrielle ; CLIP reste tel quel', () => {
     const fr = 'CLIP envoie vos photos par la plateforme d’Intelligence Industrielle. Clip, c’est simple.'
-    expect(brandText(fr, gesto)).toBe('Gesto envoie vos photos par la plateforme de Gesto. Gesto, c’est simple.')
-    expect(brandText('Through Intelligence Industrielle’s platform', gesto)).toBe('Through Gesto’s platform')
+    expect(brandText(fr, kiplo)).toBe('Kiplo envoie vos photos par la plateforme de Kiplo. Kiplo, c’est simple.')
+    expect(brandText('Through Intelligence Industrielle’s platform', kiplo)).toBe('Through Kiplo’s platform')
     expect(brandText(fr, clip)).toBe(fr)
     // « clip » en minuscules (un extrait vidéo, un identifiant) ne change pas.
-    expect(brandText('a video clip of clip-v3', gesto)).toBe('a video clip of clip-v3')
+    expect(brandText('a video clip of clip-v3', kiplo)).toBe('a video clip of clip-v3')
   })
 
   it('un dictionnaire entier, fonctions comprises, passe au nom de la marque', () => {
     const dict = { title: 'CLIP', nested: { list: ['Clip', 'x'], fn: (n: number) => `CLIP ${n}`, other: (n: number) => n * 2 } }
-    const b = brandify(dict, gesto)
-    expect(b.title).toBe('Gesto')
-    expect(b.nested.list).toEqual(['Gesto', 'x'])
-    expect(b.nested.fn(3)).toBe('Gesto 3')
+    const b = brandify(dict, kiplo)
+    expect(b.title).toBe('Kiplo')
+    expect(b.nested.list).toEqual(['Kiplo', 'x'])
+    expect(b.nested.fn(3)).toBe('Kiplo 3')
     expect(b.nested.other(3)).toBe(6)
     expect(brandify(dict, clip)).toBe(dict)
   })
 
   it('chaque marque a son logo, sa politique de confidentialité et ce qu’elle montre', () => {
-    expect(clip.mark).not.toBe(gesto.mark)
-    expect([clip.company, gesto.company]).toEqual(['Intelligence Industrielle', null])
-    expect([clip.selfServePrices, gesto.selfServePrices]).toEqual([false, true])
-    expect([clip.decouvrir, gesto.decouvrir, clip.siteIndexed, gesto.siteIndexed]).toEqual([true, false, false, true])
+    expect(clip.mark).not.toBe(kiplo.mark)
+    expect([clip.company, kiplo.company]).toEqual(['Intelligence Industrielle', null])
+    expect([clip.selfServePrices, kiplo.selfServePrices]).toEqual([false, true])
+    expect([clip.decouvrir, kiplo.decouvrir, clip.siteIndexed, kiplo.siteIndexed]).toEqual([true, false, false, true])
     // La build des tests est CLIP : sa politique est celle de son entreprise.
     expect(privacyHref('fr')).toMatch(/^https:\/\/www\.intelligenceindustrielle\.com\//)
   })
@@ -61,8 +64,8 @@ describe('ce que chaque marque vend', () => {
 
   beforeEach(() => localStorage.setItem('clip_pref_ui_lang', 'fr'))
 
-  it('Gesto : le libre-service seulement (ni Usine ni ses modules), noms dans la langue de l’outil', () => {
-    const shown = presentOffer(offer, gesto).plans
+  it('Kiplo : le libre-service seulement (ni Usine ni ses modules), noms dans la langue de l’outil', () => {
+    const shown = presentOffer(offer, kiplo).plans
     expect(shown.map((p) => p.code)).toEqual(['free', 'solo', 'equipe'])
     expect(shown.map((p) => p.name)).toEqual(['Sans abonnement', 'Solo', 'Équipe'])
     expect(shown.find((p) => p.code === 'solo')?.trial_days).toBe(7)
@@ -74,10 +77,10 @@ describe('ce que chaque marque vend', () => {
     expect(shown.every((p) => p.prices.length === 0)).toBe(true)
   })
 
-  it('le site fait de même : Gesto sans forfait sur devis, CLIP sans prix ; l’essai est de 7 jours', () => {
+  it('le site fait de même : Kiplo sans forfait sur devis, CLIP sans prix ; l’essai est de 7 jours', () => {
     const c = siteCatalog()
     expect(c.trialDays).toBe(7)
-    const g = forBrand(c, gesto)
+    const g = forBrand(c, kiplo)
     expect(g.plans.some((p) => p.quote)).toBe(false)
     expect(g.modules).toEqual([])
     expect(c.plans.every((p) => p.prices.length === 0)).toBe(true)
@@ -144,14 +147,14 @@ describe('la mesure du site attend l’accord', () => {
   })
 
   it('Google Analytics ne se charge qu’après « Accepter », sans publicité ; refuser l’arrête et efface ses témoins', () => {
-    trackEvent('vue_prix', { offre: 'gesto', type_page: 'pricing', langue: 'fr', emplacement: 'page' })
+    trackEvent('vue_prix', { offre: 'kiplo', type_page: 'pricing', langue: 'fr', emplacement: 'page' })
     expect(window.dataLayer).toBeUndefined()
     localStorage.setItem(CONSENT_KEY, JSON.stringify({ choice: 'granted', version: CONSENT_VERSION }))
     loadGoogleAnalytics('G-TEST123')
     expect(document.querySelector('script[src*="googletagmanager.com/gtag/js?id=G-TEST123"]')).toBeTruthy()
     const consent = (window.dataLayer as unknown[][]).find((args) => args[0] === 'consent')
     expect(consent?.[2]).toMatchObject({ analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' })
-    trackEvent('vue_prix', { offre: 'gesto', type_page: 'pricing', langue: 'fr', emplacement: 'page' })
+    trackEvent('vue_prix', { offre: 'kiplo', type_page: 'pricing', langue: 'fr', emplacement: 'page' })
     expect((window.dataLayer as unknown[][]).some((args) => args[0] === 'event' && args[1] === 'vue_prix')).toBe(true)
     document.cookie = '_ga=GA1.1.1; path=/'
     revokeGoogleAnalytics('G-TEST123')

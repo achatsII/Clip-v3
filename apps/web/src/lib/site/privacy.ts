@@ -1,5 +1,5 @@
 /**
- * La politique de confidentialité de la marque publique (Gesto), en français et en anglais : les autres
+ * La politique de confidentialité de la marque publique (Kiplo), en français et en anglais : les autres
  * langues du site montrent l'anglais (un texte juridique ne se traduit pas à la machine). Elle nomme
  * l'entreprise qui exploite le produit (`PRODUCT.legal`), comme la loi l'exige, et rien d'autre de
  * l'entreprise. CLIP garde la politique d'Intelligence Industrielle (`privacyHref`).

@@ -20,14 +20,14 @@ export function LogoMark({ className }: { className?: string }) {
   )
 }
 
-/** Le mot « gesto », écrit en Inter Black serré, sur une largeur fixe (`textLength`) : la mise en page ne dépend pas de la police. */
+/** Le mot « kiplo », écrit en Inter Black serré, sur une largeur fixe (`textLength`) : la mise en page ne dépend pas de la police. */
 const TEXT_VIEWBOX = '0 0 230 92'
 const textWordmark = (word: string) =>
   `<text x="2" y="68" font-size="88" font-weight="900" textLength="226" lengthAdjust="spacing" font-family="Inter, ui-sans-serif, system-ui, sans-serif" fill="currentColor">${word}</text>`
 
 /**
  * Le mot de la marque à côté du symbole ; sa couleur est celle du texte. Sa largeur suit sa hauteur
- * (`w-auto` : les proportions du dessin) : « clip » dessiné pour CLIP, « gesto » écrit pour Gesto.
+ * (`w-auto` : les proportions du dessin) : « clip » dessiné pour CLIP, « kiplo » écrit pour Kiplo.
  */
 export function Wordmark({ className, label = PRODUCT.name }: { className?: string; label?: string }) {
   const drawn = PRODUCT.wordmark === 'drawn'

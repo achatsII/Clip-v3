@@ -13,7 +13,7 @@ import { accessMode } from '@/lib/decouvrir/server/config'
 import { DECOUVRIR_COOKIE, openSession } from '@/lib/decouvrir/server/session'
 
 export function proxy(req: NextRequest) {
-  // Découvrir sert les prospects de l'équipe de vente de CLIP : la marque publique (Gesto) ne l'a pas.
+  // Découvrir sert les prospects de l'équipe de vente de CLIP : la marque publique (Kiplo) ne l'a pas.
   if (!PRODUCT.decouvrir) return new NextResponse(null, { status: 404 })
   const mode = accessMode()
   const page = !req.nextUrl.pathname.startsWith('/api/')

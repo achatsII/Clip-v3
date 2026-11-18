@@ -144,7 +144,7 @@ export function findManifest(start = process.cwd()): string {
 }
 
 /**
- * Ce que la marque de la build montre du catalogue. La marque publique (Gesto) : le libre-service seulement,
+ * Ce que la marque de la build montre du catalogue. La marque publique (Kiplo) : le libre-service seulement,
  * sans les forfaits sur devis ni leurs modules (ils se vendent par l'équipe de CLIP). CLIP : tout, mais sans un seul
  * prix du libre-service (« sur devis ») : la version publique coûte bien moins cher que les contrats en cours.
  */

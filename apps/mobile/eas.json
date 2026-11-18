@@ -6,10 +6,10 @@
     "production": {
       "autoIncrement": true
     },
-    "gesto": {
+    "kiplo": {
       "extends": "production",
       "env": {
-        "EXPO_PUBLIC_BRAND": "gesto"
+        "EXPO_PUBLIC_BRAND": "kiplo"
       }
     }
   },
@@ -19,6 +19,6 @@
         "ascAppId": "6834038200"
       }
     },
-    "gesto": {}
+    "kiplo": {}
   }
 }

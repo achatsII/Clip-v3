@@ -115,7 +115,7 @@ export function byQuote(p: { code: string; prices: readonly unknown[] } | null |
 
 /**
  * Les plans tels que la marque de la build les présente, nommés dans la langue de l'outil :
- * - la marque publique (Gesto) : sans ce qui est sur devis (Usine et ses modules se vendent par l'équipe) ;
+ * - la marque publique (Kiplo) : sans ce qui est sur devis (Usine et ses modules se vendent par l'équipe) ;
  * - CLIP : sans un seul prix du libre-service (ses clients passent par l'équipe : tout y est sur devis).
  */
 export function presentOffer(offer: PlansOffer, p: Product = PRODUCT): PlansOffer {

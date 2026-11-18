@@ -13,7 +13,7 @@ import { MeetingsCalendar } from '../MeetingsCalendar'
 import { ButtonLink, CheckList, Container, Eyebrow } from '../ui'
 
 export function BookPage({ lang }: { lang: SiteLang }) {
-  // La démo avec l'équipe : seulement pour la marque qui se vend par l'équipe (CLIP). Gesto s'essaie seul.
+  // La démo avec l'équipe : seulement pour la marque qui se vend par l'équipe (CLIP). Kiplo s'essaie seul.
   if (!PRODUCT.enterprise) notFound()
   const t = content(lang)
   const b = t.book

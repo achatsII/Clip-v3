@@ -7,12 +7,12 @@
     "bundleIdentifier": "com.intelligenceindustrielle.clip",
     "package": "com.intelligenceindustrielle.clip"
   },
-  "gesto": {
-    "name": "Gesto",
-    "webUrl": "https://getgesto.vercel.app",
+  "kiplo": {
+    "name": "Kiplo",
+    "webUrl": "https://kiplo.vercel.app",
     "defaultLang": "en",
-    "scheme": "gesto",
-    "bundleIdentifier": null,
-    "package": null
+    "scheme": "kiplo",
+    "bundleIdentifier": "app.kiplo",
+    "package": "app.kiplo"
   }
 }

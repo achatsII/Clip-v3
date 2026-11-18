@@ -22,16 +22,20 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
 
 - **Deux marques, un seul produit** (décision du 2026-11-17, `src/lib/brand/product.ts`) : **CLIP**, vendu
   par l'équipe d'Intelligence Industrielle à ses clients (aucun prix du libre-service : tout y est « sur devis »,
-  `presentOffer` et `forBrand` ; site hors des moteurs, `siteIndexed`) et **Gesto**, la version publique en
-  libre-service (« Filmez le geste. L'IA écrit l'instruction. »), qui ne nomme jamais Intelligence Industrielle,
-  sauf dans sa politique de confidentialité (`PRODUCT.legal`, exigée par la loi). La build choisit
-  (`NEXT_PUBLIC_BRAND=gesto` ; sans valeur, CLIP). Les textes gardent le jeton `CLIP` (`Clip` sur le site) :
+  `presentOffer` et `forBrand` ; site hors des moteurs, `siteIndexed`) et **Kiplo** (nom choisi le 2026-11-17
+  à la place de Gesto), la version publique en libre-service (« Filmez le geste. L'IA écrit l'instruction. »).
+  Kiplo ne nomme jamais Intelligence Industrielle dans ses textes, sauf dans sa politique de confidentialité
+  (`PRODUCT.legal`, exigée par la loi). Les deux apps se publient dans le compte développeur principal
+  d'Intelligence Industrielle, que les magasins affichent comme vendeur (décision du 2026-11-17). Kiplo y est
+  une app à part, au même code, avec ses identifiants neutres (`app.kiplo`). La build choisit
+  (`NEXT_PUBLIC_BRAND=kiplo` ; l'ancien `gesto` vaut encore Kiplo, `brandIdOf` ; sans valeur, CLIP). Les textes
+  gardent le jeton `CLIP` (`Clip` sur le site) :
   `brandify`/`brandText` y mettent le nom de la marque, une fois par dictionnaire chargé ; `APP_NAME` et
-  `PRODUCT` partout ailleurs (métadonnées, consignes de l'IA). Gesto n'a ni Découvrir (`src/proxy.ts`), ni
+  `PRODUCT` partout ailleurs (métadonnées, consignes de l'IA). Kiplo n'a ni Découvrir (`src/proxy.ts`), ni
   démo avec l'équipe (`BookPage`), ni Usine ni modules en vente ; son logo est le n° 3 « Filmer, puis lire »
-  (`PRODUCT.mark`), ses icônes dans `public/brands/gesto/` (`npm run brand-icons` les refait pour les deux
+  (`PRODUCT.mark`), ses icônes dans `public/brands/kiplo/` (`npm run brand-icons` les refait pour les deux
   marques), son favicon par réécriture (`next.config.ts`), son manifeste par `src/app/manifest.ts`. L'app
-  mobile aussi : `EXPO_PUBLIC_BRAND` (profil d'EAS au nom de la marque), `apps/mobile/brands.json` (nom,
+  mobile aussi : `EXPO_PUBLIC_BRAND` (profil d'EAS au nom de la marque, `kiplo`), `apps/mobile/brands.json` (nom,
   adresse du site, identifiants des magasins) et `app.config.js` (« Deux marques, une coquille »,
   `docs/pont-natif.md`).
 - **Une seule interface** : tout l'écran est dans `apps/web`. La coquille Expo n'ajoute que des
