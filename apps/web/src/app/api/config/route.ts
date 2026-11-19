@@ -9,19 +9,9 @@
  */
 import { NextResponse } from 'next/server'
 import type { PublicConfig } from '@clip/bridge'
-import { DEFAULT_TOGGLES } from '@/lib/toggleDefaults'
+import { serverToggles } from '@/lib/serverToggles'
 
 export const dynamic = 'force-dynamic'
-
-function parseToggles(raw: string | undefined): Record<string, boolean> {
-  if (!raw) return {}
-  try {
-    const v = JSON.parse(raw) as Record<string, unknown>
-    return Object.fromEntries(Object.entries(v).filter(([, b]) => typeof b === 'boolean')) as Record<string, boolean>
-  } catch {
-    return {}
-  }
-}
 
 export async function GET() {
   const forceUpdate: PublicConfig['forceUpdate'] = {}
@@ -30,7 +20,7 @@ export async function GET() {
   const body: PublicConfig = {
     configVersion: 1,
     forceUpdate,
-    toggles: { ...DEFAULT_TOGGLES, ...parseToggles(process.env.CLIP_TOGGLES) },
+    toggles: serverToggles(),
     realtime: !!process.env.ABLY_KEY,
   }
   return NextResponse.json(body, { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } })

@@ -11,27 +11,31 @@ import {
   CreditCard,
   Home,
   LogOut,
+  Monitor,
   MapPin,
   MessageSquareWarning,
   Moon,
   Plus,
   ScanLine,
   Settings,
+  Smartphone,
   Upload,
   Users,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Fragment, useCallback, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useSession } from '@/components/providers/Session'
 import { ScanSheet } from '@/components/ScanSheet'
+import { GetTheApp, hasStoreLink } from '@/components/devices/GetTheApp'
+import { OpenOnComputer } from '@/components/devices/OpenOnComputer'
 import { ContactSync, InboxButton } from '@/components/shell/Inbox'
 import { Logo } from '@/components/Logo'
 import { AppearanceControls } from '@/components/settings/Appearance'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { Avatar } from '@/components/ui/Avatar'
-import { callNative, hasCapability } from '@/lib/bridge/native'
+import { callNative, hasCapability, inNativeShell } from '@/lib/bridge/native'
 import { logout } from '@/lib/gateway/client'
 import { VersionLine } from './VersionLine'
 import { useLangVersion, useMessages } from '@/lib/i18n'
@@ -42,6 +46,8 @@ import { cn } from '@/lib/util/cn'
 import { CreationWatcher } from '@/hooks/useCreations'
 import { RealtimeBridge } from '@/hooks/useRealtime'
 import { useBilling } from '@/lib/billing/state'
+
+const noSubscribe = () => () => {}
 
 interface NavItem {
   href: string
@@ -69,6 +75,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [scanOpen, setScanOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const deleteToggle = useToggle('deleteAccount')
+  // D'un appareil à l'autre : l'app mobile (au web, toggle `storeLinks`), l'ordinateur (dans l'app, `desktopHint`).
+  const inApp = useSyncExternalStore(noSubscribe, inNativeShell, () => false)
+  const getAppOn = useToggle('storeLinks') && !inApp && hasStoreLink()
+  const computerOn = useToggle('desktopHint') && inApp
+  const [deviceOpen, setDeviceOpen] = useState(false)
   const operatorsOn = useToggle('operators')
   const recordsOn = useToggle('records')
 
@@ -170,6 +181,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/reglages" className={cn('btn-press flex h-11 items-center gap-3 rounded-2xl px-4 text-sm font-bold', isActive('/reglages') && !isActive('/reglages/abonnement') ? 'bg-primary-soft text-[var(--primary-strong)] dark:text-[var(--primary-light)]' : 'text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5')}>
             <Settings className="h-4 w-4" /> {t.shell.nav.settings}
           </Link>
+          {getAppOn && (
+            <button type="button" onClick={() => setDeviceOpen(true)} className="btn-press flex h-11 w-full items-center gap-3 rounded-2xl px-4 text-left text-sm font-bold text-slate-500 hover:bg-slate-900/5 dark:text-slate-400 dark:hover:bg-white/5">
+              <Smartphone className="h-4 w-4" /> {t.devices.getApp.menu}
+            </button>
+          )}
           <div className="glass-card mt-3 flex items-center gap-3 rounded-[22px] p-3">
             <Avatar name={displayName} />
             <span className="min-w-0 flex-1">
@@ -259,6 +275,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {!!n.badge && <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs text-white tabular-nums">{n.badge}</span>}
               </Link>
             ))}
+          {/* Au téléphone : dans l'app, l'adresse pour l'ordinateur ; dans le navigateur, l'app à installer (`/app`). */}
+          {computerOn && (
+            <button type="button" onClick={() => { setMoreOpen(false); setDeviceOpen(true) }} className="glass-card btn-press flex h-14 items-center gap-3 rounded-2xl px-4 text-left font-black text-slate-800 dark:text-slate-100">
+              <Monitor className="h-5 w-5" /> {t.devices.computer.title}
+            </button>
+          )}
+          {getAppOn && (
+            <Link href="/app" onClick={() => setMoreOpen(false)} className="glass-card btn-press flex h-14 items-center gap-3 rounded-2xl px-4 font-black text-slate-800 lg:hidden dark:text-slate-100">
+              <Smartphone className="h-5 w-5" /> {t.devices.getApp.menu}
+            </Link>
+          )}
           <button type="button" onClick={() => { setMoreOpen(false); setAppearanceOpen(true) }} className="glass-card btn-press flex h-14 items-center gap-3 rounded-2xl px-4 text-left font-black text-slate-800 dark:text-slate-100">
             <Moon className="h-5 w-5" /> {t.shell.appearance}
           </button>
@@ -275,6 +302,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </Modal>
       <DeleteAccountDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} />
+      <Modal open={deviceOpen} onClose={() => setDeviceOpen(false)} title={computerOn ? t.devices.computer.title : t.devices.getApp.title}>
+        {computerOn ? <OpenOnComputer hideTitle /> : <GetTheApp hideTitle />}
+      </Modal>
       {/* L'accord avant le premier envoi à l'IA. */}
       <AiConsentHost />
 

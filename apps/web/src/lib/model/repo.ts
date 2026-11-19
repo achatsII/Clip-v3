@@ -2,6 +2,7 @@
  * Accès aux données de CLIP V2. Chaque fonction prend un `DataApi` : celui de l'utilisateur
  * connecté, ou celui d'un lien public (jeton guest à portée limitée).
  */
+import type { BrandId } from '../brand/product'
 import type { DataApi, Doc } from '../gateway/data'
 import { contentLanguage, messages, messagesIn } from '../i18n/core'
 import type {
@@ -121,10 +122,15 @@ export function normalizeOrg(json: Partial<OrgSettings>, fallbackName = messages
   }
 }
 
-export async function ensureOrg(data: DataApi, name: string): Promise<Doc<OrgSettings>> {
+/**
+ * Les réglages de l'organisation, créés à sa première ouverture. `brandOf` donne alors sa marque (une marque par
+ * entreprise, `src/lib/brand/orgBrand.ts`) : appelé seulement à la création, jamais pour une entreprise existante.
+ */
+export async function ensureOrg(data: DataApi, name: string, brandOf?: () => BrandId | undefined): Promise<Doc<OrgSettings>> {
   const existing = await readOrg(data)
   if (existing) return { ...existing, json_data: normalizeOrg(existing.json_data, name) }
-  return data.insert<OrgSettings>(T.org, defaultOrg(name), 'Réglages CLIP')
+  const brand = brandOf?.()
+  return data.insert<OrgSettings>(T.org, { ...defaultOrg(name), ...(brand ? { brand } : {}) }, 'Réglages CLIP')
 }
 
 /* ───────────────────────── Postes ───────────────────────── */

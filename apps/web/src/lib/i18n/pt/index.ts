@@ -26,6 +26,7 @@ import { reports } from './reports'
 import { decouvrir } from '../en/decouvrir'
 import { nomenclature } from './nomenclature'
 import { learning } from './learning'
+import { devices } from './devices'
 
 /** O português do Brasil: as mesmas chaves do francês (a verificação de tipos garante). */
-export const pt: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir, nomenclature, learning }
+export const pt: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir, nomenclature, learning, devices }

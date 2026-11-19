@@ -26,6 +26,7 @@ import { reports } from './reports'
 import { decouvrir } from '../en/decouvrir'
 import { nomenclature } from './nomenclature'
 import { learning } from './learning'
+import { devices } from './devices'
 
 // ภาษาไทย: คีย์เหมือนภาษาฝรั่งเศสทุกตัว (การตรวจชนิดข้อมูลดูแลให้)
-export const th: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir, nomenclature, learning }
+export const th: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir, nomenclature, learning, devices }

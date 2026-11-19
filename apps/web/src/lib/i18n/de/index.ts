@@ -26,6 +26,7 @@ import { reports } from './reports'
 import { decouvrir } from '../en/decouvrir'
 import { nomenclature } from './nomenclature'
 import { learning } from './learning'
+import { devices } from './devices'
 
 // Deutsch: dieselben Schlüssel wie im Französischen (die Typprüfung achtet darauf); `decouvrir` bleibt unübersetzt.
-export const de: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir, nomenclature, learning }
+export const de: Messages = { common, catalog, shell, auth, home, instructions, capture, editor, editorTools, stations, feedback, stats, settings, billing, importer, publicLinks, team, records, inbox, notify, training, blocks, academy, reports, decouvrir, nomenclature, learning, devices }

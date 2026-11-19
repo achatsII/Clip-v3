@@ -10,6 +10,7 @@ import { useEffect, useMemo } from 'react'
 import { OfferCard } from '@/components/billing/Advisor'
 import { CreditPill, LowBalanceBanner } from '@/components/billing/Billing'
 import { CreationList } from '@/components/CreationList'
+import { DeviceCard } from '@/components/devices/DeviceCard'
 import { InstructionRow } from '@/components/InstructionCard'
 import { useSession } from '@/components/providers/Session'
 import { LinkButton } from '@/components/ui/Button'
@@ -177,6 +178,9 @@ export default function HomePage() {
 
       {/* Le conseiller d'achat : de temps en temps, l'offre qui sert l'usine (une à la fois). */}
       <OfferCard />
+
+      {/* D'un appareil à l'autre : l'app sur le téléphone (à l'ordinateur), l'ordinateur (dans l'app). */}
+      <DeviceCard />
 
       {/* La mise en route se cache d'un geste, et revient de la petite pastille. */}
       {role === 'admin' && setupDone < setup.length && setupHidden && (

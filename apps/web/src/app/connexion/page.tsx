@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { FieldError, Input, Label } from '@/components/ui/Field'
 import { errorText } from '@/components/ui/States'
 import { login, requestPasswordReset, signup } from '@/lib/gateway/auth'
+import { rememberSignup } from '@/lib/brand/orgBrand'
 import { hasSession } from '@/lib/gateway/client'
 import { parsePlanIntent, savePlanIntent, subscriptionPathFor } from '@/lib/billing/intent'
 import { BILLING_V2, SELF_SERVICE } from '@/lib/config'
@@ -76,6 +77,8 @@ export default function ConnexionPage() {
         router.replace('/accueil')
       } else if (mode === 'signup') {
         await signup({ email, password, fullname: fullname || undefined, company: company || undefined })
+        // L'entreprise qui se crée appartient à cette marque (une marque par entreprise).
+        rememberSignup()
         router.replace('/bienvenue')
       } else {
         await requestPasswordReset(email)

@@ -54,6 +54,13 @@ export interface Product {
    * à côté de CLIP (décision du 2026-11-17) ; se change ici, en un seul endroit.
    */
   legal: { entity: string; address: string; email: string }
+  /** L'adresse de l'outil sur le web (la même que `apps/mobile/brands.json`, un test les compare). */
+  webUrl: string
+  /**
+   * Les fiches de l'app mobile dans les magasins (« Installer l'app », `/app`). Kiplo est publique ; CLIP est non
+   * répertoriée chez Apple (son lien marche, la recherche ne la trouve pas) et privée chez Google, sans lien public.
+   */
+  stores: { ios?: string; android?: string }
 }
 
 const II_LEGAL = { entity: 'Intelligence Industrielle', address: '266, rue Saint-Paul Est, Montréal (Québec) H2Y 1G9, Canada', email: 'info@intelligenceindustrielle.com' }
@@ -73,6 +80,8 @@ export const PRODUCTS: Record<BrandId, Product> = {
     siteIndexed: false,
     defaultLang: 'fr',
     legal: II_LEGAL,
+    webUrl: 'https://clip-v3.vercel.app',
+    stores: { ios: 'https://apps.apple.com/app/id6834038200' },
   },
   kiplo: {
     id: 'kiplo',
@@ -89,7 +98,37 @@ export const PRODUCTS: Record<BrandId, Product> = {
     siteIndexed: true,
     defaultLang: 'en',
     legal: II_LEGAL,
+    webUrl: 'https://kiplo.vercel.app',
+    stores: { ios: 'https://apps.apple.com/app/id6836518892', android: 'https://play.google.com/store/apps/details?id=app.kiplo' },
   },
+}
+
+/** L'adresse de l'outil, sans « https:// » : ce qu'on lit à voix haute ou qu'on tape (« kiplo.vercel.app »). */
+export function webHost(p: Product = PRODUCT): string {
+  return p.webUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')
+}
+
+/** Le magasin de l'appareil, d'après l'agent du navigateur ; `null` : un ordinateur (un iPad récent s'y annonce aussi). */
+export function storePlatformOf(userAgent: string): 'ios' | 'android' | null {
+  if (/iPhone|iPad|iPod/i.test(userAgent)) return 'ios'
+  if (/Android/i.test(userAgent)) return 'android'
+  return null
+}
+
+/** La fiche de la marque pour cet appareil, si elle en a une. */
+export function storeUrlFor(userAgent: string, p: Product = PRODUCT): string | null {
+  const platform = storePlatformOf(userAgent)
+  return (platform && p.stores[platform]) || null
+}
+
+/**
+ * Le lien qui ouvre l'app du magasin elle-même, depuis la coquille (`openExternal` : un lien web s'y ouvrirait dans
+ * un navigateur intégré) : `itms-apps://` chez Apple, `market://` chez Google.
+ */
+export function storeAppLink(url: string): string {
+  if (url.startsWith('https://apps.apple.com/')) return url.replace('https://', 'itms-apps://')
+  const id = /^https:\/\/play\.google\.com\/store\/apps\/details\?id=([\w.]+)/.exec(url)?.[1]
+  return id ? `market://details?id=${id}` : url
 }
 
 /** La politique de confidentialité de la marque : celle d'Intelligence Industrielle pour CLIP ; la page du site pour Kiplo. */

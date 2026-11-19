@@ -38,7 +38,20 @@ faire, lire [`VISION.md`](VISION.md) (ce qui ne doit pas changer, ce qui est hor
   app 4975161168195830633) ; CLIP est « non répertoriée » (examinée, absente des recherches, ouverte par le lien que
   l'équipe donne à ses clients ; repli : Apple Business Manager), app privée ou test fermé sur Google Play. Les
   notes à l'examinateur de chacune expliquent les deux publics. Les noms de la fiche (`apps/mobile/store/kiplo/
-  fiche.json`) : « Kiplo – … », 30 caractères au plus (« Kiplo » seul est pris sur l'App Store). La build choisit
+  fiche.json`) : « Kiplo – … », 30 caractères au plus (« Kiplo » seul est pris sur l'App Store). **Une marque par
+  entreprise** (décision du 2026-11-18, toggle `brandGate`, `src/lib/brand/orgBrand.ts`) : les deux marques passent
+  par la même application de la plateforme (`clip-v2`), donc chaque entreprise a la sienne (`OrgSettings.brand`),
+  posée à la création de ses réglages seulement (`ensureOrg`, `brandForNewOrg`) : CLIP quand elle s'ouvre d'abord dans
+  CLIP, Kiplo seulement juste après l'inscription libre de Kiplo (`rememberSignup`) ; les entreprises d'avant n'en ont
+  pas et restent ouvertes partout (seule l'équipe la pose, dans la base). Dans l'autre marque, `BrandElsewhere`
+  remplace l'outil (ni données ni prix) : le site de la bonne marque, ou dans l'app son magasin (`storeAppLink`), et
+  « Se déconnecter ». Les textes de `devices` y portent `{app}` et `{host}`, posés après `brandify` (qui changerait
+  « CLIP » en « Kiplo »). **D'un appareil à l'autre** : `PRODUCT.webUrl` (comme `apps/mobile/brands.json`, un test
+  les compare) et `PRODUCT.stores` (Kiplo : les deux magasins ; CLIP : le lien Apple, non répertorié). Au web, « Kiplo
+  sur votre téléphone » (toggle `storeLinks`, éteint tant que les fiches ne sont pas en ligne) : un code QR vers
+  `/app`, qui envoie chaque téléphone à son magasin (`storeUrlFor`), sur l'accueil à l'ordinateur (`DeviceCard`, « Plus
+  tard » le range sur l'appareil) et dans le menu. Dans l'app, « Sur votre ordinateur » (toggle `desktopHint`) :
+  l'adresse du site à copier ou à s'envoyer, jamais un lien cliquable vers le site (ses prix : règle 3.1.3(f)). La build choisit
   (`NEXT_PUBLIC_BRAND=kiplo` ; l'ancien `gesto` vaut encore Kiplo, `brandIdOf` ; sans valeur, CLIP). Les textes
   gardent le jeton `CLIP` (`Clip` sur le site) :
   `brandify`/`brandText` y mettent le nom de la marque, une fois par dictionnaire chargé ; `APP_NAME` et

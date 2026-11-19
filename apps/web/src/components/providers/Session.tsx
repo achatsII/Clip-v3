@@ -1,6 +1,8 @@
 'use client'
 
 import { roleOf } from '@/lib/model/roles'
+import { BrandElsewhere } from '@/components/devices/BrandElsewhere'
+import { brandForNewOrg, otherBrandOf } from '@/lib/brand/orgBrand'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react'
@@ -63,7 +65,8 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
     queryFn: async () => {
       const p = profileQ.data!
       // Une usine neuve prend son nom par défaut dans la langue de la personne qui la crée.
-      const doc = await ensureOrg(data, p.orgName || p.company || messages().auth.session.defaultOrgName)
+      // Créée ici, elle prend sa marque (une marque par entreprise, `brandForNewOrg`).
+      const doc = await ensureOrg(data, p.orgName || p.company || messages().auth.session.defaultOrgName, brandForNewOrg)
       if (!doc.json_data.createdBy && p.userId) {
         await data.patch(T.org, doc._id, { createdBy: p.userId }).catch(() => undefined)
         doc.json_data.createdBy = p.userId
@@ -85,6 +88,9 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
   useEffect(() => {
     applyBrandColor(org?.json_data.color)
   }, [org?.json_data.color])
+
+  // Une marque par entreprise (toggle `brandGate`) : une entreprise de l'autre marque y est renvoyée.
+  const brandGate = useToggle('brandGate')
 
   // Les gros fichiers partent par morceaux (toggle `resumableUpload`) : `files.upload` le lit.
   const resumable = useToggle('resumableUpload')
@@ -146,6 +152,8 @@ export function SessionProvider({ children, fallback }: { children: ReactNode; f
     return <SessionError onRetry={() => (profileQ.error ? profileQ.refetch() : orgQ.refetch())} />
   }
   if (!value) return <>{fallback}</>
+  const elsewhere = brandGate ? otherBrandOf(value.org.json_data) : null
+  if (elsewhere) return <BrandElsewhere other={elsewhere} />
   return (
     <Ctx.Provider value={value}>
       <DictationProvider transcribe={transcribeDictation}>{children}</DictationProvider>

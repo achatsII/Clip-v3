@@ -1,3 +1,4 @@
+import type { BrandId } from '../brand/product'
 import type { PrintTemplate } from '../pdf/template'
 import type { Labels, Nomenclature, StationRule } from './nomenclature'
 import type { PreviousVersion, PublishedChanges } from './updates'
@@ -1065,6 +1066,12 @@ export interface OrgSettings {
   generation?: { server: boolean }
   /** Qui a ouvert CLIP le premier dans l'organisation : administrateur tant que personne d'autre ne l'est. */
   createdBy?: string
+  /**
+   * La marque de l'entreprise (une marque par entreprise, `src/lib/brand/orgBrand.ts`) : `clip`, ouverte d'abord dans
+   * CLIP ; `kiplo`, créée par l'inscription libre de Kiplo. Absente (les entreprises d'avant) : ouverte partout.
+   * Ailleurs, l'outil l'y renvoie (toggle `brandGate`). Seule l'équipe la change (dans la base).
+   */
+  brand?: BrandId
   createdAt: string
 }
 

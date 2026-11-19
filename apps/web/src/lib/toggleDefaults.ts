@@ -1,5 +1,5 @@
 /** Feature toggles : noms, valeurs servies par défaut, et valeurs de repli sans serveur. */
-export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate' | 'mediaOrder' | 'feedbackMedia' | 'variants' | 'quickMode' | 'gifInStep' | 'screenCapture' | 'learnFromEdits' | 'siteExperiments' | 'capturePreview'
+export type ToggleName = 'nativeCapture' | 'voiceAssistant' | 'tvCast' | 'bulkImport' | 'aiIllustration' | 'translations' | 'valueReport' | 'storePurchases' | 'liveEditing' | 'draftHistory' | 'previewAgent' | 'stepReel' | 'sections' | 'aiConsent' | 'deleteAccount' | 'renewal' | 'operators' | 'records' | 'multiApproval' | 'notify' | 'training' | 'sharedBlocks' | 'salesAdvisor' | 'academy' | 'recordsPlus' | 'billingPreview' | 'billingPreviewApp' | 'reports' | 'editorViews' | 'phoneReader' | 'serverGeneration' | 'resumableUpload' | 'firstStepChoice' | 'photoVoice' | 'editorSwipe' | 'splashHandoff' | 'aiConsentAtSignIn' | 'smoothVideos' | 'nomenclature' | 'operatorUpdates' | 'documentFigures' | 'clipGif' | 'printTemplates' | 'backgroundAi' | 'toolImages' | 'videoSound' | 'mediaNav' | 'sourceLibrary' | 'agentAttach' | 'slidesImport' | 'nameTemplate' | 'mediaOrder' | 'feedbackMedia' | 'variants' | 'quickMode' | 'gifInStep' | 'screenCapture' | 'learnFromEdits' | 'siteExperiments' | 'capturePreview' | 'brandGate' | 'storeLinks' | 'desktopHint'
 
 /** Valeurs servies par `GET /api/config` quand `CLIP_TOGGLES` ne dit rien. */
 export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
@@ -152,6 +152,14 @@ export const DEFAULT_TOGGLES: Record<ToggleName, boolean> = {
   // Avant de générer, dans « Nouvelle instruction » : toucher une source capturée l'ouvre en grand (la
   // vidéo jouée, la note vocale réécoutée avec sa transcription, la note lue), avec les autres.
   capturePreview: true,
+  // Une marque par entreprise (src/lib/brand/orgBrand.ts) : connecté à une entreprise de l'autre marque, l'outil l'y
+  // renvoie (lien, magasin), sans montrer ses données ni ses prix.
+  brandGate: true,
+  // « L'app sur votre téléphone » (code QR vers /app, liens des magasins) : à allumer (CLIP_TOGGLES) quand la fiche de
+  // la marque est en ligne dans le magasin ; avant, ses liens ne mènent nulle part.
+  storeLinks: false,
+  // Dans l'app mobile, « Sur votre ordinateur » : l'adresse du site, à copier ou à s'envoyer (jamais un lien d'achat).
+  desktopHint: true,
 }
 
 /** Serveur injoignable : seulement le comportement de base, aucune fonction nouvelle. */
@@ -216,4 +224,7 @@ export const FALLBACK_TOGGLES: Record<ToggleName, boolean> = {
   learnFromEdits: false,
   siteExperiments: false,
   capturePreview: false,
+  brandGate: false,
+  storeLinks: false,
+  desktopHint: false,
 }
